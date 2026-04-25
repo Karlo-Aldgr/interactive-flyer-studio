@@ -35,13 +35,13 @@ export default function Dashboard() {
     try {
       const { data: flyer, error } = await supabase
         .from("flyers")
-        .insert({ owner_id: user.id, title: "Untitled flyer" })
+        .insert([{ owner_id: user.id, title: "Untitled flyer" }])
         .select()
         .single();
       if (error) throw error;
       const { error: pErr } = await supabase
         .from("pages")
-        .insert({ flyer_id: flyer.id, index: 0, name: "Page 1" });
+        .insert([{ flyer_id: flyer.id, index: 0, name: "Page 1" }]);
       if (pErr) throw pErr;
       navigate(`/editor/${flyer.id}`);
     } catch (e: any) {
@@ -62,28 +62,27 @@ export default function Dashboard() {
     if (!user) return;
     const { data: copy, error } = await supabase
       .from("flyers")
-      .insert({ owner_id: user.id, title: flyer.title + " (copy)", settings: flyer.settings })
+      .insert([{ owner_id: user.id, title: flyer.title + " (copy)", settings: flyer.settings as any }])
       .select()
       .single();
     if (error) return toast.error(error.message);
-    // Copy pages + layers + actions
     const { data: pages } = await supabase.from("pages").select("*, layers(*, actions(*))").eq("flyer_id", flyer.id);
     if (pages) {
       for (const p of pages as any[]) {
         const { data: newPage } = await supabase
           .from("pages")
-          .insert({ flyer_id: copy.id, index: p.index, name: p.name, background: p.background })
+          .insert([{ flyer_id: copy.id, index: p.index, name: p.name, background: p.background }])
           .select().single();
         if (!newPage) continue;
         for (const l of p.layers ?? []) {
-          const { data: newLayer } = await supabase.from("layers").insert({
+          const { data: newLayer } = await supabase.from("layers").insert([{
             page_id: newPage.id, type: l.type, position: l.position, size: l.size,
             rotation: l.rotation, z_index: l.z_index, style: l.style, content: l.content,
-          }).select().single();
+          }]).select().single();
           if (newLayer && l.actions?.[0]) {
-            await supabase.from("actions").insert({
+            await supabase.from("actions").insert([{
               layer_id: newLayer.id, type: l.actions[0].type, payload: l.actions[0].payload,
-            });
+            }]);
           }
         }
       }
