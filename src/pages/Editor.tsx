@@ -117,7 +117,7 @@ export default function Editor() {
           flyer_id: flyer.id,
           index: page.index,
           name: page.name,
-          background: page.background,
+          background: page.background as any,
         });
       }
       // Delete pages no longer in store
@@ -140,12 +140,12 @@ export default function Editor() {
               id: l.id,
               page_id: page.id,
               type: l.type,
-              position: l.position,
-              size: l.size,
+              position: l.position as any,
+              size: l.size as any,
               rotation: l.rotation,
               z_index: l.z_index,
-              style: l.style,
-              content: l.content,
+              style: l.style as any,
+              content: l.content as any,
             })),
           );
         }
