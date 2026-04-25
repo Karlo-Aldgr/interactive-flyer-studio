@@ -7,7 +7,7 @@ import type { Layer } from "@/types/flyer";
 interface Props {
   layer: Layer;
   isSelected: boolean;
-  onSelect: (e: Konva.KonvaEventObject<MouseEvent>) => void;
+  onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
   onChange: (patch: Partial<Layer>) => void;
   snap: (n: number) => number;
 }

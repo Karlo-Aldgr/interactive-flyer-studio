@@ -85,7 +85,8 @@ export function Canvas() {
                 isSelected={selectedLayerIds.includes(layer.id)}
                 snap={snap}
                 onSelect={(e) => {
-                  selectLayer(layer.id, e.evt.shiftKey);
+                  const shift = "shiftKey" in e.evt ? (e.evt as MouseEvent).shiftKey : false;
+                  selectLayer(layer.id, shift);
                 }}
                 onChange={(patch) => {
                   pushHistory();
