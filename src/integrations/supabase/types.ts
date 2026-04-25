@@ -14,16 +14,295 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      actions: {
+        Row: {
+          created_at: string
+          id: string
+          layer_id: string
+          payload: Json
+          type: Database["public"]["Enums"]["action_type"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          layer_id: string
+          payload?: Json
+          type: Database["public"]["Enums"]["action_type"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          layer_id?: string
+          payload?: Json
+          type?: Database["public"]["Enums"]["action_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actions_layer_id_fkey"
+            columns: ["layer_id"]
+            isOneToOne: false
+            referencedRelation: "layers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_events: {
+        Row: {
+          created_at: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          flyer_id: string
+          id: string
+          layer_id: string | null
+          metadata: Json
+          page_id: string | null
+          session_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          flyer_id: string
+          id?: string
+          layer_id?: string | null
+          metadata?: Json
+          page_id?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["event_type"]
+          flyer_id?: string
+          id?: string
+          layer_id?: string | null
+          metadata?: Json
+          page_id?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_layer_id_fkey"
+            columns: ["layer_id"]
+            isOneToOne: false
+            referencedRelation: "layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flyers: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          public_slug: string | null
+          settings: Json
+          status: Database["public"]["Enums"]["flyer_status"]
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          public_slug?: string | null
+          settings?: Json
+          status?: Database["public"]["Enums"]["flyer_status"]
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          public_slug?: string | null
+          settings?: Json
+          status?: Database["public"]["Enums"]["flyer_status"]
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      form_submissions: {
+        Row: {
+          created_at: string
+          data: Json
+          flyer_id: string
+          id: string
+          layer_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          flyer_id: string
+          id?: string
+          layer_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          flyer_id?: string
+          id?: string
+          layer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_submissions_layer_id_fkey"
+            columns: ["layer_id"]
+            isOneToOne: false
+            referencedRelation: "layers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      layers: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          page_id: string
+          position: Json
+          rotation: number
+          size: Json
+          style: Json
+          type: Database["public"]["Enums"]["layer_type"]
+          z_index: number
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          page_id: string
+          position?: Json
+          rotation?: number
+          size?: Json
+          style?: Json
+          type: Database["public"]["Enums"]["layer_type"]
+          z_index?: number
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          page_id?: string
+          position?: Json
+          rotation?: number
+          size?: Json
+          style?: Json
+          type?: Database["public"]["Enums"]["layer_type"]
+          z_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "layers_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pages: {
+        Row: {
+          background: Json
+          created_at: string
+          flyer_id: string
+          id: string
+          index: number
+          name: string
+        }
+        Insert: {
+          background?: Json
+          created_at?: string
+          flyer_id: string
+          id?: string
+          index?: number
+          name?: string
+        }
+        Update: {
+          background?: Json
+          created_at?: string
+          flyer_id?: string
+          id?: string
+          index?: number
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pages_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      action_type:
+        | "open_url"
+        | "popup"
+        | "video"
+        | "call"
+        | "sms"
+        | "form"
+        | "navigate"
+        | "reveal"
+      app_role: "admin" | "user"
+      event_type: "view" | "click" | "submit" | "reveal"
+      flyer_status: "draft" | "published"
+      layer_type: "text" | "image" | "icon" | "shape" | "button"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +429,21 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      action_type: [
+        "open_url",
+        "popup",
+        "video",
+        "call",
+        "sms",
+        "form",
+        "navigate",
+        "reveal",
+      ],
+      app_role: ["admin", "user"],
+      event_type: ["view", "click", "submit", "reveal"],
+      flyer_status: ["draft", "published"],
+      layer_type: ["text", "image", "icon", "shape", "button"],
+    },
   },
 } as const
