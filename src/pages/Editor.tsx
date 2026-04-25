@@ -8,6 +8,7 @@ import { Canvas } from "@/components/editor/Canvas";
 import { Inspector } from "@/components/editor/Inspector";
 import { PagesBar } from "@/components/editor/PagesBar";
 import { toast } from "@/hooks/use-toast";
+import { log } from "@/lib/logger";
 import type { Flyer, FlyerPage, Layer } from "@/types/flyer";
 
 export default function Editor() {
@@ -28,57 +29,90 @@ export default function Editor() {
     if (!flyerId) return;
     (async () => {
       setLoading(true);
-      const { data: f } = await supabase.from("flyers").select("*").eq("id", flyerId).maybeSingle();
-      if (!f) {
-        setLoading(false);
-        return;
-      }
-      const { data: pgs } = await supabase
-        .from("pages")
-        .select("*")
-        .eq("flyer_id", flyerId)
-        .order("index");
-      let pagesData = pgs ?? [];
-
-      // create first page if none
-      if (pagesData.length === 0) {
-        const { data: created } = await supabase
+      log.info("[Editor]", "Loading flyer", flyerId);
+      try {
+        const { data: f, error: fErr } = await supabase
+          .from("flyers")
+          .select("*")
+          .eq("id", flyerId)
+          .maybeSingle();
+        if (fErr) {
+          log.error("[Editor]", "Flyer fetch failed", fErr);
+          throw fErr;
+        }
+        if (!f) {
+          log.warn("[Editor]", "Flyer not found", flyerId);
+          setLoading(false);
+          return;
+        }
+        const { data: pgs, error: pErr } = await supabase
           .from("pages")
-          .insert({ flyer_id: flyerId, index: 0, name: "Page 1" })
-          .select()
-          .single();
-        if (created) pagesData = [created];
+          .select("*")
+          .eq("flyer_id", flyerId)
+          .order("index");
+        if (pErr) {
+          log.error("[Editor]", "Pages fetch failed", pErr);
+          throw pErr;
+        }
+        let pagesData = pgs ?? [];
+
+        if (pagesData.length === 0) {
+          log.info("[Editor]", "No pages found, creating first page");
+          const { data: created, error: cErr } = await supabase
+            .from("pages")
+            .insert({ flyer_id: flyerId, index: 0, name: "Page 1" })
+            .select()
+            .single();
+          if (cErr) {
+            log.error("[Editor]", "Page create failed", cErr);
+            throw cErr;
+          }
+          if (created) pagesData = [created];
+        }
+
+        const pageIds = pagesData.map((p) => p.id);
+        const { data: lyrs, error: lErr } = pageIds.length
+          ? await supabase.from("layers").select("*").in("page_id", pageIds)
+          : { data: [] as any[], error: null };
+        if (lErr) {
+          log.error("[Editor]", "Layers fetch failed", lErr);
+          throw lErr;
+        }
+
+        const fullPages: FlyerPage[] = pagesData.map((p) => ({
+          id: p.id,
+          flyer_id: p.flyer_id,
+          index: p.index,
+          name: p.name,
+          background: p.background as any,
+          layers: (lyrs ?? [])
+            .filter((l: any) => l.page_id === p.id)
+            .map((l: any): Layer => ({
+              id: l.id,
+              page_id: l.page_id,
+              type: l.type,
+              position: l.position,
+              size: l.size,
+              rotation: Number(l.rotation),
+              z_index: l.z_index,
+              style: l.style,
+              content: l.content,
+              action: null,
+            })),
+        }));
+
+        log.info("[Editor]", `Loaded ${fullPages.length} page(s), ${lyrs?.length ?? 0} layer(s)`);
+        setFlyer(f as unknown as Flyer, fullPages);
+      } catch (err: any) {
+        log.error("[Editor]", "Boot failed", err);
+        toast({
+          title: "Could not load flyer",
+          description: err?.message ?? String(err),
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-
-      const pageIds = pagesData.map((p) => p.id);
-      const { data: lyrs } = pageIds.length
-        ? await supabase.from("layers").select("*").in("page_id", pageIds)
-        : { data: [] as any[] };
-
-      const fullPages: FlyerPage[] = pagesData.map((p) => ({
-        id: p.id,
-        flyer_id: p.flyer_id,
-        index: p.index,
-        name: p.name,
-        background: p.background as any,
-        layers: (lyrs ?? [])
-          .filter((l: any) => l.page_id === p.id)
-          .map((l: any): Layer => ({
-            id: l.id,
-            page_id: l.page_id,
-            type: l.type,
-            position: l.position,
-            size: l.size,
-            rotation: Number(l.rotation),
-            z_index: l.z_index,
-            style: l.style,
-            content: l.content,
-            action: null,
-          })),
-      }));
-
-      setFlyer(f as unknown as Flyer, fullPages);
-      setLoading(false);
     })();
   }, [flyerId, setFlyer]);
 
