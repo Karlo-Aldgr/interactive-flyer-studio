@@ -222,10 +222,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       setPages(mapped);
       setLoading(false);
 
-      // analytics: view
-      supabase.from("analytics_events").insert([{ flyer_id: f.id, event_type: "view", metadata: {} } as any]);
+      // analytics: view (skip in preview mode)
+      if (!previewMode) {
+        supabase.from("analytics_events").insert([{ flyer_id: f.id, event_type: "view", metadata: {} } as any]);
+      }
     })();
-  }, [slug]);
+  }, [slug, flyerId, previewMode]);
 
   function runAction(layer: Layer) {
     const a = layer.action;
