@@ -1,6 +1,56 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Stage, Layer as KLayer, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage, Group } from "react-konva";
+import Konva from "konva";
+
+// Pulsing highlight ring shown around tappable layers in the viewer.
+function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" }) {
+  const ref = useRef<any>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const period = 1600;
+    const anim = new Konva.Animation((frame) => {
+      if (!frame) return;
+      const t = (frame.time % period) / period; // 0..1
+      // ease in-out sine
+      const e = 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
+      node.opacity(0.35 + 0.55 * e);
+      node.strokeWidth(2 + 4 * e);
+    }, node.getLayer());
+    anim.start();
+    return () => {
+      anim.stop();
+    };
+  }, []);
+  const common = {
+    ref,
+    x: layer.position.x,
+    y: layer.position.y,
+    width: layer.size.width,
+    height: layer.size.height,
+    rotation: layer.rotation,
+    stroke: "#7c3aed",
+    strokeWidth: 3,
+    shadowColor: "#7c3aed",
+    shadowBlur: 12,
+    shadowOpacity: 0.6,
+    listening: false,
+    fill: "rgba(124,58,237,0.08)",
+  } as any;
+  if (shape === "ellipse") {
+    return (
+      <Ellipse
+        {...common}
+        radiusX={layer.size.width / 2}
+        radiusY={layer.size.height / 2}
+        offsetX={-layer.size.width / 2}
+        offsetY={-layer.size.height / 2}
+      />
+    );
+  }
+  return <Rect {...common} cornerRadius={layer.style.cornerRadius || 8} />;
+}
 import useImage from "use-image";
 import * as LucideIcons from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
