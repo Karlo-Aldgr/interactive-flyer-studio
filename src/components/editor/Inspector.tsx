@@ -65,6 +65,7 @@ export function Inspector() {
             </div>
           </>
         )}
+        {layer.type === "text" && (
           <>
             <div>
               <Label className="text-xs">Text</Label>
