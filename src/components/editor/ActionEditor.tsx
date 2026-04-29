@@ -37,9 +37,10 @@ const ACTION_LABELS: Record<ActionType, string> = {
   rsvp: "RSVP",
   checkout: "Link to checkout",
   coupon: "Coupon",
+  map: "Open in maps (GPS)",
 };
 
-const PRESET_TYPES: ActionType[] = ["buy_ticket", "rsvp", "checkout", "coupon"];
+const PRESET_TYPES: ActionType[] = ["buy_ticket", "rsvp", "checkout", "coupon", "map"];
 const BASIC_TYPES: ActionType[] = [
   "open_url", "popup", "video", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
@@ -78,6 +79,8 @@ function isValid(draft: LayerAction | null): boolean {
       if (!(p.couponImageUrl || p.couponCode)) return false;
       if (p.couponUnlock && !p.couponUnlockCode) return false;
       return true;
+    case "map":
+      return !!(p.mapAddress || (typeof p.mapLat === "number" && typeof p.mapLng === "number"));
     default: return true;
   }
 }
@@ -621,6 +624,52 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
             <div>
               <Label className="text-xs">Redeem URL (optional)</Label>
               <Input className="mt-1" value={p.couponRedeemUrl || ""} onChange={(e) => update({ couponRedeemUrl: e.target.value })} placeholder="https://..." />
+            </div>
+          </>
+        )}
+
+        {type === "map" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Opens the viewer's maps app (Google Maps, or Apple Maps on iOS) at the address or GPS coordinates you provide.</p>
+            <div>
+              <Label className="text-xs">Address (recommended)</Label>
+              <Input
+                className="mt-1"
+                value={p.mapAddress || ""}
+                onChange={(e) => update({ mapAddress: e.target.value })}
+                placeholder="123 Main St, San Francisco, CA"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Latitude (optional)</Label>
+                <Input
+                  type="number" step="any" className="mt-1"
+                  value={typeof p.mapLat === "number" ? p.mapLat : ""}
+                  onChange={(e) => update({ mapLat: e.target.value === "" ? undefined : Number(e.target.value) })}
+                  placeholder="37.7749"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Longitude</Label>
+                <Input
+                  type="number" step="any" className="mt-1"
+                  value={typeof p.mapLng === "number" ? p.mapLng : ""}
+                  onChange={(e) => update({ mapLng: e.target.value === "" ? undefined : Number(e.target.value) })}
+                  placeholder="-122.4194"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Maps provider</Label>
+              <Select value={p.mapProvider || "auto"} onValueChange={(v) => update({ mapProvider: v as any })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto-detect (Apple on iOS, Google elsewhere)</SelectItem>
+                  <SelectItem value="google">Google Maps</SelectItem>
+                  <SelectItem value="apple">Apple Maps</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </>
         )}

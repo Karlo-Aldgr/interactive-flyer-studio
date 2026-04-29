@@ -1,6 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import * as LucideIcons from "lucide-react";
-import { Type, Image as ImageIcon, Square, Circle, Minus, MousePointerClick, Star, Heart, Smile, ThumbsUp, SquareDashed } from "lucide-react";
+import { Type, Image as ImageIcon, Square, Circle, Minus, MousePointerClick, Star, Heart, Smile, ThumbsUp, SquareDashed, Sparkles } from "lucide-react";
+import { SmartDetectDialog } from "./SmartDetectDialog";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -22,6 +23,7 @@ export function Toolbar() {
   const fileRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { flyerId } = useParams();
+  const [detectOpen, setDetectOpen] = useState(false);
 
   async function uploadImage(file: File) {
     if (!user || !flyerId) return;
@@ -143,6 +145,21 @@ export function Toolbar() {
         </TooltipTrigger>
         <TooltipContent side="right">Hotspot (drag to draw)</TooltipContent>
       </Tooltip>
+      <div className="my-1 h-px w-8 bg-border" />
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 text-primary"
+            onClick={() => setDetectOpen(true)}
+          >
+            <Sparkles className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Detect hotspots (AI)</TooltipContent>
+      </Tooltip>
+      <SmartDetectDialog open={detectOpen} onOpenChange={setDetectOpen} />
     </div>
   );
 }

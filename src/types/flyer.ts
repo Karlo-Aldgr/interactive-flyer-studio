@@ -15,7 +15,8 @@ export type ActionType =
   | "buy_ticket"
   | "rsvp"
   | "checkout"
-  | "coupon";
+  | "coupon"
+  | "map";
 
 export interface PopupButton {
   id: string;
@@ -67,6 +68,11 @@ export interface ActionPayload {
   couponUnlock?: boolean;
   couponUnlockCode?: string;
   couponRedeemUrl?: string;
+  // map / GPS
+  mapAddress?: string;
+  mapLat?: number;
+  mapLng?: number;
+  mapProvider?: "google" | "apple" | "auto";
 }
 
 export interface LayerStyle {
