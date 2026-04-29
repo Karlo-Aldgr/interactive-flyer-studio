@@ -66,7 +66,7 @@ export function useFlyerData(flyerId: string | undefined) {
         if (np) {
           mapped.push({
             id: np.id, flyer_id: np.flyer_id, index: 0, name: np.name,
-            background: np.background ?? { color: "#ffffff" }, layers: [],
+            background: (np.background as any) ?? { color: "#ffffff" }, layers: [],
           });
         }
       }
