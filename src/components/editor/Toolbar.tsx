@@ -106,6 +106,7 @@ export function Toolbar() {
           <div className="grid max-h-64 grid-cols-6 gap-1 overflow-y-auto">
             {ICONS.map((name) => {
               const I = (LucideIcons as any)[name];
+              return (
                 <Button
                   key={name}
                   variant="ghost"
