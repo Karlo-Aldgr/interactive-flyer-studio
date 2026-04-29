@@ -233,7 +233,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     const a = layer.action;
     if (!a) return;
     // analytics
-    if (flyer) {
+    if (flyer && !previewMode) {
       supabase.from("analytics_events").insert([{
         flyer_id: flyer.id,
         page_id: layer.page_id,
