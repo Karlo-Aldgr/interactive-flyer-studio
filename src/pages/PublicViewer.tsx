@@ -466,6 +466,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               .sort((a, b) => a.z_index - b.z_index)
               .map((l) => renderLayer(l, () => runAction(l), hiddenIds.has(l.id)))}
           </KLayer>
+          {/* Pulsing highlights to indicate tappable hotspots */}
+          <KLayer listening={false}>
+            {page.layers
+              .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
+              .map((l) => {
+                const shape: "rect" | "ellipse" =
+                  l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
+                return <PulseHighlight key={"pulse-" + l.id} layer={l} shape={shape} />;
+              })}
+          </KLayer>
           {previewMode && showHitboxes && (
             <KLayer listening={false}>
               {page.layers
