@@ -232,19 +232,24 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     })();
   }, [slug, flyerId, previewMode]);
 
+  function logClick(layer: Layer | null, type: string) {
+    if (!flyer || previewMode) return;
+    supabase.from("analytics_events").insert([{
+      flyer_id: flyer.id,
+      page_id: layer?.page_id ?? null,
+      layer_id: layer?.id ?? null,
+      event_type: "click",
+      metadata: { action_type: type } as any,
+    } as any]);
+  }
+
   function runAction(layer: Layer) {
-    const a = layer.action;
-    if (!a) return;
-    // analytics
-    if (flyer && !previewMode) {
-      supabase.from("analytics_events").insert([{
-        flyer_id: flyer.id,
-        page_id: layer.page_id,
-        layer_id: layer.id,
-        event_type: "click",
-        metadata: { action_type: a.type } as any,
-      } as any]);
-    }
+    if (!layer.action) return;
+    logClick(layer, layer.action.type);
+    executeAction(layer.action, layer);
+  }
+
+  function executeAction(a: LayerAction, layer: Layer | null) {
     switch (a.type) {
       case "open_url":
         if (a.payload.url) window.open(a.payload.url, a.payload.newTab !== false ? "_blank" : "_self", "noopener,noreferrer");
@@ -282,7 +287,29 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "add_to_calendar":
         runAddToCalendar(a.payload);
         break;
+      case "buy_ticket":
+        // Show as popup with ticket image + buy button
+        setPopup(a);
+        break;
+      case "rsvp":
+        setFormAction(a);
+        setFormData({});
+        break;
+      case "checkout":
+        if (a.payload.title) setConfirmAction(a);
+        else if (a.payload.checkoutUrl) window.open(a.payload.checkoutUrl, "_blank", "noopener,noreferrer");
+        break;
+      case "coupon":
+        setCoupon(a);
+        break;
     }
+  }
+
+  function runPopupButton(a: LayerAction) {
+    logClick(null, "popup_button:" + a.type);
+    setPopup(null);
+    // small delay so the dialog closes before next opens
+    setTimeout(() => executeAction(a, null), 50);
   }
 
   async function submitForm() {
