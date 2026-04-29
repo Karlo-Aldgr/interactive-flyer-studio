@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import * as LucideIcons from "lucide-react";
 import { Type, Image as ImageIcon, Square, Circle, Minus, MousePointerClick, Star, Heart, Smile, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -104,8 +105,7 @@ export function Toolbar() {
           <div className="mb-2 text-sm font-medium">Pick an icon</div>
           <div className="grid max-h-64 grid-cols-6 gap-1 overflow-y-auto">
             {ICONS.map((name) => {
-              const I = (require("lucide-react") as any)[name];
-              return (
+              const I = (LucideIcons as any)[name];
                 <Button
                   key={name}
                   variant="ghost"
