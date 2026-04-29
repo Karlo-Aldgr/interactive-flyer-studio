@@ -336,6 +336,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      {previewMode && (
+        <div className="fixed top-3 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card/95 px-4 py-1.5 text-xs font-medium shadow-elegant backdrop-blur">
+          Preview mode — interactions are live, analytics disabled
+        </div>
+      )}
       <div style={{ width: W * scale, height: H * scale, background: page.background.color || "#fff" }} className="shadow-elegant">
         <Stage width={W * scale} height={H * scale} scaleX={scale} scaleY={scale}>
           <KLayer>
