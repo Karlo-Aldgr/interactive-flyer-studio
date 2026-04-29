@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import * as LucideIcons from "lucide-react";
-import { Type, Image as ImageIcon, Square, Circle, Minus, MousePointerClick, Star, Heart, Smile, ThumbsUp } from "lucide-react";
+import { Type, Image as ImageIcon, Square, Circle, Minus, MousePointerClick, Star, Heart, Smile, ThumbsUp, SquareDashed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,6 +17,8 @@ export function Toolbar() {
   const addImageLayer = useEditorStore((s) => s.addImageLayer);
   const updateLayerContent = useEditorStore((s) => s.updateLayerContent);
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
+  const drawMode = useEditorStore((s) => s.drawMode);
+  const setDrawMode = useEditorStore((s) => s.setDrawMode);
   const fileRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { flyerId } = useParams();
@@ -128,6 +130,19 @@ export function Toolbar() {
         </PopoverContent>
       </Popover>
       <Btn label="Button" icon={MousePointerClick} onClick={() => addLayer("button")} />
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={drawMode === "hotspot" ? "default" : "ghost"}
+            size="icon"
+            className="h-12 w-12"
+            onClick={() => setDrawMode(drawMode === "hotspot" ? null : "hotspot")}
+          >
+            <SquareDashed className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Hotspot (drag to draw)</TooltipContent>
+      </Tooltip>
     </div>
   );
 }
