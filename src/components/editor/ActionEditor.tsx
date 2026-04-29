@@ -22,7 +22,22 @@ const ACTION_LABELS: Record<ActionType | "none", string> = {
   form: "Capture form",
   navigate: "Go to page",
   reveal: "Reveal layer",
+  add_to_calendar: "Add to calendar",
 };
+
+function toLocalInputValue(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fromLocalInputValue(v: string): string | undefined {
+  if (!v) return undefined;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? undefined : d.toISOString();
+}
 
 export function ActionEditor({ action, onChange }: Props) {
   const pages = useEditorStore((s) => s.pages);
