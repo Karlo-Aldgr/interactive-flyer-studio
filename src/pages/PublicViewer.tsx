@@ -357,6 +357,34 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               .sort((a, b) => a.z_index - b.z_index)
               .map((l) => renderLayer(l, () => runAction(l), hiddenIds.has(l.id)))}
           </KLayer>
+          {previewMode && showHitboxes && (
+            <KLayer listening={false}>
+              {page.layers
+                .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
+                .map((l) => {
+                  const isEllipse = l.type === "hotspot" && l.content.hotspotShape === "ellipse";
+                  return isEllipse ? (
+                    <Ellipse
+                      key={"hb-" + l.id}
+                      x={l.position.x + l.size.width / 2}
+                      y={l.position.y + l.size.height / 2}
+                      radiusX={l.size.width / 2}
+                      radiusY={l.size.height / 2}
+                      stroke="#7c3aed" strokeWidth={2} dash={[8, 5]}
+                      fill="rgba(124,58,237,0.15)"
+                    />
+                  ) : (
+                    <Rect
+                      key={"hb-" + l.id}
+                      x={l.position.x} y={l.position.y}
+                      width={l.size.width} height={l.size.height}
+                      stroke="#7c3aed" strokeWidth={2} dash={[8, 5]}
+                      fill="rgba(124,58,237,0.15)"
+                    />
+                  );
+                })}
+            </KLayer>
+          )}
         </Stage>
       </div>
 
