@@ -2,6 +2,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Stage, Layer as KLayer, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage, Group } from "react-konva";
 import Konva from "konva";
+import useImage from "use-image";
+import * as LucideIcons from "lucide-react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { supabase } from "@/integrations/supabase/client";
+import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
+import { Loader2, Copy, Check } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { runAddToCalendar } from "@/lib/calendarHelpers";
+import { toast } from "sonner";
 
 // Pulsing highlight ring shown around tappable layers in the viewer.
 function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" }) {
@@ -12,16 +24,13 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
     const period = 1600;
     const anim = new Konva.Animation((frame) => {
       if (!frame) return;
-      const t = (frame.time % period) / period; // 0..1
-      // ease in-out sine
+      const t = (frame.time % period) / period;
       const e = 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
-      node.opacity(0.35 + 0.55 * e);
+      node.opacity(0.4 + 0.55 * e);
       node.strokeWidth(2 + 4 * e);
     }, node.getLayer());
     anim.start();
-    return () => {
-      anim.stop();
-    };
+    return () => { anim.stop(); };
   }, []);
   const common = {
     ref,
@@ -51,18 +60,6 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
   }
   return <Rect {...common} cornerRadius={layer.style.cornerRadius || 8} />;
 }
-import useImage from "use-image";
-import * as LucideIcons from "lucide-react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { supabase } from "@/integrations/supabase/client";
-import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
-import { Loader2, Copy, Check } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { runAddToCalendar } from "@/lib/calendarHelpers";
-import { toast } from "sonner";
 
 function ImageNode({ layer, props }: { layer: Layer; props: any }) {
   const [img] = useImage(layer.content.src ?? "", "anonymous");
