@@ -302,6 +302,25 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "coupon":
         setCoupon(a);
         break;
+      case "map": {
+        const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
+        const isApple = (() => {
+          if (mapProvider === "apple") return true;
+          if (mapProvider === "google") return false;
+          return /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+        })();
+        const hasCoords = typeof mapLat === "number" && typeof mapLng === "number";
+        let url = "";
+        if (isApple) {
+          if (hasCoords) url = `https://maps.apple.com/?ll=${mapLat},${mapLng}${mapAddress ? `&q=${encodeURIComponent(mapAddress)}` : ""}`;
+          else if (mapAddress) url = `https://maps.apple.com/?q=${encodeURIComponent(mapAddress)}`;
+        } else {
+          if (hasCoords) url = `https://www.google.com/maps/search/?api=1&query=${mapLat},${mapLng}`;
+          else if (mapAddress) url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapAddress)}`;
+        }
+        if (url) window.open(url, "_blank", "noopener,noreferrer");
+        break;
+      }
     }
   }
 
