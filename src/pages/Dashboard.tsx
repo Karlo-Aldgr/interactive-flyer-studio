@@ -20,10 +20,22 @@ export default function Dashboard() {
     setLoading(true);
     const { data, error } = await supabase
       .from("flyers")
-      .select("*")
+      .select("*, pages(index, layers(type, z_index, content))")
       .order("updated_at", { ascending: false });
-    if (error) toast.error(error.message);
-    else setFlyers((data ?? []) as any);
+    if (error) {
+      toast.error(error.message);
+      setLoading(false);
+      return;
+    }
+    const enriched = (data ?? []).map((f: any) => {
+      if (f.thumbnail_url) return f;
+      const firstPage = [...(f.pages ?? [])].sort((a, b) => a.index - b.index)[0];
+      const imageLayer = firstPage?.layers
+        ?.filter((l: any) => l.type === "image" && l.content?.src)
+        .sort((a: any, b: any) => (a.z_index ?? 0) - (b.z_index ?? 0))[0];
+      return { ...f, thumbnail_url: imageLayer?.content?.src ?? null };
+    });
+    setFlyers(enriched as any);
     setLoading(false);
   };
 
@@ -145,7 +157,7 @@ export default function Dashboard() {
                   <Link to={`/editor/${f.id}`} className="block">
                     <div className="aspect-[3/4] gradient-canvas border-b border-border relative">
                       {f.thumbnail_url ? (
-                        <img src={f.thumbnail_url} alt={f.title} className="h-full w-full object-cover" />
+                        <img src={f.thumbnail_url} alt={f.title} className="h-full w-full object-contain" loading="lazy" />
                       ) : (
                         <div className="flex h-full items-center justify-center text-muted-foreground">
                           <FileText className="h-10 w-10 opacity-40" />
