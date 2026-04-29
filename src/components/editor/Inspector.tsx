@@ -35,15 +35,36 @@ export function Inspector() {
     );
   }
 
+  const isHotspot = layer.type === "hotspot";
+
   return (
-    <Tabs defaultValue="style" className="flex h-full flex-col">
+    <Tabs defaultValue={isHotspot ? "action" : "style"} className="flex h-full flex-col">
       <TabsList className="m-3 grid grid-cols-2">
         <TabsTrigger value="style">Style</TabsTrigger>
         <TabsTrigger value="action">Action</TabsTrigger>
       </TabsList>
 
       <TabsContent value="style" className="flex-1 space-y-3 overflow-y-auto px-3 pb-3">
-        {layer.type === "text" && (
+        {isHotspot && (
+          <>
+            <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-2 text-[11px] text-muted-foreground">
+              Hotspots are invisible to viewers — only the cursor changes on hover. Use the <strong>Action</strong> tab to make it linkable.
+            </div>
+            <div>
+              <Label className="text-xs">Shape</Label>
+              <Select
+                value={layer.content.hotspotShape || "rect"}
+                onValueChange={(v) => updateLayerContent(layer.id, { hotspotShape: v as any })}
+              >
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="rect">Rectangle</SelectItem>
+                  <SelectItem value="ellipse">Ellipse</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
           <>
             <div>
               <Label className="text-xs">Text</Label>
