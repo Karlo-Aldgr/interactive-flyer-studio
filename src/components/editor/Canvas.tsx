@@ -8,6 +8,7 @@ import { X, Check } from "lucide-react";
 const ACTION_LABEL: Record<string, string> = {
   open_url: "URL", popup: "Popup", video: "Video", call: "Call",
   sms: "SMS", form: "Form", navigate: "Page", reveal: "Reveal", add_to_calendar: "Calendar",
+  buy_ticket: "Ticket", rsvp: "RSVP", checkout: "Checkout", coupon: "Coupon",
 };
 
 export function Canvas() {
