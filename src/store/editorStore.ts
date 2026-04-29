@@ -164,7 +164,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-  updateLayer: (id, patch) => {
+  addHotspotLayer: (rect) => {
+    const s = get();
+    const pageId = s.selectedPageId;
+    if (!pageId) return;
+    const page = s.pages.find((p) => p.id === pageId);
+    if (!page) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const base = defaultLayer("hotspot", pageId, page.layers.length);
+    const layer: Layer = {
+      ...base,
+      position: { x: rect.x, y: rect.y },
+      size: { width: rect.width, height: rect.height },
+    };
+    set({
+      pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
+      selectedLayerId: layer.id,
+      drawMode: null,
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+
     const s = get();
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
     set({
