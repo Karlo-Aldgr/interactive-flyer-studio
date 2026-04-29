@@ -159,8 +159,14 @@ function renderLayer(l: Layer, onClick: () => void, hidden: boolean) {
   }
 }
 
-export default function PublicViewer() {
-  const { slug } = useParams();
+interface PublicViewerProps {
+  previewMode?: boolean;
+}
+
+export default function PublicViewer({ previewMode = false }: PublicViewerProps) {
+  const params = useParams();
+  const slug = params.slug;
+  const flyerId = params.flyerId;
   const [loading, setLoading] = useState(true);
   const [flyer, setFlyer] = useState<Flyer | null>(null);
   const [pages, setPages] = useState<FlyerPage[]>([]);
@@ -172,10 +178,13 @@ export default function PublicViewer() {
   const [formData, setFormData] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug && !flyerId) return;
     (async () => {
       setLoading(true);
-      const { data: f } = await supabase.from("flyers").select("*").eq("public_slug", slug).eq("status", "published").maybeSingle();
+      const query = supabase.from("flyers").select("*");
+      const { data: f } = previewMode && flyerId
+        ? await query.eq("id", flyerId).maybeSingle()
+        : await query.eq("public_slug", slug!).eq("status", "published").maybeSingle();
       if (!f) {
         setLoading(false);
         return;
