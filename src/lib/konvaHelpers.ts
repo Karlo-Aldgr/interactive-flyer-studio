@@ -44,6 +44,13 @@ export function defaultLayer(type: LayerType, pageId: string, zIndex: number): L
         style: { fill: "#7c3aed", color: "#ffffff", cornerRadius: 999, fontSize: 16, fontWeight: 600, align: "center" },
         content: { label: "Click me" },
       };
+    case "hotspot":
+      return {
+        ...base,
+        size: { width: 200, height: 120 },
+        style: { opacity: 1 },
+        content: { hotspotShape: "rect" },
+      };
   }
 }
 

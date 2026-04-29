@@ -15,12 +15,14 @@ interface EditorState {
   past: Snapshot[];
   future: Snapshot[];
   dirty: boolean;
+  drawMode: null | "hotspot";
   // hydrate
   hydrate: (flyer: Flyer, pages: FlyerPage[]) => void;
   setFlyer: (patch: Partial<Flyer>) => void;
   setZoom: (z: number) => void;
   selectPage: (id: string) => void;
   selectLayer: (id: string | null) => void;
+  setDrawMode: (mode: null | "hotspot") => void;
   // pages
   addPage: () => void;
   deletePage: (id: string) => void;
@@ -29,6 +31,7 @@ interface EditorState {
   // layers
   addLayer: (type: Layer["type"]) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
+  addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }) => void;
   updateLayer: (id: string, patch: Partial<Layer>) => void;
   updateLayerStyle: (id: string, patch: Partial<LayerStyle>) => void;
   updateLayerContent: (id: string, patch: Partial<LayerContent>) => void;
@@ -57,6 +60,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   past: [],
   future: [],
   dirty: false,
+  drawMode: null,
 
   hydrate: (flyer, pages) =>
     set({
@@ -76,6 +80,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   selectPage: (id) => set({ selectedPageId: id, selectedLayerId: null }),
   selectLayer: (id) => set({ selectedLayerId: id }),
+  setDrawMode: (mode) => set({ drawMode: mode }),
 
   addPage: () => {
     const s = get();
@@ -153,6 +158,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  addHotspotLayer: (rect) => {
+    const s = get();
+    const pageId = s.selectedPageId;
+    if (!pageId) return;
+    const page = s.pages.find((p) => p.id === pageId);
+    if (!page) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const base = defaultLayer("hotspot", pageId, page.layers.length);
+    const layer: Layer = {
+      ...base,
+      position: { x: rect.x, y: rect.y },
+      size: { width: rect.width, height: rect.height },
+    };
+    set({
+      pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
+      selectedLayerId: layer.id,
+      drawMode: null,
       past,
       future: [],
       dirty: true,

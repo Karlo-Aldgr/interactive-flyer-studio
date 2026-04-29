@@ -22,7 +22,22 @@ const ACTION_LABELS: Record<ActionType | "none", string> = {
   form: "Capture form",
   navigate: "Go to page",
   reveal: "Reveal layer",
+  add_to_calendar: "Add to calendar",
 };
+
+function toLocalInputValue(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fromLocalInputValue(v: string): string | undefined {
+  if (!v) return undefined;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? undefined : d.toISOString();
+}
 
 export function ActionEditor({ action, onChange }: Props) {
   const pages = useEditorStore((s) => s.pages);
@@ -180,6 +195,91 @@ export function ActionEditor({ action, onChange }: Props) {
           </div>
         </div>
       )}
+
+      {type === "add_to_calendar" && (
+        <>
+          <div>
+            <Label className="text-xs">Event title</Label>
+            <Input
+              className="mt-1"
+              value={p.eventTitle || ""}
+              onChange={(e) => update({ eventTitle: e.target.value })}
+              placeholder="Summer launch party"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Description</Label>
+            <Textarea
+              className="mt-1"
+              rows={2}
+              value={p.eventDescription || ""}
+              onChange={(e) => update({ eventDescription: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Location</Label>
+            <Input
+              className="mt-1"
+              value={p.eventLocation || ""}
+              onChange={(e) => update({ eventLocation: e.target.value })}
+              placeholder="123 Main St or Zoom link"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">All-day</Label>
+            <Switch
+              checked={!!p.allDay}
+              onCheckedChange={(v) => update({ allDay: v })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Starts</Label>
+            <Input
+              type={p.allDay ? "date" : "datetime-local"}
+              className="mt-1"
+              value={p.allDay ? (p.startISO ? p.startISO.slice(0, 10) : "") : toLocalInputValue(p.startISO)}
+              onChange={(e) =>
+                update({
+                  startISO: p.allDay
+                    ? (e.target.value ? new Date(e.target.value + "T00:00:00").toISOString() : undefined)
+                    : fromLocalInputValue(e.target.value),
+                })
+              }
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Ends</Label>
+            <Input
+              type={p.allDay ? "date" : "datetime-local"}
+              className="mt-1"
+              value={p.allDay ? (p.endISO ? p.endISO.slice(0, 10) : "") : toLocalInputValue(p.endISO)}
+              onChange={(e) =>
+                update({
+                  endISO: p.allDay
+                    ? (e.target.value ? new Date(e.target.value + "T00:00:00").toISOString() : undefined)
+                    : fromLocalInputValue(e.target.value),
+                })
+              }
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Behavior on click</Label>
+            <Select
+              value={p.calendarMode || "ics"}
+              onValueChange={(v) => update({ calendarMode: v as any })}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ics">Download .ics file</SelectItem>
+                <SelectItem value="google">Open Google Calendar</SelectItem>
+                <SelectItem value="both">Both</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[11px] text-muted-foreground">.ics works with Apple Calendar, Outlook, and most clients.</p>
+          </div>
+        </>
+      )}
     </div>
   );
 }
+

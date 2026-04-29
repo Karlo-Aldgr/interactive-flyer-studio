@@ -299,10 +299,11 @@ export type Database = {
         | "form"
         | "navigate"
         | "reveal"
+        | "add_to_calendar"
       app_role: "admin" | "user"
       event_type: "view" | "click" | "submit" | "reveal"
       flyer_status: "draft" | "published"
-      layer_type: "text" | "image" | "icon" | "shape" | "button"
+      layer_type: "text" | "image" | "icon" | "shape" | "button" | "hotspot"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -439,11 +440,12 @@ export const Constants = {
         "form",
         "navigate",
         "reveal",
+        "add_to_calendar",
       ],
       app_role: ["admin", "user"],
       event_type: ["view", "click", "submit", "reveal"],
       flyer_status: ["draft", "published"],
-      layer_type: ["text", "image", "icon", "shape", "button"],
+      layer_type: ["text", "image", "icon", "shape", "button", "hotspot"],
     },
   },
 } as const

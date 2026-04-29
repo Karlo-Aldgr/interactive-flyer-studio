@@ -1,5 +1,5 @@
 import { Layer } from "@/types/flyer";
-import { Group, Rect, Circle, Line, Text, Image as KonvaImage } from "react-konva";
+import { Group, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage } from "react-konva";
 import useImage from "use-image";
 import * as LucideIcons from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
