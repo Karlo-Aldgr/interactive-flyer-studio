@@ -5,6 +5,7 @@ import { Toolbar } from "@/components/editor/Toolbar";
 import { Canvas } from "@/components/editor/Canvas";
 import { Inspector } from "@/components/editor/Inspector";
 import { LayersPanel } from "@/components/editor/LayersPanel";
+import { PagesPanel } from "@/components/editor/PagesPanel";
 import { Loader2 } from "lucide-react";
 
 export default function Editor() {
@@ -24,7 +25,8 @@ export default function Editor() {
       <TopBar saving={saving} />
       <div className="flex flex-1 overflow-hidden">
         <Toolbar />
-        <aside className="flex w-60 flex-col border-r border-border bg-card">
+        <aside className="flex w-60 flex-col border-r border-border bg-card overflow-y-auto">
+          <PagesPanel />
           <LayersPanel />
         </aside>
         <main className="flex-1 overflow-hidden">
