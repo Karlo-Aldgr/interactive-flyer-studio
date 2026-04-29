@@ -440,15 +440,42 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </div>
       )}
 
-      {/* Popup */}
+      {/* Popup (also used for buy_ticket) */}
       <Dialog open={!!popup} onOpenChange={(v) => !v && setPopup(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{popup?.payload.title || "Info"}</DialogTitle>
+            <DialogTitle>{popup?.payload.title || (popup?.type === "buy_ticket" ? "Get your ticket" : "Info")}</DialogTitle>
             {popup?.payload.body && <DialogDescription>{popup.payload.body}</DialogDescription>}
           </DialogHeader>
-          {popup?.payload.mediaUrl && (
+          {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
+            <img src={popup.payload.ticketImageUrl} alt="Ticket" className="w-full rounded" />
+          )}
+          {popup?.type !== "buy_ticket" && popup?.payload.mediaUrl && (
             <img src={popup.payload.mediaUrl} alt="" className="w-full rounded" />
+          )}
+          {popup?.type === "buy_ticket" && popup.payload.checkoutUrl && (
+            <Button
+              className="w-full"
+              onClick={() => {
+                logClick(null, "buy_ticket_cta");
+                window.open(popup.payload.checkoutUrl!, "_blank", "noopener,noreferrer");
+              }}
+            >
+              {popup.payload.ticketCtaLabel || "Buy ticket"}
+            </Button>
+          )}
+          {popup?.payload.buttons && popup.payload.buttons.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {popup.payload.buttons.map((b) => (
+                <Button
+                  key={b.id}
+                  variant={b.style === "secondary" ? "outline" : "default"}
+                  onClick={() => runPopupButton(b.action)}
+                >
+                  {b.label}
+                </Button>
+              ))}
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -473,27 +500,140 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
-      {/* Form */}
+      {/* Form / RSVP */}
       <Dialog open={!!formAction} onOpenChange={(v) => !v && setFormAction(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Get in touch</DialogTitle>
+            <DialogTitle>
+              {formAction?.payload.title || (formAction?.type === "rsvp" ? "RSVP" : "Get in touch")}
+            </DialogTitle>
+            {formAction?.payload.body && <DialogDescription>{formAction.payload.body}</DialogDescription>}
           </DialogHeader>
           <div className="space-y-3">
-            {(formAction?.payload.fields || []).map((f) => (
+            {((formAction?.type === "rsvp" ? formAction?.payload.rsvpFields : formAction?.payload.fields) || []).map((f) => (
               <div key={f}>
                 <Label className="text-xs capitalize">{f}</Label>
                 <Input
-                  type={f === "email" ? "email" : "text"}
+                  type={f === "email" ? "email" : f === "phone" ? "tel" : "text"}
                   value={formData[f] || ""}
                   onChange={(e) => setFormData((d) => ({ ...d, [f]: e.target.value }))}
                 />
               </div>
             ))}
-            <Button onClick={submitForm} className="w-full">Submit</Button>
+            <Button onClick={submitForm} className="w-full">
+              {formAction?.type === "rsvp" ? "Confirm RSVP" : "Submit"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Checkout confirmation */}
+      <Dialog open={!!confirmAction} onOpenChange={(v) => !v && setConfirmAction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmAction?.payload.title || "Continue?"}</DialogTitle>
+            {confirmAction?.payload.body && <DialogDescription>{confirmAction.payload.body}</DialogDescription>}
+          </DialogHeader>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setConfirmAction(null)}>Cancel</Button>
+            <Button
+              className="flex-1"
+              onClick={() => {
+                if (confirmAction?.payload.checkoutUrl) {
+                  logClick(null, "checkout_confirm");
+                  window.open(confirmAction.payload.checkoutUrl, "_blank", "noopener,noreferrer");
+                }
+                setConfirmAction(null);
+              }}
+            >
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Coupon */}
+      <CouponDialog action={coupon} onClose={() => setCoupon(null)} onRedeem={(url) => { logClick(null, "coupon_redeem"); window.open(url, "_blank", "noopener,noreferrer"); }} />
     </div>
+  );
+}
+
+function CouponDialog({
+  action, onClose, onRedeem,
+}: { action: LayerAction | null; onClose: () => void; onRedeem: (url: string) => void }) {
+  const [unlocked, setUnlocked] = useState(false);
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (action) {
+      setUnlocked(!action.payload.couponUnlock);
+      setInput("");
+      setError("");
+      setCopied(false);
+    }
+  }, [action?.id]);
+
+  if (!action) return null;
+  const p = action.payload;
+
+  function tryUnlock() {
+    const expected = (p.couponUnlockCode || "").trim().toLowerCase();
+    if (input.trim().toLowerCase() === expected) {
+      setUnlocked(true);
+      setError("");
+    } else {
+      setError("Wrong code, try again.");
+    }
+  }
+
+  function copy() {
+    if (!p.couponCode) return;
+    navigator.clipboard.writeText(p.couponCode).then(() => {
+      setCopied(true);
+      toast.success("Code copied");
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }
+
+  return (
+    <Dialog open={!!action} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{p.title || "Your coupon"}</DialogTitle>
+          {p.body && <DialogDescription>{p.body}</DialogDescription>}
+        </DialogHeader>
+        {!unlocked ? (
+          <div className="space-y-3">
+            <Label className="text-xs">Enter unlock code</Label>
+            <Input
+              value={input}
+              onChange={(e) => { setInput(e.target.value); setError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && tryUnlock()}
+              placeholder="Code"
+              autoFocus
+            />
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <Button className="w-full" onClick={tryUnlock} disabled={!input.trim()}>Unlock</Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {p.couponImageUrl && <img src={p.couponImageUrl} alt="Coupon" className="w-full rounded" />}
+            {p.couponCode && (
+              <div className="flex items-center gap-2 rounded border-2 border-dashed border-primary bg-primary/5 p-3">
+                <code className="flex-1 text-center font-mono text-lg font-bold tracking-wider">{p.couponCode}</code>
+                <Button size="sm" variant="ghost" onClick={copy}>
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            )}
+            {p.couponRedeemUrl && (
+              <Button className="w-full" onClick={() => onRedeem(p.couponRedeemUrl!)}>Redeem now</Button>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
