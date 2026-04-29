@@ -673,6 +673,83 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
             </div>
           </>
         )}
+
+        {draft && (
+          <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold uppercase tracking-wide">Tap highlight</Label>
+              <Switch
+                checked={(draft.highlight?.enabled ?? true) && (draft.highlight?.style ?? "pulse") !== "none"}
+                onCheckedChange={(v) =>
+                  setDraft({
+                    ...draft,
+                    highlight: { ...(draft.highlight || {}), enabled: v, style: draft.highlight?.style ?? "pulse" },
+                  })
+                }
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">Visual cue shown on the published flyer to indicate this layer is tappable.</p>
+
+            <div>
+              <Label className="text-xs">Style</Label>
+              <Select
+                value={draft.highlight?.style ?? "pulse"}
+                onValueChange={(v) =>
+                  setDraft({ ...draft, highlight: { ...(draft.highlight || {}), style: v as any } })
+                }
+              >
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pulse">Pulse ring</SelectItem>
+                  <SelectItem value="glow">Glow</SelectItem>
+                  <SelectItem value="solid">Solid outline</SelectItem>
+                  <SelectItem value="dashed">Dashed outline</SelectItem>
+                  <SelectItem value="corners">Corner brackets</SelectItem>
+                  <SelectItem value="none">None (hidden)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Color</Label>
+                <Input
+                  type="color"
+                  className="mt-1 h-9 w-full"
+                  value={draft.highlight?.color ?? "#7c3aed"}
+                  onChange={(e) =>
+                    setDraft({ ...draft, highlight: { ...(draft.highlight || {}), color: e.target.value } })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Opacity: {Math.round(((draft.highlight?.opacity ?? 0.85)) * 100)}%</Label>
+                <div className="mt-2">
+                  <Slider
+                    min={10} max={100} step={5}
+                    value={[Math.round((draft.highlight?.opacity ?? 0.85) * 100)]}
+                    onValueChange={([v]) =>
+                      setDraft({ ...draft, highlight: { ...(draft.highlight || {}), opacity: v / 100 } })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Thickness: {draft.highlight?.thickness ?? 3}px</Label>
+              <div className="mt-2">
+                <Slider
+                  min={1} max={12} step={1}
+                  value={[draft.highlight?.thickness ?? 3]}
+                  onValueChange={([v]) =>
+                    setDraft({ ...draft, highlight: { ...(draft.highlight || {}), thickness: v } })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {!embedded && (
