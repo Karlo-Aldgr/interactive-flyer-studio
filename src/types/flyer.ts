@@ -150,6 +150,7 @@ export interface FlyerSettings {
   width: number;
   height: number;
   background: string;
+  highlightsEnabled?: boolean; // global on/off for tap highlights (default true)
 }
 
 export interface Flyer {

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
-  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2,
+  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -153,6 +153,32 @@ export function TopBar({ saving }: Props) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>Show clickable areas</TooltipContent>
+      </Tooltip>
+
+      {/* Global highlights toggle */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            size="icon"
+            variant={(flyer.settings.highlightsEnabled ?? true) ? "default" : "ghost"}
+            className="h-8 w-8"
+            onClick={() =>
+              setFlyer({
+                settings: {
+                  ...flyer.settings,
+                  highlightsEnabled: !(flyer.settings.highlightsEnabled ?? true),
+                },
+              })
+            }
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {(flyer.settings.highlightsEnabled ?? true)
+            ? "Tap highlights ON — click to disable for all layers"
+            : "Tap highlights OFF — click to enable"}
+        </TooltipContent>
       </Tooltip>
 
       <div className="ml-auto flex items-center gap-2">

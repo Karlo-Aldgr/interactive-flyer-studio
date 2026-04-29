@@ -517,22 +517,24 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               .map((l) => renderLayer(l, () => runAction(l), hiddenIds.has(l.id)))}
           </KLayer>
           {/* Pulsing highlights to indicate tappable hotspots */}
-          <KLayer listening={false}>
-            {page.layers
-              .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
-              .filter((l) => {
-                const h = l.action?.highlight;
-                if (!h) return true; // default: show
-                if (h.enabled === false) return false;
-                if (h.style === "none") return false;
-                return true;
-              })
-              .map((l) => {
-                const shape: "rect" | "ellipse" =
-                  l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
-                return <PulseHighlight key={"pulse-" + l.id} layer={l} shape={shape} />;
-              })}
-          </KLayer>
+          {(flyer.settings?.highlightsEnabled ?? true) && (
+            <KLayer listening={false}>
+              {page.layers
+                .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
+                .filter((l) => {
+                  const h = l.action?.highlight;
+                  if (!h) return true; // default: show
+                  if (h.enabled === false) return false;
+                  if (h.style === "none") return false;
+                  return true;
+                })
+                .map((l) => {
+                  const shape: "rect" | "ellipse" =
+                    l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
+                  return <PulseHighlight key={"pulse-" + l.id} layer={l} shape={shape} />;
+                })}
+            </KLayer>
+          )}
           {previewMode && showHitboxes && (
             <KLayer listening={false}>
               {page.layers
