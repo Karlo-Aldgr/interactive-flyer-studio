@@ -176,6 +176,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [video, setVideo] = useState<string | null>(null);
   const [formAction, setFormAction] = useState<LayerAction | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [showHitboxes, setShowHitboxes] = useState(false);
 
   useEffect(() => {
     if (!slug && !flyerId) return;
@@ -337,8 +338,15 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       {previewMode && (
-        <div className="fixed top-3 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card/95 px-4 py-1.5 text-xs font-medium shadow-elegant backdrop-blur">
-          Preview mode — interactions are live, analytics disabled
+        <div className="fixed top-3 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-4 py-1.5 text-xs font-medium shadow-elegant backdrop-blur">
+          <span>Preview mode</span>
+          <span className="text-muted-foreground">·</span>
+          <button
+            className={`rounded-full px-2 py-0.5 text-[11px] ${showHitboxes ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+            onClick={() => setShowHitboxes((v) => !v)}
+          >
+            {showHitboxes ? "Hide hotspots" : "Show hotspots"}
+          </button>
         </div>
       )}
       <div style={{ width: W * scale, height: H * scale, background: page.background.color || "#fff" }} className="shadow-elegant">
@@ -349,6 +357,34 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               .sort((a, b) => a.z_index - b.z_index)
               .map((l) => renderLayer(l, () => runAction(l), hiddenIds.has(l.id)))}
           </KLayer>
+          {previewMode && showHitboxes && (
+            <KLayer listening={false}>
+              {page.layers
+                .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
+                .map((l) => {
+                  const isEllipse = l.type === "hotspot" && l.content.hotspotShape === "ellipse";
+                  return isEllipse ? (
+                    <Ellipse
+                      key={"hb-" + l.id}
+                      x={l.position.x + l.size.width / 2}
+                      y={l.position.y + l.size.height / 2}
+                      radiusX={l.size.width / 2}
+                      radiusY={l.size.height / 2}
+                      stroke="#7c3aed" strokeWidth={2} dash={[8, 5]}
+                      fill="rgba(124,58,237,0.15)"
+                    />
+                  ) : (
+                    <Rect
+                      key={"hb-" + l.id}
+                      x={l.position.x} y={l.position.y}
+                      width={l.size.width} height={l.size.height}
+                      stroke="#7c3aed" strokeWidth={2} dash={[8, 5]}
+                      fill="rgba(124,58,237,0.15)"
+                    />
+                  );
+                })}
+            </KLayer>
+          )}
         </Stage>
       </div>
 

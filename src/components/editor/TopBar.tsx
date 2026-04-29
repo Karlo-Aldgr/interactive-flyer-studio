@@ -1,10 +1,21 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useEditorStore } from "@/store/editorStore";
+import { useEditorStore, ResizeMode } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, Undo2, Redo2, Plus, X, Eye, Globe, Loader2, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
+  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ShareDialog } from "./ShareDialog";
 
 interface Props { saving: boolean }
 
@@ -12,13 +23,17 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40) + "-" + Math.random().toString(36).slice(2, 7);
 }
 
+const PRESETS: { label: string; w: number; h: number }[] = [
+  { label: "Story 9:16 (1080×1920)", w: 1080, h: 1920 },
+  { label: "Portrait 4:5 (1080×1350)", w: 1080, h: 1350 },
+  { label: "Square 1:1 (1080×1080)", w: 1080, h: 1080 },
+  { label: "Landscape 16:9 (1920×1080)", w: 1920, h: 1080 },
+  { label: "A4 Portrait (2480×3508)", w: 2480, h: 3508 },
+  { label: "Default (900×1200)", w: 900, h: 1200 },
+];
+
 export function TopBar({ saving }: Props) {
   const flyer = useEditorStore((s) => s.flyer);
-  const pages = useEditorStore((s) => s.pages);
-  const selectedPageId = useEditorStore((s) => s.selectedPageId);
-  const selectPage = useEditorStore((s) => s.selectPage);
-  const addPage = useEditorStore((s) => s.addPage);
-  const deletePage = useEditorStore((s) => s.deletePage);
   const setFlyer = useEditorStore((s) => s.setFlyer);
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
@@ -26,6 +41,20 @@ export function TopBar({ saving }: Props) {
   const future = useEditorStore((s) => s.future.length);
   const zoom = useEditorStore((s) => s.zoom);
   const setZoom = useEditorStore((s) => s.setZoom);
+  const showHitboxes = useEditorStore((s) => s.showHitboxes);
+  const toggleHitboxes = useEditorStore((s) => s.toggleHitboxes);
+  const deviceFrame = useEditorStore((s) => s.deviceFrame);
+  const setDeviceFrame = useEditorStore((s) => s.setDeviceFrame);
+  const setCanvasSize = useEditorStore((s) => s.setCanvasSize);
+  const startCrop = useEditorStore((s) => s.startCrop);
+
+  const [resizeOpen, setResizeOpen] = useState(false);
+  const [presetIdx, setPresetIdx] = useState<string>("0");
+  const [customW, setCustomW] = useState(1080);
+  const [customH, setCustomH] = useState(1920);
+  const [useCustom, setUseCustom] = useState(false);
+  const [mode, setMode] = useState<ResizeMode>("resize");
+  const [shareOpen, setShareOpen] = useState(false);
 
   if (!flyer) return null;
 
@@ -42,11 +71,21 @@ export function TopBar({ saving }: Props) {
     else toast.success(newStatus === "published" ? "Published!" : "Unpublished");
   }
 
-  function copyLink() {
-    if (!flyer?.public_slug) return;
-    navigator.clipboard.writeText(`${window.location.origin}/f/${flyer.public_slug}`);
-    toast.success("Public link copied");
+  function applyResize() {
+    const target = useCustom
+      ? { w: Math.max(100, customW), h: Math.max(100, customH) }
+      : { w: PRESETS[Number(presetIdx)].w, h: PRESETS[Number(presetIdx)].h };
+    if (mode === "crop") {
+      startCrop({ width: target.w, height: target.h });
+      toast.message("Drag the crop area on the canvas, then confirm.");
+    } else {
+      setCanvasSize(target.w, target.h, mode);
+      toast.success(`Canvas resized to ${target.w} × ${target.h}`);
+    }
+    setResizeOpen(false);
   }
+
+  const publicUrl = flyer.public_slug ? `${window.location.origin}/f/${flyer.public_slug}` : "";
 
   return (
     <header className="flex h-14 items-center gap-3 border-b border-border bg-card px-3">
@@ -67,28 +106,54 @@ export function TopBar({ saving }: Props) {
         </Button>
       </div>
 
-      <div className="ml-4 flex items-center gap-1 overflow-x-auto">
-        {pages.map((p, i) => (
-          <div
-            key={p.id}
-            className={`group flex items-center gap-1 rounded-md px-2 py-1 text-sm cursor-pointer ${p.id === selectedPageId ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-            onClick={() => selectPage(p.id)}
-          >
-            <span>{i + 1}</span>
-            {pages.length > 1 && (
-              <button
-                onClick={(e) => { e.stopPropagation(); deletePage(p.id); }}
-                className="opacity-0 group-hover:opacity-100"
+      {/* Device frame preview */}
+      <div className="ml-2 flex items-center rounded-md border border-border p-0.5">
+        {([
+          { f: "desktop" as const, I: Monitor },
+          { f: "tablet" as const, I: Tablet },
+          { f: "mobile" as const, I: Smartphone },
+        ]).map(({ f, I }) => (
+          <Tooltip key={f}>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant={deviceFrame === f ? "default" : "ghost"}
+                className="h-7 w-7"
+                onClick={() => setDeviceFrame(f)}
               >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
+                <I className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Preview as {f}</TooltipContent>
+          </Tooltip>
         ))}
-        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={addPage}>
-          <Plus className="h-4 w-4" />
-        </Button>
       </div>
+
+      {/* Canvas size dialog trigger */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button size="sm" variant="outline" className="h-8" onClick={() => setResizeOpen(true)}>
+            <Crop className="mr-1 h-3.5 w-3.5" />
+            {flyer.settings.width}×{flyer.settings.height}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Change canvas size or crop</TooltipContent>
+      </Tooltip>
+
+      {/* Hitbox toggle */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            size="icon"
+            variant={showHitboxes ? "default" : "ghost"}
+            className="h-8 w-8"
+            onClick={toggleHitboxes}
+          >
+            <Crosshair className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Show clickable areas</TooltipContent>
+      </Tooltip>
 
       <div className="ml-auto flex items-center gap-2">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -107,13 +172,74 @@ export function TopBar({ saving }: Props) {
           <a href={`/preview/${flyer.id}`} target="_blank" rel="noreferrer"><Eye className="mr-1 h-4 w-4" />Preview</a>
         </Button>
         {flyer.status === "published" && (
-          <Button size="sm" variant="outline" onClick={copyLink}>Copy link</Button>
+          <Button size="sm" variant="outline" onClick={() => setShareOpen(true)}>
+            <Share2 className="mr-1 h-4 w-4" /> Share
+          </Button>
         )}
         <Button size="sm" onClick={togglePublish} className={flyer.status === "published" ? "" : "shadow-glow"}>
           <Globe className="mr-1 h-4 w-4" />
           {flyer.status === "published" ? "Unpublish" : "Publish"}
         </Button>
       </div>
+
+      {/* Resize Dialog */}
+      <Dialog open={resizeOpen} onOpenChange={setResizeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Canvas size</DialogTitle>
+            <DialogDescription>Pick a preset or enter custom dimensions, then choose how layers adapt.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs">Preset</Label>
+              <Select
+                value={useCustom ? "custom" : presetIdx}
+                onValueChange={(v) => {
+                  if (v === "custom") setUseCustom(true);
+                  else { setUseCustom(false); setPresetIdx(v); }
+                }}
+              >
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRESETS.map((p, i) => (
+                    <SelectItem key={i} value={String(i)}>{p.label}</SelectItem>
+                  ))}
+                  <SelectItem value="custom">Custom…</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {useCustom && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Width</Label>
+                  <Input type="number" min={100} value={customW} onChange={(e) => setCustomW(Number(e.target.value))} />
+                </div>
+                <div>
+                  <Label className="text-xs">Height</Label>
+                  <Input type="number" min={100} value={customH} onChange={(e) => setCustomH(Number(e.target.value))} />
+                </div>
+              </div>
+            )}
+            <div>
+              <Label className="text-xs">How should existing layers adapt?</Label>
+              <Select value={mode} onValueChange={(v) => setMode(v as ResizeMode)}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="resize">Resize canvas only (keep layers in place)</SelectItem>
+                  <SelectItem value="scale">Scale layers to fit new size</SelectItem>
+                  <SelectItem value="crop">Crop — drag region on canvas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setResizeOpen(false)}>Cancel</Button>
+            <Button onClick={applyResize}>Apply</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} url={publicUrl} title={flyer.title} />
     </header>
   );
 }
