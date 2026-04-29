@@ -1,0 +1,185 @@
+import { ActionType, LayerAction } from "@/types/flyer";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { useEditorStore } from "@/store/editorStore";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface Props {
+  action: LayerAction | null;
+  onChange: (a: LayerAction | null) => void;
+}
+
+const ACTION_LABELS: Record<ActionType | "none", string> = {
+  none: "No action",
+  open_url: "Open URL",
+  popup: "Show popup",
+  video: "Play video",
+  call: "Call phone",
+  sms: "Send SMS",
+  form: "Capture form",
+  navigate: "Go to page",
+  reveal: "Reveal layer",
+};
+
+export function ActionEditor({ action, onChange }: Props) {
+  const pages = useEditorStore((s) => s.pages);
+  const selectedPageId = useEditorStore((s) => s.selectedPageId);
+  const currentPage = pages.find((p) => p.id === selectedPageId);
+
+  const type = action?.type ?? "none";
+  const p = action?.payload ?? {};
+
+  const update = (patch: any) =>
+    onChange({
+      id: action?.id || crypto.randomUUID(),
+      type: type as ActionType,
+      payload: { ...p, ...patch },
+    });
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Action type</Label>
+        <Select
+          value={type}
+          onValueChange={(v) => {
+            if (v === "none") onChange(null);
+            else onChange({ id: action?.id || crypto.randomUUID(), type: v as ActionType, payload: {} });
+          }}
+        >
+          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {Object.entries(ACTION_LABELS).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {type === "open_url" && (
+        <>
+          <div>
+            <Label className="text-xs">URL</Label>
+            <Input className="mt-1" value={p.url || ""} onChange={(e) => update({ url: e.target.value })} placeholder="https://..." />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">Open in new tab</Label>
+            <Switch checked={p.newTab ?? true} onCheckedChange={(v) => update({ newTab: v })} />
+          </div>
+        </>
+      )}
+
+      {type === "popup" && (
+        <>
+          <div>
+            <Label className="text-xs">Title</Label>
+            <Input className="mt-1" value={p.title || ""} onChange={(e) => update({ title: e.target.value })} />
+          </div>
+          <div>
+            <Label className="text-xs">Body</Label>
+            <Textarea className="mt-1" rows={3} value={p.body || ""} onChange={(e) => update({ body: e.target.value })} />
+          </div>
+          <div>
+            <Label className="text-xs">Image URL (optional)</Label>
+            <Input className="mt-1" value={p.mediaUrl || ""} onChange={(e) => update({ mediaUrl: e.target.value })} />
+          </div>
+        </>
+      )}
+
+      {type === "video" && (
+        <div>
+          <Label className="text-xs">Video URL (YouTube, Vimeo, mp4)</Label>
+          <Input className="mt-1" value={p.videoUrl || ""} onChange={(e) => update({ videoUrl: e.target.value })} />
+        </div>
+      )}
+
+      {type === "call" && (
+        <div>
+          <Label className="text-xs">Phone number</Label>
+          <Input className="mt-1" value={p.phone || ""} onChange={(e) => update({ phone: e.target.value })} placeholder="+1..." />
+        </div>
+      )}
+
+      {type === "sms" && (
+        <>
+          <div>
+            <Label className="text-xs">Phone number</Label>
+            <Input className="mt-1" value={p.phone || ""} onChange={(e) => update({ phone: e.target.value })} />
+          </div>
+          <div>
+            <Label className="text-xs">Prefilled message</Label>
+            <Textarea className="mt-1" rows={2} value={p.message || ""} onChange={(e) => update({ message: e.target.value })} />
+          </div>
+        </>
+      )}
+
+      {type === "form" && (
+        <>
+          <Label className="text-xs">Fields to collect</Label>
+          {(["name", "email", "phone"] as const).map((f) => {
+            const enabled = (p.fields || []).includes(f);
+            return (
+              <div key={f} className="flex items-center gap-2">
+                <Checkbox
+                  checked={enabled}
+                  onCheckedChange={(v) => {
+                    const set = new Set(p.fields || []);
+                    if (v) set.add(f); else set.delete(f);
+                    update({ fields: Array.from(set) });
+                  }}
+                />
+                <Label className="text-sm capitalize">{f}</Label>
+              </div>
+            );
+          })}
+          <div>
+            <Label className="text-xs">Success message</Label>
+            <Input className="mt-1" value={p.successMessage || ""} onChange={(e) => update({ successMessage: e.target.value })} />
+          </div>
+        </>
+      )}
+
+      {type === "navigate" && (
+        <div>
+          <Label className="text-xs">Go to page</Label>
+          <Select value={p.pageId || ""} onValueChange={(v) => update({ pageId: v })}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Pick a page" /></SelectTrigger>
+            <SelectContent>
+              {pages.map((pg) => (
+                <SelectItem key={pg.id} value={pg.id}>{pg.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {type === "reveal" && (
+        <div>
+          <Label className="text-xs">Layers to reveal on this page</Label>
+          <div className="mt-1 max-h-40 space-y-1 overflow-y-auto rounded border border-border p-2">
+            {currentPage?.layers.map((l) => {
+              const ids = p.targetLayerIds || [];
+              const checked = ids.includes(l.id);
+              return (
+                <div key={l.id} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={(v) => {
+                      const set = new Set(ids);
+                      if (v) set.add(l.id); else set.delete(l.id);
+                      update({ targetLayerIds: Array.from(set) });
+                    }}
+                  />
+                  <span className="truncate">{l.content.text || l.content.label || l.type}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
