@@ -1,6 +1,9 @@
 // Smart hotspot detection: uses Lovable AI (Gemini vision) to OCR a flyer image
 // and detect actionable items (phone, url, address, email, date) with bboxes.
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 interface Detection {
   kind: "phone" | "url" | "email" | "address" | "date";
