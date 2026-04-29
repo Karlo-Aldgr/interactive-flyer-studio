@@ -187,7 +187,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-
+  updateLayer: (id, patch) => {
     const s = get();
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
     set({
