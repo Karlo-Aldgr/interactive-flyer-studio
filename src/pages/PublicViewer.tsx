@@ -177,6 +177,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [formAction, setFormAction] = useState<LayerAction | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showHitboxes, setShowHitboxes] = useState(false);
+  const [coupon, setCoupon] = useState<LayerAction | null>(null);
+  const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
 
   useEffect(() => {
     if (!slug && !flyerId) return;
