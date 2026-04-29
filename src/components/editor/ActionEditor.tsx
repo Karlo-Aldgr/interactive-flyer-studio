@@ -37,9 +37,10 @@ const ACTION_LABELS: Record<ActionType, string> = {
   rsvp: "RSVP",
   checkout: "Link to checkout",
   coupon: "Coupon",
+  map: "Open in maps (GPS)",
 };
 
-const PRESET_TYPES: ActionType[] = ["buy_ticket", "rsvp", "checkout", "coupon"];
+const PRESET_TYPES: ActionType[] = ["buy_ticket", "rsvp", "checkout", "coupon", "map"];
 const BASIC_TYPES: ActionType[] = [
   "open_url", "popup", "video", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
@@ -78,6 +79,8 @@ function isValid(draft: LayerAction | null): boolean {
       if (!(p.couponImageUrl || p.couponCode)) return false;
       if (p.couponUnlock && !p.couponUnlockCode) return false;
       return true;
+    case "map":
+      return !!(p.mapAddress || (typeof p.mapLat === "number" && typeof p.mapLng === "number"));
     default: return true;
   }
 }
