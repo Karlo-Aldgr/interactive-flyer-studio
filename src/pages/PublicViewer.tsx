@@ -6,7 +6,7 @@ import * as LucideIcons from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { supabase } from "@/integrations/supabase/client";
 import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
-import { Loader2 } from "lucide-react";
+import { Loader2, Copy, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -177,6 +177,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [formAction, setFormAction] = useState<LayerAction | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showHitboxes, setShowHitboxes] = useState(false);
+  const [coupon, setCoupon] = useState<LayerAction | null>(null);
+  const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
 
   useEffect(() => {
     if (!slug && !flyerId) return;
@@ -230,19 +232,24 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     })();
   }, [slug, flyerId, previewMode]);
 
+  function logClick(layer: Layer | null, type: string) {
+    if (!flyer || previewMode) return;
+    supabase.from("analytics_events").insert([{
+      flyer_id: flyer.id,
+      page_id: layer?.page_id ?? null,
+      layer_id: layer?.id ?? null,
+      event_type: "click",
+      metadata: { action_type: type } as any,
+    } as any]);
+  }
+
   function runAction(layer: Layer) {
-    const a = layer.action;
-    if (!a) return;
-    // analytics
-    if (flyer && !previewMode) {
-      supabase.from("analytics_events").insert([{
-        flyer_id: flyer.id,
-        page_id: layer.page_id,
-        layer_id: layer.id,
-        event_type: "click",
-        metadata: { action_type: a.type } as any,
-      } as any]);
-    }
+    if (!layer.action) return;
+    logClick(layer, layer.action.type);
+    executeAction(layer.action, layer);
+  }
+
+  function executeAction(a: LayerAction, layer: Layer | null) {
     switch (a.type) {
       case "open_url":
         if (a.payload.url) window.open(a.payload.url, a.payload.newTab !== false ? "_blank" : "_self", "noopener,noreferrer");
@@ -280,22 +287,58 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "add_to_calendar":
         runAddToCalendar(a.payload);
         break;
+      case "buy_ticket":
+        // Show as popup with ticket image + buy button
+        setPopup(a);
+        break;
+      case "rsvp":
+        setFormAction(a);
+        setFormData({});
+        break;
+      case "checkout":
+        if (a.payload.title) setConfirmAction(a);
+        else if (a.payload.checkoutUrl) window.open(a.payload.checkoutUrl, "_blank", "noopener,noreferrer");
+        break;
+      case "coupon":
+        setCoupon(a);
+        break;
     }
+  }
+
+  function runPopupButton(a: LayerAction) {
+    logClick(null, "popup_button:" + a.type);
+    setPopup(null);
+    // small delay so the dialog closes before next opens
+    setTimeout(() => executeAction(a, null), 50);
   }
 
   async function submitForm() {
     if (!formAction || !flyer) return;
+    const isRsvp = formAction.type === "rsvp";
+    const fieldList = (isRsvp ? formAction.payload.rsvpFields : formAction.payload.fields) || [];
+    // basic required check
+    for (const f of fieldList) {
+      if (!formData[f]) {
+        toast.error(`Please enter your ${f}`);
+        return;
+      }
+    }
     const { error } = await supabase.from("form_submissions").insert([{
       flyer_id: flyer.id,
       layer_id: null,
-      data: formData as any,
+      data: { ...formData, _preset: isRsvp ? "rsvp" : "form" } as any,
     }]);
     if (error) {
       toast.error("Could not submit");
       return;
     }
-    toast.success(formAction.payload.successMessage || "Thanks!");
+    toast.success(formAction.payload.successMessage || (isRsvp ? "Thanks for your RSVP!" : "Thanks!"));
+    const offerCalendar = isRsvp && formAction.payload.rsvpAddToCalendar && formAction.payload.eventTitle && formAction.payload.startISO;
+    const calPayload = formAction.payload;
     setFormAction(null);
+    if (offerCalendar) {
+      setTimeout(() => runAddToCalendar(calPayload), 100);
+    }
   }
 
   if (loading) {
@@ -397,15 +440,42 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </div>
       )}
 
-      {/* Popup */}
+      {/* Popup (also used for buy_ticket) */}
       <Dialog open={!!popup} onOpenChange={(v) => !v && setPopup(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{popup?.payload.title || "Info"}</DialogTitle>
+            <DialogTitle>{popup?.payload.title || (popup?.type === "buy_ticket" ? "Get your ticket" : "Info")}</DialogTitle>
             {popup?.payload.body && <DialogDescription>{popup.payload.body}</DialogDescription>}
           </DialogHeader>
-          {popup?.payload.mediaUrl && (
+          {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
+            <img src={popup.payload.ticketImageUrl} alt="Ticket" className="w-full rounded" />
+          )}
+          {popup?.type !== "buy_ticket" && popup?.payload.mediaUrl && (
             <img src={popup.payload.mediaUrl} alt="" className="w-full rounded" />
+          )}
+          {popup?.type === "buy_ticket" && popup.payload.checkoutUrl && (
+            <Button
+              className="w-full"
+              onClick={() => {
+                logClick(null, "buy_ticket_cta");
+                window.open(popup.payload.checkoutUrl!, "_blank", "noopener,noreferrer");
+              }}
+            >
+              {popup.payload.ticketCtaLabel || "Buy ticket"}
+            </Button>
+          )}
+          {popup?.payload.buttons && popup.payload.buttons.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {popup.payload.buttons.map((b) => (
+                <Button
+                  key={b.id}
+                  variant={b.style === "secondary" ? "outline" : "default"}
+                  onClick={() => runPopupButton(b.action)}
+                >
+                  {b.label}
+                </Button>
+              ))}
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -430,27 +500,140 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
-      {/* Form */}
+      {/* Form / RSVP */}
       <Dialog open={!!formAction} onOpenChange={(v) => !v && setFormAction(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Get in touch</DialogTitle>
+            <DialogTitle>
+              {formAction?.payload.title || (formAction?.type === "rsvp" ? "RSVP" : "Get in touch")}
+            </DialogTitle>
+            {formAction?.payload.body && <DialogDescription>{formAction.payload.body}</DialogDescription>}
           </DialogHeader>
           <div className="space-y-3">
-            {(formAction?.payload.fields || []).map((f) => (
+            {((formAction?.type === "rsvp" ? formAction?.payload.rsvpFields : formAction?.payload.fields) || []).map((f) => (
               <div key={f}>
                 <Label className="text-xs capitalize">{f}</Label>
                 <Input
-                  type={f === "email" ? "email" : "text"}
+                  type={f === "email" ? "email" : f === "phone" ? "tel" : "text"}
                   value={formData[f] || ""}
                   onChange={(e) => setFormData((d) => ({ ...d, [f]: e.target.value }))}
                 />
               </div>
             ))}
-            <Button onClick={submitForm} className="w-full">Submit</Button>
+            <Button onClick={submitForm} className="w-full">
+              {formAction?.type === "rsvp" ? "Confirm RSVP" : "Submit"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Checkout confirmation */}
+      <Dialog open={!!confirmAction} onOpenChange={(v) => !v && setConfirmAction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmAction?.payload.title || "Continue?"}</DialogTitle>
+            {confirmAction?.payload.body && <DialogDescription>{confirmAction.payload.body}</DialogDescription>}
+          </DialogHeader>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setConfirmAction(null)}>Cancel</Button>
+            <Button
+              className="flex-1"
+              onClick={() => {
+                if (confirmAction?.payload.checkoutUrl) {
+                  logClick(null, "checkout_confirm");
+                  window.open(confirmAction.payload.checkoutUrl, "_blank", "noopener,noreferrer");
+                }
+                setConfirmAction(null);
+              }}
+            >
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Coupon */}
+      <CouponDialog action={coupon} onClose={() => setCoupon(null)} onRedeem={(url) => { logClick(null, "coupon_redeem"); window.open(url, "_blank", "noopener,noreferrer"); }} />
     </div>
+  );
+}
+
+function CouponDialog({
+  action, onClose, onRedeem,
+}: { action: LayerAction | null; onClose: () => void; onRedeem: (url: string) => void }) {
+  const [unlocked, setUnlocked] = useState(false);
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (action) {
+      setUnlocked(!action.payload.couponUnlock);
+      setInput("");
+      setError("");
+      setCopied(false);
+    }
+  }, [action?.id]);
+
+  if (!action) return null;
+  const p = action.payload;
+
+  function tryUnlock() {
+    const expected = (p.couponUnlockCode || "").trim().toLowerCase();
+    if (input.trim().toLowerCase() === expected) {
+      setUnlocked(true);
+      setError("");
+    } else {
+      setError("Wrong code, try again.");
+    }
+  }
+
+  function copy() {
+    if (!p.couponCode) return;
+    navigator.clipboard.writeText(p.couponCode).then(() => {
+      setCopied(true);
+      toast.success("Code copied");
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }
+
+  return (
+    <Dialog open={!!action} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{p.title || "Your coupon"}</DialogTitle>
+          {p.body && <DialogDescription>{p.body}</DialogDescription>}
+        </DialogHeader>
+        {!unlocked ? (
+          <div className="space-y-3">
+            <Label className="text-xs">Enter unlock code</Label>
+            <Input
+              value={input}
+              onChange={(e) => { setInput(e.target.value); setError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && tryUnlock()}
+              placeholder="Code"
+              autoFocus
+            />
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <Button className="w-full" onClick={tryUnlock} disabled={!input.trim()}>Unlock</Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {p.couponImageUrl && <img src={p.couponImageUrl} alt="Coupon" className="w-full rounded" />}
+            {p.couponCode && (
+              <div className="flex items-center gap-2 rounded border-2 border-dashed border-primary bg-primary/5 p-3">
+                <code className="flex-1 text-center font-mono text-lg font-bold tracking-wider">{p.couponCode}</code>
+                <Button size="sm" variant="ghost" onClick={copy}>
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            )}
+            {p.couponRedeemUrl && (
+              <Button className="w-full" onClick={() => onRedeem(p.couponRedeemUrl!)}>Redeem now</Button>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -300,6 +300,10 @@ export type Database = {
         | "navigate"
         | "reveal"
         | "add_to_calendar"
+        | "buy_ticket"
+        | "rsvp"
+        | "checkout"
+        | "coupon"
       app_role: "admin" | "user"
       event_type: "view" | "click" | "submit" | "reveal"
       flyer_status: "draft" | "published"
@@ -441,6 +445,10 @@ export const Constants = {
         "navigate",
         "reveal",
         "add_to_calendar",
+        "buy_ticket",
+        "rsvp",
+        "checkout",
+        "coupon",
       ],
       app_role: ["admin", "user"],
       event_type: ["view", "click", "submit", "reveal"],

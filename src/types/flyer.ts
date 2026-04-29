@@ -11,7 +11,18 @@ export type ActionType =
   | "form"
   | "navigate"
   | "reveal"
-  | "add_to_calendar";
+  | "add_to_calendar"
+  | "buy_ticket"
+  | "rsvp"
+  | "checkout"
+  | "coupon";
+
+export interface PopupButton {
+  id: string;
+  label: string;
+  style?: "primary" | "secondary";
+  action: LayerAction;
+}
 
 export interface ActionPayload {
   // open_url
@@ -21,6 +32,7 @@ export interface ActionPayload {
   title?: string;
   body?: string;
   mediaUrl?: string;
+  buttons?: PopupButton[];
   // video
   videoUrl?: string;
   // call / sms
@@ -37,11 +49,24 @@ export interface ActionPayload {
   eventTitle?: string;
   eventDescription?: string;
   eventLocation?: string;
-  startISO?: string; // ISO datetime
-  endISO?: string;   // ISO datetime
+  startISO?: string;
+  endISO?: string;
   allDay?: boolean;
   timezone?: string;
   calendarMode?: "ics" | "google" | "both";
+  // buy_ticket
+  ticketImageUrl?: string;
+  checkoutUrl?: string;
+  ticketCtaLabel?: string;
+  // rsvp
+  rsvpFields?: Array<"name" | "email" | "phone">;
+  rsvpAddToCalendar?: boolean;
+  // coupon
+  couponImageUrl?: string;
+  couponCode?: string;
+  couponUnlock?: boolean;
+  couponUnlockCode?: string;
+  couponRedeemUrl?: string;
 }
 
 export interface LayerStyle {

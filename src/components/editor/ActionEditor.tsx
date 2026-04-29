@@ -1,23 +1,29 @@
-import { useEffect, useState } from "react";
-import { ActionType, LayerAction } from "@/types/flyer";
+import { useEffect, useRef, useState } from "react";
+import { ActionType, LayerAction, PopupButton } from "@/types/flyer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useEditorStore } from "@/store/editorStore";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Lock, Save, Undo2 } from "lucide-react";
+import { Lock, Save, Undo2, Upload, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useParams } from "react-router-dom";
 
 interface Props {
   action: LayerAction | null;
   onChange: (a: LayerAction | null) => void;
+  /** Recursion depth to prevent infinite nesting in popup buttons. */
+  depth?: number;
+  /** Hide save/discard footer when used as nested editor. */
+  embedded?: boolean;
 }
 
-const ACTION_LABELS: Record<ActionType | "none", string> = {
-  none: "No action",
+const ACTION_LABELS: Record<ActionType, string> = {
   open_url: "Open URL",
   popup: "Show popup",
   video: "Play video",
@@ -27,7 +33,16 @@ const ACTION_LABELS: Record<ActionType | "none", string> = {
   navigate: "Go to page",
   reveal: "Reveal layer",
   add_to_calendar: "Add to calendar",
+  buy_ticket: "Buy ticket",
+  rsvp: "RSVP",
+  checkout: "Link to checkout",
+  coupon: "Coupon",
 };
+
+const PRESET_TYPES: ActionType[] = ["buy_ticket", "rsvp", "checkout", "coupon"];
+const BASIC_TYPES: ActionType[] = [
+  "open_url", "popup", "video", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
+];
 
 function toLocalInputValue(iso?: string): string {
   if (!iso) return "";
@@ -48,7 +63,7 @@ function isValid(draft: LayerAction | null): boolean {
   const p = draft.payload || {};
   switch (draft.type) {
     case "open_url": return !!p.url;
-    case "popup": return !!(p.title || p.body);
+    case "popup": return !!(p.title || p.body || (p.buttons && p.buttons.length));
     case "video": return !!p.videoUrl;
     case "call": return !!p.phone;
     case "sms": return !!p.phone;
@@ -56,21 +71,175 @@ function isValid(draft: LayerAction | null): boolean {
     case "navigate": return !!p.pageId;
     case "reveal": return !!(p.targetLayerIds && p.targetLayerIds.length);
     case "add_to_calendar": return !!(p.eventTitle && p.startISO);
+    case "buy_ticket": return !!(p.ticketImageUrl || p.checkoutUrl);
+    case "rsvp": return !!(p.rsvpFields && p.rsvpFields.length);
+    case "checkout": return !!p.checkoutUrl;
+    case "coupon":
+      if (!(p.couponImageUrl || p.couponCode)) return false;
+      if (p.couponUnlock && !p.couponUnlockCode) return false;
+      return true;
     default: return true;
   }
 }
 
-export function ActionEditor({ action, onChange }: Props) {
+function AssetUpload({
+  label, value, onChange,
+}: { label: string; value?: string; onChange: (url: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+  const { flyerId } = useParams();
+  const [busy, setBusy] = useState(false);
+
+  async function handle(file: File) {
+    if (!user || !flyerId) return toast.error("Sign in required");
+    setBusy(true);
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/${flyerId}/assets/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("flyer-assets").upload(path, file);
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    const { data } = supabase.storage.from("flyer-assets").getPublicUrl(path);
+    onChange(data.publicUrl);
+    toast.success("Image uploaded");
+  }
+
+  return (
+    <div>
+      <Label className="text-xs">{label}</Label>
+      <div className="mt-1 flex items-center gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && handle(e.target.files[0])}
+        />
+        <Button type="button" size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={busy}>
+          <Upload className="mr-1 h-3.5 w-3.5" /> {value ? "Replace" : "Upload"}
+        </Button>
+        {value && (
+          <img src={value} alt="" className="h-10 w-10 rounded border border-border object-cover" />
+        )}
+        {value && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => onChange("")}>
+            Remove
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PopupButtonsEditor({
+  buttons, onChange, depth,
+}: { buttons: PopupButton[]; onChange: (b: PopupButton[]) => void; depth: number }) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+
+  function add() {
+    const next: PopupButton = {
+      id: crypto.randomUUID(),
+      label: "Button",
+      style: "primary",
+      action: { id: crypto.randomUUID(), type: "open_url", payload: {} },
+    };
+    onChange([...buttons, next]);
+    setOpenIdx(buttons.length);
+  }
+  function update(i: number, patch: Partial<PopupButton>) {
+    onChange(buttons.map((b, idx) => (idx === i ? { ...b, ...patch } : b)));
+  }
+  function move(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= buttons.length) return;
+    const next = [...buttons];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  }
+  function remove(i: number) {
+    onChange(buttons.filter((_, idx) => idx !== i));
+    if (openIdx === i) setOpenIdx(null);
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Buttons</Label>
+        <Button type="button" size="sm" variant="ghost" onClick={add}>
+          <Plus className="mr-1 h-3.5 w-3.5" /> Add
+        </Button>
+      </div>
+      {buttons.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">No buttons. Add one to chain another action after the popup.</p>
+      )}
+      <div className="space-y-2">
+        {buttons.map((b, i) => (
+          <div key={b.id} className="rounded border border-border bg-muted/30 p-2">
+            <div className="flex items-center gap-1">
+              <Input
+                className="h-7 flex-1 text-xs"
+                value={b.label}
+                onChange={(e) => update(i, { label: e.target.value })}
+                placeholder="Button label"
+              />
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(i, -1)} disabled={i === 0}>
+                <ChevronUp className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(i, 1)} disabled={i === buttons.length - 1}>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setOpenIdx(openIdx === i ? null : i)}>
+                {openIdx === i ? "−" : "…"}
+              </Button>
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(i)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            {openIdx === i && (
+              <div className="mt-2 border-t border-border pt-2">
+                <div className="mb-2 flex items-center gap-2">
+                  <Label className="text-[11px]">Style</Label>
+                  <Select value={b.style || "primary"} onValueChange={(v) => update(i, { style: v as any })}>
+                    <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="primary">Primary</SelectItem>
+                      <SelectItem value="secondary">Secondary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <ActionEditor
+                  embedded
+                  depth={depth + 1}
+                  action={b.action}
+                  onChange={(a) => a && update(i, { action: a })}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function ActionEditor({ action, onChange, depth = 0, embedded = false }: Props) {
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const currentPage = pages.find((p) => p.id === selectedPageId);
 
   const [draft, setDraft] = useState<LayerAction | null>(action);
 
-  // Reset draft when underlying layer/action changes
-  useEffect(() => { setDraft(action); }, [action?.id, action?.type, JSON.stringify(action?.payload)]);
+  useEffect(() => {
+    setDraft(action);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [action?.id, action?.type, JSON.stringify(action?.payload)]);
 
-  const type = draft?.type ?? "none";
+  // For embedded editors, propagate drafts immediately (they're saved with the parent)
+  useEffect(() => {
+    if (embedded) onChange(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
+
+  const type = draft?.type ?? "open_url";
   const p = draft?.payload ?? {};
 
   const update = (patch: any) =>
@@ -82,15 +251,14 @@ export function ActionEditor({ action, onChange }: Props) {
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(action);
   const valid = isValid(draft);
+  // Restrict popup nesting (depth 0 = root layer; allow buttons up to depth 1)
+  const allowPopupButtons = type === "popup" && depth < 1;
 
   function save() {
     onChange(draft);
     toast.success(draft ? "Action saved" : "Action cleared");
   }
-
-  function discard() {
-    setDraft(action);
-  }
+  function discard() { setDraft(action); }
 
   return (
     <div className="flex h-full flex-col">
@@ -98,7 +266,7 @@ export function ActionEditor({ action, onChange }: Props) {
         <div>
           <Label className="text-xs">Action type</Label>
           <Select
-            value={type}
+            value={draft ? type : "none"}
             onValueChange={(v) => {
               if (v === "none") setDraft(null);
               else setDraft({ id: draft?.id || crypto.randomUUID(), type: v as ActionType, payload: {} });
@@ -106,9 +274,19 @@ export function ActionEditor({ action, onChange }: Props) {
           >
             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {Object.entries(ACTION_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
+              {!embedded && <SelectItem value="none">No action</SelectItem>}
+              <SelectGroup>
+                <SelectLabel>Presets</SelectLabel>
+                {PRESET_TYPES.map((k) => (
+                  <SelectItem key={k} value={k}>{ACTION_LABELS[k]}</SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>Basic</SelectLabel>
+                {BASIC_TYPES.map((k) => (
+                  <SelectItem key={k} value={k}>{ACTION_LABELS[k]}</SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>
@@ -136,10 +314,21 @@ export function ActionEditor({ action, onChange }: Props) {
               <Label className="text-xs">Body</Label>
               <Textarea className="mt-1" rows={3} value={p.body || ""} onChange={(e) => update({ body: e.target.value })} />
             </div>
-            <div>
-              <Label className="text-xs">Image URL (optional)</Label>
-              <Input className="mt-1" value={p.mediaUrl || ""} onChange={(e) => update({ mediaUrl: e.target.value })} />
-            </div>
+            <AssetUpload
+              label="Image (optional)"
+              value={p.mediaUrl}
+              onChange={(url) => update({ mediaUrl: url })}
+            />
+            {allowPopupButtons && (
+              <PopupButtonsEditor
+                depth={depth}
+                buttons={p.buttons || []}
+                onChange={(buttons) => update({ buttons })}
+              />
+            )}
+            {!allowPopupButtons && depth >= 1 && (
+              <p className="text-[11px] text-muted-foreground">Nested popups can't have their own buttons.</p>
+            )}
           </>
         )}
 
@@ -293,36 +482,176 @@ export function ActionEditor({ action, onChange }: Props) {
                   <SelectItem value="both">Both</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="mt-1 text-[11px] text-muted-foreground">.ics works with Apple Calendar, Outlook, and most clients.</p>
+            </div>
+          </>
+        )}
+
+        {type === "buy_ticket" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Shows your ticket image in a popup with a Buy button that opens your checkout link.</p>
+            <AssetUpload label="Ticket image" value={p.ticketImageUrl} onChange={(url) => update({ ticketImageUrl: url })} />
+            <div>
+              <Label className="text-xs">Checkout URL</Label>
+              <Input className="mt-1" value={p.checkoutUrl || ""} onChange={(e) => update({ checkoutUrl: e.target.value })} placeholder="https://..." />
+            </div>
+            <div>
+              <Label className="text-xs">Buy button label</Label>
+              <Input className="mt-1" value={p.ticketCtaLabel || ""} onChange={(e) => update({ ticketCtaLabel: e.target.value })} placeholder="Buy ticket" />
+            </div>
+            <div>
+              <Label className="text-xs">Title (optional)</Label>
+              <Input className="mt-1" value={p.title || ""} onChange={(e) => update({ title: e.target.value })} placeholder="Get your ticket" />
+            </div>
+            <div>
+              <Label className="text-xs">Description (optional)</Label>
+              <Textarea className="mt-1" rows={2} value={p.body || ""} onChange={(e) => update({ body: e.target.value })} />
+            </div>
+          </>
+        )}
+
+        {type === "rsvp" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Pops up an RSVP form. Submissions are saved and visible in your dashboard.</p>
+            <Label className="text-xs">Fields to collect</Label>
+            {(["name", "email", "phone"] as const).map((f) => {
+              const enabled = (p.rsvpFields || ["name", "email"]).includes(f);
+              return (
+                <div key={f} className="flex items-center gap-2">
+                  <Checkbox
+                    checked={enabled}
+                    onCheckedChange={(v) => {
+                      const set = new Set(p.rsvpFields || ["name", "email"]);
+                      if (v) set.add(f); else set.delete(f);
+                      update({ rsvpFields: Array.from(set) });
+                    }}
+                  />
+                  <Label className="text-sm capitalize">{f}</Label>
+                </div>
+              );
+            })}
+            <div>
+              <Label className="text-xs">Title</Label>
+              <Input className="mt-1" value={p.title || ""} onChange={(e) => update({ title: e.target.value })} placeholder="RSVP" />
+            </div>
+            <div>
+              <Label className="text-xs">Success message</Label>
+              <Input className="mt-1" value={p.successMessage || ""} onChange={(e) => update({ successMessage: e.target.value })} placeholder="Thanks for your RSVP!" />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Offer "Add to calendar" after RSVP</Label>
+              <Switch checked={!!p.rsvpAddToCalendar} onCheckedChange={(v) => update({ rsvpAddToCalendar: v })} />
+            </div>
+            {p.rsvpAddToCalendar && (
+              <div className="space-y-2 rounded border border-border p-2">
+                <div>
+                  <Label className="text-[11px]">Event title</Label>
+                  <Input className="mt-1" value={p.eventTitle || ""} onChange={(e) => update({ eventTitle: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Starts</Label>
+                  <Input
+                    type="datetime-local" className="mt-1"
+                    value={toLocalInputValue(p.startISO)}
+                    onChange={(e) => update({ startISO: fromLocalInputValue(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Ends</Label>
+                  <Input
+                    type="datetime-local" className="mt-1"
+                    value={toLocalInputValue(p.endISO)}
+                    onChange={(e) => update({ endISO: fromLocalInputValue(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Location</Label>
+                  <Input className="mt-1" value={p.eventLocation || ""} onChange={(e) => update({ eventLocation: e.target.value })} />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {type === "checkout" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Opens your checkout link directly when tapped.</p>
+            <div>
+              <Label className="text-xs">Checkout URL</Label>
+              <Input className="mt-1" value={p.checkoutUrl || ""} onChange={(e) => update({ checkoutUrl: e.target.value })} placeholder="https://buy.stripe.com/..." />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Confirm before opening</Label>
+              <Switch checked={!!p.title} onCheckedChange={(v) => update({ title: v ? "Continue to checkout?" : "" })} />
+            </div>
+            {!!p.title && (
+              <div>
+                <Label className="text-xs">Confirmation message</Label>
+                <Input className="mt-1" value={p.body || ""} onChange={(e) => update({ body: e.target.value })} placeholder="You'll be sent to a secure page." />
+              </div>
+            )}
+          </>
+        )}
+
+        {type === "coupon" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Show a coupon, optionally locked behind a code.</p>
+            <AssetUpload label="Coupon image" value={p.couponImageUrl} onChange={(url) => update({ couponImageUrl: url })} />
+            <div>
+              <Label className="text-xs">Coupon code (shown to viewer)</Label>
+              <Input className="mt-1" value={p.couponCode || ""} onChange={(e) => update({ couponCode: e.target.value })} placeholder="SAVE20" />
+            </div>
+            <div>
+              <Label className="text-xs">Title</Label>
+              <Input className="mt-1" value={p.title || ""} onChange={(e) => update({ title: e.target.value })} placeholder="Your coupon" />
+            </div>
+            <div>
+              <Label className="text-xs">Description</Label>
+              <Textarea className="mt-1" rows={2} value={p.body || ""} onChange={(e) => update({ body: e.target.value })} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Require unlock code</Label>
+              <Switch checked={!!p.couponUnlock} onCheckedChange={(v) => update({ couponUnlock: v })} />
+            </div>
+            {p.couponUnlock && (
+              <div>
+                <Label className="text-xs">Unlock code (viewers must type this)</Label>
+                <Input className="mt-1" value={p.couponUnlockCode || ""} onChange={(e) => update({ couponUnlockCode: e.target.value })} placeholder="VIP123" />
+              </div>
+            )}
+            <div>
+              <Label className="text-xs">Redeem URL (optional)</Label>
+              <Input className="mt-1" value={p.couponRedeemUrl || ""} onChange={(e) => update({ couponRedeemUrl: e.target.value })} placeholder="https://..." />
             </div>
           </>
         )}
       </div>
 
-      <div className="sticky bottom-0 mt-3 -mx-3 border-t border-border bg-card px-3 pt-3">
-        <div className="mb-2 flex items-center gap-2 text-[11px]">
-          {dirty ? (
-            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Unsaved changes
-            </span>
-          ) : action ? (
-            <span className="flex items-center gap-1 text-muted-foreground">
-              <Lock className="h-3 w-3" /> Action saved
-            </span>
-          ) : (
-            <span className="text-muted-foreground">No action set</span>
-          )}
-          {dirty && !valid && <span className="text-destructive">Required fields missing</span>}
+      {!embedded && (
+        <div className="sticky bottom-0 mt-3 -mx-3 border-t border-border bg-card px-3 pt-3">
+          <div className="mb-2 flex items-center gap-2 text-[11px]">
+            {dirty ? (
+              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Unsaved changes
+              </span>
+            ) : action ? (
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <Lock className="h-3 w-3" /> Action saved
+              </span>
+            ) : (
+              <span className="text-muted-foreground">No action set</span>
+            )}
+            {dirty && !valid && <span className="text-destructive">Required fields missing</span>}
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" className="flex-1" onClick={save} disabled={!dirty || !valid}>
+              <Save className="mr-1 h-3.5 w-3.5" /> Save action
+            </Button>
+            <Button size="sm" variant="ghost" onClick={discard} disabled={!dirty}>
+              <Undo2 className="mr-1 h-3.5 w-3.5" /> Discard
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" className="flex-1" onClick={save} disabled={!dirty || !valid}>
-            <Save className="mr-1 h-3.5 w-3.5" /> Save action
-          </Button>
-          <Button size="sm" variant="ghost" onClick={discard} disabled={!dirty}>
-            <Undo2 className="mr-1 h-3.5 w-3.5" /> Discard
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
