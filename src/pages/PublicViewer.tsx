@@ -314,17 +314,31 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
   async function submitForm() {
     if (!formAction || !flyer) return;
+    const isRsvp = formAction.type === "rsvp";
+    const fieldList = (isRsvp ? formAction.payload.rsvpFields : formAction.payload.fields) || [];
+    // basic required check
+    for (const f of fieldList) {
+      if (!formData[f]) {
+        toast.error(`Please enter your ${f}`);
+        return;
+      }
+    }
     const { error } = await supabase.from("form_submissions").insert([{
       flyer_id: flyer.id,
       layer_id: null,
-      data: formData as any,
+      data: { ...formData, _preset: isRsvp ? "rsvp" : "form" } as any,
     }]);
     if (error) {
       toast.error("Could not submit");
       return;
     }
-    toast.success(formAction.payload.successMessage || "Thanks!");
+    toast.success(formAction.payload.successMessage || (isRsvp ? "Thanks for your RSVP!" : "Thanks!"));
+    const offerCalendar = isRsvp && formAction.payload.rsvpAddToCalendar && formAction.payload.eventTitle && formAction.payload.startISO;
+    const calPayload = formAction.payload;
     setFormAction(null);
+    if (offerCalendar) {
+      setTimeout(() => runAddToCalendar(calPayload), 100);
+    }
   }
 
   if (loading) {
