@@ -107,10 +107,21 @@ export interface LayerContent {
   hotspotShape?: "rect" | "ellipse";
 }
 
+export type HighlightStyle = "none" | "pulse" | "solid" | "dashed" | "glow" | "corners";
+
+export interface HighlightConfig {
+  enabled?: boolean;        // default true
+  style?: HighlightStyle;   // default "pulse"
+  color?: string;           // default "#7c3aed"
+  thickness?: number;       // default 3
+  opacity?: number;         // 0..1, default 0.85
+}
+
 export interface LayerAction {
   id: string;
   type: ActionType;
   payload: ActionPayload;
+  highlight?: HighlightConfig;
 }
 
 export interface Layer {
