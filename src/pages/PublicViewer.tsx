@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Stage, Layer as KLayer, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage, Group } from "react-konva";
+import Konva from "konva";
 import useImage from "use-image";
 import * as LucideIcons from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -13,6 +14,52 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import { toast } from "sonner";
+
+// Pulsing highlight ring shown around tappable layers in the viewer.
+function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" }) {
+  const ref = useRef<any>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const period = 1600;
+    const anim = new Konva.Animation((frame) => {
+      if (!frame) return;
+      const t = (frame.time % period) / period;
+      const e = 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
+      node.opacity(0.4 + 0.55 * e);
+      node.strokeWidth(2 + 4 * e);
+    }, node.getLayer());
+    anim.start();
+    return () => { anim.stop(); };
+  }, []);
+  const common = {
+    ref,
+    x: layer.position.x,
+    y: layer.position.y,
+    width: layer.size.width,
+    height: layer.size.height,
+    rotation: layer.rotation,
+    stroke: "#7c3aed",
+    strokeWidth: 3,
+    shadowColor: "#7c3aed",
+    shadowBlur: 12,
+    shadowOpacity: 0.6,
+    listening: false,
+    fill: "rgba(124,58,237,0.08)",
+  } as any;
+  if (shape === "ellipse") {
+    return (
+      <Ellipse
+        {...common}
+        radiusX={layer.size.width / 2}
+        radiusY={layer.size.height / 2}
+        offsetX={-layer.size.width / 2}
+        offsetY={-layer.size.height / 2}
+      />
+    );
+  }
+  return <Rect {...common} cornerRadius={layer.style.cornerRadius || 8} />;
+}
 
 function ImageNode({ layer, props }: { layer: Layer; props: any }) {
   const [img] = useImage(layer.content.src ?? "", "anonymous");
@@ -418,6 +465,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             {[...page.layers]
               .sort((a, b) => a.z_index - b.z_index)
               .map((l) => renderLayer(l, () => runAction(l), hiddenIds.has(l.id)))}
+          </KLayer>
+          {/* Pulsing highlights to indicate tappable hotspots */}
+          <KLayer listening={false}>
+            {page.layers
+              .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
+              .map((l) => {
+                const shape: "rect" | "ellipse" =
+                  l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
+                return <PulseHighlight key={"pulse-" + l.id} layer={l} shape={shape} />;
+              })}
           </KLayer>
           {previewMode && showHitboxes && (
             <KLayer listening={false}>
