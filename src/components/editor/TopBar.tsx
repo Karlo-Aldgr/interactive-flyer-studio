@@ -155,6 +155,32 @@ export function TopBar({ saving }: Props) {
         <TooltipContent>Show clickable areas</TooltipContent>
       </Tooltip>
 
+      {/* Global highlights toggle */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            size="icon"
+            variant={(flyer.settings.highlightsEnabled ?? true) ? "default" : "ghost"}
+            className="h-8 w-8"
+            onClick={() =>
+              setFlyer({
+                settings: {
+                  ...flyer.settings,
+                  highlightsEnabled: !(flyer.settings.highlightsEnabled ?? true),
+                },
+              })
+            }
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {(flyer.settings.highlightsEnabled ?? true)
+            ? "Tap highlights ON — click to disable for all layers"
+            : "Tap highlights OFF — click to enable"}
+        </TooltipContent>
+      </Tooltip>
+
       <div className="ml-auto flex items-center gap-2">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(zoom - 0.1)}>
