@@ -28,6 +28,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/editor/:flyerId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
             <Route path="/analytics/:flyerId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+            <Route path="/preview/:flyerId" element={<ProtectedRoute><PublicViewer previewMode /></ProtectedRoute>} />
             <Route path="/f/:slug" element={<PublicViewer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
