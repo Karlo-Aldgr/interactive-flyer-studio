@@ -1,6 +1,6 @@
 // FlyerFlow shared domain types
 
-export type LayerType = "text" | "image" | "icon" | "shape" | "button";
+export type LayerType = "text" | "image" | "icon" | "shape" | "button" | "hotspot";
 
 export type ActionType =
   | "open_url"
@@ -10,7 +10,8 @@ export type ActionType =
   | "sms"
   | "form"
   | "navigate"
-  | "reveal";
+  | "reveal"
+  | "add_to_calendar";
 
 export interface ActionPayload {
   // open_url
@@ -32,6 +33,15 @@ export interface ActionPayload {
   pageId?: string;
   // reveal
   targetLayerIds?: string[];
+  // add_to_calendar
+  eventTitle?: string;
+  eventDescription?: string;
+  eventLocation?: string;
+  startISO?: string; // ISO datetime
+  endISO?: string;   // ISO datetime
+  allDay?: boolean;
+  timezone?: string;
+  calendarMode?: "ics" | "google" | "both";
 }
 
 export interface LayerStyle {
@@ -63,6 +73,7 @@ export interface LayerContent {
   label?: string;
   shape?: "rect" | "circle" | "line";
   hidden?: boolean; // for reveal action targets
+  hotspotShape?: "rect" | "ellipse";
 }
 
 export interface LayerAction {
