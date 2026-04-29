@@ -103,11 +103,9 @@ export function TopBar({ saving }: Props) {
         <span className="text-xs text-muted-foreground">
           {saving ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Saving...</span> : "Saved"}
         </span>
-        {flyer.public_slug && (
-          <Button asChild size="sm" variant="ghost">
-            <a href={`/f/${flyer.public_slug}`} target="_blank" rel="noreferrer"><Eye className="mr-1 h-4 w-4" />Preview</a>
-          </Button>
-        )}
+        <Button asChild size="sm" variant="outline">
+          <a href={`/preview/${flyer.id}`} target="_blank" rel="noreferrer"><Eye className="mr-1 h-4 w-4" />Preview</a>
+        </Button>
         {flyer.status === "published" && (
           <Button size="sm" variant="outline" onClick={copyLink}>Copy link</Button>
         )}

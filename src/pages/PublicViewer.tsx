@@ -159,8 +159,14 @@ function renderLayer(l: Layer, onClick: () => void, hidden: boolean) {
   }
 }
 
-export default function PublicViewer() {
-  const { slug } = useParams();
+interface PublicViewerProps {
+  previewMode?: boolean;
+}
+
+export default function PublicViewer({ previewMode = false }: PublicViewerProps) {
+  const params = useParams();
+  const slug = params.slug;
+  const flyerId = params.flyerId;
   const [loading, setLoading] = useState(true);
   const [flyer, setFlyer] = useState<Flyer | null>(null);
   const [pages, setPages] = useState<FlyerPage[]>([]);
@@ -172,10 +178,13 @@ export default function PublicViewer() {
   const [formData, setFormData] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug && !flyerId) return;
     (async () => {
       setLoading(true);
-      const { data: f } = await supabase.from("flyers").select("*").eq("public_slug", slug).eq("status", "published").maybeSingle();
+      const query = supabase.from("flyers").select("*");
+      const { data: f } = previewMode && flyerId
+        ? await query.eq("id", flyerId).maybeSingle()
+        : await query.eq("public_slug", slug!).eq("status", "published").maybeSingle();
       if (!f) {
         setLoading(false);
         return;
@@ -213,16 +222,18 @@ export default function PublicViewer() {
       setPages(mapped);
       setLoading(false);
 
-      // analytics: view
-      supabase.from("analytics_events").insert([{ flyer_id: f.id, event_type: "view", metadata: {} } as any]);
+      // analytics: view (skip in preview mode)
+      if (!previewMode) {
+        supabase.from("analytics_events").insert([{ flyer_id: f.id, event_type: "view", metadata: {} } as any]);
+      }
     })();
-  }, [slug]);
+  }, [slug, flyerId, previewMode]);
 
   function runAction(layer: Layer) {
     const a = layer.action;
     if (!a) return;
     // analytics
-    if (flyer) {
+    if (flyer && !previewMode) {
       supabase.from("analytics_events").insert([{
         flyer_id: flyer.id,
         page_id: layer.page_id,
@@ -325,6 +336,11 @@ export default function PublicViewer() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      {previewMode && (
+        <div className="fixed top-3 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card/95 px-4 py-1.5 text-xs font-medium shadow-elegant backdrop-blur">
+          Preview mode — interactions are live, analytics disabled
+        </div>
+      )}
       <div style={{ width: W * scale, height: H * scale, background: page.background.color || "#fff" }} className="shadow-elegant">
         <Stage width={W * scale} height={H * scale} scaleX={scale} scaleY={scale}>
           <KLayer>
