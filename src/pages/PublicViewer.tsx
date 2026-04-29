@@ -15,10 +15,18 @@ import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import { toast } from "sonner";
 
-// Pulsing highlight ring shown around tappable layers in the viewer.
+// Highlight ring shown around tappable layers in the viewer.
 function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" }) {
   const ref = useRef<any>(null);
+  const cornerRefs = useRef<any[]>([]);
+  const hl = layer.action?.highlight ?? {};
+  const style = hl.style ?? "pulse";
+  const color = hl.color ?? "#7c3aed";
+  const thickness = hl.thickness ?? 3;
+  const baseOpacity = hl.opacity ?? 0.85;
+
   useEffect(() => {
+    if (style !== "pulse" && style !== "glow") return;
     const node = ref.current;
     if (!node) return;
     const period = 1600;
@@ -26,12 +34,52 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
       if (!frame) return;
       const t = (frame.time % period) / period;
       const e = 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
-      node.opacity(0.4 + 0.55 * e);
-      node.strokeWidth(2 + 4 * e);
+      if (style === "pulse") {
+        node.opacity(baseOpacity * (0.45 + 0.55 * e));
+        node.strokeWidth(thickness + 3 * e);
+      } else {
+        // glow: steady stroke, pulsing shadow
+        node.shadowOpacity(0.3 + 0.6 * e);
+        node.shadowBlur(8 + 16 * e);
+      }
     }, node.getLayer());
     anim.start();
     return () => { anim.stop(); };
-  }, []);
+  }, [style, thickness, baseOpacity, color]);
+
+  if (style === "corners") {
+    // Render 4 L-shaped corner brackets
+    const x = layer.position.x;
+    const y = layer.position.y;
+    const w = layer.size.width;
+    const h = layer.size.height;
+    const len = Math.max(10, Math.min(w, h) * 0.18);
+    const sw = thickness;
+    const corners = [
+      [[x, y + len], [x, y], [x + len, y]],
+      [[x + w - len, y], [x + w, y], [x + w, y + len]],
+      [[x, y + h - len], [x, y + h], [x + len, y + h]],
+      [[x + w - len, y + h], [x + w, y + h], [x + w, y + h - len]],
+    ];
+    return (
+      <>
+        {corners.map((pts, i) => (
+          <Line
+            key={i}
+            points={pts.flat()}
+            stroke={color}
+            strokeWidth={sw}
+            opacity={baseOpacity}
+            lineCap="round"
+            lineJoin="round"
+            listening={false}
+          />
+        ))}
+      </>
+    );
+  }
+
+  const dashed = style === "dashed";
   const common = {
     ref,
     x: layer.position.x,
@@ -39,13 +87,15 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
     width: layer.size.width,
     height: layer.size.height,
     rotation: layer.rotation,
-    stroke: "#7c3aed",
-    strokeWidth: 3,
-    shadowColor: "#7c3aed",
-    shadowBlur: 12,
-    shadowOpacity: 0.6,
+    stroke: color,
+    strokeWidth: thickness,
+    opacity: baseOpacity,
+    dash: dashed ? [thickness * 3, thickness * 2] : undefined,
+    shadowColor: color,
+    shadowBlur: style === "glow" ? 16 : style === "pulse" ? 12 : 0,
+    shadowOpacity: style === "glow" ? 0.7 : style === "pulse" ? 0.6 : 0,
     listening: false,
-    fill: "rgba(124,58,237,0.08)",
+    fill: style === "solid" || style === "dashed" ? undefined : `${color}14`,
   } as any;
   if (shape === "ellipse") {
     return (
@@ -470,6 +520,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           <KLayer listening={false}>
             {page.layers
               .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
+              .filter((l) => {
+                const h = l.action?.highlight;
+                if (!h) return true; // default: show
+                if (h.enabled === false) return false;
+                if (h.style === "none") return false;
+                return true;
+              })
               .map((l) => {
                 const shape: "rect" | "ellipse" =
                   l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
