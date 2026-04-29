@@ -520,6 +520,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           <KLayer listening={false}>
             {page.layers
               .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
+              .filter((l) => {
+                const h = l.action?.highlight;
+                if (!h) return true; // default: show
+                if (h.enabled === false) return false;
+                if (h.style === "none") return false;
+                return true;
+              })
               .map((l) => {
                 const shape: "rect" | "ellipse" =
                   l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
