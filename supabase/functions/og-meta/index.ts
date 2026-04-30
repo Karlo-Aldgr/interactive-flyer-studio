@@ -31,10 +31,9 @@ function cleanThumbnailUrl(value: string | null | undefined): string | null {
 }
 
 function htmlResponse(html: string, status = 200, cacheControl = "public, max-age=300") {
-  return new Response(new TextEncoder().encode(html), {
+  return new Response(new Blob([html], { type: "text/html; charset=utf-8" }), {
     status,
     headers: {
-      "content-type": "text/html; charset=utf-8",
       "cache-control": cacheControl,
       ...corsHeaders,
     },
