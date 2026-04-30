@@ -32,7 +32,27 @@ export function ShareDialog({
   regenerating,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [shareOriginInput, setShareOriginInput] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setShareOriginInput(localStorage.getItem("flyerflow.shareOrigin") || "");
+    }
+  }, [open]);
+
+  function saveShareOrigin() {
+    const v = shareOriginInput.trim().replace(/\/$/, "");
+    if (v && !/^https?:\/\//i.test(v)) {
+      toast.error("Must start with https://");
+      return;
+    }
+    if (v) localStorage.setItem("flyerflow.shareOrigin", v);
+    else localStorage.removeItem("flyerflow.shareOrigin");
+    toast.success("Preview server saved — reopen the dialog to refresh links");
+    setShowConfig(false);
+  }
 
   function copy() {
     // Copy the og-meta share URL so messaging apps (Messenger, iMessage, WhatsApp, etc.)
