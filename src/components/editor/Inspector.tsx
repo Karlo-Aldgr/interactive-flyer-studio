@@ -57,9 +57,10 @@ export function Inspector() {
 
   return (
     <Tabs defaultValue={isHotspot ? "action" : "style"} className="flex h-full flex-col">
-      <TabsList className="m-3 grid grid-cols-2">
+      <TabsList className="m-3 grid grid-cols-3">
         <TabsTrigger value="style">Style</TabsTrigger>
         <TabsTrigger value="action">Action</TabsTrigger>
+        <TabsTrigger value="animation">Animate</TabsTrigger>
       </TabsList>
 
       <TabsContent value="style" className="flex-1 space-y-3 overflow-y-auto px-3 pb-3">
