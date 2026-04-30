@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Download, Share2, RefreshCw, Loader2 } from "lucide-react";
+import { Copy, Download, Share2, RefreshCw, Loader2, ImagePlus, Clipboard } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -16,6 +16,7 @@ interface Props {
   title?: string;
   thumbnailUrl?: string;
   onRegenerateThumbnail?: () => Promise<void> | void;
+  onUploadThumbnail?: (file: File) => Promise<void> | void;
   regenerating?: boolean;
 }
 
@@ -27,9 +28,11 @@ export function ShareDialog({
   title,
   thumbnailUrl,
   onRegenerateThumbnail,
+  onUploadThumbnail,
   regenerating,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   function copy() {
     navigator.clipboard.writeText(displayUrl);
@@ -54,6 +57,23 @@ export function ShareDialog({
       } catch {}
     } else {
       copy();
+    }
+  }
+
+  async function pasteImage() {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find((type) => type.startsWith("image/"));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          await onUploadThumbnail?.(new File([blob], "pasted-preview.png", { type: imageType }));
+          return;
+        }
+      }
+      toast.error("Clipboard doesn't contain an image");
+    } catch {
+      toast.error("Paste is blocked by the browser. Use Upload image instead.");
     }
   }
 
@@ -94,19 +114,32 @@ export function ShareDialog({
         </div>
 
         {onRegenerateThumbnail && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full"
-            onClick={() => onRegenerateThumbnail()}
-            disabled={regenerating}
-          >
-            {regenerating ? (
-              <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Generating preview…</>
-            ) : (
-              <><RefreshCw className="mr-1 h-3.5 w-3.5" /> Regenerate social preview</>
-            )}
-          </Button>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void onUploadThumbnail?.(file);
+                e.currentTarget.value = "";
+              }}
+            />
+            <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={regenerating}>
+              <ImagePlus className="mr-1 h-3.5 w-3.5" /> Upload image
+            </Button>
+            <Button size="sm" variant="outline" onClick={pasteImage} disabled={regenerating || !onUploadThumbnail}>
+              <Clipboard className="mr-1 h-3.5 w-3.5" /> Paste image
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onRegenerateThumbnail()} disabled={regenerating}>
+              {regenerating ? (
+                <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Updating…</>
+              ) : (
+                <><RefreshCw className="mr-1 h-3.5 w-3.5" /> Auto capture</>
+              )}
+            </Button>
+          </div>
         )}
 
         <div className="flex flex-col items-center gap-4">
