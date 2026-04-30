@@ -556,9 +556,30 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         <Stage width={W * scale} height={H * scale} scaleX={scale} scaleY={scale}>
           <KLayer>
             <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
-            {[...page.layers]
-              .sort((a, b) => a.z_index - b.z_index)
-              .map((l) => renderLayer(l, () => runAction(l), hiddenIds.has(l.id)))}
+            {(() => {
+              const introCfg = resolveIntro(page.intro);
+              const sorted = [...page.layers].sort((a, b) => a.z_index - b.z_index);
+              return sorted.map((l, idx) => {
+                const node = renderLayer(l, () => runAction(l), hiddenIds.has(l.id));
+                if (!node) return null;
+                const cx = l.position.x + l.size.width / 2;
+                const cy = l.position.y + l.size.height / 2;
+                const delay = introCfg.delayMs + (introCfg.stagger ? idx * introCfg.staggerStepMs : 0);
+                return (
+                  <IntroAnimatedGroup
+                    key={l.id}
+                    preset={introCfg.preset}
+                    durationMs={introCfg.durationMs}
+                    delayMs={delay}
+                    cx={cx}
+                    cy={cy}
+                    introKey={`${page.id}:${pageIndex}`}
+                  >
+                    {node}
+                  </IntroAnimatedGroup>
+                );
+              });
+            })()}
           </KLayer>
           {/* Pulsing highlights to indicate tappable hotspots */}
           {(flyer.settings?.highlightsEnabled ?? true) && (
