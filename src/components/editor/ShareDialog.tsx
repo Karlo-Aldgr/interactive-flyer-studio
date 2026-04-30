@@ -11,9 +11,10 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   url: string;
   title?: string;
+  thumbnailUrl?: string;
 }
 
-export function ShareDialog({ open, onOpenChange, url, title }: Props) {
+export function ShareDialog({ open, onOpenChange, url, title, thumbnailUrl }: Props) {
   const [copied, setCopied] = useState(false);
 
   function copy() {
