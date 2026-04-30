@@ -56,8 +56,19 @@ export function ShareDialog({ open, onOpenChange, url, title, thumbnailUrl }: Pr
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Share your flyer</DialogTitle>
-          <DialogDescription>Anyone with the link can view it.</DialogDescription>
+          <DialogDescription>Anyone with the link can view it. Social previews show your flyer.</DialogDescription>
         </DialogHeader>
+
+        {thumbnailUrl && (
+          <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
+            <img
+              src={thumbnailUrl}
+              alt={`${title || "Flyer"} social preview`}
+              className="block h-auto w-full"
+              loading="lazy"
+            />
+          </div>
+        )}
 
         <div className="flex flex-col items-center gap-4">
           <div className="rounded-lg bg-white p-4 shadow-sm">
