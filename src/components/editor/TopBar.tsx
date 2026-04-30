@@ -111,7 +111,14 @@ export function TopBar({ saving }: Props) {
     setResizeOpen(false);
   }
 
-  const publicUrl = flyer.public_slug ? `${window.location.origin}/f/${flyer.public_slug}` : "";
+  // Public viewer URL (humans land here directly).
+  const viewerUrl = flyer.public_slug ? `${window.location.origin}/f/${flyer.public_slug}` : "";
+  // Share URL goes through the og-meta edge function so social platforms see a per-flyer
+  // preview image and title. Humans are redirected to the viewer in <50ms.
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const publicUrl = flyer.public_slug && projectId
+    ? `https://${projectId}.supabase.co/functions/v1/og-meta?slug=${encodeURIComponent(flyer.public_slug)}&site=${encodeURIComponent(window.location.origin)}`
+    : viewerUrl;
 
   return (
     <header className="flex h-14 items-center gap-3 border-b border-border bg-card px-3">
