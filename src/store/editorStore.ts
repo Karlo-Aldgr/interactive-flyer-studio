@@ -50,7 +50,7 @@ interface EditorState {
   // layers
   addLayer: (type: Layer["type"]) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
-  addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }) => void;
+  addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }, shape?: "rect" | "ellipse") => void;
   updateLayer: (id: string, patch: Partial<Layer>) => void;
   updateLayerStyle: (id: string, patch: Partial<LayerStyle>) => void;
   updateLayerContent: (id: string, patch: Partial<LayerContent>) => void;
