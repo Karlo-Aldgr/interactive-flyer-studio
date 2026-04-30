@@ -281,7 +281,7 @@ export function TopBar({ saving }: Props) {
           <a href={`/preview/${flyer.id}`} target="_blank" rel="noreferrer"><Eye className="mr-1 h-4 w-4" />Preview</a>
         </Button>
         {flyer.status === "published" && (
-          <Button size="sm" variant="outline" onClick={() => setShareOpen(true)}>
+          <Button size="sm" variant="outline" onClick={openShare}>
             <Share2 className="mr-1 h-4 w-4" /> Share
           </Button>
         )}
@@ -351,9 +351,12 @@ export function TopBar({ saving }: Props) {
       <ShareDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
-        url={publicUrl}
+        displayUrl={viewerUrl}
+        socialUrl={socialUrl}
         title={flyer.title}
-        thumbnailUrl={flyer.thumbnail_url ?? undefined}
+        thumbnailUrl={localThumbnail ?? flyer.thumbnail_url ?? undefined}
+        onRegenerateThumbnail={() => ensureThumbnail(true)}
+        regenerating={regenerating}
       />
     </header>
   );
