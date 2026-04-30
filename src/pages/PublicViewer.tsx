@@ -338,6 +338,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             z_index: l.z_index,
             style: l.style ?? {},
             content: l.content ?? {},
+            intro: l.intro ?? null,
             action: l.actions?.[0]
               ? { id: l.actions[0].id, type: l.actions[0].type, payload: l.actions[0].payload, highlight: l.actions[0].highlight ?? undefined }
               : null,
@@ -559,19 +560,23 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           <KLayer>
             <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
             {(() => {
-              const introCfg = resolveIntro(page.intro);
+              const pageCfg = resolveIntro(page.intro);
               const sorted = [...page.layers].sort((a, b) => a.z_index - b.z_index);
               return sorted.map((l, idx) => {
                 const node = renderLayer(l, () => runAction(l), hiddenIds.has(l.id));
                 if (!node) return null;
+                // Per-layer intro overrides the page-level intro entirely.
+                const cfg = l.intro ? resolveIntro(l.intro) : pageCfg;
                 const cx = l.position.x + l.size.width / 2;
                 const cy = l.position.y + l.size.height / 2;
-                const delay = introCfg.delayMs + (introCfg.stagger ? idx * introCfg.staggerStepMs : 0);
+                const delay = l.intro
+                  ? cfg.delayMs
+                  : cfg.delayMs + (cfg.stagger ? idx * cfg.staggerStepMs : 0);
                 return (
                   <IntroAnimatedGroup
                     key={l.id}
-                    preset={introCfg.preset}
-                    durationMs={introCfg.durationMs}
+                    preset={cfg.preset}
+                    durationMs={cfg.durationMs}
                     delayMs={delay}
                     cx={cx}
                     cy={cy}

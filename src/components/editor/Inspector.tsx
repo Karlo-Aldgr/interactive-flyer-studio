@@ -4,8 +4,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { ActionEditor } from "./ActionEditor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Play, Sparkles } from "lucide-react";
+import type { IntroPreset, PageIntro } from "@/types/flyer";
+
+const INTRO_PRESETS: { value: IntroPreset; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "fade", label: "Fade in" },
+  { value: "slide-up", label: "Slide up" },
+  { value: "slide-down", label: "Slide down" },
+  { value: "slide-left", label: "Slide left" },
+  { value: "slide-right", label: "Slide right" },
+  { value: "zoom", label: "Zoom in" },
+  { value: "pop", label: "Pop" },
+  { value: "blur", label: "Blur in" },
+  { value: "drop", label: "Drop" },
+];
 
 export function Inspector() {
   const pages = useEditorStore((s) => s.pages);
@@ -14,7 +30,9 @@ export function Inspector() {
   const updateLayerStyle = useEditorStore((s) => s.updateLayerStyle);
   const updateLayerContent = useEditorStore((s) => s.updateLayerContent);
   const setLayerAction = useEditorStore((s) => s.setLayerAction);
+  const setLayerIntro = useEditorStore((s) => s.setLayerIntro);
   const setPageBackground = useEditorStore((s) => s.setPageBackground);
+  const replayIntro = useEditorStore((s) => s.replayIntro);
 
   const page = pages.find((p) => p.id === selectedPageId);
   const layer = page?.layers.find((l) => l.id === selectedLayerId);
@@ -39,9 +57,10 @@ export function Inspector() {
 
   return (
     <Tabs defaultValue={isHotspot ? "action" : "style"} className="flex h-full flex-col">
-      <TabsList className="m-3 grid grid-cols-2">
+      <TabsList className="m-3 grid grid-cols-3">
         <TabsTrigger value="style">Style</TabsTrigger>
         <TabsTrigger value="action">Action</TabsTrigger>
+        <TabsTrigger value="animation">Animate</TabsTrigger>
       </TabsList>
 
       <TabsContent value="style" className="flex-1 space-y-3 overflow-y-auto px-3 pb-3">
@@ -169,6 +188,109 @@ export function Inspector() {
 
       <TabsContent value="action" className="flex-1 overflow-y-auto px-3 pb-3">
         <ActionEditor action={layer.action ?? null} onChange={(a) => setLayerAction(layer.id, a)} />
+      </TabsContent>
+
+      <TabsContent value="animation" className="flex-1 space-y-3 overflow-y-auto px-3 pb-3">
+        {(() => {
+          const usingOverride = !!layer.intro;
+          const cfg: PageIntro = layer.intro ?? {
+            preset: "none",
+            durationMs: 600,
+            delayMs: 0,
+            stagger: false,
+            staggerStepMs: 80,
+          };
+          function patch(p: Partial<PageIntro>) {
+            const next: PageIntro = { ...cfg, ...p };
+            setLayerIntro(layer.id, next);
+          }
+          return (
+            <>
+              <div className="flex items-start gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 p-2 text-[11px] text-muted-foreground">
+                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                <span>
+                  {usingOverride
+                    ? "This layer uses its own animation, overriding the page intro."
+                    : "This layer inherits the page-level intro animation. Set a preset below to customize it just for this layer."}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Preset</Label>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={replayIntro}
+                >
+                  <Play className="mr-1 h-3 w-3" /> Replay
+                </Button>
+              </div>
+              <Select
+                value={cfg.preset}
+                onValueChange={(v) => {
+                  if (v === "inherit") setLayerIntro(layer.id, null);
+                  else patch({ preset: v as IntroPreset });
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inherit" className="text-xs">Inherit from page</SelectItem>
+                  {INTRO_PRESETS.map((o) => (
+                    <SelectItem key={o.value} value={o.value} className="text-xs">
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {usingOverride && cfg.preset !== "none" && (
+                <>
+                  <div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <Label className="text-[11px]">Duration</Label>
+                      <span className="text-[11px] text-muted-foreground">{cfg.durationMs ?? 600}ms</span>
+                    </div>
+                    <Slider
+                      min={200}
+                      max={2000}
+                      step={50}
+                      value={[cfg.durationMs ?? 600]}
+                      onValueChange={(v) => patch({ durationMs: v[0] })}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <Label className="text-[11px]">Delay</Label>
+                      <span className="text-[11px] text-muted-foreground">{cfg.delayMs ?? 0}ms</span>
+                    </div>
+                    <Slider
+                      min={0}
+                      max={3000}
+                      step={50}
+                      value={[cfg.delayMs ?? 0]}
+                      onValueChange={(v) => patch({ delayMs: v[0] })}
+                    />
+                  </div>
+                </>
+              )}
+
+              {usingOverride && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 w-full text-xs"
+                  onClick={() => setLayerIntro(layer.id, null)}
+                >
+                  Reset to page default
+                </Button>
+              )}
+            </>
+          );
+        })()}
       </TabsContent>
     </Tabs>
   );

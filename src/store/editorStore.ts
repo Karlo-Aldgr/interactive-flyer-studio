@@ -55,6 +55,7 @@ interface EditorState {
   updateLayerStyle: (id: string, patch: Partial<LayerStyle>) => void;
   updateLayerContent: (id: string, patch: Partial<LayerContent>) => void;
   setLayerAction: (id: string, action: LayerAction | null) => void;
+  setLayerIntro: (id: string, intro: PageIntro | null) => void;
   deleteLayer: (id: string) => void;
   bringForward: (id: string) => void;
   sendBackward: (id: string) => void;
@@ -381,6 +382,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pages: s.pages.map((p) => ({
         ...p,
         layers: p.layers.map((l) => (l.id === id ? { ...l, action: next } : l)),
+      })),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  setLayerIntro: (id, intro) => {
+    const s = get();
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => ({
+        ...p,
+        layers: p.layers.map((l) => (l.id === id ? { ...l, intro } : l)),
       })),
       past,
       future: [],

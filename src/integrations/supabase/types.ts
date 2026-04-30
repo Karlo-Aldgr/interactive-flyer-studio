@@ -184,6 +184,7 @@ export type Database = {
           content: Json
           created_at: string
           id: string
+          intro: Json | null
           page_id: string
           position: Json
           rotation: number
@@ -196,6 +197,7 @@ export type Database = {
           content?: Json
           created_at?: string
           id?: string
+          intro?: Json | null
           page_id: string
           position?: Json
           rotation?: number
@@ -208,6 +210,7 @@ export type Database = {
           content?: Json
           created_at?: string
           id?: string
+          intro?: Json | null
           page_id?: string
           position?: Json
           rotation?: number

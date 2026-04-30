@@ -51,6 +51,7 @@ export function useFlyerData(flyerId: string | undefined) {
             z_index: l.z_index,
             style: l.style ?? {},
             content: l.content ?? {},
+            intro: l.intro ?? null,
             action: l.actions?.[0]
               ? ({ id: l.actions[0].id, type: l.actions[0].type, payload: l.actions[0].payload, highlight: l.actions[0].highlight ?? undefined } as LayerAction)
               : null,
@@ -156,6 +157,7 @@ export function useFlyerData(flyerId: string | undefined) {
           z_index: l.z_index,
           style: l.style as any,
           content: l.content as any,
+          intro: (l.intro ?? null) as any,
         }));
         await supabase.from("layers").upsert(layerRows);
       }

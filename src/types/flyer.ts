@@ -142,6 +142,7 @@ export interface Layer {
   style: LayerStyle;
   content: LayerContent;
   action?: LayerAction | null;
+  intro?: PageIntro | null; // per-layer intro override (takes precedence over page intro)
 }
 
 export type IntroPreset =
