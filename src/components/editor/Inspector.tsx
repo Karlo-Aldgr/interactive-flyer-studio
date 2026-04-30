@@ -4,8 +4,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { ActionEditor } from "./ActionEditor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Play, Sparkles } from "lucide-react";
+import type { IntroPreset, PageIntro } from "@/types/flyer";
+
+const INTRO_PRESETS: { value: IntroPreset; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "fade", label: "Fade in" },
+  { value: "slide-up", label: "Slide up" },
+  { value: "slide-down", label: "Slide down" },
+  { value: "slide-left", label: "Slide left" },
+  { value: "slide-right", label: "Slide right" },
+  { value: "zoom", label: "Zoom in" },
+  { value: "pop", label: "Pop" },
+  { value: "blur", label: "Blur in" },
+  { value: "drop", label: "Drop" },
+];
 
 export function Inspector() {
   const pages = useEditorStore((s) => s.pages);
@@ -14,7 +30,9 @@ export function Inspector() {
   const updateLayerStyle = useEditorStore((s) => s.updateLayerStyle);
   const updateLayerContent = useEditorStore((s) => s.updateLayerContent);
   const setLayerAction = useEditorStore((s) => s.setLayerAction);
+  const setLayerIntro = useEditorStore((s) => s.setLayerIntro);
   const setPageBackground = useEditorStore((s) => s.setPageBackground);
+  const replayIntro = useEditorStore((s) => s.replayIntro);
 
   const page = pages.find((p) => p.id === selectedPageId);
   const layer = page?.layers.find((l) => l.id === selectedLayerId);
