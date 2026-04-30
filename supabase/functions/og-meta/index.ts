@@ -30,6 +30,17 @@ function cleanThumbnailUrl(value: string | null | undefined): string | null {
   return value ? String(value).split("?")[0] : null;
 }
 
+function htmlResponse(html: string, status = 200, cacheControl = "public, max-age=300") {
+  return new Response(new TextEncoder().encode(html), {
+    status,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": cacheControl,
+      ...corsHeaders,
+    },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -46,10 +57,7 @@ Deno.serve(async (req) => {
       : "");
 
   if (!slug) {
-    return new Response(fallbackHtml(siteOrigin, "Missing slug."), {
-      status: 400,
-      headers: { "content-type": "text/html; charset=utf-8" },
-    });
+    return htmlResponse(fallbackHtml(siteOrigin, "Missing slug."), 400, "no-store");
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -64,13 +72,7 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   if (error || !flyer) {
-    return new Response(
-      fallbackHtml(siteOrigin, "This flyer is not available."),
-      {
-        status: 404,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      }
-    );
+    return htmlResponse(fallbackHtml(siteOrigin, "This flyer is not available."), 404, "no-store");
   }
 
   const rawImageUrl =
@@ -151,12 +153,5 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-  return new Response(html, {
-    status: 200,
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "public, max-age=300",
-      ...corsHeaders,
-    },
-  });
+  return htmlResponse(html);
 });
