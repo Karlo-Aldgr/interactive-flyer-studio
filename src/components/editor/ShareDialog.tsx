@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Download, Share2, RefreshCw, Loader2, ImagePlus, Clipboard } from "lucide-react";
+import { Copy, Download, Share2, RefreshCw, Loader2, ImagePlus, Clipboard, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -32,7 +32,27 @@ export function ShareDialog({
   regenerating,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [shareOriginInput, setShareOriginInput] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setShareOriginInput(localStorage.getItem("flyerflow.shareOrigin") || "");
+    }
+  }, [open]);
+
+  function saveShareOrigin() {
+    const v = shareOriginInput.trim().replace(/\/$/, "");
+    if (v && !/^https?:\/\//i.test(v)) {
+      toast.error("Must start with https://");
+      return;
+    }
+    if (v) localStorage.setItem("flyerflow.shareOrigin", v);
+    else localStorage.removeItem("flyerflow.shareOrigin");
+    toast.success("Preview server saved — reopen the dialog to refresh links");
+    setShowConfig(false);
+  }
 
   function copy() {
     // Copy the og-meta share URL so messaging apps (Messenger, iMessage, WhatsApp, etc.)
@@ -155,9 +175,28 @@ export function ShareDialog({
               {copied ? "Copied" : "Copy"}
             </Button>
           </div>
-          <p className="-mt-2 text-center text-[11px] text-muted-foreground">
-            This link unfurls with your flyer preview in Messenger, WhatsApp, iMessage, etc.
-          </p>
+          <div className="-mt-2 flex w-full items-center justify-between gap-2 text-[11px] text-muted-foreground">
+            <span>This link unfurls with your flyer preview in Messenger, WhatsApp, iMessage, etc.</span>
+            <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setShowConfig((v) => !v)}>
+              <Settings2 className="mr-1 h-3 w-3" /> {showConfig ? "Hide" : "Preview server"}
+            </Button>
+          </div>
+          {showConfig && (
+            <div className="w-full rounded-md border border-border bg-muted/30 p-3 text-xs">
+              <p className="mb-2 text-muted-foreground">
+                Paste your Cloudflare Worker URL (e.g. <code>https://flyerflow-share.xxx.workers.dev</code>). See <code>worker/README.md</code> for setup. Leave empty to fall back to the plain app link (generic preview only).
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={shareOriginInput}
+                  onChange={(e) => setShareOriginInput(e.target.value)}
+                  placeholder="https://flyerflow-share.your-subdomain.workers.dev"
+                  className="flex-1 text-xs"
+                />
+                <Button size="sm" onClick={saveShareOrigin}>Save</Button>
+              </div>
+            </div>
+          )}
           <div className="flex w-full gap-2">
             <Button size="sm" variant="outline" className="flex-1" onClick={downloadQR}>
               <Download className="mr-1 h-3.5 w-3.5" /> Download QR

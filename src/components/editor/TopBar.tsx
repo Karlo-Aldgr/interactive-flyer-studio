@@ -189,7 +189,19 @@ export function TopBar({ saving }: Props) {
   }
 
   const viewerUrl = flyer.public_slug ? `${getShareOrigin()}/f/${flyer.public_slug}` : "";
-  const socialUrl = viewerUrl;
+  // The "social URL" is what gets pasted into Messenger/WhatsApp/etc. It must
+  // hit a server that returns clean HTML with per-flyer OG tags. We use a
+  // Cloudflare Worker for this (see /worker/README.md). If no Worker is
+  // configured yet, fall back to the viewer URL — previews will be generic
+  // until the Worker is set up.
+  const shareOrigin =
+    (typeof window !== "undefined" && localStorage.getItem("flyerflow.shareOrigin")) ||
+    (import.meta as any).env?.VITE_SHARE_ORIGIN ||
+    "";
+  const socialUrl =
+    shareOrigin && flyer.public_slug
+      ? `${shareOrigin.replace(/\/$/, "")}/f/${flyer.public_slug}`
+      : viewerUrl;
 
   return (
     <header className="flex h-14 items-center gap-3 border-b border-border bg-card px-3">
