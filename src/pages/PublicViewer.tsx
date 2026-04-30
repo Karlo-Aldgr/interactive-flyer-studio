@@ -314,7 +314,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             style: l.style ?? {},
             content: l.content ?? {},
             action: l.actions?.[0]
-              ? { id: l.actions[0].id, type: l.actions[0].type, payload: l.actions[0].payload }
+              ? { id: l.actions[0].id, type: l.actions[0].type, payload: l.actions[0].payload, highlight: l.actions[0].highlight ?? undefined }
               : null,
           })),
       }));
