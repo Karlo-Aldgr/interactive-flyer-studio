@@ -178,7 +178,7 @@ export function Canvas() {
             width: W * zoom,
             height: H * zoom,
             background: page.background.color || "#fff",
-            cursor: drawMode === "hotspot" ? "crosshair" : "default",
+            cursor: drawMode === "hotspot" || drawMode === "hotspot-ellipse" ? "crosshair" : "default",
           }}
         >
           <Stage
