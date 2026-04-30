@@ -363,6 +363,13 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                 placeholder="https://.../song.mp3"
               />
             </div>
+            <AssetUpload
+              label="Or upload audio file"
+              value={p.audioUrl}
+              onChange={(url) => update({ audioUrl: url })}
+              accept="audio/*"
+              kind="audio"
+            />
             <div className="flex items-center justify-between">
               <Label className="text-xs">Loop</Label>
               <Switch checked={!!p.audioLoop} onCheckedChange={(v) => update({ audioLoop: v })} />
