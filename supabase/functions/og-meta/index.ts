@@ -31,13 +31,14 @@ function cleanThumbnailUrl(value: string | null | undefined): string | null {
 }
 
 function htmlResponse(html: string, status = 200, cacheControl = "public, max-age=300") {
+  const headers = new Headers(corsHeaders);
+  headers.set("content-type", "text/html; charset=utf-8");
+  headers.set("cache-control", cacheControl);
+  headers.set("x-og-meta-version", "html-headers-v2");
+
   return new Response(html, {
     status,
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": cacheControl,
-      ...corsHeaders,
-    },
+    headers,
   });
 }
 
