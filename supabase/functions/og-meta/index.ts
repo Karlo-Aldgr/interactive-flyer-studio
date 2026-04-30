@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
   if (!slug) {
     return new Response(fallbackHtml(siteOrigin, "Missing slug."), {
       status: 400,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
+      headers: { "content-type": "text/html; charset=utf-8" },
     });
   }
 
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       fallbackHtml(siteOrigin, "This flyer is not available."),
       {
         status: 404,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
+        headers: { "content-type": "text/html; charset=utf-8" },
       }
     );
   }
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
   // Strip any cache-busting querystring — some social crawlers reject those on og:image.
   const imageUrl = new URL(req.url);
   imageUrl.searchParams.set("image", "1");
-  const image = escapeHtml(imageUrl);
+  const image = escapeHtml(imageUrl.toString());
   const canonical = escapeHtml(targetUrl);
 
   // The user-agent check lets us:
@@ -152,8 +152,8 @@ Deno.serve(async (req) => {
   return new Response(html, {
     status: 200,
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, max-age=300",
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "public, max-age=300",
       ...corsHeaders,
     },
   });
