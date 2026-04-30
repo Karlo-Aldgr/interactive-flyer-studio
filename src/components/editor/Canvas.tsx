@@ -247,19 +247,23 @@ export function Canvas() {
             <KLayer>
               <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
               {sortedLayers.map((l, idx) => {
-                const introCfg = resolveIntro(page.intro);
-                const delay = introCfg.delayMs + (introCfg.stagger ? idx * introCfg.staggerStepMs : 0);
+                const pageCfg = resolveIntro(page.intro);
+                // Per-layer intro overrides the page-level intro entirely.
+                const cfg = l.intro ? resolveIntro(l.intro) : pageCfg;
+                const delay = l.intro
+                  ? cfg.delayMs
+                  : cfg.delayMs + (cfg.stagger ? idx * cfg.staggerStepMs : 0);
                 const cx = l.position.x + l.size.width / 2;
                 const cy = l.position.y + l.size.height / 2;
                 return (
                   <IntroAnimatedGroup
                     key={l.id}
-                    preset={introCfg.preset}
-                    durationMs={introCfg.durationMs}
+                    preset={cfg.preset}
+                    durationMs={cfg.durationMs}
                     delayMs={delay}
                     cx={cx}
                     cy={cy}
-                    introKey={`${page.id}:${page.intro?.preset ?? "none"}:${introReplayKey}`}
+                    introKey={`${page.id}:${l.id}:${cfg.preset}:${introReplayKey}`}
                   >
                     <LayerRenderer
                       layer={l}
