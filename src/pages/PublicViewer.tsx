@@ -650,6 +650,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   key={b.id}
                   variant={b.style === "secondary" ? "outline" : "default"}
                   onClick={() => runPopupButton(b.action)}
+                  style={{
+                    ...(b.bgColor ? { backgroundColor: b.bgColor, borderColor: b.bgColor } : {}),
+                    ...(b.textColor ? { color: b.textColor } : {}),
+                  }}
                 >
                   {b.label}
                 </Button>

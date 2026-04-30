@@ -218,6 +218,42 @@ function PopupButtonsEditor({
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="mb-2 grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[11px]">Background</Label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="color"
+                        className="h-7 w-8 cursor-pointer rounded border border-border bg-transparent p-0"
+                        value={b.bgColor || "#7c3aed"}
+                        onChange={(e) => update(i, { bgColor: e.target.value })}
+                      />
+                      <Input
+                        className="h-7 flex-1 text-xs"
+                        value={b.bgColor || ""}
+                        placeholder="auto"
+                        onChange={(e) => update(i, { bgColor: e.target.value || undefined })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[11px]">Text</Label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="color"
+                        className="h-7 w-8 cursor-pointer rounded border border-border bg-transparent p-0"
+                        value={b.textColor || "#ffffff"}
+                        onChange={(e) => update(i, { textColor: e.target.value })}
+                      />
+                      <Input
+                        className="h-7 flex-1 text-xs"
+                        value={b.textColor || ""}
+                        placeholder="auto"
+                        onChange={(e) => update(i, { textColor: e.target.value || undefined })}
+                      />
+                    </div>
+                  </div>
+                </div>
                 <ActionEditor
                   embedded
                   depth={depth + 1}
