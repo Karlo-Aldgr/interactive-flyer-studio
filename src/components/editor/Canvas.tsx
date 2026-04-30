@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer as KLayer, Rect, Transformer, Ellipse, Group, Text } from "react-konva";
 import { useEditorStore } from "@/store/editorStore";
 import { LayerRenderer } from "./LayerRenderer";
+import { HighlightOverlay } from "./HighlightOverlay";
 import { Button } from "@/components/ui/button";
 import { X, Check } from "lucide-react";
 
