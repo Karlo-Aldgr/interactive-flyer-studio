@@ -157,6 +157,7 @@ export function useFlyerData(flyerId: string | undefined) {
           z_index: l.z_index,
           style: l.style as any,
           content: l.content as any,
+          intro: (l.intro ?? null) as any,
         }));
         await supabase.from("layers").upsert(layerRows);
       }
