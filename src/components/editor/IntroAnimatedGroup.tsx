@@ -49,6 +49,18 @@ function startState(preset: IntroPreset) {
   }
 }
 
+// Konva's Tween.destroy() throws "Cannot convert undefined or null to object"
+// when the underlying node is already detached or its tween bookkeeping was
+// cleared. Swallow that — there's nothing to clean up at that point.
+function safeDestroy(tween: Konva.Tween | null) {
+  if (!tween) return;
+  try {
+    tween.destroy();
+  } catch {
+    /* node already gone */
+  }
+}
+
 export function IntroAnimatedGroup({
   preset,
   durationMs,
@@ -89,7 +101,8 @@ export function IntroAnimatedGroup({
     node.getLayer()?.batchDraw();
 
     timerRef.current = window.setTimeout(() => {
-      tweenRef.current?.destroy();
+      safeDestroy(tweenRef.current);
+      tweenRef.current = null;
       tweenRef.current = new Konva.Tween({
         node,
         duration: Math.max(0.05, durationMs / 1000),
@@ -110,7 +123,8 @@ export function IntroAnimatedGroup({
 
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
-      tweenRef.current?.destroy();
+      safeDestroy(tweenRef.current);
+      tweenRef.current = null;
     };
     // Intentionally exclude cx/cy — only animate on preset/timing/replay changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
