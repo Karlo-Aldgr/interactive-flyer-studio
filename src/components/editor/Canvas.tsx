@@ -30,6 +30,7 @@ export function Canvas() {
   const pendingCrop = useEditorStore((s) => s.pendingCrop);
   const cropCanvas = useEditorStore((s) => s.cropCanvas);
   const cancelCrop = useEditorStore((s) => s.cancelCrop);
+  const introReplayKey = useEditorStore((s) => s.introReplayKey);
 
   const stageRef = useRef<any>(null);
   const trRef = useRef<any>(null);
