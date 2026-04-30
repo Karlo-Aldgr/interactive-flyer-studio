@@ -7,6 +7,7 @@ import * as LucideIcons from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { supabase } from "@/integrations/supabase/client";
 import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
+import { IntroAnimatedGroup, resolveIntro } from "@/components/editor/IntroAnimatedGroup";
 import { Loader2, Copy, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
