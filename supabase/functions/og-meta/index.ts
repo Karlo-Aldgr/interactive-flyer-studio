@@ -115,12 +115,14 @@ Deno.serve(async (req) => {
   // Prefer the DB thumbnail_url. If missing, try the deterministic storage path
   // (the file may exist from an earlier capture even if the column wasn't updated).
   // Strip any cache-busting querystring — some social crawlers reject those on og:image.
-  const imageUrl = new URL(`${SUPABASE_URL}/functions/v1/og-meta`);
-  imageUrl.searchParams.set("slug", flyer.public_slug);
-  if (siteOrigin) imageUrl.searchParams.set("site", siteOrigin);
+  const sharePageUrl = new URL(`${SUPABASE_URL}/functions/v1/og-meta`);
+  sharePageUrl.searchParams.set("slug", flyer.public_slug);
+  if (siteOrigin) sharePageUrl.searchParams.set("site", siteOrigin);
+  const imageUrl = new URL(sharePageUrl);
   imageUrl.searchParams.set("image", "1");
   const image = escapeHtml(imageUrl.toString());
   const canonical = escapeHtml(targetUrl);
+  const ogUrl = escapeHtml(sharePageUrl.toString());
 
   // The user-agent check lets us:
   //   - Serve meta-tag HTML to social crawlers (they don't follow JS redirects).
@@ -145,7 +147,7 @@ Deno.serve(async (req) => {
   <meta property="og:image" content="${image}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:url" content="${canonical}" />
+  <meta property="og:url" content="${ogUrl}" />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${title}" />
