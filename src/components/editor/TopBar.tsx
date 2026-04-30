@@ -80,21 +80,21 @@ export function TopBar({ saving }: Props) {
         toast.error("Couldn't capture the page. Try again.");
         return;
       }
-      const url = await generateAndUploadThumbnail(
-        stage,
-        flyer.id,
-        flyer.settings.width,
-        flyer.settings.height,
-        firstPage.background?.color || flyer.settings.background || "#ffffff"
-      );
-      if (url) {
+      try {
+        const url = await generateAndUploadThumbnail(
+          stage,
+          flyer.id,
+          flyer.settings.width,
+          flyer.settings.height,
+          firstPage.background?.color || flyer.settings.background || "#ffffff"
+        );
         setLocalThumbnail(url);
-        // Reflect the clean URL in the store for future sessions / OG tags.
         const cleanUrl = url.split("?")[0];
         setFlyer({ thumbnail_url: cleanUrl });
         if (force) toast.success("Social preview updated");
-      } else {
-        toast.error("Could not generate preview");
+      } catch (e: any) {
+        console.error("[ensureThumbnail]", e);
+        toast.error(e?.message || "Could not generate preview");
       }
     } finally {
       setRegenerating(false);
