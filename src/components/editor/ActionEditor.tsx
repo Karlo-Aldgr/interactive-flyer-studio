@@ -28,6 +28,7 @@ const ACTION_LABELS: Record<ActionType, string> = {
   open_url: "Open URL",
   popup: "Show popup",
   video: "Play video",
+  audio: "Play audio",
   call: "Call phone",
   sms: "Send SMS",
   form: "Capture form",
@@ -43,7 +44,7 @@ const ACTION_LABELS: Record<ActionType, string> = {
 
 const PRESET_TYPES: ActionType[] = ["buy_ticket", "rsvp", "checkout", "coupon", "map"];
 const BASIC_TYPES: ActionType[] = [
-  "open_url", "popup", "video", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
+  "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
 
 function toLocalInputValue(iso?: string): string {
@@ -67,6 +68,7 @@ function isValid(draft: LayerAction | null): boolean {
     case "open_url": return !!p.url;
     case "popup": return !!(p.title || p.body || (p.buttons && p.buttons.length));
     case "video": return !!p.videoUrl;
+    case "audio": return !!p.audioUrl;
     case "call": return !!p.phone;
     case "sms": return !!p.phone;
     case "form": return !!(p.fields && p.fields.length);
