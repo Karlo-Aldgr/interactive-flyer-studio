@@ -83,6 +83,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   showHitboxes: false,
   deviceFrame: "desktop",
   pendingCrop: null,
+  introReplayKey: 0,
+  replayIntro: () => set((s) => ({ introReplayKey: s.introReplayKey + 1 })),
 
   hydrate: (flyer, pages) =>
     set({
