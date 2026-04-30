@@ -16,7 +16,8 @@ export type ActionType =
   | "rsvp"
   | "checkout"
   | "coupon"
-  | "map";
+  | "map"
+  | "audio";
 
 export interface PopupButton {
   id: string;
@@ -36,6 +37,10 @@ export interface ActionPayload {
   buttons?: PopupButton[];
   // video
   videoUrl?: string;
+  // audio
+  audioUrl?: string;
+  audioAutoplay?: boolean;
+  audioLoop?: boolean;
   // call / sms
   phone?: string;
   message?: string;
@@ -107,7 +112,7 @@ export interface LayerContent {
   hotspotShape?: "rect" | "ellipse";
 }
 
-export type HighlightStyle = "none" | "pulse" | "solid" | "dashed" | "glow" | "corners";
+export type HighlightStyle = "none" | "pulse" | "solid" | "dashed" | "glow" | "corners" | "circle";
 
 export interface HighlightConfig {
   enabled?: boolean;        // default true
