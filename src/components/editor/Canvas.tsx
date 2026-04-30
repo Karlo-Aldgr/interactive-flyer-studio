@@ -188,7 +188,7 @@ export function Canvas() {
             scaleX={zoom}
             scaleY={zoom}
             onMouseDown={(e) => {
-              if (drawMode === "hotspot") {
+              if (drawMode === "hotspot" || drawMode === "hotspot-ellipse") {
                 const p = getStagePos(e);
                 if (p) { setDrawStart(p); setDrawCurrent(p); }
                 return;
@@ -197,13 +197,13 @@ export function Canvas() {
               if (e.target === e.target.getStage()) selectLayer(null);
             }}
             onMouseMove={(e) => {
-              if (drawMode === "hotspot" && drawStart) {
+              if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart) {
                 const p = getStagePos(e);
                 if (p) setDrawCurrent(p);
               }
             }}
             onMouseUp={() => {
-              if (drawMode === "hotspot" && drawStart && drawCurrent) {
+              if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart && drawCurrent) {
                 const w = Math.abs(drawCurrent.x - drawStart.x);
                 const h = Math.abs(drawCurrent.y - drawStart.y);
                 if (w >= 8 && h >= 8) {
@@ -211,13 +211,13 @@ export function Canvas() {
                     x: Math.min(drawStart.x, drawCurrent.x),
                     y: Math.min(drawStart.y, drawCurrent.y),
                     width: w, height: h,
-                  });
+                  }, drawMode === "hotspot-ellipse" ? "ellipse" : "rect");
                 } else { setDrawMode(null); }
                 setDrawStart(null); setDrawCurrent(null);
               }
             }}
             onTouchStart={(e) => {
-              if (drawMode === "hotspot") {
+              if (drawMode === "hotspot" || drawMode === "hotspot-ellipse") {
                 const p = getStagePos(e);
                 if (p) { setDrawStart(p); setDrawCurrent(p); }
                 return;
@@ -226,13 +226,13 @@ export function Canvas() {
               if (e.target === e.target.getStage()) selectLayer(null);
             }}
             onTouchMove={(e) => {
-              if (drawMode === "hotspot" && drawStart) {
+              if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart) {
                 const p = getStagePos(e);
                 if (p) setDrawCurrent(p);
               }
             }}
             onTouchEnd={() => {
-              if (drawMode === "hotspot" && drawStart && drawCurrent) {
+              if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart && drawCurrent) {
                 const w = Math.abs(drawCurrent.x - drawStart.x);
                 const h = Math.abs(drawCurrent.y - drawStart.y);
                 if (w >= 8 && h >= 8) {
@@ -240,7 +240,7 @@ export function Canvas() {
                     x: Math.min(drawStart.x, drawCurrent.x),
                     y: Math.min(drawStart.y, drawCurrent.y),
                     width: w, height: h,
-                  });
+                  }, drawMode === "hotspot-ellipse" ? "ellipse" : "rect");
                 } else { setDrawMode(null); }
                 setDrawStart(null); setDrawCurrent(null);
               }
