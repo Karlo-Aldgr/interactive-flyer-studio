@@ -135,13 +135,17 @@ export function TopBar({ saving }: Props) {
         }
         const stage = useEditorStore.getState().stageRef;
         if (stage) {
-          await generateAndUploadThumbnail(
-            stage,
-            flyer.id,
-            flyer.settings.width,
-            flyer.settings.height,
-            firstPage.background?.color || flyer.settings.background || "#ffffff"
-          );
+          try {
+            await generateAndUploadThumbnail(
+              stage,
+              flyer.id,
+              flyer.settings.width,
+              flyer.settings.height,
+              firstPage.background?.color || flyer.settings.background || "#ffffff"
+            );
+          } catch (e) {
+            console.warn("[publish] thumbnail capture failed", e);
+          }
         }
       }
     }
