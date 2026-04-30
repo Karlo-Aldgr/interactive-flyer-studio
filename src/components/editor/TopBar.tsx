@@ -68,8 +68,33 @@ export function TopBar({ saving }: Props) {
     }
     setFlyer({ status: newStatus, public_slug: slug });
     const { error } = await supabase.from("flyers").update({ status: newStatus, public_slug: slug }).eq("id", flyer.id);
-    if (error) toast.error(error.message);
-    else toast.success(newStatus === "published" ? "Published!" : "Unpublished");
+    if (error) { toast.error(error.message); return; }
+    toast.success(newStatus === "published" ? "Published!" : "Unpublished");
+
+    // On publish, capture a fresh social thumbnail of page 1.
+    if (newStatus === "published") {
+      const store = useEditorStore.getState();
+      const firstPage = store.pages[0];
+      if (firstPage) {
+        // Switch to page 1 if not already there, wait a tick for konva to render.
+        if (store.selectedPageId !== firstPage.id) {
+          store.selectPage(firstPage.id);
+          await new Promise((r) => setTimeout(r, 250));
+        } else {
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        const stage = useEditorStore.getState().stageRef;
+        if (stage) {
+          await generateAndUploadThumbnail(
+            stage,
+            flyer.id,
+            flyer.settings.width,
+            flyer.settings.height,
+            firstPage.background?.color || flyer.settings.background || "#ffffff"
+          );
+        }
+      }
+    }
   }
 
   function applyResize() {
