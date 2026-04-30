@@ -13,6 +13,36 @@ export function thumbnailPublicUrl(ownerId: string, flyerId: string) {
   return data.publicUrl;
 }
 
+function drawContainedImage(img: HTMLImageElement, background = "#ffffff"): Blob | PromiseLike<Blob> {
+  const out = document.createElement("canvas");
+  out.width = TARGET_W;
+  out.height = TARGET_H;
+  const ctx = out.getContext("2d")!;
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, TARGET_W, TARGET_H);
+
+  const imgAspect = img.naturalWidth / img.naturalHeight;
+  const targetAspect = TARGET_W / TARGET_H;
+  let dw: number;
+  let dh: number;
+  if (imgAspect > targetAspect) {
+    dw = TARGET_W;
+    dh = TARGET_W / imgAspect;
+  } else {
+    dh = TARGET_H;
+    dw = TARGET_H * imgAspect;
+  }
+  ctx.drawImage(img, (TARGET_W - dw) / 2, (TARGET_H - dh) / 2, dw, dh);
+
+  return new Promise<Blob>((resolve, reject) => {
+    out.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("canvas toBlob failed"))),
+      "image/jpeg",
+      0.9
+    );
+  });
+}
+
 /**
  * Render a Konva stage to a JPEG dataURL covering the flyer page in native pixels.
  */
@@ -75,6 +105,53 @@ export async function composeSocialImage(
       0.85
     );
   });
+}
+
+async function uploadThumbnailBlob(blob: Blob, flyerId: string): Promise<string> {
+  const { data: authData, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !authData.user) {
+    throw new Error("Sign in required to upload the preview image.");
+  }
+
+  const path = `${authData.user.id}/${thumbnailStoragePath(flyerId)}`;
+  const { error: uploadErr } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, blob, {
+      contentType: "image/jpeg",
+      upsert: true,
+      cacheControl: "3600",
+    });
+  if (uploadErr) {
+    console.warn("[thumbnail] upload failed", uploadErr);
+    throw new Error("Upload failed: " + uploadErr.message);
+  }
+
+  const cleanUrl = thumbnailPublicUrl(authData.user.id, flyerId);
+  const { error: dbErr } = await supabase
+    .from("flyers")
+    .update({ thumbnail_url: cleanUrl })
+    .eq("id", flyerId);
+  if (dbErr) {
+    console.warn("[thumbnail] db update failed", dbErr);
+    throw new Error("Saving thumbnail URL failed: " + dbErr.message);
+  }
+
+  return `${cleanUrl}?v=${Date.now()}`;
+}
+
+export async function uploadManualThumbnail(file: File, flyerId: string): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Please choose an image file.");
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await loadImage(objectUrl);
+    const blob = await drawContainedImage(img);
+    return uploadThumbnailBlob(blob, flyerId);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
