@@ -1,29 +1,44 @@
-# Make hotspots repositionable
+## Goal
+Reduce initial JS payload so the preview loads noticeably faster. Today every route (Landing, Auth, Dashboard, Editor with Konva, Analytics with Recharts, PublicViewer) is statically imported in `src/App.tsx`, so visitors download all of it upfront — including `konva` + `react-konva` (~300KB) and `recharts` even when they only open the Landing page.
 
-## Problem
+## Changes
 
-Right now you can draw a hotspot (rectangle or circle), but you can't grab it afterwards to move, resize, or rotate it. That's because the editor's layer renderer doesn't render anything for `hotspot` layers — there's no Konva node to click on, so the selection transformer never attaches.
+### 1. Lazy-load route components (`src/App.tsx`)
+Replace static imports with `React.lazy` + a single `<Suspense>` fallback around `<Routes>`. Keep `Landing` eager so the first paint of the home page stays instant; lazy-load Auth, Dashboard, Editor, Analytics, PublicViewer, NotFound.
 
-The hotspot still exists in the data and shows up as a dashed overlay only when "Show hitboxes" is enabled, but it isn't an interactive object on the canvas.
+```tsx
+const Editor = lazy(() => import("./pages/Editor"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+// ...
+<Suspense fallback={<FullScreenSpinner />}>
+  <Routes>...</Routes>
+</Suspense>
+```
 
-## Fix
+This alone splits the giant Konva/Recharts chunks out of the initial bundle.
 
-Render hotspot layers as an invisible-but-hit-testable shape in the editor so they behave like every other layer:
+### 2. Manual vendor chunking (`vite.config.ts`)
+Add `build.rollupOptions.output.manualChunks` to isolate large libs so they cache well and don't bloat the entry chunk:
+- `konva`, `react-konva`, `use-image` → `konva` chunk
+- `recharts` → `charts` chunk
+- `@radix-ui/*` → `radix` chunk
+- `react`, `react-dom`, `react-router-dom` → `react` chunk
 
-- Click to select
-- Drag to reposition
-- Use the transformer handles to resize and rotate
-- Use arrow keys to nudge (already works once selected)
-- Inspector panel updates position/size like other layers
+### 3. Font loading
+Add `media="print" onload="this.media='all'"` pattern (or `rel="preload" as="style"`) to the Google Fonts `<link>` in `index.html` so fonts don't block first paint.
 
-Rectangle hotspots render as a `Rect`, circle hotspots as an `Ellipse` (matching the `content.hotspotShape` already stored on the layer).
+### 4. Spinner fallback
+Small reusable `<FullScreenSpinner/>` (just the existing `Loader2` centered) used by Suspense, so route transitions show the same spinner pattern already used inside `Editor`.
 
-A faint dashed purple outline is drawn so you can see exactly where the hotspot lives even when "Show hitboxes" is off. The fill is essentially fully transparent (alpha ~0.001) — invisible to the viewer's eye but enough for Konva to hit-test the entire shape so you can grab it from anywhere inside.
+## Out of scope
+- No changes to data-loading logic in `useFlyerData`.
+- No design/visual changes.
+- No dependency upgrades or removals.
 
-The published `PublicViewer` is not affected — it has its own rendering path for hotspots and continues to render them as truly invisible tap targets with the configured highlight style.
+## Files to edit
+- `src/App.tsx` — lazy routes + Suspense
+- `vite.config.ts` — manualChunks
+- `index.html` — non-blocking font load
 
-## Files to change
-
-- `src/components/editor/LayerRenderer.tsx` — add a `case "hotspot"` to the layer type switch that returns a `Rect` or `Ellipse` (based on `content.hotspotShape`) using the shared `commonProps` (which already wires up drag, transform, selection, and rotation handlers).
-
-No database changes, no store changes, no changes to the public viewer.
+## Expected impact
+Initial JS for `/` and `/auth` drops significantly (Konva + Recharts no longer loaded). Editor route loads its own chunk on demand, but TTI on first visit improves.
