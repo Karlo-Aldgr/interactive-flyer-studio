@@ -45,6 +45,8 @@ interface EditorState {
   setPageBackground: (id: string, color: string) => void;
   setPageIntro: (id: string, intro: PageIntro | null) => void;
   applyIntroToAllPages: (intro: PageIntro | null) => void;
+  introReplayKey: number;
+  replayIntro: () => void;
   // layers
   addLayer: (type: Layer["type"]) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
