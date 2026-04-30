@@ -26,6 +26,10 @@ function fallbackHtml(siteOrigin: string, message: string) {
   )}</p><p><a href="${escapeHtml(siteOrigin)}">Return home</a></p></body></html>`;
 }
 
+function cleanThumbnailUrl(value: string | null | undefined): string | null {
+  return value ? String(value).split("?")[0] : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -54,7 +58,7 @@ Deno.serve(async (req) => {
 
   const { data: flyer, error } = await supabase
     .from("flyers")
-    .select("id, title, status, public_slug, thumbnail_url")
+    .select("id, owner_id, title, status, public_slug, thumbnail_url")
     .eq("public_slug", slug)
     .eq("status", "published")
     .maybeSingle();
@@ -69,6 +73,32 @@ Deno.serve(async (req) => {
     );
   }
 
+  const rawImageUrl =
+    cleanThumbnailUrl(flyer.thumbnail_url) ||
+    `${SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}.jpg`;
+
+  if (url.searchParams.get("image") === "1") {
+    const imageResponse = await fetch(rawImageUrl, {
+      headers: { Accept: "image/*", "User-Agent": req.headers.get("user-agent") || "facebookexternalhit/1.1" },
+    });
+
+    if (!imageResponse.ok || !imageResponse.body) {
+      return new Response("Preview image not found", {
+        status: 404,
+        headers: { "content-type": "text/plain; charset=utf-8", ...corsHeaders },
+      });
+    }
+
+    return new Response(imageResponse.body, {
+      status: 200,
+      headers: {
+        "content-type": imageResponse.headers.get("content-type") || "image/jpeg",
+        "cache-control": "public, max-age=86400",
+        ...corsHeaders,
+      },
+    });
+  }
+
   const targetUrl = `${siteOrigin || ""}/f/${flyer.public_slug}`;
   const title = escapeHtml(flyer.title || "Flyer");
   const description = escapeHtml(`View "${flyer.title || "this flyer"}" — interactive flyer.`);
@@ -76,9 +106,8 @@ Deno.serve(async (req) => {
   // Prefer the DB thumbnail_url. If missing, try the deterministic storage path
   // (the file may exist from an earlier capture even if the column wasn't updated).
   // Strip any cache-busting querystring — some social crawlers reject those on og:image.
-  let imageUrl = flyer.thumbnail_url
-    ? String(flyer.thumbnail_url).split("?")[0]
-    : `${SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.id}.jpg`;
+  const imageUrl = new URL(req.url);
+  imageUrl.searchParams.set("image", "1");
   const image = escapeHtml(imageUrl);
   const canonical = escapeHtml(targetUrl);
 
