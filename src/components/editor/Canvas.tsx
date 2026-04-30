@@ -3,6 +3,7 @@ import { Stage, Layer as KLayer, Rect, Transformer, Ellipse, Group, Text } from 
 import { useEditorStore } from "@/store/editorStore";
 import { LayerRenderer } from "./LayerRenderer";
 import { HighlightOverlay } from "./HighlightOverlay";
+import { IntroAnimatedGroup, resolveIntro } from "./IntroAnimatedGroup";
 import { Button } from "@/components/ui/button";
 import { X, Check } from "lucide-react";
 
