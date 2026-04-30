@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import * as LucideIcons from "lucide-react";
-import { Type, Image as ImageIcon, Square, Circle, Minus, MousePointerClick, Star, Heart, Smile, ThumbsUp, SquareDashed, Sparkles } from "lucide-react";
+import { Type, Image as ImageIcon, Square, Circle, Minus, MousePointerClick, Star, Heart, Smile, ThumbsUp, SquareDashed, CircleDashed, Sparkles } from "lucide-react";
 import { SmartDetectDialog } from "./SmartDetectDialog";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
