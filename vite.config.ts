@@ -24,14 +24,14 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
+          if (id.includes("react-reconciler") || id.includes("scheduler")) return "react";
           if (id.includes("konva") || id.includes("use-image")) return "konva";
           if (id.includes("recharts") || id.includes("d3-")) return "charts";
           if (id.includes("@radix-ui")) return "radix";
           if (
             id.includes("react-router") ||
             id.includes("/react-dom/") ||
-            id.includes("/react/") ||
-            id.includes("scheduler")
+            id.includes("/react/")
           ) {
             return "react";
           }
