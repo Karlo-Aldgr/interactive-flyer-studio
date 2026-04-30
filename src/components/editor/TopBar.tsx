@@ -56,8 +56,58 @@ export function TopBar({ saving }: Props) {
   const [useCustom, setUseCustom] = useState(false);
   const [mode, setMode] = useState<ResizeMode>("resize");
   const [shareOpen, setShareOpen] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
 
   if (!flyer) return null;
+
+  async function ensureThumbnail(force = false) {
+    if (!flyer) return;
+    if (!force && flyer.thumbnail_url) return;
+    setRegenerating(true);
+    try {
+      const store = useEditorStore.getState();
+      const firstPage = store.pages[0];
+      if (!firstPage) return;
+      if (store.selectedPageId !== firstPage.id) {
+        store.selectPage(firstPage.id);
+        await new Promise((r) => setTimeout(r, 300));
+      } else {
+        await new Promise((r) => setTimeout(r, 80));
+      }
+      const stage = useEditorStore.getState().stageRef;
+      if (!stage) {
+        toast.error("Couldn't capture the page. Try again.");
+        return;
+      }
+      const url = await generateAndUploadThumbnail(
+        stage,
+        flyer.id,
+        flyer.settings.width,
+        flyer.settings.height,
+        firstPage.background?.color || flyer.settings.background || "#ffffff"
+      );
+      if (url) {
+        setLocalThumbnail(url);
+        // Reflect the clean URL in the store for future sessions / OG tags.
+        const cleanUrl = url.split("?")[0];
+        setFlyer({ thumbnail_url: cleanUrl });
+        if (force) toast.success("Social preview updated");
+      } else {
+        toast.error("Could not generate preview");
+      }
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
+  function openShare() {
+    setShareOpen(true);
+    // Auto-generate if missing.
+    if (!flyer?.thumbnail_url) {
+      void ensureThumbnail(false);
+    }
+  }
 
   async function togglePublish() {
     if (!flyer) return;
@@ -111,12 +161,12 @@ export function TopBar({ saving }: Props) {
     setResizeOpen(false);
   }
 
-  // Public viewer URL (humans land here directly).
+  // Public viewer URL (humans land here directly). This is what we show & let users copy.
   const viewerUrl = flyer.public_slug ? `${window.location.origin}/f/${flyer.public_slug}` : "";
-  // Share URL goes through the og-meta edge function so social platforms see a per-flyer
-  // preview image and title. Humans are redirected to the viewer in <50ms.
+  // Social-share URL goes through the og-meta edge function so platforms see a per-flyer
+  // preview image and title. Humans get redirected to the viewer in <50ms.
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-  const publicUrl = flyer.public_slug && projectId
+  const socialUrl = flyer.public_slug && projectId
     ? `https://${projectId}.supabase.co/functions/v1/og-meta?slug=${encodeURIComponent(flyer.public_slug)}&site=${encodeURIComponent(window.location.origin)}`
     : viewerUrl;
 
