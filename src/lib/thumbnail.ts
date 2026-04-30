@@ -191,35 +191,6 @@ export async function generateAndUploadThumbnail(
   if (!raw) throw new Error("Canvas returned an empty image.");
 
   const blob = await composeSocialImage(raw, flyerW, flyerH, background);
-
-  const { data: authData, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !authData.user) {
-    throw new Error("Sign in required to upload the preview image.");
-  }
-
-  const path = `${authData.user.id}/${thumbnailStoragePath(flyerId)}`;
-  const { error: uploadErr } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, blob, {
-      contentType: "image/jpeg",
-      upsert: true,
-      cacheControl: "3600",
-    });
-  if (uploadErr) {
-    console.warn("[thumbnail] upload failed", uploadErr);
-    throw new Error("Upload failed: " + uploadErr.message);
-  }
-
-  const cleanUrl = thumbnailPublicUrl(authData.user.id, flyerId);
-  const { error: dbErr } = await supabase
-    .from("flyers")
-    .update({ thumbnail_url: cleanUrl })
-    .eq("id", flyerId);
-  if (dbErr) {
-    console.warn("[thumbnail] db update failed", dbErr);
-    throw new Error("Saving thumbnail URL failed: " + dbErr.message);
-  }
-
-  return `${cleanUrl}?v=${Date.now()}`;
+  return uploadThumbnailBlob(blob, flyerId);
 }
 
