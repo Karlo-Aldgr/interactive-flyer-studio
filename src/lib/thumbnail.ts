@@ -2,24 +2,28 @@ import { supabase } from "@/integrations/supabase/client";
 
 const TARGET_W = 1200;
 const TARGET_H = 630;
+const BUCKET = "flyer-thumbnails";
+
+export function thumbnailStoragePath(flyerId: string) {
+  return `${flyerId}.jpg`;
+}
+
+export function thumbnailPublicUrl(flyerId: string) {
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(thumbnailStoragePath(flyerId));
+  return data.publicUrl;
+}
 
 /**
- * Render a Konva stage to a 1200×630 JPEG (social-share friendly),
- * letterboxing the flyer page on its background color.
+ * Render a Konva stage to a JPEG dataURL covering the flyer page in native pixels.
  */
 export function stageToSocialDataURL(
   stage: any,
   flyerW: number,
   flyerH: number,
-  background: string
+  _background: string
 ): string | null {
   if (!stage) return null;
-  // Konva: get an image of the stage at its native (unscaled) flyer dimensions.
   const stagePixelRatio = Math.min(2, Math.max(1, TARGET_W / flyerW));
-  // Snapshot the entire visible stage. We compensate for editor zoom by passing
-  // pixelRatio that targets the native flyer width.
-  // First, we need source coords in unscaled flyer space → use stage's getClientRect-less approach:
-  // toDataURL with x/y/width/height are in stage (post-scale) pixel coordinates.
   const scale = stage.scaleX() || 1;
   const dataUrl: string = stage.toDataURL({
     x: 0,
@@ -30,19 +34,6 @@ export function stageToSocialDataURL(
     mimeType: "image/jpeg",
     quality: 0.85,
   });
-
-  // Compose onto a 1200x630 canvas with the page background letterboxed.
-  const out = document.createElement("canvas");
-  out.width = TARGET_W;
-  out.height = TARGET_H;
-  const ctx = out.getContext("2d");
-  if (!ctx) return dataUrl;
-
-  ctx.fillStyle = background || "#ffffff";
-  ctx.fillRect(0, 0, TARGET_W, TARGET_H);
-
-  // We have to draw synchronously, but the toDataURL produces an image we must load.
-  // Return a promise via a wrapper instead — see composeSocialImage.
   return dataUrl;
 }
 
@@ -97,7 +88,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 /**
  * Render the current first-page Konva stage, upload to Supabase storage,
- * and write the resulting public URL to flyers.thumbnail_url.
+ * write the CLEAN public URL (no cache-buster) to flyers.thumbnail_url,
+ * and return a cache-busted URL for immediate UI display.
  */
 export async function generateAndUploadThumbnail(
   stage: any,
@@ -112,9 +104,9 @@ export async function generateAndUploadThumbnail(
     if (!raw) return null;
     const blob = await composeSocialImage(raw, flyerW, flyerH, background);
 
-    const path = `${flyerId}.jpg`;
+    const path = thumbnailStoragePath(flyerId);
     const { error: uploadErr } = await supabase.storage
-      .from("flyer-thumbnails")
+      .from(BUCKET)
       .upload(path, blob, {
         contentType: "image/jpeg",
         upsert: true,
@@ -125,11 +117,12 @@ export async function generateAndUploadThumbnail(
       return null;
     }
 
-    const { data } = supabase.storage.from("flyer-thumbnails").getPublicUrl(path);
-    const cacheBusted = `${data.publicUrl}?v=${Date.now()}`;
+    const cleanUrl = thumbnailPublicUrl(flyerId);
+    // Persist the clean (no-querystring) URL so social crawlers get a stable image URL.
+    await supabase.from("flyers").update({ thumbnail_url: cleanUrl }).eq("id", flyerId);
 
-    await supabase.from("flyers").update({ thumbnail_url: cacheBusted }).eq("id", flyerId);
-    return cacheBusted;
+    // Return cache-busted variant for the UI <img> so the user sees the fresh capture.
+    return `${cleanUrl}?v=${Date.now()}`;
   } catch (e) {
     console.warn("[thumbnail] generation failed", e);
     return null;

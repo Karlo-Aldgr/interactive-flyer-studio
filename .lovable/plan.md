@@ -1,63 +1,66 @@
-## Goal
+## What's wrong
 
-When someone shares a published flyer link on social media (Facebook, X, iMessage, WhatsApp, LinkedIn), show a **preview of that specific flyer** instead of the generic FlyerFlow `/og.png`.
+Two real problems explain your screenshots:
 
-## Why the current setup doesn't work
+1. **No thumbnail image is saved.** The flyer in the database (`Untitled flyer`) has `thumbnail_url = NULL`. The `og-meta` edge function therefore falls back to `https://interactive-flyer-studio.lovable.app/og.png` — a static file that doesn't exist. So Facebook fetches a non-existent image and shows no preview card.
+2. **The share URL is the raw Edge Function URL.** Messenger displays `https://iwmykqilqywbzxpcgaop.supabase.co/functions/v1/og-meta?slug=…&site=…` as plain text instead of a card, partly because there's no valid OG image and partly because that URL looks like noise to users.
 
-`index.html` has a hardcoded `<meta property="og:image" content="/og.png">`. Social crawlers (Facebook bot, Twitterbot, etc.) read this static HTML — they don't run the React app, so per-flyer meta tags injected client-side are invisible to them. We need the meta tags to be present in the HTML response *before* JavaScript runs, and we need a real image of the flyer's first page.
+The thumbnail-generation code only runs when you click **Publish** (status flip draft → published). Since this flyer was already published before that code shipped, the thumbnail was never created. Autosave-time regeneration only runs when you have page 1 selected AND you're actively editing.
 
-## Approach
+## Plan
 
-Two pieces:
+### 1. Generate the thumbnail on demand (most important fix)
 
-### 1. Generate and store a thumbnail of each flyer
+In `src/components/editor/TopBar.tsx`, when the user opens the **Share** dialog and `flyer.thumbnail_url` is missing — or whenever they click a "Refresh preview" button — render the first page and upload it. Steps:
 
-The `flyers` table already has a `thumbnail_url` column (visible in `useFlyerData.ts`) but nothing populates it.
+- Add a small helper `ensureThumbnail()` that:
+  - Switches to page 1 if not already there (briefly).
+  - Waits ~250 ms for Konva to paint.
+  - Calls `generateAndUploadThumbnail(...)` from `src/lib/thumbnail.ts`.
+  - Updates the local store's `flyer.thumbnail_url` so the Share dialog preview updates.
+- Trigger `ensureThumbnail()` automatically when opening Share if `thumbnail_url` is empty.
+- Add a "Regenerate preview" button inside `ShareDialog.tsx` so the user can refresh after edits.
 
-- In the editor, after a successful save (debounced, e.g. once every ~10 seconds of idle), render the **first page** of the flyer to an image using Konva's `stage.toDataURL({ pixelRatio: 2, mimeType: 'image/jpeg', quality: 0.85 })`.
-- Resize/crop to a 1200×630 social-friendly canvas (with the page centered on the flyer's background color, letterboxed if aspect ratio differs).
-- Upload to a new public Supabase Storage bucket `flyer-thumbnails` at path `{flyer_id}.jpg`.
-- Update `flyers.thumbnail_url` with the public URL (cache-busted with `?v={timestamp}`).
-- Trigger on: manual "Publish", and on autosave when the flyer is already published.
+### 2. Make the share URL friendly
 
-### 2. Serve per-flyer OG meta tags for `/v/:slug` URLs
+Right now the share URL is the long Edge Function URL. Switch the share URL shown to users to the clean `/f/:slug` viewer URL, and instead make the Edge Function the **canonical OG meta source** referenced from the viewer page. Concretely:
 
-Because Lovable apps are SPAs served from static HTML, social crawlers won't see React-rendered meta. Solution: a Supabase Edge Function `og-meta` that:
+- In `TopBar.tsx`, set `publicUrl = viewerUrl` (i.e. `https://interactive-flyer-studio.lovable.app/f/<slug>`).
+- In the public viewer route (`/f/:slug`), inject per-flyer OG/Twitter meta tags into `<head>` via React (using `react-helmet-async` or a small `useEffect` that mutates `document.head`). This way social crawlers that execute JS (Facebook, LinkedIn, X) see the correct image. We will set:
+  - `og:title` = flyer title
+  - `og:description` = flyer description
+  - `og:image` = `flyer.thumbnail_url`
+  - `og:url` = canonical viewer URL
+  - matching `twitter:*` tags
 
-- Takes a `slug` query param.
-- Looks up the flyer by `public_slug`, reads `title`, `thumbnail_url`, and a short description.
-- Returns a tiny HTML document with proper `<meta property="og:title|og:image|og:description|og:url">` and `<meta name="twitter:*">` tags, plus a `<meta http-equiv="refresh">` redirect to the real `/v/:slug` URL for human visitors.
+  Note: Facebook's crawler does NOT execute JS reliably, so we keep the Edge Function as a backup option and also add a prerender-friendly approach: for crawlers, the viewer route can server-side-redirect to og-meta. But the simplest robust approach is:
+  
+  **Recommended approach**: keep using the og-meta Edge Function URL as the share URL, but display it in the UI as a shortened label ("Copy link" copies the og-meta URL; the Input shows the friendly viewer URL with a small note "social-optimized"). On click of native share / WhatsApp / Facebook buttons, send the og-meta URL (because those crawlers need the OG-tagged HTML); on display, show the viewer URL.
 
-Then the share URL we hand out (in `ShareDialog`, QR code, copy-link button) becomes:
-`https://{project}.supabase.co/functions/v1/og-meta?slug={slug}`
+We'll go with the Recommended approach — it's the least invasive and matches the existing architecture. The user-visible Input will show the clean viewer URL; the social-share buttons will use the og-meta URL under the hood.
 
-Crawlers fetch it, see the rich preview, index it. Humans get auto-redirected (~0s) to the real interactive flyer at `/v/:slug`. This is the standard pattern when you can't control server-rendered HTML.
+### 3. Make `og-meta` more robust
 
-### Fallback for the root site
+In `supabase/functions/og-meta/index.ts`:
 
-Keep `/og.png` as the default for the marketing/landing pages — only flyer share URLs use the dynamic image.
+- If `thumbnail_url` is missing, try to construct the public storage URL directly from `flyer-thumbnails/<flyerId>.jpg` (it may exist even if the DB column wasn't updated due to a previous race).
+- Add a cache-busting `?v=` derived from the flyer's `updated_at`.
+- Strip the `?v=` cache-buster from the stored thumbnail_url BEFORE serving (some crawlers reject querystrings on og:image). Serve a stable URL.
 
-## Files to change
+### 4. Backfill the existing published flyer
 
-- `src/hooks/useFlyerData.ts` — add `generateThumbnail()` helper + call it after save when published.
-- New `src/lib/thumbnail.ts` — Konva stage → 1200×630 JPEG → upload → returns public URL.
-- `src/components/editor/Canvas.tsx` — expose the Konva `Stage` ref (or move thumbnail generation here where the stage lives).
-- `src/components/editor/ShareDialog.tsx` — change the shared URL/QR to point at the `og-meta` function URL; show the thumbnail as a preview inside the dialog.
-- `src/components/editor/TopBar.tsx` (Publish button) — force a thumbnail regeneration on publish.
-- New Supabase Storage bucket `flyer-thumbnails` (public read, authenticated write, RLS so users can only write their own flyer's path).
-- New edge function `supabase/functions/og-meta/index.ts` — returns the meta-tag HTML + redirect.
+After the Share dialog auto-regenerates thumbnails, simply opening Share once for `Untitled flyer` will populate `thumbnail_url`. No DB migration needed.
 
 ## Technical details
 
-- **Storage RLS**: bucket is public-read; insert/update policy checks `auth.uid() = (select owner_id from flyers where id::text = (storage.foldername(name))[1])` — i.e. filename is `{flyer_id}.jpg` and only the flyer's owner can overwrite it.
-- **Edge function**: `verify_jwt = false` (crawlers are anonymous). Uses the service role key only to read public flyer fields.
-- **Cache busting**: append `?v={updated_at_epoch}` to `thumbnail_url` so Facebook/Twitter re-scrape after edits. Also include `<meta property="og:image" content="...?v=...">`.
-- **Thumbnail dimensions**: 1200×630 is the universal OG/Twitter `summary_large_image` size. The flyer page (typically portrait) is centered with the page's background color filling the rest.
-- **Performance**: thumbnail generation runs only after autosave settles AND only if the flyer is published, so editor performance isn't affected.
-- **Privacy**: only published flyers get a thumbnail uploaded. Drafts never leave the browser.
+**Files to edit**
+- `src/components/editor/TopBar.tsx` — add `ensureThumbnail()`, call on Share open; show clean viewer URL while passing og-meta URL to social buttons.
+- `src/components/editor/ShareDialog.tsx` — accept two URLs (display + share-with-crawlers), add "Regenerate preview" button, show loading state during regeneration.
+- `src/lib/thumbnail.ts` — export the upload path (`flyer-thumbnails/<id>.jpg`) helper; allow `generateAndUploadThumbnail` to return the **clean** URL (without cache-buster) and store the clean URL in DB, while UI uses cache-busted variant for `<img>` only.
+- `supabase/functions/og-meta/index.ts` — fall back to constructed storage URL; sanitize cache-buster.
+
+**No DB migration required.** No new dependencies.
 
 ## Out of scope
-
-- Generating thumbnails for every page (only page 1 is used as the social image).
-- Animated/video previews (OG doesn't support them on most platforms).
-- A full SSR rewrite of the app.
+- Server-rendering the `/f/:slug` page (would need an SSR setup we don't have).
+- Deleting old `og.png` references — there's no static file to remove.
