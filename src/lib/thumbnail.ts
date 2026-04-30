@@ -8,8 +8,8 @@ export function thumbnailStoragePath(flyerId: string) {
   return `${flyerId}.jpg`;
 }
 
-export function thumbnailPublicUrl(flyerId: string) {
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(thumbnailStoragePath(flyerId));
+export function thumbnailPublicUrl(ownerId: string, flyerId: string) {
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(`${ownerId}/${thumbnailStoragePath(flyerId)}`);
   return data.publicUrl;
 }
 
@@ -115,7 +115,12 @@ export async function generateAndUploadThumbnail(
 
   const blob = await composeSocialImage(raw, flyerW, flyerH, background);
 
-  const path = thumbnailStoragePath(flyerId);
+  const { data: authData, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !authData.user) {
+    throw new Error("Sign in required to upload the preview image.");
+  }
+
+  const path = `${authData.user.id}/${thumbnailStoragePath(flyerId)}`;
   const { error: uploadErr } = await supabase.storage
     .from(BUCKET)
     .upload(path, blob, {
@@ -128,7 +133,7 @@ export async function generateAndUploadThumbnail(
     throw new Error("Upload failed: " + uploadErr.message);
   }
 
-  const cleanUrl = thumbnailPublicUrl(flyerId);
+  const cleanUrl = thumbnailPublicUrl(authData.user.id, flyerId);
   const { error: dbErr } = await supabase
     .from("flyers")
     .update({ thumbnail_url: cleanUrl })
