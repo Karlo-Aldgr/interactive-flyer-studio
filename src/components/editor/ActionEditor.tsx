@@ -345,6 +345,25 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
           </div>
         )}
 
+        {type === "audio" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Plays an audio file (mp3, wav, ogg, m4a) when this layer is tapped.</p>
+            <div>
+              <Label className="text-xs">Audio URL</Label>
+              <Input
+                className="mt-1"
+                value={p.audioUrl || ""}
+                onChange={(e) => update({ audioUrl: e.target.value })}
+                placeholder="https://.../song.mp3"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Loop</Label>
+              <Switch checked={!!p.audioLoop} onCheckedChange={(v) => update({ audioLoop: v })} />
+            </div>
+          </>
+        )}
+
         {type === "call" && (
           <div>
             <Label className="text-xs">Phone number</Label>
@@ -708,6 +727,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                   <SelectItem value="solid">Solid outline</SelectItem>
                   <SelectItem value="dashed">Dashed outline</SelectItem>
                   <SelectItem value="corners">Corner brackets</SelectItem>
+                  <SelectItem value="circle">Circle ring</SelectItem>
                   <SelectItem value="none">None (hidden)</SelectItem>
                 </SelectContent>
               </Select>
