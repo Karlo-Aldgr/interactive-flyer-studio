@@ -97,34 +97,47 @@ export async function generateAndUploadThumbnail(
   flyerW: number,
   flyerH: number,
   background: string
-): Promise<string | null> {
-  if (!stage) return null;
-  try {
-    const raw = stageToSocialDataURL(stage, flyerW, flyerH, background);
-    if (!raw) return null;
-    const blob = await composeSocialImage(raw, flyerW, flyerH, background);
-
-    const path = thumbnailStoragePath(flyerId);
-    const { error: uploadErr } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, blob, {
-        contentType: "image/jpeg",
-        upsert: true,
-        cacheControl: "3600",
-      });
-    if (uploadErr) {
-      console.warn("[thumbnail] upload failed", uploadErr);
-      return null;
-    }
-
-    const cleanUrl = thumbnailPublicUrl(flyerId);
-    // Persist the clean (no-querystring) URL so social crawlers get a stable image URL.
-    await supabase.from("flyers").update({ thumbnail_url: cleanUrl }).eq("id", flyerId);
-
-    // Return cache-busted variant for the UI <img> so the user sees the fresh capture.
-    return `${cleanUrl}?v=${Date.now()}`;
-  } catch (e) {
-    console.warn("[thumbnail] generation failed", e);
-    return null;
+): Promise<string> {
+  if (!stage) {
+    throw new Error("Canvas not ready (no stage). Please open the editor and try again.");
   }
+  let raw: string | null;
+  try {
+    raw = stageToSocialDataURL(stage, flyerW, flyerH, background);
+  } catch (e: any) {
+    // Common cause: a cross-origin image tainted the canvas.
+    console.warn("[thumbnail] stage.toDataURL failed", e);
+    throw new Error(
+      "Canvas could not be exported (an image may be blocking export). " + (e?.message || "")
+    );
+  }
+  if (!raw) throw new Error("Canvas returned an empty image.");
+
+  const blob = await composeSocialImage(raw, flyerW, flyerH, background);
+
+  const path = thumbnailStoragePath(flyerId);
+  const { error: uploadErr } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, blob, {
+      contentType: "image/jpeg",
+      upsert: true,
+      cacheControl: "3600",
+    });
+  if (uploadErr) {
+    console.warn("[thumbnail] upload failed", uploadErr);
+    throw new Error("Upload failed: " + uploadErr.message);
+  }
+
+  const cleanUrl = thumbnailPublicUrl(flyerId);
+  const { error: dbErr } = await supabase
+    .from("flyers")
+    .update({ thumbnail_url: cleanUrl })
+    .eq("id", flyerId);
+  if (dbErr) {
+    console.warn("[thumbnail] db update failed", dbErr);
+    throw new Error("Saving thumbnail URL failed: " + dbErr.message);
+  }
+
+  return `${cleanUrl}?v=${Date.now()}`;
 }
+

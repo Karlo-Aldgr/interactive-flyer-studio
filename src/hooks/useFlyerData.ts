@@ -107,7 +107,7 @@ export function useFlyerData(flyerId: string | undefined) {
               flyer.settings.width,
               flyer.settings.height,
               pages[0].background?.color || flyer.settings.background || "#ffffff"
-            );
+            ).catch((e) => console.warn("[autosave thumbnail] failed", e));
           }
         }
       }
