@@ -1,85 +1,87 @@
-# Multi-Step Interactions + Action Presets
+# Flyer Intro Animations
 
-Add a true multi-step interaction model (tap → popup → next action) and ship four ready-made presets that build on it: Buy Ticket, RSVP, Link to Checkout, and Coupon (with unlock).
+Let creators choose an intro animation that plays the first time a viewer lands on a page (and optionally per-layer stagger). Plays in both the editor preview and public viewer.
 
 ## What you'll get
 
-1. **Popups can chain into a next action.** Inside any popup you can add 1+ buttons. Each button triggers another action (open URL, video, calendar, form, navigate, reveal, call/sms, download image, or another popup).
-2. **Buy Ticket preset.** Pops up showing an uploaded ticket image plus a "Buy now" button that opens a checkout URL. Optional "Save ticket" button downloads the ticket image.
-3. **RSVP preset.** Pops up an RSVP form (name + email, optional phone) with a success message and optional "Add to calendar" button afterward.
-4. **Link to Checkout preset.** One-tap open-URL action with a checkout-styled label, optional "Confirm before opening" popup step.
-5. **Coupon preset.** Pops up a coupon image + code. Two modes:
-   - **Show coupon** — reveal image and code immediately.
-   - **Unlock with code** — viewer types a code; on match, reveal coupon image, code, and a copy-to-clipboard button. Optional "Redeem" button opens a URL.
+In the editor, a new **Intro Animation** section (Page settings panel) with:
 
-Coupon images and ticket images upload to existing `flyer-assets` storage (same flow as the Image tool).
+- **Preset**: None, Fade, Slide Up, Slide Down, Slide Left, Slide Right, Zoom In, Pop, Blur In, Drop
+- **Duration**: 200–2000ms slider (default 600ms)
+- **Delay**: 0–2000ms slider (default 0)
+- **Stagger layers**: toggle — when on, layers animate in sequence (sorted by z-index) using a per-layer offset (default 80ms)
+- **Replay** button (editor only) to preview again
+- **Apply to all pages** button
 
-## Editor UX (Inspector → Action panel)
+In the public viewer:
+- Animation plays once per page when first shown (page load + on `navigate` action between pages).
+- Respects `prefers-reduced-motion` (skips to final state).
 
-The Action type dropdown gets a new **Presets** group at the top:
+## Where it lives
 
-- Buy ticket
-- RSVP
-- Link to checkout
-- Coupon
+- Stored on `FlyerPage` as a new optional `intro` field (JSON in existing `pages.background` sibling — actually a new `intro` jsonb column on `pages`, since `background` is its own thing).
+- Type:
+  ```ts
+  interface PageIntro {
+    preset: "none" | "fade" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "zoom" | "pop" | "blur" | "drop";
+    durationMs?: number;   // default 600
+    delayMs?: number;      // default 0
+    stagger?: boolean;     // default false
+    staggerStepMs?: number;// default 80
+  }
+  ```
 
-Picking a preset fills the right fields and shows only what's relevant (e.g. ticket image upload, checkout URL, RSVP fields, coupon code + image + unlock toggle).
+## Editor UX
 
-For the existing **Show popup** action, a new "Buttons" section appears under Title/Body/Image:
-
-- Add button → label + nested action editor (recursive, max depth 2 to keep things sane)
-- Reorder / delete buttons
-- Each button uses the same Save action lock-in flow
-
-The hitbox overlay badge will show the preset name (e.g. "Coupon", "RSVP") instead of the raw type when present.
+- New collapsible section in `PagesPanel.tsx` (or a new `PageSettings` block in the right inspector when no layer is selected) titled "Intro animation".
+- Selecting a preset immediately replays the animation in the canvas so the creator sees it.
+- "Apply to all pages" copies the current page's intro to every page.
 
 ## Viewer behavior
 
-- Popup dialog renders the title, body, optional image, then a vertical stack of buttons. Tapping a button runs its action — chaining popups, opening URLs, downloading images, submitting forms, etc. — without closing context unexpectedly.
-- Buy Ticket: dialog shows ticket image + "Buy now" → opens checkout URL in new tab. Analytics logs `click` with `action_type: buy_ticket`.
-- RSVP: dialog shows form fields, submits to existing `form_submissions` table with `metadata.preset = "rsvp"`, then optionally chains into Add to Calendar.
-- Coupon (show): dialog shows image + code with a "Copy code" button.
-- Coupon (unlock): dialog shows a code input. On match, swap to the revealed view (image + code + copy + optional Redeem button). Wrong codes show an inline error. Code comparison is case-insensitive and trimmed.
-
-All new actions log analytics `click` events the same way existing ones do, with the preset name in metadata.
+- On page mount / page change, wrap each Konva layer's `<Group>` in a tween:
+  - Fade: opacity 0 → 1
+  - Slide-*: offset translate (e.g. 40px) → 0 + opacity
+  - Zoom: scale 0.9 → 1 + opacity
+  - Pop: scale 0.6 → 1.05 → 1 (overshoot easing) + opacity
+  - Blur: CSS-style blur not native to Konva — emulate with opacity + slight scale (cheap fallback)
+  - Drop: y offset -60 → 0 with ease-out-bounce-ish easing
+- Implemented with Konva's built-in `Tween` (or React state + `requestAnimationFrame`) on each `Group`. No new deps.
+- `prefers-reduced-motion: reduce` → instantly show final state, log no animation.
 
 ## Technical details
 
+**DB migration**
+- Add `intro jsonb` column to `pages` (nullable, default null).
+
 **Types (`src/types/flyer.ts`)**
+- Add `PageIntro` interface above.
+- Extend `FlyerPage` with `intro?: PageIntro`.
 
-- Extend `ActionType` with: `"buy_ticket" | "rsvp" | "checkout" | "coupon"`.
-- Extend `ActionPayload` with:
-  - `buttons?: Array<{ id: string; label: string; action: LayerAction; style?: "primary" | "secondary" }>` (used by `popup`, `buy_ticket`, `coupon`)
-  - `ticketImageUrl?: string`, `checkoutUrl?: string`
-  - `couponImageUrl?: string`, `couponCode?: string`, `couponUnlock?: boolean`, `couponUnlockCode?: string`, `couponRedeemUrl?: string`
-  - `rsvpFields?: Array<"name" | "email" | "phone">`, `rsvpAddToCalendar?: boolean` (reuses existing calendar payload fields)
+**Hook (`src/hooks/useFlyerData.ts`)**
+- Read/write the `intro` column alongside `background`.
+- Map row → `FlyerPage.intro`.
 
-No DB migration needed — `actions.payload` is already JSON, and `flyer-assets` bucket already exists.
-
-**ActionEditor (`src/components/editor/ActionEditor.tsx`)**
-
-- Add preset group to the type select.
-- Add `<PopupButtonsEditor>` subcomponent for editing the `buttons` array. Each row reuses `ActionEditor` recursively (with a `depth` prop, hard-capped at 2 to disable nested popups beyond one level).
-- Add an `<AssetUpload>` helper that wraps the existing Toolbar upload pattern (`supabase.storage.from("flyer-assets").upload(...)`) so it's reusable from coupon/ticket panels.
-- Update `isValid()` for the new presets:
-  - `buy_ticket`: requires `ticketImageUrl` or `checkoutUrl`
-  - `rsvp`: requires at least one field
-  - `checkout`: requires `checkoutUrl`
-  - `coupon`: requires `couponImageUrl` or `couponCode`; if `couponUnlock`, requires `couponUnlockCode`
+**Editor**
+- `src/components/editor/PagesPanel.tsx` (or new `src/components/editor/PageIntroEditor.tsx`):
+  - Preset Select, Duration Slider, Delay Slider, Stagger Switch, Replay button, Apply-to-all button.
+  - Calls `updatePage(pageId, { intro: { ... } })` via the existing store.
+- `src/components/editor/Canvas.tsx`:
+  - Track `introKey` state that bumps when the active page's `intro` changes or Replay is pressed.
+  - Wrap each layer `<Group>` with an `<IntroAnimatedGroup>` that applies the preset tween based on `intro`, `introKey`, and the layer's stagger index.
+- New file `src/components/editor/IntroAnimatedGroup.tsx`: Reusable Konva group wrapper that applies a preset to its children using Konva `Tween` on mount. Used by both Canvas and PublicViewer.
 
 **Viewer (`src/pages/PublicViewer.tsx`)**
+- Reuse `IntroAnimatedGroup` to wrap each rendered layer (replacing the `Group` in `renderLayer`).
+- Bump intro key on `pageIndex` change so animations replay between pages.
+- Respect `window.matchMedia("(prefers-reduced-motion: reduce)").matches`.
 
-- Generalize the popup state to hold a stack so chained popups can replace each other cleanly.
-- Add `runAction` cases for `buy_ticket`, `rsvp`, `checkout`, `coupon`.
-- New `<CouponDialog>` component handles both show and unlock modes with local input state and clipboard copy via `navigator.clipboard.writeText`.
-- Popup dialog renders `payload.buttons` as a vertical button stack; each button click calls `runAction` with a synthetic layer (so analytics/chaining work).
-
-**Hitbox overlay**
-
-- Update the badge label map in `Canvas.tsx` and `PublicViewer.tsx` to include the new presets.
+**Defaults / back-compat**
+- If `intro` is null → preset = "none" → no animation, identical to today.
 
 ## Out of scope
 
-- Real payment processing (Buy Ticket / Checkout just open the URL you provide; Stripe/Paddle hookup is a separate task).
-- Per-user coupon code generation (single shared code per coupon for now).
-- Email confirmations for RSVP (submissions land in the existing form submissions table; you can wire email later).
+- Per-layer custom animations (only the page-level preset + optional stagger).
+- Exit animations on page leave.
+- Looping/idle animations (separate from intro).
+- Real Gaussian blur in Konva (would need filters; we use opacity+scale fallback).

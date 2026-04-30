@@ -233,6 +233,7 @@ export type Database = {
           flyer_id: string
           id: string
           index: number
+          intro: Json | null
           name: string
         }
         Insert: {
@@ -241,6 +242,7 @@ export type Database = {
           flyer_id: string
           id?: string
           index?: number
+          intro?: Json | null
           name?: string
         }
         Update: {
@@ -249,6 +251,7 @@ export type Database = {
           flyer_id?: string
           id?: string
           index?: number
+          intro?: Json | null
           name?: string
         }
         Relationships: [
