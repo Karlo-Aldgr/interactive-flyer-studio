@@ -297,12 +297,23 @@ export function Canvas() {
                     return <HighlightOverlay key={"hl-" + l.id} layer={l} shape={shape} />;
                   })}
               {previewRect && (
-                <Rect
-                  x={previewRect.x} y={previewRect.y}
-                  width={previewRect.width} height={previewRect.height}
-                  fill="rgba(124,58,237,0.12)" stroke="#7c3aed" strokeWidth={1.5}
-                  dash={[6, 4]} listening={false}
-                />
+                drawMode === "hotspot-ellipse" ? (
+                  <Ellipse
+                    x={previewRect.x + previewRect.width / 2}
+                    y={previewRect.y + previewRect.height / 2}
+                    radiusX={previewRect.width / 2}
+                    radiusY={previewRect.height / 2}
+                    fill="rgba(124,58,237,0.12)" stroke="#7c3aed" strokeWidth={1.5}
+                    dash={[6, 4]} listening={false}
+                  />
+                ) : (
+                  <Rect
+                    x={previewRect.x} y={previewRect.y}
+                    width={previewRect.width} height={previewRect.height}
+                    fill="rgba(124,58,237,0.12)" stroke="#7c3aed" strokeWidth={1.5}
+                    dash={[6, 4]} listening={false}
+                  />
+                )
               )}
               <Transformer
                 ref={trRef}
