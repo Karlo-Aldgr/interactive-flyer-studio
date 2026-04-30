@@ -1,0 +1,1 @@
+ALTER TABLE public.layers ADD COLUMN IF NOT EXISTS intro jsonb;
