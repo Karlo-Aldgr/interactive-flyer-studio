@@ -309,7 +309,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-  addHotspotLayer: (rect) => {
+  addHotspotLayer: (rect, shape = "rect") => {
     const s = get();
     const pageId = s.selectedPageId;
     if (!pageId) return;
@@ -321,6 +321,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...base,
       position: { x: rect.x, y: rect.y },
       size: { width: rect.width, height: rect.height },
+      content: { ...base.content, hotspotShape: shape },
     };
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
