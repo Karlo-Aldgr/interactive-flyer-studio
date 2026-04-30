@@ -79,6 +79,27 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
     );
   }
 
+  if (style === "circle") {
+    // Circular ring around the layer's bounding box
+    const cx = layer.position.x + layer.size.width / 2;
+    const cy = layer.position.y + layer.size.height / 2;
+    const r = Math.max(layer.size.width, layer.size.height) / 2 + thickness * 2;
+    return (
+      <Circle
+        x={cx}
+        y={cy}
+        radius={r}
+        stroke={color}
+        strokeWidth={thickness}
+        opacity={baseOpacity}
+        shadowColor={color}
+        shadowBlur={10}
+        shadowOpacity={0.4}
+        listening={false}
+      />
+    );
+  }
+
   const dashed = style === "dashed";
   const common = {
     ref,
