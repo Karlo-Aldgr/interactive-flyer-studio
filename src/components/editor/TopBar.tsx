@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { generateAndUploadThumbnail } from "@/lib/thumbnail";
+import { generateAndUploadThumbnail, uploadManualThumbnail } from "@/lib/thumbnail";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -96,6 +96,22 @@ export function TopBar({ saving }: Props) {
         console.error("[ensureThumbnail]", e);
         toast.error(e?.message || "Could not generate preview");
       }
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
+  async function uploadSocialPreview(file: File) {
+    if (!flyer) return;
+    setRegenerating(true);
+    try {
+      const url = await uploadManualThumbnail(file, flyer.id);
+      setLocalThumbnail(url);
+      setFlyer({ thumbnail_url: url.split("?")[0] });
+      toast.success("Social preview image updated");
+    } catch (e: any) {
+      console.error("[uploadSocialPreview]", e);
+      toast.error(e?.message || "Could not upload preview image");
     } finally {
       setRegenerating(false);
     }
@@ -360,6 +376,7 @@ export function TopBar({ saving }: Props) {
         title={flyer.title}
         thumbnailUrl={localThumbnail ?? flyer.thumbnail_url ?? undefined}
         onRegenerateThumbnail={() => ensureThumbnail(true)}
+        onUploadThumbnail={uploadSocialPreview}
         regenerating={regenerating}
       />
     </header>
