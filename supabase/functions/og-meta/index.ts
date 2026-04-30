@@ -106,7 +106,9 @@ Deno.serve(async (req) => {
   // Prefer the DB thumbnail_url. If missing, try the deterministic storage path
   // (the file may exist from an earlier capture even if the column wasn't updated).
   // Strip any cache-busting querystring — some social crawlers reject those on og:image.
-  const imageUrl = new URL(req.url);
+  const imageUrl = new URL(`${SUPABASE_URL}/functions/v1/og-meta`);
+  imageUrl.searchParams.set("slug", flyer.public_slug);
+  if (siteOrigin) imageUrl.searchParams.set("site", siteOrigin);
   imageUrl.searchParams.set("image", "1");
   const image = escapeHtml(imageUrl.toString());
   const canonical = escapeHtml(targetUrl);
