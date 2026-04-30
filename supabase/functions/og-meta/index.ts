@@ -72,9 +72,14 @@ Deno.serve(async (req) => {
   const targetUrl = `${siteOrigin || ""}/f/${flyer.public_slug}`;
   const title = escapeHtml(flyer.title || "Flyer");
   const description = escapeHtml(`View "${flyer.title || "this flyer"}" — interactive flyer.`);
-  const image = flyer.thumbnail_url
-    ? escapeHtml(flyer.thumbnail_url)
-    : escapeHtml(`${siteOrigin || ""}/og.png`);
+
+  // Prefer the DB thumbnail_url. If missing, try the deterministic storage path
+  // (the file may exist from an earlier capture even if the column wasn't updated).
+  // Strip any cache-busting querystring — some social crawlers reject those on og:image.
+  let imageUrl = flyer.thumbnail_url
+    ? String(flyer.thumbnail_url).split("?")[0]
+    : `${SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.id}.jpg`;
+  const image = escapeHtml(imageUrl);
   const canonical = escapeHtml(targetUrl);
 
   // The user-agent check lets us:
