@@ -22,6 +22,9 @@ interface EditorState {
   showHitboxes: boolean;
   deviceFrame: DeviceFrame;
   pendingCrop: { width: number; height: number } | null;
+  // konva stage ref (set by Canvas) — used to render social thumbnails
+  stageRef: any | null;
+  setStageRef: (s: any | null) => void;
   // hydrate
   hydrate: (flyer: Flyer, pages: FlyerPage[]) => void;
   setFlyer: (patch: Partial<Flyer>) => void;
