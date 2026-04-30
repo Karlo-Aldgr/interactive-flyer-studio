@@ -23,6 +23,8 @@ export interface PopupButton {
   id: string;
   label: string;
   style?: "primary" | "secondary";
+  bgColor?: string;
+  textColor?: string;
   action: LayerAction;
 }
 
