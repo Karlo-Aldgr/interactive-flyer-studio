@@ -298,7 +298,13 @@ export function TopBar({ saving }: Props) {
         </DialogContent>
       </Dialog>
 
-      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} url={publicUrl} title={flyer.title} />
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        url={publicUrl}
+        title={flyer.title}
+        thumbnailUrl={flyer.thumbnail_url ?? undefined}
+      />
     </header>
   );
 }
