@@ -87,6 +87,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   showHitboxes: false,
   deviceFrame: "desktop",
   pendingCrop: null,
+  stageRef: null,
+  setStageRef: (s) => set({ stageRef: s }),
   introReplayKey: 0,
   replayIntro: () => set((s) => ({ introReplayKey: s.introReplayKey + 1 })),
 
