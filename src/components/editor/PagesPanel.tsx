@@ -2,7 +2,25 @@ import { useState } from "react";
 import { useEditorStore } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Copy, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play } from "lucide-react";
+import type { IntroPreset, PageIntro } from "@/types/flyer";
+
+const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "fade", label: "Fade in" },
+  { value: "slide-up", label: "Slide up" },
+  { value: "slide-down", label: "Slide down" },
+  { value: "slide-left", label: "Slide left" },
+  { value: "slide-right", label: "Slide right" },
+  { value: "zoom", label: "Zoom in" },
+  { value: "pop", label: "Pop" },
+  { value: "blur", label: "Blur in" },
+  { value: "drop", label: "Drop" },
+];
 
 export function PagesPanel() {
   const pages = useEditorStore((s) => s.pages);
@@ -13,6 +31,9 @@ export function PagesPanel() {
   const duplicatePage = useEditorStore((s) => s.duplicatePage);
   const renamePage = useEditorStore((s) => s.renamePage);
   const reorderPages = useEditorStore((s) => s.reorderPages);
+  const setPageIntro = useEditorStore((s) => s.setPageIntro);
+  const applyIntroToAllPages = useEditorStore((s) => s.applyIntroToAllPages);
+  const replayIntro = useEditorStore((s) => s.replayIntro);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -24,6 +45,21 @@ export function PagesPanel() {
     const ids = pages.map((p) => p.id);
     [ids[idx], ids[newIdx]] = [ids[newIdx], ids[idx]];
     reorderPages(ids);
+  }
+
+  const activePage = pages.find((p) => p.id === selectedPageId);
+  const intro: PageIntro = activePage?.intro ?? {
+    preset: "none",
+    durationMs: 600,
+    delayMs: 0,
+    stagger: false,
+    staggerStepMs: 80,
+  };
+
+  function patchIntro(patch: Partial<PageIntro>) {
+    if (!activePage) return;
+    const next: PageIntro = { ...intro, ...patch };
+    setPageIntro(activePage.id, next.preset === "none" && !patch.preset ? next : next);
   }
 
   return (
@@ -93,6 +129,111 @@ export function PagesPanel() {
           );
         })}
       </div>
+
+      {activePage && (
+        <div className="space-y-3 border-t border-border bg-muted/20 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" />
+              Intro animation
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              onClick={replayIntro}
+              disabled={intro.preset === "none"}
+              title="Replay"
+            >
+              <Play className="mr-1 h-3 w-3" /> Replay
+            </Button>
+          </div>
+
+          <div>
+            <Label className="text-[11px]">Preset</Label>
+            <Select
+              value={intro.preset}
+              onValueChange={(v) => patchIntro({ preset: v as IntroPreset })}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PRESET_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value} className="text-xs">
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {intro.preset !== "none" && (
+            <>
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <Label className="text-[11px]">Duration</Label>
+                  <span className="text-[11px] text-muted-foreground">{intro.durationMs ?? 600}ms</span>
+                </div>
+                <Slider
+                  min={200}
+                  max={2000}
+                  step={50}
+                  value={[intro.durationMs ?? 600]}
+                  onValueChange={(v) => patchIntro({ durationMs: v[0] })}
+                />
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <Label className="text-[11px]">Delay</Label>
+                  <span className="text-[11px] text-muted-foreground">{intro.delayMs ?? 0}ms</span>
+                </div>
+                <Slider
+                  min={0}
+                  max={2000}
+                  step={50}
+                  value={[intro.delayMs ?? 0]}
+                  onValueChange={(v) => patchIntro({ delayMs: v[0] })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-[11px]">Stagger layers</Label>
+                <Switch
+                  checked={!!intro.stagger}
+                  onCheckedChange={(v) => patchIntro({ stagger: v })}
+                />
+              </div>
+
+              {intro.stagger && (
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <Label className="text-[11px]">Stagger step</Label>
+                    <span className="text-[11px] text-muted-foreground">{intro.staggerStepMs ?? 80}ms</span>
+                  </div>
+                  <Slider
+                    min={20}
+                    max={400}
+                    step={10}
+                    value={[intro.staggerStepMs ?? 80]}
+                    onValueChange={(v) => patchIntro({ staggerStepMs: v[0] })}
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 w-full text-xs"
+            onClick={() => applyIntroToAllPages(intro)}
+          >
+            Apply to all pages
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
