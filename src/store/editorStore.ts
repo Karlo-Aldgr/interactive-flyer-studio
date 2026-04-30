@@ -18,7 +18,7 @@ interface EditorState {
   past: Snapshot[];
   future: Snapshot[];
   dirty: boolean;
-  drawMode: null | "hotspot" | "crop";
+  drawMode: null | "hotspot" | "hotspot-ellipse" | "crop";
   showHitboxes: boolean;
   deviceFrame: DeviceFrame;
   pendingCrop: { width: number; height: number } | null;
