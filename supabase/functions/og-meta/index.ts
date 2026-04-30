@@ -31,18 +31,11 @@ function cleanThumbnailUrl(value: string | null | undefined): string | null {
 }
 
 function htmlResponse(html: string, status = 200, cacheControl = "public, max-age=300") {
-  const bytes = new TextEncoder().encode(html);
-  const body = new ReadableStream({
-    start(controller) {
-      controller.enqueue(bytes);
-      controller.close();
-    },
-  });
-  return new Response(body, {
+  return new Response(html, {
     status,
     headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": cacheControl,
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": cacheControl,
       ...corsHeaders,
     },
   });
