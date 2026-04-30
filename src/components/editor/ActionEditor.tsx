@@ -89,8 +89,8 @@ function isValid(draft: LayerAction | null): boolean {
 }
 
 function AssetUpload({
-  label, value, onChange,
-}: { label: string; value?: string; onChange: (url: string) => void }) {
+  label, value, onChange, accept = "image/*", kind = "image",
+}: { label: string; value?: string; onChange: (url: string) => void; accept?: string; kind?: "image" | "audio" }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { flyerId } = useParams();
@@ -100,13 +100,16 @@ function AssetUpload({
     if (!user || !flyerId) return toast.error("Sign in required");
     setBusy(true);
     const ext = file.name.split(".").pop();
-    const path = `${user.id}/${flyerId}/assets/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("flyer-assets").upload(path, file);
+    const folder = kind === "audio" ? "audio" : "assets";
+    const path = `${user.id}/${flyerId}/${folder}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("flyer-assets").upload(path, file, {
+      contentType: file.type || undefined,
+    });
     setBusy(false);
     if (error) return toast.error(error.message);
     const { data } = supabase.storage.from("flyer-assets").getPublicUrl(path);
     onChange(data.publicUrl);
-    toast.success("Image uploaded");
+    toast.success(kind === "audio" ? "Audio uploaded" : "Image uploaded");
   }
 
   return (
@@ -116,15 +119,18 @@ function AssetUpload({
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept={accept}
           className="hidden"
           onChange={(e) => e.target.files?.[0] && handle(e.target.files[0])}
         />
         <Button type="button" size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={busy}>
-          <Upload className="mr-1 h-3.5 w-3.5" /> {value ? "Replace" : "Upload"}
+          <Upload className="mr-1 h-3.5 w-3.5" /> {busy ? "Uploading..." : value ? "Replace" : "Upload"}
         </Button>
-        {value && (
+        {value && kind === "image" && (
           <img src={value} alt="" className="h-10 w-10 rounded border border-border object-cover" />
+        )}
+        {value && kind === "audio" && (
+          <audio src={value} controls className="h-8 max-w-[200px]" />
         )}
         {value && (
           <Button type="button" size="sm" variant="ghost" onClick={() => onChange("")}>
@@ -357,6 +363,13 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                 placeholder="https://.../song.mp3"
               />
             </div>
+            <AssetUpload
+              label="Or upload audio file"
+              value={p.audioUrl}
+              onChange={(url) => update({ audioUrl: url })}
+              accept="audio/*"
+              kind="audio"
+            />
             <div className="flex items-center justify-between">
               <Label className="text-xs">Loop</Label>
               <Switch checked={!!p.audioLoop} onCheckedChange={(v) => update({ audioLoop: v })} />
