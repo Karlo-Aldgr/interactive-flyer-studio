@@ -3,6 +3,7 @@ import { Stage, Layer as KLayer, Rect, Transformer, Ellipse, Group, Text } from 
 import { useEditorStore } from "@/store/editorStore";
 import { LayerRenderer } from "./LayerRenderer";
 import { HighlightOverlay } from "./HighlightOverlay";
+import { IntroAnimatedGroup, resolveIntro } from "./IntroAnimatedGroup";
 import { Button } from "@/components/ui/button";
 import { X, Check } from "lucide-react";
 
@@ -29,6 +30,7 @@ export function Canvas() {
   const pendingCrop = useEditorStore((s) => s.pendingCrop);
   const cropCanvas = useEditorStore((s) => s.cropCanvas);
   const cancelCrop = useEditorStore((s) => s.cancelCrop);
+  const introReplayKey = useEditorStore((s) => s.introReplayKey);
 
   const stageRef = useRef<any>(null);
   const trRef = useRef<any>(null);
@@ -244,20 +246,35 @@ export function Canvas() {
           >
             <KLayer>
               <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
-              {sortedLayers.map((l) => (
-                <LayerRenderer
-                  key={l.id}
-                  layer={l}
-                  isSelected={selectedLayerId === l.id}
-                  draggable={!drawMode}
-                  onSelect={() => !drawMode && selectLayer(l.id)}
-                  onChange={(patch) => updateLayer(l.id, patch)}
-                  refSetter={(node) => {
-                    if (node) nodeRefs.current[l.id] = node;
-                    else delete nodeRefs.current[l.id];
-                  }}
-                />
-              ))}
+              {sortedLayers.map((l, idx) => {
+                const introCfg = resolveIntro(page.intro);
+                const delay = introCfg.delayMs + (introCfg.stagger ? idx * introCfg.staggerStepMs : 0);
+                const cx = l.position.x + l.size.width / 2;
+                const cy = l.position.y + l.size.height / 2;
+                return (
+                  <IntroAnimatedGroup
+                    key={l.id}
+                    preset={introCfg.preset}
+                    durationMs={introCfg.durationMs}
+                    delayMs={delay}
+                    cx={cx}
+                    cy={cy}
+                    introKey={`${page.id}:${page.intro?.preset ?? "none"}:${introReplayKey}`}
+                  >
+                    <LayerRenderer
+                      layer={l}
+                      isSelected={selectedLayerId === l.id}
+                      draggable={!drawMode}
+                      onSelect={() => !drawMode && selectLayer(l.id)}
+                      onChange={(patch) => updateLayer(l.id, patch)}
+                      refSetter={(node) => {
+                        if (node) nodeRefs.current[l.id] = node;
+                        else delete nodeRefs.current[l.id];
+                      }}
+                    />
+                  </IntroAnimatedGroup>
+                );
+              })}
               {/* Live preview of tap highlights for layers with actions */}
               {(flyer.settings.highlightsEnabled ?? true) &&
                 sortedLayers

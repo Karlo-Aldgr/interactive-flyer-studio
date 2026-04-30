@@ -144,6 +144,26 @@ export interface Layer {
   action?: LayerAction | null;
 }
 
+export type IntroPreset =
+  | "none"
+  | "fade"
+  | "slide-up"
+  | "slide-down"
+  | "slide-left"
+  | "slide-right"
+  | "zoom"
+  | "pop"
+  | "blur"
+  | "drop";
+
+export interface PageIntro {
+  preset: IntroPreset;
+  durationMs?: number;   // default 600
+  delayMs?: number;      // default 0
+  stagger?: boolean;     // default false
+  staggerStepMs?: number;// default 80
+}
+
 export interface FlyerPage {
   id: string;
   flyer_id: string;
@@ -151,6 +171,7 @@ export interface FlyerPage {
   name: string;
   background: { color?: string; image?: string };
   layers: Layer[];
+  intro?: PageIntro | null;
 }
 
 export interface FlyerSettings {

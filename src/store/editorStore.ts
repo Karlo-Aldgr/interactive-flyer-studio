@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Flyer, FlyerPage, Layer, LayerAction, LayerContent, LayerStyle } from "@/types/flyer";
+import { Flyer, FlyerPage, Layer, LayerAction, LayerContent, LayerStyle, PageIntro } from "@/types/flyer";
 import { defaultLayer, emptyPage, uid } from "@/lib/konvaHelpers";
 
 interface Snapshot {
@@ -43,6 +43,10 @@ interface EditorState {
   duplicatePage: (id: string) => void;
   reorderPages: (orderedIds: string[]) => void;
   setPageBackground: (id: string, color: string) => void;
+  setPageIntro: (id: string, intro: PageIntro | null) => void;
+  applyIntroToAllPages: (intro: PageIntro | null) => void;
+  introReplayKey: number;
+  replayIntro: () => void;
   // layers
   addLayer: (type: Layer["type"]) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
@@ -79,6 +83,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   showHitboxes: false,
   deviceFrame: "desktop",
   pendingCrop: null,
+  introReplayKey: 0,
+  replayIntro: () => set((s) => ({ introReplayKey: s.introReplayKey + 1 })),
 
   hydrate: (flyer, pages) =>
     set({
@@ -232,6 +238,28 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
     set({
       pages: s.pages.map((p) => (p.id === id ? { ...p, background: { ...p.background, color } } : p)),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  setPageIntro: (id, intro) => {
+    const s = get();
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => (p.id === id ? { ...p, intro } : p)),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  applyIntroToAllPages: (intro) => {
+    const s = get();
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => ({ ...p, intro })),
       past,
       future: [],
       dirty: true,

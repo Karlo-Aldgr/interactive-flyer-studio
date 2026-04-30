@@ -38,6 +38,7 @@ export function useFlyerData(flyerId: string | undefined) {
         index: p.index,
         name: p.name,
         background: p.background ?? { color: "#ffffff" },
+        intro: p.intro ?? null,
         layers: (p.layers ?? [])
           .sort((a: any, b: any) => a.z_index - b.z_index)
           .map((l: any) => ({
@@ -136,6 +137,7 @@ export function useFlyerData(flyerId: string | undefined) {
         index: p.index,
         name: p.name,
         background: p.background as any,
+        intro: (p.intro ?? null) as any,
       }));
       if (pageRows.length) {
         await supabase.from("pages").upsert(pageRows);
