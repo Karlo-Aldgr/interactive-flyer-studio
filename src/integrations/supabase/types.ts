@@ -17,6 +17,7 @@ export type Database = {
       actions: {
         Row: {
           created_at: string
+          highlight: Json | null
           id: string
           layer_id: string
           payload: Json
@@ -24,6 +25,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          highlight?: Json | null
           id?: string
           layer_id: string
           payload?: Json
@@ -31,6 +33,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          highlight?: Json | null
           id?: string
           layer_id?: string
           payload?: Json
@@ -305,6 +308,7 @@ export type Database = {
         | "checkout"
         | "coupon"
         | "map"
+        | "audio"
       app_role: "admin" | "user"
       event_type: "view" | "click" | "submit" | "reveal"
       flyer_status: "draft" | "published"
@@ -451,6 +455,7 @@ export const Constants = {
         "checkout",
         "coupon",
         "map",
+        "audio",
       ],
       app_role: ["admin", "user"],
       event_type: ["view", "click", "submit", "reveal"],
