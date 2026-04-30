@@ -26,6 +26,28 @@ function fallbackHtml(siteOrigin: string, message: string) {
   )}</p><p><a href="${escapeHtml(siteOrigin)}">Return home</a></p></body></html>`;
 }
 
+function cleanThumbnailUrl(value: string | null | undefined): string | null {
+  return value ? String(value).split("?")[0] : null;
+}
+
+function htmlResponse(html: string, status = 200, cacheControl = "public, max-age=300") {
+  const bytes = new TextEncoder().encode(html);
+  const body = new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+  return new Response(body, {
+    status,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": cacheControl,
+      ...corsHeaders,
+    },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -42,10 +64,7 @@ Deno.serve(async (req) => {
       : "");
 
   if (!slug) {
-    return new Response(fallbackHtml(siteOrigin, "Missing slug."), {
-      status: 400,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    return htmlResponse(fallbackHtml(siteOrigin, "Missing slug."), 400, "no-store");
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -54,19 +73,39 @@ Deno.serve(async (req) => {
 
   const { data: flyer, error } = await supabase
     .from("flyers")
-    .select("id, title, status, public_slug, thumbnail_url")
+    .select("id, owner_id, title, status, public_slug, thumbnail_url")
     .eq("public_slug", slug)
     .eq("status", "published")
     .maybeSingle();
 
   if (error || !flyer) {
-    return new Response(
-      fallbackHtml(siteOrigin, "This flyer is not available."),
-      {
+    return htmlResponse(fallbackHtml(siteOrigin, "This flyer is not available."), 404, "no-store");
+  }
+
+  const rawImageUrl =
+    cleanThumbnailUrl(flyer.thumbnail_url) ||
+    `${SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}.jpg`;
+
+  if (url.searchParams.get("image") === "1") {
+    const imageResponse = await fetch(rawImageUrl, {
+      headers: { Accept: "image/*", "User-Agent": req.headers.get("user-agent") || "facebookexternalhit/1.1" },
+    });
+
+    if (!imageResponse.ok || !imageResponse.body) {
+      return new Response("Preview image not found", {
         status: 404,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      }
-    );
+        headers: { "content-type": "text/plain; charset=utf-8", ...corsHeaders },
+      });
+    }
+
+    return new Response(imageResponse.body, {
+      status: 200,
+      headers: {
+        "content-type": imageResponse.headers.get("content-type") || "image/jpeg",
+        "cache-control": "public, max-age=86400",
+        ...corsHeaders,
+      },
+    });
   }
 
   const targetUrl = `${siteOrigin || ""}/f/${flyer.public_slug}`;
@@ -76,11 +115,14 @@ Deno.serve(async (req) => {
   // Prefer the DB thumbnail_url. If missing, try the deterministic storage path
   // (the file may exist from an earlier capture even if the column wasn't updated).
   // Strip any cache-busting querystring — some social crawlers reject those on og:image.
-  let imageUrl = flyer.thumbnail_url
-    ? String(flyer.thumbnail_url).split("?")[0]
-    : `${SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.id}.jpg`;
-  const image = escapeHtml(imageUrl);
+  const sharePageUrl = new URL(`${SUPABASE_URL}/functions/v1/og-meta`);
+  sharePageUrl.searchParams.set("slug", flyer.public_slug);
+  if (siteOrigin) sharePageUrl.searchParams.set("site", siteOrigin);
+  const imageUrl = new URL(sharePageUrl);
+  imageUrl.searchParams.set("image", "1");
+  const image = escapeHtml(imageUrl.toString());
   const canonical = escapeHtml(targetUrl);
+  const ogUrl = escapeHtml(sharePageUrl.toString());
 
   // The user-agent check lets us:
   //   - Serve meta-tag HTML to social crawlers (they don't follow JS redirects).
@@ -105,7 +147,7 @@ Deno.serve(async (req) => {
   <meta property="og:image" content="${image}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:url" content="${canonical}" />
+  <meta property="og:url" content="${ogUrl}" />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${title}" />
@@ -120,12 +162,5 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-  return new Response(html, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, max-age=300",
-      ...corsHeaders,
-    },
-  });
+  return htmlResponse(html);
 });
