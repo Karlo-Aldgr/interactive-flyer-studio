@@ -28,7 +28,7 @@ interface EditorState {
   setZoom: (z: number) => void;
   selectPage: (id: string) => void;
   selectLayer: (id: string | null) => void;
-  setDrawMode: (mode: null | "hotspot" | "crop") => void;
+  setDrawMode: (mode: null | "hotspot" | "hotspot-ellipse" | "crop") => void;
   toggleHitboxes: () => void;
   setDeviceFrame: (f: DeviceFrame) => void;
   startCrop: (size: { width: number; height: number }) => void;
