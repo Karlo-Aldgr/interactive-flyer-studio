@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEditorStore } from "@/store/editorStore";
 import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import { toast } from "sonner";
+import { generateAndUploadThumbnail } from "@/lib/thumbnail";
 
 export function useFlyerData(flyerId: string | undefined) {
   const [loading, setLoading] = useState(true);
@@ -81,12 +82,35 @@ export function useFlyerData(flyerId: string | undefined) {
   }, [flyerId, hydrate]);
 
   // Autosave
+  const lastThumbAt = useRef<number>(0);
   useEffect(() => {
     if (!flyer || loading) return;
     if (!dirty) return;
     const handle = setTimeout(async () => {
       await save(flyer, pages);
       markSaved();
+      // Regenerate the social thumbnail at most every 15s while the flyer is published.
+      if (flyer.status === "published") {
+        const now = Date.now();
+        if (now - lastThumbAt.current > 15000) {
+          lastThumbAt.current = now;
+          const stage = useEditorStore.getState().stageRef;
+          // Switch to first page momentarily isn't needed — we render the active stage.
+          // For social previews we want page 1, so we render whatever is currently shown
+          // only if it's the first page; otherwise we skip and rely on publish-time capture.
+          const firstPageId = pages[0]?.id;
+          const selectedPageId = useEditorStore.getState().selectedPageId;
+          if (stage && firstPageId && selectedPageId === firstPageId) {
+            generateAndUploadThumbnail(
+              stage,
+              flyer.id,
+              flyer.settings.width,
+              flyer.settings.height,
+              pages[0].background?.color || flyer.settings.background || "#ffffff"
+            );
+          }
+        }
+      }
     }, 800);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { generateAndUploadThumbnail } from "@/lib/thumbnail";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -67,8 +68,33 @@ export function TopBar({ saving }: Props) {
     }
     setFlyer({ status: newStatus, public_slug: slug });
     const { error } = await supabase.from("flyers").update({ status: newStatus, public_slug: slug }).eq("id", flyer.id);
-    if (error) toast.error(error.message);
-    else toast.success(newStatus === "published" ? "Published!" : "Unpublished");
+    if (error) { toast.error(error.message); return; }
+    toast.success(newStatus === "published" ? "Published!" : "Unpublished");
+
+    // On publish, capture a fresh social thumbnail of page 1.
+    if (newStatus === "published") {
+      const store = useEditorStore.getState();
+      const firstPage = store.pages[0];
+      if (firstPage) {
+        // Switch to page 1 if not already there, wait a tick for konva to render.
+        if (store.selectedPageId !== firstPage.id) {
+          store.selectPage(firstPage.id);
+          await new Promise((r) => setTimeout(r, 250));
+        } else {
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        const stage = useEditorStore.getState().stageRef;
+        if (stage) {
+          await generateAndUploadThumbnail(
+            stage,
+            flyer.id,
+            flyer.settings.width,
+            flyer.settings.height,
+            firstPage.background?.color || flyer.settings.background || "#ffffff"
+          );
+        }
+      }
+    }
   }
 
   function applyResize() {
@@ -85,7 +111,14 @@ export function TopBar({ saving }: Props) {
     setResizeOpen(false);
   }
 
-  const publicUrl = flyer.public_slug ? `${window.location.origin}/f/${flyer.public_slug}` : "";
+  // Public viewer URL (humans land here directly).
+  const viewerUrl = flyer.public_slug ? `${window.location.origin}/f/${flyer.public_slug}` : "";
+  // Share URL goes through the og-meta edge function so social platforms see a per-flyer
+  // preview image and title. Humans are redirected to the viewer in <50ms.
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const publicUrl = flyer.public_slug && projectId
+    ? `https://${projectId}.supabase.co/functions/v1/og-meta?slug=${encodeURIComponent(flyer.public_slug)}&site=${encodeURIComponent(window.location.origin)}`
+    : viewerUrl;
 
   return (
     <header className="flex h-14 items-center gap-3 border-b border-border bg-card px-3">
@@ -265,7 +298,13 @@ export function TopBar({ saving }: Props) {
         </DialogContent>
       </Dialog>
 
-      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} url={publicUrl} title={flyer.title} />
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        url={publicUrl}
+        title={flyer.title}
+        thumbnailUrl={flyer.thumbnail_url ?? undefined}
+      />
     </header>
   );
 }

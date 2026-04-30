@@ -31,12 +31,19 @@ export function Canvas() {
   const cropCanvas = useEditorStore((s) => s.cropCanvas);
   const cancelCrop = useEditorStore((s) => s.cancelCrop);
   const introReplayKey = useEditorStore((s) => s.introReplayKey);
+  const setStageRef = useEditorStore((s) => s.setStageRef);
 
   const stageRef = useRef<any>(null);
   const trRef = useRef<any>(null);
   const cropTrRef = useRef<any>(null);
   const cropRectRef = useRef<any>(null);
   const nodeRefs = useRef<Record<string, any>>({});
+
+  // Register the konva stage with the store so it can be used for thumbnail capture.
+  useEffect(() => {
+    setStageRef(stageRef.current);
+    return () => setStageRef(null);
+  }, [setStageRef]);
 
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
