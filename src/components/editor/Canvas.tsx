@@ -258,6 +258,21 @@ export function Canvas() {
                   }}
                 />
               ))}
+              {/* Live preview of tap highlights for layers with actions */}
+              {(flyer.settings.highlightsEnabled ?? true) &&
+                sortedLayers
+                  .filter((l) => {
+                    const h = l.action?.highlight;
+                    if (!l.action) return false;
+                    if (h?.enabled === false) return false;
+                    if ((h?.style ?? "pulse") === "none") return false;
+                    return true;
+                  })
+                  .map((l) => {
+                    const shape: "rect" | "ellipse" =
+                      l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
+                    return <HighlightOverlay key={"hl-" + l.id} layer={l} shape={shape} />;
+                  })}
               {previewRect && (
                 <Rect
                   x={previewRect.x} y={previewRect.y}
