@@ -143,5 +143,33 @@ export function LayerRenderer(props: Props) {
           />
         </Group>
       );
+    case "hotspot": {
+      // Invisible-but-hit-testable shape so the user can select, drag, resize, and rotate it.
+      const isEllipse = layer.content.hotspotShape === "ellipse";
+      if (isEllipse) {
+        return (
+          <Ellipse
+            {...commonProps}
+            offsetX={-layer.size.width / 2}
+            offsetY={-layer.size.height / 2}
+            radiusX={layer.size.width / 2}
+            radiusY={layer.size.height / 2}
+            fill="rgba(124,58,237,0.001)"
+            stroke="#7c3aed"
+            strokeWidth={1}
+            dash={[6, 4]}
+          />
+        );
+      }
+      return (
+        <Rect
+          {...commonProps}
+          fill="rgba(124,58,237,0.001)"
+          stroke="#7c3aed"
+          strokeWidth={1}
+          dash={[6, 4]}
+        />
+      );
+    }
   }
 }
