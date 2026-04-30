@@ -79,6 +79,27 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
     );
   }
 
+  if (style === "circle") {
+    // Circular ring around the layer's bounding box
+    const cx = layer.position.x + layer.size.width / 2;
+    const cy = layer.position.y + layer.size.height / 2;
+    const r = Math.max(layer.size.width, layer.size.height) / 2 + thickness * 2;
+    return (
+      <Circle
+        x={cx}
+        y={cy}
+        radius={r}
+        stroke={color}
+        strokeWidth={thickness}
+        opacity={baseOpacity}
+        shadowColor={color}
+        shadowBlur={10}
+        shadowOpacity={0.4}
+        listening={false}
+      />
+    );
+  }
+
   const dashed = style === "dashed";
   const common = {
     ref,
@@ -276,6 +297,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [showHitboxes, setShowHitboxes] = useState(false);
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
 
   useEffect(() => {
     if (!slug && !flyerId) return;
@@ -314,7 +337,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             style: l.style ?? {},
             content: l.content ?? {},
             action: l.actions?.[0]
-              ? { id: l.actions[0].id, type: l.actions[0].type, payload: l.actions[0].payload }
+              ? { id: l.actions[0].id, type: l.actions[0].type, payload: l.actions[0].payload, highlight: l.actions[0].highlight ?? undefined }
               : null,
           })),
       }));
@@ -357,6 +380,27 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "video":
         if (a.payload.videoUrl) setVideo(a.payload.videoUrl);
         break;
+      case "audio": {
+        const url = a.payload.audioUrl;
+        if (!url) break;
+        // Toggle: tapping the same source again stops it
+        if (audioRef.current && audioInfo?.url === url && !audioRef.current.paused) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          setAudioInfo(null);
+          break;
+        }
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+        const el = new Audio(url);
+        el.loop = !!a.payload.audioLoop;
+        el.onended = () => setAudioInfo((s) => (s?.url === url ? null : s));
+        el.play().catch(() => toast.error("Could not play audio"));
+        audioRef.current = el;
+        setAudioInfo({ url, loop: !!a.payload.audioLoop });
+        break;
+      }
       case "call":
         if (a.payload.phone) window.location.href = `tel:${a.payload.phone}`;
         break;
@@ -635,7 +679,24 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
-      {/* Form / RSVP */}
+      {/* Audio mini-player (fixed bottom) */}
+      {audioInfo && (
+        <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-card/95 px-4 py-2 shadow-elegant backdrop-blur">
+          <span className="text-xs font-medium">♪ Now playing{audioInfo.loop ? " (loop)" : ""}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs"
+            onClick={() => {
+              audioRef.current?.pause();
+              if (audioRef.current) audioRef.current.currentTime = 0;
+              setAudioInfo(null);
+            }}
+          >
+            Stop
+          </Button>
+        </div>
+      )}
       <Dialog open={!!formAction} onOpenChange={(v) => !v && setFormAction(null)}>
         <DialogContent>
           <DialogHeader>

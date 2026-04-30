@@ -28,6 +28,7 @@ const ACTION_LABELS: Record<ActionType, string> = {
   open_url: "Open URL",
   popup: "Show popup",
   video: "Play video",
+  audio: "Play audio",
   call: "Call phone",
   sms: "Send SMS",
   form: "Capture form",
@@ -43,7 +44,7 @@ const ACTION_LABELS: Record<ActionType, string> = {
 
 const PRESET_TYPES: ActionType[] = ["buy_ticket", "rsvp", "checkout", "coupon", "map"];
 const BASIC_TYPES: ActionType[] = [
-  "open_url", "popup", "video", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
+  "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
 
 function toLocalInputValue(iso?: string): string {
@@ -67,6 +68,7 @@ function isValid(draft: LayerAction | null): boolean {
     case "open_url": return !!p.url;
     case "popup": return !!(p.title || p.body || (p.buttons && p.buttons.length));
     case "video": return !!p.videoUrl;
+    case "audio": return !!p.audioUrl;
     case "call": return !!p.phone;
     case "sms": return !!p.phone;
     case "form": return !!(p.fields && p.fields.length);
@@ -341,6 +343,25 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
             <Label className="text-xs">Video URL (YouTube, Vimeo, mp4)</Label>
             <Input className="mt-1" value={p.videoUrl || ""} onChange={(e) => update({ videoUrl: e.target.value })} />
           </div>
+        )}
+
+        {type === "audio" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Plays an audio file (mp3, wav, ogg, m4a) when this layer is tapped.</p>
+            <div>
+              <Label className="text-xs">Audio URL</Label>
+              <Input
+                className="mt-1"
+                value={p.audioUrl || ""}
+                onChange={(e) => update({ audioUrl: e.target.value })}
+                placeholder="https://.../song.mp3"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Loop</Label>
+              <Switch checked={!!p.audioLoop} onCheckedChange={(v) => update({ audioLoop: v })} />
+            </div>
+          </>
         )}
 
         {type === "call" && (
@@ -706,6 +727,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                   <SelectItem value="solid">Solid outline</SelectItem>
                   <SelectItem value="dashed">Dashed outline</SelectItem>
                   <SelectItem value="corners">Corner brackets</SelectItem>
+                  <SelectItem value="circle">Circle ring</SelectItem>
                   <SelectItem value="none">None (hidden)</SelectItem>
                 </SelectContent>
               </Select>

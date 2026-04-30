@@ -51,7 +51,7 @@ export function useFlyerData(flyerId: string | undefined) {
             style: l.style ?? {},
             content: l.content ?? {},
             action: l.actions?.[0]
-              ? ({ id: l.actions[0].id, type: l.actions[0].type, payload: l.actions[0].payload } as LayerAction)
+              ? ({ id: l.actions[0].id, type: l.actions[0].type, payload: l.actions[0].payload, highlight: l.actions[0].highlight ?? undefined } as LayerAction)
               : null,
           })),
       }));
@@ -172,6 +172,7 @@ export function useFlyerData(flyerId: string | undefined) {
           layer_id: l.id,
           type: l.action.type,
           payload: l.action.payload as any,
+          highlight: (l.action.highlight ?? null) as any,
         }]);
       }
     } catch (e: any) {
