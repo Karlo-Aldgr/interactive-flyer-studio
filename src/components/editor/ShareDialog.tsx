@@ -55,7 +55,7 @@ export function ShareDialog({
   async function nativeShare() {
     if (typeof navigator !== "undefined" && (navigator as any).share) {
       try {
-        await (navigator as any).share({ title: title || "Flyer", url: displayUrl });
+        await (navigator as any).share({ title: title || "Flyer", url: socialUrl });
       } catch {}
     } else {
       copy();
