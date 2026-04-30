@@ -18,7 +18,7 @@ interface EditorState {
   past: Snapshot[];
   future: Snapshot[];
   dirty: boolean;
-  drawMode: null | "hotspot" | "crop";
+  drawMode: null | "hotspot" | "hotspot-ellipse" | "crop";
   showHitboxes: boolean;
   deviceFrame: DeviceFrame;
   pendingCrop: { width: number; height: number } | null;
@@ -28,7 +28,7 @@ interface EditorState {
   setZoom: (z: number) => void;
   selectPage: (id: string) => void;
   selectLayer: (id: string | null) => void;
-  setDrawMode: (mode: null | "hotspot" | "crop") => void;
+  setDrawMode: (mode: null | "hotspot" | "hotspot-ellipse" | "crop") => void;
   toggleHitboxes: () => void;
   setDeviceFrame: (f: DeviceFrame) => void;
   startCrop: (size: { width: number; height: number }) => void;
@@ -50,7 +50,7 @@ interface EditorState {
   // layers
   addLayer: (type: Layer["type"]) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
-  addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }) => void;
+  addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }, shape?: "rect" | "ellipse") => void;
   updateLayer: (id: string, patch: Partial<Layer>) => void;
   updateLayerStyle: (id: string, patch: Partial<LayerStyle>) => void;
   updateLayerContent: (id: string, patch: Partial<LayerContent>) => void;
@@ -309,7 +309,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-  addHotspotLayer: (rect) => {
+  addHotspotLayer: (rect, shape = "rect") => {
     const s = get();
     const pageId = s.selectedPageId;
     if (!pageId) return;
@@ -321,6 +321,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...base,
       position: { x: rect.x, y: rect.y },
       size: { width: rect.width, height: rect.height },
+      content: { ...base.content, hotspotShape: shape },
     };
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),

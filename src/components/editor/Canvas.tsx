@@ -148,9 +148,11 @@ export function Canvas() {
 
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-auto bg-muted/40 p-8">
-      {drawMode === "hotspot" && (
+      {(drawMode === "hotspot" || drawMode === "hotspot-ellipse") && (
         <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
-          <span className="font-medium">Drag on the canvas to draw a hotspot</span>
+          <span className="font-medium">
+            Drag on the canvas to draw a {drawMode === "hotspot-ellipse" ? "circle" : "rectangle"} hotspot
+          </span>
           <span className="text-muted-foreground">— Esc to cancel</span>
           <Button variant="ghost" size="icon" className="h-6 w-6"
             onClick={() => { setDrawMode(null); setDrawStart(null); setDrawCurrent(null); }}>
@@ -176,7 +178,7 @@ export function Canvas() {
             width: W * zoom,
             height: H * zoom,
             background: page.background.color || "#fff",
-            cursor: drawMode === "hotspot" ? "crosshair" : "default",
+            cursor: drawMode === "hotspot" || drawMode === "hotspot-ellipse" ? "crosshair" : "default",
           }}
         >
           <Stage
@@ -186,7 +188,7 @@ export function Canvas() {
             scaleX={zoom}
             scaleY={zoom}
             onMouseDown={(e) => {
-              if (drawMode === "hotspot") {
+              if (drawMode === "hotspot" || drawMode === "hotspot-ellipse") {
                 const p = getStagePos(e);
                 if (p) { setDrawStart(p); setDrawCurrent(p); }
                 return;
@@ -195,13 +197,13 @@ export function Canvas() {
               if (e.target === e.target.getStage()) selectLayer(null);
             }}
             onMouseMove={(e) => {
-              if (drawMode === "hotspot" && drawStart) {
+              if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart) {
                 const p = getStagePos(e);
                 if (p) setDrawCurrent(p);
               }
             }}
             onMouseUp={() => {
-              if (drawMode === "hotspot" && drawStart && drawCurrent) {
+              if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart && drawCurrent) {
                 const w = Math.abs(drawCurrent.x - drawStart.x);
                 const h = Math.abs(drawCurrent.y - drawStart.y);
                 if (w >= 8 && h >= 8) {
@@ -209,13 +211,13 @@ export function Canvas() {
                     x: Math.min(drawStart.x, drawCurrent.x),
                     y: Math.min(drawStart.y, drawCurrent.y),
                     width: w, height: h,
-                  });
+                  }, drawMode === "hotspot-ellipse" ? "ellipse" : "rect");
                 } else { setDrawMode(null); }
                 setDrawStart(null); setDrawCurrent(null);
               }
             }}
             onTouchStart={(e) => {
-              if (drawMode === "hotspot") {
+              if (drawMode === "hotspot" || drawMode === "hotspot-ellipse") {
                 const p = getStagePos(e);
                 if (p) { setDrawStart(p); setDrawCurrent(p); }
                 return;
@@ -224,13 +226,13 @@ export function Canvas() {
               if (e.target === e.target.getStage()) selectLayer(null);
             }}
             onTouchMove={(e) => {
-              if (drawMode === "hotspot" && drawStart) {
+              if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart) {
                 const p = getStagePos(e);
                 if (p) setDrawCurrent(p);
               }
             }}
             onTouchEnd={() => {
-              if (drawMode === "hotspot" && drawStart && drawCurrent) {
+              if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart && drawCurrent) {
                 const w = Math.abs(drawCurrent.x - drawStart.x);
                 const h = Math.abs(drawCurrent.y - drawStart.y);
                 if (w >= 8 && h >= 8) {
@@ -238,7 +240,7 @@ export function Canvas() {
                     x: Math.min(drawStart.x, drawCurrent.x),
                     y: Math.min(drawStart.y, drawCurrent.y),
                     width: w, height: h,
-                  });
+                  }, drawMode === "hotspot-ellipse" ? "ellipse" : "rect");
                 } else { setDrawMode(null); }
                 setDrawStart(null); setDrawCurrent(null);
               }
@@ -295,12 +297,23 @@ export function Canvas() {
                     return <HighlightOverlay key={"hl-" + l.id} layer={l} shape={shape} />;
                   })}
               {previewRect && (
-                <Rect
-                  x={previewRect.x} y={previewRect.y}
-                  width={previewRect.width} height={previewRect.height}
-                  fill="rgba(124,58,237,0.12)" stroke="#7c3aed" strokeWidth={1.5}
-                  dash={[6, 4]} listening={false}
-                />
+                drawMode === "hotspot-ellipse" ? (
+                  <Ellipse
+                    x={previewRect.x + previewRect.width / 2}
+                    y={previewRect.y + previewRect.height / 2}
+                    radiusX={previewRect.width / 2}
+                    radiusY={previewRect.height / 2}
+                    fill="rgba(124,58,237,0.12)" stroke="#7c3aed" strokeWidth={1.5}
+                    dash={[6, 4]} listening={false}
+                  />
+                ) : (
+                  <Rect
+                    x={previewRect.x} y={previewRect.y}
+                    width={previewRect.width} height={previewRect.height}
+                    fill="rgba(124,58,237,0.12)" stroke="#7c3aed" strokeWidth={1.5}
+                    dash={[6, 4]} listening={false}
+                  />
+                )
               )}
               <Transformer
                 ref={trRef}

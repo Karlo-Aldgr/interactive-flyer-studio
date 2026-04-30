@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import * as LucideIcons from "lucide-react";
-import { Type, Image as ImageIcon, Square, Circle, Minus, MousePointerClick, Star, Heart, Smile, ThumbsUp, SquareDashed, Sparkles } from "lucide-react";
+import { Type, Image as ImageIcon, Square, Circle, Minus, MousePointerClick, Star, Heart, Smile, ThumbsUp, SquareDashed, CircleDashed, Sparkles } from "lucide-react";
 import { SmartDetectDialog } from "./SmartDetectDialog";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -143,7 +143,20 @@ export function Toolbar() {
             <SquareDashed className="h-5 w-5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="right">Hotspot (drag to draw)</TooltipContent>
+        <TooltipContent side="right">Hotspot rectangle (drag to draw)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={drawMode === "hotspot-ellipse" ? "default" : "ghost"}
+            size="icon"
+            className="h-12 w-12"
+            onClick={() => setDrawMode(drawMode === "hotspot-ellipse" ? null : "hotspot-ellipse")}
+          >
+            <CircleDashed className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Hotspot circle (drag to draw)</TooltipContent>
       </Tooltip>
       <div className="my-1 h-px w-8 bg-border" />
       <Tooltip>
