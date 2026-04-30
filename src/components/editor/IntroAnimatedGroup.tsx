@@ -61,10 +61,16 @@ export function IntroAnimatedGroup({
   const ref = useRef<Konva.Group | null>(null);
   const tweenRef = useRef<Konva.Tween | null>(null);
   const timerRef = useRef<number | null>(null);
+  // Capture cx/cy at animation start — we don't want re-animating when the
+  // user drags the wrapped layer (which would change cx/cy on every frame).
+  const cxRef = useRef(cx);
+  const cyRef = useRef(cy);
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
+    cxRef.current = cx;
+    cyRef.current = cy;
     const start = startState(preset);
     if (!start || reduced()) {
       node.x(cx);
@@ -75,7 +81,6 @@ export function IntroAnimatedGroup({
       node.getLayer()?.batchDraw();
       return;
     }
-    // Apply initial state (additive offset on top of pivot at cx, cy)
     node.x(cx + start.x);
     node.y(cy + start.y);
     node.scaleX(start.scaleX);
@@ -88,8 +93,8 @@ export function IntroAnimatedGroup({
       tweenRef.current = new Konva.Tween({
         node,
         duration: Math.max(0.05, durationMs / 1000),
-        x: cx,
-        y: cy,
+        x: cxRef.current,
+        y: cyRef.current,
         scaleX: 1,
         scaleY: 1,
         opacity: 1,
@@ -107,7 +112,22 @@ export function IntroAnimatedGroup({
       if (timerRef.current) window.clearTimeout(timerRef.current);
       tweenRef.current?.destroy();
     };
-  }, [preset, durationMs, delayMs, cx, cy, introKey]);
+    // Intentionally exclude cx/cy — only animate on preset/timing/replay changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preset, durationMs, delayMs, introKey]);
+
+  // When not animating (steady state), keep the wrapper anchored to the latest
+  // cx/cy. This way layer drags update the pivot for the *next* animation but
+  // don't retrigger the current one.
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    if (tweenRef.current && tweenRef.current.anim?.isRunning?.()) return;
+    node.x(cx);
+    node.y(cy);
+    node.offsetX(cx);
+    node.offsetY(cy);
+  }, [cx, cy]);
 
   return (
     <Group ref={ref as any} x={cx} y={cy} offsetX={cx} offsetY={cy}>
