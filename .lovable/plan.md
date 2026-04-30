@@ -1,66 +1,72 @@
-## What's wrong
+## Goal
 
-Two real problems explain your screenshots:
+Make Facebook Messenger (and other social platforms) show the **actual flyer thumbnail and title** in link previews — not a generic image, not raw HTML.
 
-1. **No thumbnail image is saved.** The flyer in the database (`Untitled flyer`) has `thumbnail_url = NULL`. The `og-meta` edge function therefore falls back to `https://interactive-flyer-studio.lovable.app/og.png` — a static file that doesn't exist. So Facebook fetches a non-existent image and shows no preview card.
-2. **The share URL is the raw Edge Function URL.** Messenger displays `https://iwmykqilqywbzxpcgaop.supabase.co/functions/v1/og-meta?slug=…&site=…` as plain text instead of a card, partly because there's no valid OG image and partly because that URL looks like noise to users.
+## Why the current setup fails
 
-The thumbnail-generation code only runs when you click **Publish** (status flip draft → published). Since this flyer was already published before that code shipped, the thumbnail was never created. Autosave-time regeneration only runs when you have page 1 selected AND you're actively editing.
+Two architectural blockers, confirmed by inspecting live responses:
 
-## Plan
+1. **Supabase Edge Functions inject `Content-Security-Policy: default-src 'none'; sandbox`** on every response. Facebook's crawler treats sandboxed pages as untrusted and discards their OG tags. This header cannot be removed.
+2. **Lovable's static hosting has no SSR**, so `/f/:slug` always returns the same `index.html` with the default OG image. Per-flyer dynamic tags are impossible from the app itself.
 
-### 1. Generate the thumbnail on demand (most important fix)
+You can't fix this inside Lovable or Supabase alone. You need a real server in front that returns clean HTML with proper OG tags.
 
-In `src/components/editor/TopBar.tsx`, when the user opens the **Share** dialog and `flyer.thumbnail_url` is missing — or whenever they click a "Refresh preview" button — render the first page and upload it. Steps:
+## Recommended solution: Cloudflare Worker
 
-- Add a small helper `ensureThumbnail()` that:
-  - Switches to page 1 if not already there (briefly).
-  - Waits ~250 ms for Konva to paint.
-  - Calls `generateAndUploadThumbnail(...)` from `src/lib/thumbnail.ts`.
-  - Updates the local store's `flyer.thumbnail_url` so the Share dialog preview updates.
-- Trigger `ensureThumbnail()` automatically when opening Share if `thumbnail_url` is empty.
-- Add a "Regenerate preview" button inside `ShareDialog.tsx` so the user can refresh after edits.
+A Cloudflare Worker is the simplest "real server" option:
 
-### 2. Make the share URL friendly
+- Free tier covers far more than you'll need (100k requests/day).
+- No server to maintain — single JavaScript file.
+- Sits on a subdomain you control (e.g. `share.yourdomain.com` or a free `*.workers.dev` URL).
+- Returns clean HTML with no sandbox CSP, so social crawlers parse OG tags correctly.
 
-Right now the share URL is the long Edge Function URL. Switch the share URL shown to users to the clean `/f/:slug` viewer URL, and instead make the Edge Function the **canonical OG meta source** referenced from the viewer page. Concretely:
+This replaces the broken `og-meta` Supabase function entirely.
 
-- In `TopBar.tsx`, set `publicUrl = viewerUrl` (i.e. `https://interactive-flyer-studio.lovable.app/f/<slug>`).
-- In the public viewer route (`/f/:slug`), inject per-flyer OG/Twitter meta tags into `<head>` via React (using `react-helmet-async` or a small `useEffect` that mutates `document.head`). This way social crawlers that execute JS (Facebook, LinkedIn, X) see the correct image. We will set:
-  - `og:title` = flyer title
-  - `og:description` = flyer description
-  - `og:image` = `flyer.thumbnail_url`
-  - `og:url` = canonical viewer URL
-  - matching `twitter:*` tags
+## What the Worker does
 
-  Note: Facebook's crawler does NOT execute JS reliably, so we keep the Edge Function as a backup option and also add a prerender-friendly approach: for crawlers, the viewer route can server-side-redirect to og-meta. But the simplest robust approach is:
-  
-  **Recommended approach**: keep using the og-meta Edge Function URL as the share URL, but display it in the UI as a shortened label ("Copy link" copies the og-meta URL; the Input shows the friendly viewer URL with a small note "social-optimized"). On click of native share / WhatsApp / Facebook buttons, send the og-meta URL (because those crawlers need the OG-tagged HTML); on display, show the viewer URL.
+For a request like `https://share.yourdomain.com/f/my-flyer-slug`:
 
-We'll go with the Recommended approach — it's the least invasive and matches the existing architecture. The user-visible Input will show the clean viewer URL; the social-share buttons will use the og-meta URL under the hood.
+1. Fetches the flyer row from Supabase using the slug (read-only, public published flyers only).
+2. If the User-Agent is a social crawler (Facebook, WhatsApp, iMessage, Twitter, LinkedIn, Slack, Discord, Telegram, etc.), returns HTML containing real OG/Twitter meta tags pointing to the flyer's thumbnail and title.
+3. If the User-Agent is a normal browser, 302-redirects to `https://interactive-flyer-studio.lovable.app/f/my-flyer-slug` so the user lands in the interactive viewer.
 
-### 3. Make `og-meta` more robust
+```text
+  Messenger crawler ──► Worker ──► HTML with og:image of THIS flyer
+  Real user click   ──► Worker ──► 302 redirect to live app viewer
+```
 
-In `supabase/functions/og-meta/index.ts`:
+## Implementation steps
 
-- If `thumbnail_url` is missing, try to construct the public storage URL directly from `flyer-thumbnails/<flyerId>.jpg` (it may exist even if the DB column wasn't updated due to a previous race).
-- Add a cache-busting `?v=` derived from the flyer's `updated_at`.
-- Strip the `?v=` cache-buster from the stored thumbnail_url BEFORE serving (some crawlers reject querystrings on og:image). Serve a stable URL.
+### 1. App-side changes (I'll do these)
 
-### 4. Backfill the existing published flyer
+- Update `src/components/editor/TopBar.tsx` so `socialUrl` points to the Worker URL (e.g. `https://share.<your-domain>/f/<slug>`) instead of the Lovable app URL.
+- Keep `viewerUrl` (the friendly URL shown in the dialog) pointing to the Lovable app.
+- Delete/retire the `og-meta` Supabase edge function — it's no longer used.
+- Clean up the static OG tags in `index.html` so the homepage still has a sensible default.
 
-After the Share dialog auto-regenerates thumbnails, simply opening Share once for `Untitled flyer` will populate `thumbnail_url`. No DB migration needed.
+### 2. Worker code (I'll write the file; you deploy it)
 
-## Technical details
+I'll create `worker/share-worker.js` in the repo containing the full Worker code. You then:
 
-**Files to edit**
-- `src/components/editor/TopBar.tsx` — add `ensureThumbnail()`, call on Share open; show clean viewer URL while passing og-meta URL to social buttons.
-- `src/components/editor/ShareDialog.tsx` — accept two URLs (display + share-with-crawlers), add "Regenerate preview" button, show loading state during regeneration.
-- `src/lib/thumbnail.ts` — export the upload path (`flyer-thumbnails/<id>.jpg`) helper; allow `generateAndUploadThumbnail` to return the **clean** URL (without cache-buster) and store the clean URL in DB, while UI uses cache-busted variant for `<img>` only.
-- `supabase/functions/og-meta/index.ts` — fall back to constructed storage URL; sanitize cache-buster.
+1. Create a free Cloudflare account (if you don't have one).
+2. Create a new Worker, paste in the code, deploy.
+3. Set two Worker environment variables: `SUPABASE_URL` and `SUPABASE_ANON_KEY` (anon key only — no service role needed since published flyers are publicly readable via RLS).
+4. Either use the free `*.workers.dev` URL Cloudflare gives you, or bind a subdomain you own.
+5. Tell me the final Worker URL and I'll wire it into the app.
 
-**No DB migration required.** No new dependencies.
+### 3. Verify
 
-## Out of scope
-- Server-rendering the `/f/:slug` page (would need an SSR setup we don't have).
-- Deleting old `og.png` references — there's no static file to remove.
+After deployment, test the share link in the [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/). It should show the flyer's actual thumbnail and title.
+
+## Alternatives if you don't want a Worker
+
+- **Vercel/Netlify Functions** — same idea, slightly more setup. I can write that code instead if you prefer.
+- **Move the entire app off Lovable hosting to Next.js on Vercel** — overkill just for social previews.
+- **Accept generic previews** — keep the static `og:image` we just set up; every shared link shows the same FlyerFlow image.
+
+## What you need to decide
+
+- Are you okay deploying a Cloudflare Worker (free, ~5 min setup)?
+- Do you want to use a subdomain of a domain you own, or the free `*.workers.dev` URL?
+
+Once you confirm, I'll write the Worker code and update the app to point at it.
