@@ -290,6 +290,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_flyer_thumbnail: {
+        Args: { _object_name: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
