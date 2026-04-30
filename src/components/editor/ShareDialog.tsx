@@ -35,9 +35,11 @@ export function ShareDialog({
   const fileRef = useRef<HTMLInputElement>(null);
 
   function copy() {
-    navigator.clipboard.writeText(displayUrl);
+    // Copy the og-meta share URL so messaging apps (Messenger, iMessage, WhatsApp, etc.)
+    // see the per-flyer preview image when the link is pasted.
+    navigator.clipboard.writeText(socialUrl);
     setCopied(true);
-    toast.success("Link copied to clipboard");
+    toast.success("Share link copied — paste it anywhere for a rich preview");
     setTimeout(() => setCopied(false), 1500);
   }
 
@@ -53,7 +55,7 @@ export function ShareDialog({
   async function nativeShare() {
     if (typeof navigator !== "undefined" && (navigator as any).share) {
       try {
-        await (navigator as any).share({ title: title || "Flyer", url: displayUrl });
+        await (navigator as any).share({ title: title || "Flyer", url: socialUrl });
       } catch {}
     } else {
       copy();
@@ -144,15 +146,18 @@ export function ShareDialog({
 
         <div className="flex flex-col items-center gap-4">
           <div className="rounded-lg bg-white p-4 shadow-sm">
-            <QRCodeCanvas id="share-qr-canvas" value={displayUrl} size={200} level="M" includeMargin={false} />
+            <QRCodeCanvas id="share-qr-canvas" value={socialUrl} size={200} level="M" includeMargin={false} />
           </div>
           <div className="flex w-full gap-2">
-            <Input readOnly value={displayUrl} className="flex-1 text-xs" onFocus={(e) => e.target.select()} />
+            <Input readOnly value={socialUrl} className="flex-1 text-xs" onFocus={(e) => e.target.select()} />
             <Button size="sm" variant="outline" onClick={copy}>
               <Copy className="mr-1 h-3.5 w-3.5" />
               {copied ? "Copied" : "Copy"}
             </Button>
           </div>
+          <p className="-mt-2 text-center text-[11px] text-muted-foreground">
+            This link unfurls with your flyer preview in Messenger, WhatsApp, iMessage, etc.
+          </p>
           <div className="flex w-full gap-2">
             <Button size="sm" variant="outline" className="flex-1" onClick={downloadQR}>
               <Download className="mr-1 h-3.5 w-3.5" /> Download QR
