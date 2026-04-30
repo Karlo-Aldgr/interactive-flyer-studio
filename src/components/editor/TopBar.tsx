@@ -24,6 +24,13 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40) + "-" + Math.random().toString(36).slice(2, 7);
 }
 
+function getShareOrigin() {
+  const origin = window.location.origin;
+  return origin.includes("lovable.app") && origin.includes("preview")
+    ? "https://interactive-flyer-studio.lovable.app"
+    : origin;
+}
+
 const PRESETS: { label: string; w: number; h: number }[] = [
   { label: "Story 9:16 (1080×1920)", w: 1080, h: 1920 },
   { label: "Portrait 4:5 (1080×1350)", w: 1080, h: 1350 },
@@ -181,14 +188,8 @@ export function TopBar({ saving }: Props) {
     setResizeOpen(false);
   }
 
-  // Public viewer URL (humans land here directly). This is what we show & let users copy.
-  const viewerUrl = flyer.public_slug ? `${window.location.origin}/f/${flyer.public_slug}` : "";
-  // Social-share URL goes through the og-meta edge function so platforms see a per-flyer
-  // preview image and title. Humans get redirected to the viewer in <50ms.
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-  const socialUrl = flyer.public_slug && projectId
-    ? `https://${projectId}.supabase.co/functions/v1/og-meta?slug=${encodeURIComponent(flyer.public_slug)}&site=${encodeURIComponent(window.location.origin)}`
-    : viewerUrl;
+  const viewerUrl = flyer.public_slug ? `${getShareOrigin()}/f/${flyer.public_slug}` : "";
+  const socialUrl = viewerUrl;
 
   return (
     <header className="flex h-14 items-center gap-3 border-b border-border bg-card px-3">

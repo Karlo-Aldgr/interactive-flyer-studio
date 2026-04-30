@@ -31,20 +31,14 @@ function cleanThumbnailUrl(value: string | null | undefined): string | null {
 }
 
 function htmlResponse(html: string, status = 200, cacheControl = "public, max-age=300") {
-  const bytes = new TextEncoder().encode(html);
-  const body = new ReadableStream({
-    start(controller) {
-      controller.enqueue(bytes);
-      controller.close();
-    },
-  });
-  return new Response(body, {
+  const headers = new Headers(corsHeaders);
+  headers.set("content-type", "application/xhtml+xml; charset=utf-8");
+  headers.set("cache-control", cacheControl);
+  headers.set("x-og-meta-version", "xhtml-v3");
+
+  return new Response(html, {
     status,
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": cacheControl,
-      ...corsHeaders,
-    },
+    headers,
   });
 }
 
