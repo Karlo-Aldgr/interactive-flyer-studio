@@ -35,9 +35,11 @@ export function ShareDialog({
   const fileRef = useRef<HTMLInputElement>(null);
 
   function copy() {
-    navigator.clipboard.writeText(displayUrl);
+    // Copy the og-meta share URL so messaging apps (Messenger, iMessage, WhatsApp, etc.)
+    // see the per-flyer preview image when the link is pasted.
+    navigator.clipboard.writeText(socialUrl);
     setCopied(true);
-    toast.success("Link copied to clipboard");
+    toast.success("Share link copied — paste it anywhere for a rich preview");
     setTimeout(() => setCopied(false), 1500);
   }
 
