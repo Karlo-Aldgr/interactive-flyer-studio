@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEditorStore } from "@/store/editorStore";
 import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import { toast } from "sonner";
+import { generateAndUploadThumbnail } from "@/lib/thumbnail";
 
 export function useFlyerData(flyerId: string | undefined) {
   const [loading, setLoading] = useState(true);
