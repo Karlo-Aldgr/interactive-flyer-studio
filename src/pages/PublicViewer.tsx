@@ -299,6 +299,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [enlarged, setEnlarged] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
   const introPlayedRef = useRef(false);
@@ -595,11 +596,15 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   // Fit-to-screen scale: fill the viewport edge-to-edge (no padding around the flyer).
   const vw = typeof window !== "undefined" ? window.innerWidth : W;
   const vh = typeof window !== "undefined" ? window.innerHeight : H;
-  const scale = Math.min(vw / W, vh / H);
+  const fitScale = Math.min(vw / W, vh / H);
+  // Enlarged: fill the longer viewport edge so user can scroll/pan to inspect details.
+  // Multiplier gives extra zoom on top of fit-to-screen.
+  const enlargedScale = Math.max(vw / W, vh / H) * 1.6;
+  const scale = enlarged ? enlargedScale : fitScale;
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center overflow-auto"
+      className={`flex min-h-screen ${enlarged ? "items-start justify-start" : "items-center justify-center"} overflow-auto`}
       style={{ background: page.background.color || "#fff", touchAction: "pinch-zoom" }}
     >
       {previewMode && (
@@ -614,6 +619,25 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </button>
         </div>
       )}
+      {/* Enlarge / fit toggle — keeps Konva hotspots fully interactive */}
+      <button
+        type="button"
+        aria-label={enlarged ? "Fit to screen" : "Enlarge flyer"}
+        onClick={() => setEnlarged((v) => !v)}
+        className="fixed top-3 right-3 z-50 inline-flex items-center gap-1 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs font-medium shadow-elegant backdrop-blur hover:bg-card"
+      >
+        {enlarged ? (
+          <>
+            <LucideIcons.Minimize2 className="h-3.5 w-3.5" />
+            Fit
+          </>
+        ) : (
+          <>
+            <LucideIcons.Maximize2 className="h-3.5 w-3.5" />
+            Enlarge
+          </>
+        )}
+      </button>
       <div style={{ width: W * scale, height: H * scale, background: page.background.color || "#fff" }}>
         <Stage width={W * scale} height={H * scale} scaleX={scale} scaleY={scale}>
           <KLayer>
