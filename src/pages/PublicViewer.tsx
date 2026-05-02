@@ -656,10 +656,20 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             {popup?.payload.body && <DialogDescription>{popup.payload.body}</DialogDescription>}
           </DialogHeader>
           {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
-            <img src={popup.payload.ticketImageUrl} alt="Ticket" className="w-full rounded" />
+            <img
+              src={popup.payload.ticketImageUrl}
+              alt="Ticket"
+              className="w-full rounded cursor-zoom-in transition hover:opacity-90"
+              onClick={() => setZoomImage(popup.payload.ticketImageUrl!)}
+            />
           )}
           {popup?.type !== "buy_ticket" && popup?.payload.mediaUrl && (
-            <img src={popup.payload.mediaUrl} alt="" className="w-full rounded" />
+            <img
+              src={popup.payload.mediaUrl}
+              alt=""
+              className="w-full rounded cursor-zoom-in transition hover:opacity-90"
+              onClick={() => setZoomImage(popup.payload.mediaUrl!)}
+            />
           )}
           {popup?.type === "buy_ticket" && popup.payload.checkoutUrl && (
             <Button
