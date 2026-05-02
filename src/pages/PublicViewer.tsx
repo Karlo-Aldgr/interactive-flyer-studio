@@ -597,14 +597,98 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const vw = typeof window !== "undefined" ? window.innerWidth : W;
   const vh = typeof window !== "undefined" ? window.innerHeight : H;
   const fitScale = Math.min(vw / W, vh / H);
-  // Enlarged: fill the longer viewport edge so user can scroll/pan to inspect details.
-  // Multiplier gives extra zoom on top of fit-to-screen.
+  // Enlarged scale (used inside the lightbox dialog): fill the longer edge of the
+  // viewport so the user can scroll/pan to inspect, similar to the popup lightbox.
   const enlargedScale = Math.max(vw / W, vh / H) * 1.6;
-  const scale = enlarged ? enlargedScale : fitScale;
+
+  // Renders the Konva stage at a given scale. Used for both the inline view
+  // and the enlarged lightbox so hotspots remain fully interactive in both.
+  const renderStage = (s: number) => (
+    <div style={{ width: W * s, height: H * s, background: page.background.color || "#fff" }}>
+      <Stage width={W * s} height={H * s} scaleX={s} scaleY={s}>
+        <KLayer>
+          <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
+          {(() => {
+            const pageCfg = resolveIntro(page.intro);
+            const sorted = [...page.layers].sort((a, b) => a.z_index - b.z_index);
+            return sorted.map((l, idx) => {
+              const node = renderLayer(l, () => runAction(l), hiddenIds.has(l.id));
+              if (!node) return null;
+              const cfg = l.intro ? resolveIntro(l.intro) : pageCfg;
+              const cx = l.position.x + l.size.width / 2;
+              const cy = l.position.y + l.size.height / 2;
+              const delay = l.intro
+                ? cfg.delayMs
+                : cfg.delayMs + (cfg.stagger ? idx * cfg.staggerStepMs : 0);
+              return (
+                <IntroAnimatedGroup
+                  key={l.id}
+                  preset={cfg.preset}
+                  durationMs={cfg.durationMs}
+                  delayMs={delay}
+                  cx={cx}
+                  cy={cy}
+                  introKey={`${page.id}:${pageIndex}:${s}`}
+                >
+                  {node}
+                </IntroAnimatedGroup>
+              );
+            });
+          })()}
+        </KLayer>
+        {(flyer.settings?.highlightsEnabled ?? true) && (
+          <KLayer listening={false}>
+            {page.layers
+              .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
+              .filter((l) => {
+                const h = l.action?.highlight;
+                if (!h) return true;
+                if (h.enabled === false) return false;
+                if (h.style === "none") return false;
+                return true;
+              })
+              .map((l) => {
+                const shape: "rect" | "ellipse" =
+                  l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
+                return <PulseHighlight key={"pulse-" + l.id} layer={l} shape={shape} />;
+              })}
+          </KLayer>
+        )}
+        {previewMode && showHitboxes && (
+          <KLayer listening={false}>
+            {page.layers
+              .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
+              .map((l) => {
+                const isEllipse = l.type === "hotspot" && l.content.hotspotShape === "ellipse";
+                return isEllipse ? (
+                  <Ellipse
+                    key={"hb-" + l.id}
+                    x={l.position.x + l.size.width / 2}
+                    y={l.position.y + l.size.height / 2}
+                    radiusX={l.size.width / 2}
+                    radiusY={l.size.height / 2}
+                    stroke="#7c3aed" strokeWidth={2} dash={[8, 5]}
+                    fill="rgba(124,58,237,0.15)"
+                  />
+                ) : (
+                  <Rect
+                    key={"hb-" + l.id}
+                    x={l.position.x} y={l.position.y}
+                    width={l.size.width} height={l.size.height}
+                    stroke="#7c3aed" strokeWidth={2} dash={[8, 5]}
+                    fill="rgba(124,58,237,0.15)"
+                  />
+                );
+              })}
+          </KLayer>
+        )}
+      </Stage>
+    </div>
+  );
 
   return (
     <div
-      className={`flex min-h-screen ${enlarged ? "items-start justify-start" : "items-center justify-center"} overflow-auto`}
+      className="flex min-h-screen items-center justify-center overflow-auto"
       style={{ background: page.background.color || "#fff", touchAction: "pinch-zoom" }}
     >
       {previewMode && (
@@ -619,107 +703,39 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </button>
         </div>
       )}
-      {/* Enlarge / fit toggle — keeps Konva hotspots fully interactive */}
+      {/* Enlarge button — opens a lightbox with the flyer scaled up, hotspots stay live */}
       <button
         type="button"
-        aria-label={enlarged ? "Fit to screen" : "Enlarge flyer"}
-        onClick={() => setEnlarged((v) => !v)}
-        className="fixed top-3 right-3 z-50 inline-flex items-center gap-1 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs font-medium shadow-elegant backdrop-blur hover:bg-card"
+        aria-label="Enlarge flyer"
+        onClick={() => setEnlarged(true)}
+        className="fixed top-3 right-3 z-50 inline-flex items-center gap-1 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-medium text-foreground border border-border shadow-sm hover:bg-background transition"
       >
-        {enlarged ? (
-          <>
-            <LucideIcons.Minimize2 className="h-3.5 w-3.5" />
-            Fit
-          </>
-        ) : (
-          <>
-            <LucideIcons.Maximize2 className="h-3.5 w-3.5" />
-            Enlarge
-          </>
-        )}
+        <LucideIcons.Maximize2 className="h-3.5 w-3.5" />
+        Enlarge
       </button>
-      <div style={{ width: W * scale, height: H * scale, background: page.background.color || "#fff" }}>
-        <Stage width={W * scale} height={H * scale} scaleX={scale} scaleY={scale}>
-          <KLayer>
-            <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
-            {(() => {
-              const pageCfg = resolveIntro(page.intro);
-              const sorted = [...page.layers].sort((a, b) => a.z_index - b.z_index);
-              return sorted.map((l, idx) => {
-                const node = renderLayer(l, () => runAction(l), hiddenIds.has(l.id));
-                if (!node) return null;
-                // Per-layer intro overrides the page-level intro entirely.
-                const cfg = l.intro ? resolveIntro(l.intro) : pageCfg;
-                const cx = l.position.x + l.size.width / 2;
-                const cy = l.position.y + l.size.height / 2;
-                const delay = l.intro
-                  ? cfg.delayMs
-                  : cfg.delayMs + (cfg.stagger ? idx * cfg.staggerStepMs : 0);
-                return (
-                  <IntroAnimatedGroup
-                    key={l.id}
-                    preset={cfg.preset}
-                    durationMs={cfg.durationMs}
-                    delayMs={delay}
-                    cx={cx}
-                    cy={cy}
-                    introKey={`${page.id}:${pageIndex}`}
-                  >
-                    {node}
-                  </IntroAnimatedGroup>
-                );
-              });
-            })()}
-          </KLayer>
-          {/* Pulsing highlights to indicate tappable hotspots */}
-          {(flyer.settings?.highlightsEnabled ?? true) && (
-            <KLayer listening={false}>
-              {page.layers
-                .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
-                .filter((l) => {
-                  const h = l.action?.highlight;
-                  if (!h) return true; // default: show
-                  if (h.enabled === false) return false;
-                  if (h.style === "none") return false;
-                  return true;
-                })
-                .map((l) => {
-                  const shape: "rect" | "ellipse" =
-                    l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
-                  return <PulseHighlight key={"pulse-" + l.id} layer={l} shape={shape} />;
-                })}
-            </KLayer>
-          )}
-          {previewMode && showHitboxes && (
-            <KLayer listening={false}>
-              {page.layers
-                .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
-                .map((l) => {
-                  const isEllipse = l.type === "hotspot" && l.content.hotspotShape === "ellipse";
-                  return isEllipse ? (
-                    <Ellipse
-                      key={"hb-" + l.id}
-                      x={l.position.x + l.size.width / 2}
-                      y={l.position.y + l.size.height / 2}
-                      radiusX={l.size.width / 2}
-                      radiusY={l.size.height / 2}
-                      stroke="#7c3aed" strokeWidth={2} dash={[8, 5]}
-                      fill="rgba(124,58,237,0.15)"
-                    />
-                  ) : (
-                    <Rect
-                      key={"hb-" + l.id}
-                      x={l.position.x} y={l.position.y}
-                      width={l.size.width} height={l.size.height}
-                      stroke="#7c3aed" strokeWidth={2} dash={[8, 5]}
-                      fill="rgba(124,58,237,0.15)"
-                    />
-                  );
-                })}
-            </KLayer>
-          )}
-        </Stage>
-      </div>
+
+      {renderStage(fitScale)}
+
+      {/* Enlarged lightbox — same pattern as popup image enlarge */}
+      <Dialog open={enlarged} onOpenChange={(v) => !v && setEnlarged(false)}>
+        <DialogContent className="max-w-[100vw] w-screen h-screen p-0 bg-transparent border-none shadow-none sm:rounded-none">
+          <div
+            className="relative flex h-screen w-screen items-start justify-start overflow-auto"
+            style={{ background: page.background.color || "#fff", touchAction: "pinch-zoom" }}
+          >
+            <button
+              type="button"
+              aria-label="Close enlarged view"
+              onClick={() => setEnlarged(false)}
+              className="fixed top-3 right-3 z-50 inline-flex items-center gap-1 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-medium text-foreground border border-border shadow-sm hover:bg-background transition"
+            >
+              <LucideIcons.Minimize2 className="h-3.5 w-3.5" />
+              Close
+            </button>
+            {renderStage(enlargedScale)}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pagination */}
       {pages.length > 1 && (
