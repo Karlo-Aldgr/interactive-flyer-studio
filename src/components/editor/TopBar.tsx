@@ -315,6 +315,14 @@ export function TopBar({ saving }: Props) {
         <Button asChild size="sm" variant="outline">
           <a href={`/preview/${flyer.id}`} target="_blank" rel="noreferrer"><Eye className="mr-1 h-4 w-4" />Preview</a>
         </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button size="sm" variant="outline" onClick={() => setPayOpen(true)}>
+              <DollarSign className="mr-1 h-4 w-4" /> Pay link
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Generate a Venmo / Cash App / PayPal link to send to customers</TooltipContent>
+        </Tooltip>
         {flyer.status === "published" && (
           <Button size="sm" variant="outline" onClick={openShare}>
             <Share2 className="mr-1 h-4 w-4" /> Share
