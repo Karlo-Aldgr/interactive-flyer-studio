@@ -308,6 +308,18 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
   }
   function discard() { setDraft(action); }
 
+  // Highlight (visual cue) edits propagate live without requiring a Save click —
+  // they're purely presentational and users expect immediate feedback on the canvas.
+  function updateHighlight(patch: Partial<NonNullable<LayerAction["highlight"]>>) {
+    if (!draft) return;
+    const next: LayerAction = {
+      ...draft,
+      highlight: { ...(draft.highlight || {}), ...patch },
+    };
+    setDraft(next);
+    if (!embedded) onChange(next);
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-3 overflow-y-auto">
