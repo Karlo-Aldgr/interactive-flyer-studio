@@ -18,6 +18,38 @@ interface Props {
   onRegenerateThumbnail?: () => Promise<void> | void;
   onUploadThumbnail?: (file: File) => Promise<void> | void;
   regenerating?: boolean;
+  /** When false, hide the share controls and prompt the user to publish first. */
+  isPublished?: boolean;
+}
+
+const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
+
+/** Defensive guard: never let a private/preview URL be shared. */
+function sanitizeShareUrl(url: string): string {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    const host = u.hostname;
+    const isPreviewHost =
+      host.endsWith("lovableproject.com") ||
+      host.startsWith("id-preview--") ||
+      (host.endsWith("lovable.app") && host.includes("preview"));
+    // The /preview/:flyerId route is auth-gated — never share it.
+    const isPrivatePath = u.pathname.startsWith("/preview/");
+    if (isPreviewHost || isPrivatePath) {
+      const pub = new URL(PUBLISHED_ORIGIN);
+      // If the path is /preview/<id>, we can't recover a public slug — return
+      // the published origin root so the recipient at least lands on the app
+      // homepage instead of a login screen.
+      u.protocol = pub.protocol;
+      u.host = pub.host;
+      if (isPrivatePath) u.pathname = "/";
+      return u.toString();
+    }
+    return url;
+  } catch {
+    return url;
+  }
 }
 
 export function ShareDialog({
@@ -30,6 +62,7 @@ export function ShareDialog({
   onRegenerateThumbnail,
   onUploadThumbnail,
   regenerating,
+  isPublished = true,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
