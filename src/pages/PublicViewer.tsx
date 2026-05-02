@@ -303,6 +303,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
   const introPlayedRef = useRef(false);
   const [introNeedsTap, setIntroNeedsTap] = useState(false);
+  const [, setResizeTick] = useState(0);
+  useEffect(() => {
+    const onResize = () => setResizeTick((n) => n + 1);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
 
   useEffect(() => {
     if (!slug && !flyerId) return;
@@ -582,12 +592,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     })
   );
 
-  // Fit-to-screen scale
-  const maxW = typeof window !== "undefined" ? Math.min(window.innerWidth - 32, W) : W;
-  const scale = maxW / W;
+  // Fit-to-screen scale: fill the viewport edge-to-edge (no padding around the flyer).
+  const vw = typeof window !== "undefined" ? window.innerWidth : W;
+  const vh = typeof window !== "undefined" ? window.innerHeight : H;
+  const scale = Math.min(vw / W, vh / H);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+    <div
+      className="flex min-h-screen items-center justify-center overflow-auto"
+      style={{ background: page.background.color || "#fff", touchAction: "pinch-zoom" }}
+    >
       {previewMode && (
         <div className="fixed top-3 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-4 py-1.5 text-xs font-medium shadow-elegant backdrop-blur">
           <span>Preview mode</span>
@@ -600,7 +614,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </button>
         </div>
       )}
-      <div style={{ width: W * scale, height: H * scale, background: page.background.color || "#fff" }} className="shadow-elegant">
+      <div style={{ width: W * scale, height: H * scale, background: page.background.color || "#fff" }}>
         <Stage width={W * scale} height={H * scale} scaleX={scale} scaleY={scale}>
           <KLayer>
             <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
