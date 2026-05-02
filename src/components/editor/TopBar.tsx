@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareDialog } from "./ShareDialog";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
+import { IntroAudioDialog } from "./IntroAudioDialog";
 
 interface Props { saving: boolean }
 
