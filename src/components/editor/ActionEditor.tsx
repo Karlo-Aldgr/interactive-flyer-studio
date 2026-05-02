@@ -269,6 +269,208 @@ function PopupButtonsEditor({
   );
 }
 
+function PopupHotspotsEditor({
+  imageUrl,
+  hotspots,
+  onChange,
+  depth,
+}: {
+  imageUrl?: string;
+  hotspots: PopupHotspot[];
+  onChange: (h: PopupHotspot[]) => void;
+  depth: number;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const [draft, setDraft] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [mode, setMode] = useState<"select" | "draw">("draw");
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+
+  function update(i: number, patch: Partial<PopupHotspot>) {
+    onChange(hotspots.map((h, idx) => (idx === i ? { ...h, ...patch } : h)));
+  }
+  function remove(i: number) {
+    onChange(hotspots.filter((_, idx) => idx !== i));
+    if (openIdx === i) setOpenIdx(null);
+  }
+
+  function relCoords(e: React.PointerEvent) {
+    const el = containerRef.current!;
+    const r = el.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)),
+      y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)),
+    };
+  }
+
+  function onPointerDown(e: React.PointerEvent) {
+    if (mode !== "draw" || !imageUrl) return;
+    if ((e.target as HTMLElement).closest("[data-hotspot]")) return;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    const p = relCoords(e);
+    startRef.current = p;
+    setDraft({ x: p.x, y: p.y, w: 0, h: 0 });
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    if (!startRef.current) return;
+    const p = relCoords(e);
+    const s = startRef.current;
+    setDraft({
+      x: Math.min(s.x, p.x),
+      y: Math.min(s.y, p.y),
+      w: Math.abs(p.x - s.x),
+      h: Math.abs(p.y - s.y),
+    });
+  }
+  function onPointerUp() {
+    if (draft && draft.w > 0.01 && draft.h > 0.01) {
+      const next: PopupHotspot = {
+        id: crypto.randomUUID(),
+        x: draft.x,
+        y: draft.y,
+        width: draft.w,
+        height: draft.h,
+        shape: "rect",
+        action: { id: crypto.randomUUID(), type: "open_url", payload: {} },
+      };
+      onChange([...hotspots, next]);
+      setOpenIdx(hotspots.length);
+    }
+    setDraft(null);
+    startRef.current = null;
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Hotspots on image</Label>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant={mode === "draw" ? "default" : "ghost"}
+            className="h-7 text-xs"
+            onClick={() => setMode("draw")}
+            disabled={!imageUrl}
+          >
+            Draw
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={mode === "select" ? "default" : "ghost"}
+            className="h-7 text-xs"
+            onClick={() => setMode("select")}
+          >
+            Select
+          </Button>
+        </div>
+      </div>
+
+      {!imageUrl && (
+        <p className="text-[11px] text-muted-foreground">Add an image above to draw hotspots on it.</p>
+      )}
+
+      {imageUrl && (
+        <div
+          ref={containerRef}
+          className="relative w-full overflow-hidden rounded border border-border bg-muted/30 select-none"
+          style={{ touchAction: "none", cursor: mode === "draw" ? "crosshair" : "default" }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+        >
+          <img src={imageUrl} alt="" className="block w-full h-auto pointer-events-none" draggable={false} />
+          {hotspots.map((h, i) => (
+            <div
+              key={h.id}
+              data-hotspot
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenIdx(openIdx === i ? null : i);
+              }}
+              className={`absolute border-2 cursor-pointer ${
+                openIdx === i ? "border-primary bg-primary/30" : "border-primary/70 bg-primary/15 hover:bg-primary/25"
+              } ${h.shape === "ellipse" ? "rounded-full" : "rounded-sm"}`}
+              style={{
+                left: `${h.x * 100}%`,
+                top: `${h.y * 100}%`,
+                width: `${h.width * 100}%`,
+                height: `${h.height * 100}%`,
+              }}
+              title={h.label || `Hotspot ${i + 1}`}
+            >
+              <span className="absolute -top-1 -left-1 rounded bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {i + 1}
+              </span>
+            </div>
+          ))}
+          {draft && (
+            <div
+              className="absolute border-2 border-dashed border-primary bg-primary/20 pointer-events-none"
+              style={{
+                left: `${draft.x * 100}%`,
+                top: `${draft.y * 100}%`,
+                width: `${draft.w * 100}%`,
+                height: `${draft.h * 100}%`,
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      {hotspots.length > 0 && (
+        <div className="space-y-2">
+          {hotspots.map((h, i) => (
+            <div key={h.id} className="rounded border border-border bg-muted/30 p-2">
+              <div className="flex items-center gap-1">
+                <span className="flex h-5 w-5 items-center justify-center rounded bg-primary text-[10px] font-bold text-primary-foreground">
+                  {i + 1}
+                </span>
+                <Input
+                  className="h-7 flex-1 text-xs"
+                  value={h.label || ""}
+                  placeholder={`Hotspot ${i + 1}`}
+                  onChange={(e) => update(i, { label: e.target.value })}
+                />
+                <Select value={h.shape || "rect"} onValueChange={(v) => update(i, { shape: v as any })}>
+                  <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rect">Rectangle</SelectItem>
+                    <SelectItem value="ellipse">Ellipse</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setOpenIdx(openIdx === i ? null : i)}>
+                  {openIdx === i ? "−" : "…"}
+                </Button>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(i)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {openIdx === i && (
+                <div className="mt-2 border-t border-border pt-2">
+                  <ActionEditor
+                    embedded
+                    depth={depth + 1}
+                    action={h.action}
+                    onChange={(a) => a && update(i, { action: a })}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {imageUrl && hotspots.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          Drag on the image above to draw a clickable hotspot.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ActionEditor({ action, onChange, depth = 0, embedded = false }: Props) {
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
