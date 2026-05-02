@@ -28,6 +28,18 @@ export interface PopupButton {
   action: LayerAction;
 }
 
+/** A clickable region drawn on top of a popup's image. Coords are 0..1 of the image. */
+export interface PopupHotspot {
+  id: string;
+  x: number;       // 0..1
+  y: number;       // 0..1
+  width: number;   // 0..1
+  height: number;  // 0..1
+  shape?: "rect" | "ellipse";
+  label?: string;
+  action: LayerAction;
+}
+
 export interface ActionPayload {
   // open_url
   url?: string;
@@ -37,6 +49,7 @@ export interface ActionPayload {
   body?: string;
   mediaUrl?: string;
   buttons?: PopupButton[];
+  hotspots?: PopupHotspot[];
   // video
   videoUrl?: string;
   // audio
