@@ -702,6 +702,20 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
+      {/* Image lightbox (tap popup image to enlarge) */}
+      <Dialog open={!!zoomImage} onOpenChange={(v) => !v && setZoomImage(null)}>
+        <DialogContent className="max-w-[95vw] w-fit p-2 bg-transparent border-none shadow-none">
+          {zoomImage && (
+            <img
+              src={zoomImage}
+              alt="Zoomed"
+              className="max-h-[90vh] max-w-[95vw] w-auto h-auto rounded cursor-zoom-out object-contain"
+              onClick={() => setZoomImage(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Video */}
       <Dialog open={!!video} onOpenChange={(v) => !v && setVideo(null)}>
         <DialogContent className="max-w-3xl">
