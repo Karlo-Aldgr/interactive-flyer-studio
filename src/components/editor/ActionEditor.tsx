@@ -589,6 +589,13 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                 onChange={(hotspots) => update({ hotspots })}
               />
             )}
+            {allowPopupButtons && (
+              <PopupButtonsEditor
+                depth={depth}
+                buttons={p.buttons || []}
+                onChange={(buttons) => update({ buttons })}
+              />
+            )}
             {!allowPopupButtons && depth >= 1 && (
               <p className="text-[11px] text-muted-foreground">Nested popups can't have their own buttons.</p>
             )}
