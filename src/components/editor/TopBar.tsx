@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
-  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign,
+  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareDialog } from "./ShareDialog";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
+import { IntroAudioDialog } from "./IntroAudioDialog";
 
 interface Props { saving: boolean }
 
@@ -67,6 +68,7 @@ export function TopBar({ saving }: Props) {
   const [regenerating, setRegenerating] = useState(false);
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
   const [payOpen, setPayOpen] = useState(false);
+  const [introAudioOpen, setIntroAudioOpen] = useState(false);
 
   if (!flyer) return null;
 
@@ -317,6 +319,22 @@ export function TopBar({ saving }: Props) {
         </Button>
         <Tooltip>
           <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant={flyer.settings.introAudioUrl ? "default" : "outline"}
+              onClick={() => setIntroAudioOpen(true)}
+            >
+              <Music className="mr-1 h-4 w-4" /> Intro audio
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {flyer.settings.introAudioUrl
+              ? "Intro audio set — click to edit"
+              : "Play an audio clip when viewers first open the flyer"}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button size="sm" variant="outline" onClick={() => setPayOpen(true)}>
               <DollarSign className="mr-1 h-4 w-4" /> Pay link
             </Button>
@@ -404,6 +422,7 @@ export function TopBar({ saving }: Props) {
       />
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
+      <IntroAudioDialog open={introAudioOpen} onOpenChange={setIntroAudioOpen} />
     </header>
   );
 }

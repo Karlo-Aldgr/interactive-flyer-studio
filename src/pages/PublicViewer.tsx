@@ -301,6 +301,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
+  const introPlayedRef = useRef(false);
+  const [introNeedsTap, setIntroNeedsTap] = useState(false);
 
   useEffect(() => {
     if (!slug && !flyerId) return;
@@ -504,6 +506,48 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       setTimeout(() => runAddToCalendar(calPayload), 100);
     }
   }
+
+  // Intro audio: try to autoplay once the flyer loads. If browser blocks autoplay,
+  // show a tap prompt and start on the first user interaction.
+  useEffect(() => {
+    if (!flyer) return;
+    const url = flyer.settings?.introAudioUrl;
+    if (!url || introPlayedRef.current) return;
+    const loop = !!flyer.settings?.introAudioLoop;
+    const el = new Audio(url);
+    el.loop = loop;
+    el.onended = () => setAudioInfo((s) => (s?.url === url ? null : s));
+    audioRef.current = el;
+
+    const start = () => {
+      if (introPlayedRef.current) return;
+      introPlayedRef.current = true;
+      el.play()
+        .then(() => {
+          setAudioInfo({ url, loop });
+          setIntroNeedsTap(false);
+        })
+        .catch(() => {
+          // Autoplay blocked — wait for user gesture
+          introPlayedRef.current = false;
+          setIntroNeedsTap(true);
+        });
+    };
+
+    start();
+
+    const onTap = () => {
+      if (!introPlayedRef.current) start();
+      window.removeEventListener("pointerdown", onTap);
+      window.removeEventListener("keydown", onTap);
+    };
+    window.addEventListener("pointerdown", onTap);
+    window.addEventListener("keydown", onTap);
+    return () => {
+      window.removeEventListener("pointerdown", onTap);
+      window.removeEventListener("keydown", onTap);
+    };
+  }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop]);
 
   if (loading) {
     return (
@@ -760,6 +804,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
+      {/* Intro audio tap prompt (autoplay blocked) */}
+      {introNeedsTap && !audioInfo && (
+        <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card/95 px-4 py-2 text-xs font-medium shadow-elegant backdrop-blur">
+          🔊 Tap anywhere to play sound
+        </div>
+      )}
       {/* Audio mini-player (fixed bottom) */}
       {audioInfo && (
         <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-card/95 px-4 py-2 shadow-elegant backdrop-blur">
