@@ -720,8 +720,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       <Dialog open={enlarged} onOpenChange={(v) => !v && setEnlarged(false)}>
         <DialogContent className="max-w-[100vw] w-screen h-screen p-0 bg-transparent border-none shadow-none sm:rounded-none">
           <div
-            className="relative flex h-screen w-screen items-start justify-start overflow-auto"
-            style={{ background: page.background.color || "#fff", touchAction: "pinch-zoom" }}
+            className="relative h-screen w-screen overflow-auto"
+            style={{ background: page.background.color || "#fff", touchAction: "pan-x pan-y pinch-zoom", WebkitOverflowScrolling: "touch" as any }}
           >
             <button
               type="button"
@@ -732,7 +732,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               <LucideIcons.Minimize2 className="h-3.5 w-3.5" />
               Close
             </button>
-            {renderStage(enlargedScale)}
+            <div style={{ width: W * enlargedScale, height: H * enlargedScale }}>
+              {renderStage(enlargedScale)}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
