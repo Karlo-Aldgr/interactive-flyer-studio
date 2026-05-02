@@ -422,6 +422,7 @@ export function TopBar({ saving }: Props) {
       />
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
+      <IntroAudioDialog open={introAudioOpen} onOpenChange={setIntroAudioOpen} />
     </header>
   );
 }
