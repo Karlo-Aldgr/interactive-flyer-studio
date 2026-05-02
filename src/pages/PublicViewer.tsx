@@ -309,11 +309,29 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     const onResize = () => setResizeTick((n) => n + 1);
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("scroll", onResize);
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("orientationchange", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("scroll", onResize);
     };
   }, []);
+
+  useEffect(() => {
+    if (!enlarged) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setEnlarged(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [enlarged]);
 
   useEffect(() => {
     if (!slug && !flyerId) return;
@@ -594,8 +612,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   );
 
   // Fit-to-screen scale: fill the viewport edge-to-edge (no padding around the flyer).
-  const vw = typeof window !== "undefined" ? window.innerWidth : W;
-  const vh = typeof window !== "undefined" ? window.innerHeight : H;
+  const visualViewport = typeof window !== "undefined" ? window.visualViewport : undefined;
+  const vw = visualViewport?.width ?? (typeof window !== "undefined" ? window.innerWidth : W);
+  const vh = visualViewport?.height ?? (typeof window !== "undefined" ? window.innerHeight : H);
   const fitScale = Math.min(vw / W, vh / H);
   // Enlarged scale (used inside the lightbox dialog): fill the longer edge of the
   // viewport so the user can scroll/pan to inspect, similar to the popup lightbox.
@@ -603,9 +622,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
   // Renders the Konva stage at a given scale. Used for both the inline view
   // and the enlarged lightbox so hotspots remain fully interactive in both.
-  const renderStage = (s: number) => (
+  const renderStage = (s: number, allowTouchPan = false) => (
     <div style={{ width: W * s, height: H * s, background: page.background.color || "#fff" }}>
-      <Stage width={W * s} height={H * s} scaleX={s} scaleY={s}>
+      <Stage width={W * s} height={H * s} scaleX={s} scaleY={s} preventDefault={!allowTouchPan}>
         <KLayer>
           <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
           {(() => {
