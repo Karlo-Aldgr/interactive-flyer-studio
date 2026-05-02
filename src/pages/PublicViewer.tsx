@@ -754,7 +754,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 />
               ))}
             </div>
-          )}
+            );
+          })()}
           {popup?.type === "buy_ticket" && popup.payload.checkoutUrl && (
             <Button
               className="w-full"
