@@ -193,6 +193,9 @@ export interface FlyerSettings {
   height: number;
   background: string;
   highlightsEnabled?: boolean; // global on/off for tap highlights (default true)
+  // Intro audio: plays once on first view of the flyer
+  introAudioUrl?: string;
+  introAudioLoop?: boolean;
 }
 
 export interface Flyer {
