@@ -319,6 +319,22 @@ export function TopBar({ saving }: Props) {
         </Button>
         <Tooltip>
           <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant={flyer.settings.introAudioUrl ? "default" : "outline"}
+              onClick={() => setIntroAudioOpen(true)}
+            >
+              <Music className="mr-1 h-4 w-4" /> Intro audio
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {flyer.settings.introAudioUrl
+              ? "Intro audio set — click to edit"
+              : "Play an audio clip when viewers first open the flyer"}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button size="sm" variant="outline" onClick={() => setPayOpen(true)}>
               <DollarSign className="mr-1 h-4 w-4" /> Pay link
             </Button>
