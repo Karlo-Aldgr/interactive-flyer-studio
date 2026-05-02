@@ -341,133 +341,193 @@ function PopupHotspotsEditor({
     startRef.current = null;
   }
 
+  const [fullscreen, setFullscreen] = useState(false);
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label className="text-xs">Hotspots on image</Label>
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant={mode === "draw" ? "default" : "ghost"}
-            className="h-7 text-xs"
-            onClick={() => setMode("draw")}
-            disabled={!imageUrl}
-          >
-            Draw
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={mode === "select" ? "default" : "ghost"}
-            className="h-7 text-xs"
-            onClick={() => setMode("select")}
-          >
-            Select
-          </Button>
-        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs"
+          onClick={() => setFullscreen(true)}
+          disabled={!imageUrl}
+        >
+          <Maximize2 className="mr-1 h-3.5 w-3.5" />
+          {hotspots.length > 0 ? `Edit (${hotspots.length})` : "Edit hotspots"}
+        </Button>
       </div>
 
       {!imageUrl && (
         <p className="text-[11px] text-muted-foreground">Add an image above to draw hotspots on it.</p>
       )}
-
-      {imageUrl && (
-        <div
-          ref={containerRef}
-          className="relative w-full overflow-hidden rounded border border-border bg-muted/30 select-none"
-          style={{ touchAction: "none", cursor: mode === "draw" ? "crosshair" : "default" }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-        >
-          <img src={imageUrl} alt="" className="block w-full h-auto pointer-events-none" draggable={false} />
-          {hotspots.map((h, i) => (
-            <div
-              key={h.id}
-              data-hotspot
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpenIdx(openIdx === i ? null : i);
-              }}
-              className={`absolute border-2 cursor-pointer ${
-                openIdx === i ? "border-primary bg-primary/30" : "border-primary/70 bg-primary/15 hover:bg-primary/25"
-              } ${h.shape === "ellipse" ? "rounded-full" : "rounded-sm"}`}
-              style={{
-                left: `${h.x * 100}%`,
-                top: `${h.y * 100}%`,
-                width: `${h.width * 100}%`,
-                height: `${h.height * 100}%`,
-              }}
-              title={h.label || `Hotspot ${i + 1}`}
-            >
-              <span className="absolute -top-1 -left-1 rounded bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                {i + 1}
-              </span>
-            </div>
-          ))}
-          {draft && (
-            <div
-              className="absolute border-2 border-dashed border-primary bg-primary/20 pointer-events-none"
-              style={{
-                left: `${draft.x * 100}%`,
-                top: `${draft.y * 100}%`,
-                width: `${draft.w * 100}%`,
-                height: `${draft.h * 100}%`,
-              }}
-            />
-          )}
-        </div>
-      )}
-
-      {hotspots.length > 0 && (
-        <div className="space-y-2">
-          {hotspots.map((h, i) => (
-            <div key={h.id} className="rounded border border-border bg-muted/30 p-2">
-              <div className="flex items-center gap-1">
-                <span className="flex h-5 w-5 items-center justify-center rounded bg-primary text-[10px] font-bold text-primary-foreground">
-                  {i + 1}
-                </span>
-                <Input
-                  className="h-7 flex-1 text-xs"
-                  value={h.label || ""}
-                  placeholder={`Hotspot ${i + 1}`}
-                  onChange={(e) => update(i, { label: e.target.value })}
-                />
-                <Select value={h.shape || "rect"} onValueChange={(v) => update(i, { shape: v as any })}>
-                  <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="rect">Rectangle</SelectItem>
-                    <SelectItem value="ellipse">Ellipse</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setOpenIdx(openIdx === i ? null : i)}>
-                  {openIdx === i ? "−" : "…"}
-                </Button>
-                <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(i)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              {openIdx === i && (
-                <div className="mt-2 border-t border-border pt-2">
-                  <ActionEditor
-                    embedded
-                    depth={depth + 1}
-                    action={h.action}
-                    onChange={(a) => a && update(i, { action: a })}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
       {imageUrl && hotspots.length === 0 && (
         <p className="text-[11px] text-muted-foreground">
-          Drag on the image above to draw a clickable hotspot.
+          Click "Edit hotspots" to draw clickable regions on the image.
         </p>
       )}
+      {hotspots.length > 0 && (
+        <div className="rounded border border-border bg-muted/20 p-2 text-[11px] text-muted-foreground">
+          {hotspots.length} hotspot{hotspots.length === 1 ? "" : "s"} configured.
+        </div>
+      )}
+
+      <Dialog open={fullscreen} onOpenChange={setFullscreen}>
+        <DialogContent
+          className="max-w-none w-screen h-screen p-0 gap-0 rounded-none border-0 sm:rounded-none flex flex-col"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-border bg-card px-4 py-2 shrink-0">
+            <div className="flex items-center gap-3">
+              <h2 className="text-sm font-semibold">Popup hotspots</h2>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mode === "draw" ? "default" : "ghost"}
+                  className="h-7 text-xs"
+                  onClick={() => setMode("draw")}
+                  disabled={!imageUrl}
+                >
+                  Draw
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mode === "select" ? "default" : "ghost"}
+                  className="h-7 text-xs"
+                  onClick={() => setMode("select")}
+                >
+                  Select
+                </Button>
+              </div>
+              <span className="text-[11px] text-muted-foreground">
+                {mode === "draw" ? "Drag on the image to draw a hotspot." : "Click a hotspot to edit its action."}
+              </span>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setFullscreen(false)}
+            >
+              <X className="mr-1 h-3.5 w-3.5" /> Done
+            </Button>
+          </div>
+
+          {/* Body: image canvas + side panel */}
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-auto bg-muted/40 p-6 flex items-start justify-center">
+              {imageUrl ? (
+                <div
+                  ref={containerRef}
+                  className="relative max-w-full select-none shadow-lg"
+                  style={{ touchAction: "none", cursor: mode === "draw" ? "crosshair" : "default" }}
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                >
+                  <img
+                    src={imageUrl}
+                    alt=""
+                    className="block max-w-full max-h-[calc(100vh-8rem)] w-auto h-auto pointer-events-none"
+                    draggable={false}
+                  />
+                  {hotspots.map((h, i) => (
+                    <div
+                      key={h.id}
+                      data-hotspot
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenIdx(openIdx === i ? null : i);
+                      }}
+                      className={`absolute border-2 cursor-pointer ${
+                        openIdx === i
+                          ? "border-primary bg-primary/30"
+                          : "border-primary/70 bg-primary/15 hover:bg-primary/25"
+                      } ${h.shape === "ellipse" ? "rounded-full" : "rounded-sm"}`}
+                      style={{
+                        left: `${h.x * 100}%`,
+                        top: `${h.y * 100}%`,
+                        width: `${h.width * 100}%`,
+                        height: `${h.height * 100}%`,
+                      }}
+                      title={h.label || `Hotspot ${i + 1}`}
+                    >
+                      <span className="absolute -top-2 -left-2 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground shadow">
+                        {i + 1}
+                      </span>
+                    </div>
+                  ))}
+                  {draft && (
+                    <div
+                      className="absolute border-2 border-dashed border-primary bg-primary/20 pointer-events-none"
+                      style={{
+                        left: `${draft.x * 100}%`,
+                        top: `${draft.y * 100}%`,
+                        width: `${draft.w * 100}%`,
+                        height: `${draft.h * 100}%`,
+                      }}
+                    />
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No image set.</p>
+              )}
+            </div>
+
+            <aside className="w-96 shrink-0 border-l border-border bg-card overflow-y-auto p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Hotspots ({hotspots.length})</Label>
+              </div>
+              {hotspots.length === 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Drag on the image to create your first hotspot.
+                </p>
+              )}
+              {hotspots.map((h, i) => (
+                <div key={h.id} className="rounded border border-border bg-muted/30 p-2">
+                  <div className="flex items-center gap-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded bg-primary text-[10px] font-bold text-primary-foreground">
+                      {i + 1}
+                    </span>
+                    <Input
+                      className="h-7 flex-1 text-xs"
+                      value={h.label || ""}
+                      placeholder={`Hotspot ${i + 1}`}
+                      onChange={(e) => update(i, { label: e.target.value })}
+                    />
+                    <Select value={h.shape || "rect"} onValueChange={(v) => update(i, { shape: v as any })}>
+                      <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="rect">Rectangle</SelectItem>
+                        <SelectItem value="ellipse">Ellipse</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setOpenIdx(openIdx === i ? null : i)}>
+                      {openIdx === i ? "−" : "…"}
+                    </Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(i)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  {openIdx === i && (
+                    <div className="mt-2 border-t border-border pt-2">
+                      <ActionEditor
+                        embedded
+                        depth={depth + 1}
+                        action={h.action}
+                        onChange={(a) => a && update(i, { action: a })}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </aside>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
