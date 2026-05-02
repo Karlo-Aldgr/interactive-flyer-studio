@@ -407,13 +407,26 @@ function PopupHotspotsEditor({
                 {mode === "draw" ? "Drag on the image to draw a hotspot." : "Click a hotspot to edit its action."}
               </span>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setFullscreen(false)}
-            >
-              <X className="mr-1 h-3.5 w-3.5" /> Done
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  toast.success(`Saved ${hotspots.length} hotspot${hotspots.length === 1 ? "" : "s"}`);
+                  setFullscreen(false);
+                }}
+              >
+                <Save className="mr-1 h-3.5 w-3.5" /> Save
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setFullscreen(false)}
+              >
+                <X className="mr-1 h-3.5 w-3.5" /> Close
+              </Button>
+            </div>
           </div>
 
           {/* Body: image canvas + side panel */}
