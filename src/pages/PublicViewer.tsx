@@ -301,6 +301,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
+  const introPlayedRef = useRef(false);
+  const [introNeedsTap, setIntroNeedsTap] = useState(false);
 
   useEffect(() => {
     if (!slug && !flyerId) return;
