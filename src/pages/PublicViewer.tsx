@@ -735,26 +735,28 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
       {renderStage(fitScale)}
 
-      {/* Enlarged lightbox — same pattern as popup image enlarge */}
-      <Dialog open={enlarged} onOpenChange={(v) => !v && setEnlarged(false)}>
-        <DialogContent className="max-w-[100vw] w-screen h-screen p-0 bg-transparent border-none shadow-none sm:rounded-none">
-          <div
-            className="relative h-screen w-screen overflow-auto"
-            style={{ background: page.background.color || "#fff", touchAction: "pan-x pan-y pinch-zoom", WebkitOverflowScrolling: "touch" as any }}
+      {/* Enlarged lightbox — custom fixed overlay so mobile Safari can pan/scroll the oversized flyer */}
+      {enlarged && (
+        <div
+          className="fixed inset-0 z-50 overflow-auto overscroll-contain"
+          style={{
+            background: page.background.color || "#fff",
+            touchAction: "pan-x pan-y pinch-zoom",
+            WebkitOverflowScrolling: "touch" as any,
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Close enlarged view"
+            onClick={() => setEnlarged(false)}
+            className="fixed top-3 right-3 z-50 inline-flex items-center gap-1 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-medium text-foreground border border-border shadow-sm hover:bg-background transition"
           >
-            <button
-              type="button"
-              aria-label="Close enlarged view"
-              onClick={() => setEnlarged(false)}
-              className="fixed top-3 right-3 z-50 inline-flex items-center gap-1 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-medium text-foreground border border-border shadow-sm hover:bg-background transition"
-            >
-              <LucideIcons.Minimize2 className="h-3.5 w-3.5" />
-              Close
-            </button>
-            {renderStage(enlargedScale)}
-          </div>
-        </DialogContent>
-      </Dialog>
+            <LucideIcons.Minimize2 className="h-3.5 w-3.5" />
+            Close
+          </button>
+          {renderStage(enlargedScale, true)}
+        </div>
+      )}
 
       {/* Pagination */}
       {pages.length > 1 && (
