@@ -298,6 +298,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [showHitboxes, setShowHitboxes] = useState(false);
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
 
@@ -655,10 +656,20 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             {popup?.payload.body && <DialogDescription>{popup.payload.body}</DialogDescription>}
           </DialogHeader>
           {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
-            <img src={popup.payload.ticketImageUrl} alt="Ticket" className="w-full rounded" />
+            <img
+              src={popup.payload.ticketImageUrl}
+              alt="Ticket"
+              className="w-full rounded cursor-zoom-in transition hover:opacity-90"
+              onClick={() => setZoomImage(popup.payload.ticketImageUrl!)}
+            />
           )}
           {popup?.type !== "buy_ticket" && popup?.payload.mediaUrl && (
-            <img src={popup.payload.mediaUrl} alt="" className="w-full rounded" />
+            <img
+              src={popup.payload.mediaUrl}
+              alt=""
+              className="w-full rounded cursor-zoom-in transition hover:opacity-90"
+              onClick={() => setZoomImage(popup.payload.mediaUrl!)}
+            />
           )}
           {popup?.type === "buy_ticket" && popup.payload.checkoutUrl && (
             <Button
@@ -687,6 +698,20 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 </Button>
               ))}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Image lightbox (tap popup image to enlarge) */}
+      <Dialog open={!!zoomImage} onOpenChange={(v) => !v && setZoomImage(null)}>
+        <DialogContent className="max-w-[95vw] w-fit p-2 bg-transparent border-none shadow-none">
+          {zoomImage && (
+            <img
+              src={zoomImage}
+              alt="Zoomed"
+              className="max-h-[90vh] max-w-[95vw] w-auto h-auto rounded cursor-zoom-out object-contain"
+              onClick={() => setZoomImage(null)}
+            />
           )}
         </DialogContent>
       </Dialog>
