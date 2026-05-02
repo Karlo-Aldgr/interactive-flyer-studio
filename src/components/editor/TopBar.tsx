@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
-  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles,
+  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareDialog } from "./ShareDialog";
+import { PaymentLinkDialog } from "./PaymentLinkDialog";
 
 interface Props { saving: boolean }
 
@@ -65,6 +66,7 @@ export function TopBar({ saving }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
+  const [payOpen, setPayOpen] = useState(false);
 
   if (!flyer) return null;
 
@@ -313,6 +315,14 @@ export function TopBar({ saving }: Props) {
         <Button asChild size="sm" variant="outline">
           <a href={`/preview/${flyer.id}`} target="_blank" rel="noreferrer"><Eye className="mr-1 h-4 w-4" />Preview</a>
         </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button size="sm" variant="outline" onClick={() => setPayOpen(true)}>
+              <DollarSign className="mr-1 h-4 w-4" /> Pay link
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Generate a Venmo / Cash App / PayPal link to send to customers</TooltipContent>
+        </Tooltip>
         {flyer.status === "published" && (
           <Button size="sm" variant="outline" onClick={openShare}>
             <Share2 className="mr-1 h-4 w-4" /> Share
@@ -392,6 +402,8 @@ export function TopBar({ saving }: Props) {
         onUploadThumbnail={uploadSocialPreview}
         regenerating={regenerating}
       />
+
+      <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
     </header>
   );
 }
