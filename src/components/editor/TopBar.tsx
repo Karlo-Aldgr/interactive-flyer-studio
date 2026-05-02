@@ -402,6 +402,8 @@ export function TopBar({ saving }: Props) {
         onUploadThumbnail={uploadSocialPreview}
         regenerating={regenerating}
       />
+
+      <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
     </header>
   );
 }
