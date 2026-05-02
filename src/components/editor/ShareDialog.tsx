@@ -87,10 +87,15 @@ export function ShareDialog({
     setShowConfig(false);
   }
 
+  // Always sanitize before exposing to clipboard / QR / social buttons so a
+  // private preview URL can never be shared by accident.
+  const safeSocialUrl = sanitizeShareUrl(socialUrl);
+  const safeDisplayUrl = sanitizeShareUrl(displayUrl);
+
   function copy() {
     // Copy the og-meta share URL so messaging apps (Messenger, iMessage, WhatsApp, etc.)
     // see the per-flyer preview image when the link is pasted.
-    navigator.clipboard.writeText(socialUrl);
+    navigator.clipboard.writeText(safeSocialUrl);
     setCopied(true);
     toast.success("Share link copied — paste it anywhere for a rich preview");
     setTimeout(() => setCopied(false), 1500);
@@ -108,7 +113,7 @@ export function ShareDialog({
   async function nativeShare() {
     if (typeof navigator !== "undefined" && (navigator as any).share) {
       try {
-        await (navigator as any).share({ title: title || "Flyer", url: socialUrl });
+        await (navigator as any).share({ title: title || "Flyer", url: safeSocialUrl });
       } catch {}
     } else {
       copy();
@@ -134,12 +139,38 @@ export function ShareDialog({
 
   // Social-share buttons use the og-meta URL so platforms see the per-flyer preview.
   const shareLinks = [
-    { label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(socialUrl)}` },
-    { label: "X / Twitter", href: `https://twitter.com/intent/tweet?url=${encodeURIComponent(socialUrl)}` },
-    { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(socialUrl)}` },
-    { label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(socialUrl)}` },
-    { label: "Email", href: `mailto:?subject=${encodeURIComponent(title || "Check this out")}&body=${encodeURIComponent(socialUrl)}` },
+    { label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(safeSocialUrl)}` },
+    { label: "X / Twitter", href: `https://twitter.com/intent/tweet?url=${encodeURIComponent(safeSocialUrl)}` },
+    { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(safeSocialUrl)}` },
+    { label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(safeSocialUrl)}` },
+    { label: "Email", href: `mailto:?subject=${encodeURIComponent(title || "Check this out")}&body=${encodeURIComponent(safeSocialUrl)}` },
   ];
+
+  if (!isPublished) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Publish your flyer to share it</DialogTitle>
+            <DialogDescription>
+              Your flyer needs to be published before you can share a public link. Click the
+              <strong> Publish </strong> button in the top bar — then anyone with the link can
+              view your flyer without logging in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+            Note: the <code>/preview/...</code> URL from the Preview button is private and only
+            works for you. Always use the link from this dialog (after publishing) when sending
+            your flyer to others.
+          </div>
+          <DialogFooter>
+            <Button onClick={() => onOpenChange(false)}>Got it</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
