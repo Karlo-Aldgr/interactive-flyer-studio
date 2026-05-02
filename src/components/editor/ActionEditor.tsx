@@ -581,11 +581,12 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
               value={p.mediaUrl}
               onChange={(url) => update({ mediaUrl: url })}
             />
-            {allowPopupButtons && (
-              <PopupButtonsEditor
+            {depth < 1 && (
+              <PopupHotspotsEditor
                 depth={depth}
-                buttons={p.buttons || []}
-                onChange={(buttons) => update({ buttons })}
+                imageUrl={p.mediaUrl}
+                hotspots={p.hotspots || []}
+                onChange={(hotspots) => update({ hotspots })}
               />
             )}
             {!allowPopupButtons && depth >= 1 && (
