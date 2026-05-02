@@ -732,9 +732,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               <LucideIcons.Minimize2 className="h-3.5 w-3.5" />
               Close
             </button>
-            <div style={{ width: W * enlargedScale, height: H * enlargedScale }}>
-              {renderStage(enlargedScale)}
-            </div>
+            {renderStage(enlargedScale)}
           </div>
         </DialogContent>
       </Dialog>
