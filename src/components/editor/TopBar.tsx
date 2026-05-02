@@ -26,11 +26,19 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40) + "-" + Math.random().toString(36).slice(2, 7);
 }
 
+// Public origin where the flyer is published. We must NEVER hand out a URL
+// pointing at the Lovable preview sandbox (lovableproject.com / id-preview--*),
+// because those hosts require a Lovable login and recipients will be bounced
+// to a sign-in screen. Always rewrite to the published .lovable.app domain.
+const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
 function getShareOrigin() {
+  if (typeof window === "undefined") return PUBLISHED_ORIGIN;
   const origin = window.location.origin;
-  return origin.includes("lovable.app") && origin.includes("preview")
-    ? "https://interactive-flyer-studio.lovable.app"
-    : origin;
+  const isPreviewSandbox =
+    origin.includes("lovableproject.com") ||
+    origin.includes("id-preview--") ||
+    (origin.includes("lovable.app") && origin.includes("preview"));
+  return isPreviewSandbox ? PUBLISHED_ORIGIN : origin;
 }
 
 const PRESETS: { label: string; w: number; h: number }[] = [
@@ -314,9 +322,18 @@ export function TopBar({ saving }: Props) {
         <span className="text-xs text-muted-foreground">
           {saving ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Saving...</span> : "Saved"}
         </span>
-        <Button asChild size="sm" variant="outline">
-          <a href={`/preview/${flyer.id}`} target="_blank" rel="noreferrer"><Eye className="mr-1 h-4 w-4" />Preview</a>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild size="sm" variant="outline">
+              <a href={`/preview/${flyer.id}`} target="_blank" rel="noreferrer">
+                <Eye className="mr-1 h-4 w-4" />Preview <span className="ml-1 hidden text-[10px] uppercase tracking-wide text-muted-foreground sm:inline">(private)</span>
+              </a>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Only you can see this. To send it to others, use <strong>Share</strong> after publishing.
+          </TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -419,6 +436,7 @@ export function TopBar({ saving }: Props) {
         onRegenerateThumbnail={() => ensureThumbnail(true)}
         onUploadThumbnail={uploadSocialPreview}
         regenerating={regenerating}
+        isPublished={flyer.status === "published" && !!flyer.public_slug}
       />
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />

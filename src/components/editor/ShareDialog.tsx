@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Download, Share2, RefreshCw, Loader2, ImagePlus, Clipboard, Settings2 } from "lucide-react";
@@ -18,6 +18,38 @@ interface Props {
   onRegenerateThumbnail?: () => Promise<void> | void;
   onUploadThumbnail?: (file: File) => Promise<void> | void;
   regenerating?: boolean;
+  /** When false, hide the share controls and prompt the user to publish first. */
+  isPublished?: boolean;
+}
+
+const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
+
+/** Defensive guard: never let a private/preview URL be shared. */
+function sanitizeShareUrl(url: string): string {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    const host = u.hostname;
+    const isPreviewHost =
+      host.endsWith("lovableproject.com") ||
+      host.startsWith("id-preview--") ||
+      (host.endsWith("lovable.app") && host.includes("preview"));
+    // The /preview/:flyerId route is auth-gated — never share it.
+    const isPrivatePath = u.pathname.startsWith("/preview/");
+    if (isPreviewHost || isPrivatePath) {
+      const pub = new URL(PUBLISHED_ORIGIN);
+      // If the path is /preview/<id>, we can't recover a public slug — return
+      // the published origin root so the recipient at least lands on the app
+      // homepage instead of a login screen.
+      u.protocol = pub.protocol;
+      u.host = pub.host;
+      if (isPrivatePath) u.pathname = "/";
+      return u.toString();
+    }
+    return url;
+  } catch {
+    return url;
+  }
 }
 
 export function ShareDialog({
@@ -30,6 +62,7 @@ export function ShareDialog({
   onRegenerateThumbnail,
   onUploadThumbnail,
   regenerating,
+  isPublished = true,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
@@ -54,10 +87,15 @@ export function ShareDialog({
     setShowConfig(false);
   }
 
+  // Always sanitize before exposing to clipboard / QR / social buttons so a
+  // private preview URL can never be shared by accident.
+  const safeSocialUrl = sanitizeShareUrl(socialUrl);
+  const safeDisplayUrl = sanitizeShareUrl(displayUrl);
+
   function copy() {
     // Copy the og-meta share URL so messaging apps (Messenger, iMessage, WhatsApp, etc.)
     // see the per-flyer preview image when the link is pasted.
-    navigator.clipboard.writeText(socialUrl);
+    navigator.clipboard.writeText(safeSocialUrl);
     setCopied(true);
     toast.success("Share link copied — paste it anywhere for a rich preview");
     setTimeout(() => setCopied(false), 1500);
@@ -75,7 +113,7 @@ export function ShareDialog({
   async function nativeShare() {
     if (typeof navigator !== "undefined" && (navigator as any).share) {
       try {
-        await (navigator as any).share({ title: title || "Flyer", url: socialUrl });
+        await (navigator as any).share({ title: title || "Flyer", url: safeSocialUrl });
       } catch {}
     } else {
       copy();
@@ -101,12 +139,38 @@ export function ShareDialog({
 
   // Social-share buttons use the og-meta URL so platforms see the per-flyer preview.
   const shareLinks = [
-    { label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(socialUrl)}` },
-    { label: "X / Twitter", href: `https://twitter.com/intent/tweet?url=${encodeURIComponent(socialUrl)}` },
-    { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(socialUrl)}` },
-    { label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(socialUrl)}` },
-    { label: "Email", href: `mailto:?subject=${encodeURIComponent(title || "Check this out")}&body=${encodeURIComponent(socialUrl)}` },
+    { label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(safeSocialUrl)}` },
+    { label: "X / Twitter", href: `https://twitter.com/intent/tweet?url=${encodeURIComponent(safeSocialUrl)}` },
+    { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(safeSocialUrl)}` },
+    { label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(safeSocialUrl)}` },
+    { label: "Email", href: `mailto:?subject=${encodeURIComponent(title || "Check this out")}&body=${encodeURIComponent(safeSocialUrl)}` },
   ];
+
+  if (!isPublished) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Publish your flyer to share it</DialogTitle>
+            <DialogDescription>
+              Your flyer needs to be published before you can share a public link. Click the
+              <strong> Publish </strong> button in the top bar — then anyone with the link can
+              view your flyer without logging in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+            Note: the <code>/preview/...</code> URL from the Preview button is private and only
+            works for you. Always use the link from this dialog (after publishing) when sending
+            your flyer to others.
+          </div>
+          <DialogFooter>
+            <Button onClick={() => onOpenChange(false)}>Got it</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -166,10 +230,10 @@ export function ShareDialog({
 
         <div className="flex flex-col items-center gap-4">
           <div className="rounded-lg bg-white p-4 shadow-sm">
-            <QRCodeCanvas id="share-qr-canvas" value={socialUrl} size={200} level="M" includeMargin={false} />
+            <QRCodeCanvas id="share-qr-canvas" value={safeSocialUrl} size={200} level="M" includeMargin={false} />
           </div>
           <div className="flex w-full gap-2">
-            <Input readOnly value={socialUrl} className="flex-1 text-xs" onFocus={(e) => e.target.select()} />
+            <Input readOnly value={safeSocialUrl} className="flex-1 text-xs" onFocus={(e) => e.target.select()} />
             <Button size="sm" variant="outline" onClick={copy}>
               <Copy className="mr-1 h-3.5 w-3.5" />
               {copied ? "Copied" : "Copy"}
