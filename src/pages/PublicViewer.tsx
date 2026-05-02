@@ -664,12 +664,36 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             />
           )}
           {popup?.type !== "buy_ticket" && popup?.payload.mediaUrl && (
-            <img
-              src={popup.payload.mediaUrl}
-              alt=""
-              className="w-full rounded cursor-zoom-in transition hover:opacity-90"
-              onClick={() => setZoomImage(popup.payload.mediaUrl!)}
-            />
+            <div className="relative w-full">
+              <img
+                src={popup.payload.mediaUrl}
+                alt=""
+                className="block w-full rounded cursor-zoom-in transition hover:opacity-95"
+                onClick={() => setZoomImage(popup.payload.mediaUrl!)}
+                draggable={false}
+              />
+              {(popup.payload.hotspots || []).map((h) => (
+                <button
+                  key={h.id}
+                  type="button"
+                  aria-label={h.label || "Hotspot"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    runPopupButton(h.action);
+                  }}
+                  className={`absolute border-2 border-primary/70 bg-primary/10 hover:bg-primary/30 transition cursor-pointer ${
+                    h.shape === "ellipse" ? "rounded-full" : "rounded-sm"
+                  }`}
+                  style={{
+                    left: `${h.x * 100}%`,
+                    top: `${h.y * 100}%`,
+                    width: `${h.width * 100}%`,
+                    height: `${h.height * 100}%`,
+                  }}
+                  title={h.label}
+                />
+              ))}
+            </div>
           )}
           {popup?.type === "buy_ticket" && popup.payload.checkoutUrl && (
             <Button
