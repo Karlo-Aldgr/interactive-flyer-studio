@@ -507,6 +507,48 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     }
   }
 
+  // Intro audio: try to autoplay once the flyer loads. If browser blocks autoplay,
+  // show a tap prompt and start on the first user interaction.
+  useEffect(() => {
+    if (!flyer) return;
+    const url = flyer.settings?.introAudioUrl;
+    if (!url || introPlayedRef.current) return;
+    const loop = !!flyer.settings?.introAudioLoop;
+    const el = new Audio(url);
+    el.loop = loop;
+    el.onended = () => setAudioInfo((s) => (s?.url === url ? null : s));
+    audioRef.current = el;
+
+    const start = () => {
+      if (introPlayedRef.current) return;
+      introPlayedRef.current = true;
+      el.play()
+        .then(() => {
+          setAudioInfo({ url, loop });
+          setIntroNeedsTap(false);
+        })
+        .catch(() => {
+          // Autoplay blocked — wait for user gesture
+          introPlayedRef.current = false;
+          setIntroNeedsTap(true);
+        });
+    };
+
+    start();
+
+    const onTap = () => {
+      if (!introPlayedRef.current) start();
+      window.removeEventListener("pointerdown", onTap);
+      window.removeEventListener("keydown", onTap);
+    };
+    window.addEventListener("pointerdown", onTap);
+    window.addEventListener("keydown", onTap);
+    return () => {
+      window.removeEventListener("pointerdown", onTap);
+      window.removeEventListener("keydown", onTap);
+    };
+  }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
