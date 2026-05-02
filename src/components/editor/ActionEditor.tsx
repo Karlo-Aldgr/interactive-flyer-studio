@@ -308,6 +308,18 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
   }
   function discard() { setDraft(action); }
 
+  // Highlight (visual cue) edits propagate live without requiring a Save click —
+  // they're purely presentational and users expect immediate feedback on the canvas.
+  function updateHighlight(patch: Partial<NonNullable<LayerAction["highlight"]>>) {
+    if (!draft) return;
+    const next: LayerAction = {
+      ...draft,
+      highlight: { ...(draft.highlight || {}), ...patch },
+    };
+    setDraft(next);
+    if (!embedded) onChange(next);
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-3 overflow-y-auto">
@@ -752,10 +764,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
               <Switch
                 checked={(draft.highlight?.enabled ?? true) && (draft.highlight?.style ?? "pulse") !== "none"}
                 onCheckedChange={(v) =>
-                  setDraft({
-                    ...draft,
-                    highlight: { ...(draft.highlight || {}), enabled: v, style: draft.highlight?.style ?? "pulse" },
-                  })
+                  updateHighlight({ enabled: v, style: draft.highlight?.style ?? "pulse" })
                 }
               />
             </div>
@@ -765,9 +774,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
               <Label className="text-xs">Style</Label>
               <Select
                 value={draft.highlight?.style ?? "pulse"}
-                onValueChange={(v) =>
-                  setDraft({ ...draft, highlight: { ...(draft.highlight || {}), style: v as any } })
-                }
+                onValueChange={(v) => updateHighlight({ style: v as any })}
               >
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -789,9 +796,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                   type="color"
                   className="mt-1 h-9 w-full"
                   value={draft.highlight?.color ?? "#7c3aed"}
-                  onChange={(e) =>
-                    setDraft({ ...draft, highlight: { ...(draft.highlight || {}), color: e.target.value } })
-                  }
+                  onChange={(e) => updateHighlight({ color: e.target.value })}
                 />
               </div>
               <div>
@@ -800,9 +805,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                   <Slider
                     min={10} max={100} step={5}
                     value={[Math.round((draft.highlight?.opacity ?? 0.85) * 100)]}
-                    onValueChange={([v]) =>
-                      setDraft({ ...draft, highlight: { ...(draft.highlight || {}), opacity: v / 100 } })
-                    }
+                    onValueChange={([v]) => updateHighlight({ opacity: v / 100 })}
                   />
                 </div>
               </div>
@@ -814,9 +817,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                 <Slider
                   min={1} max={12} step={1}
                   value={[draft.highlight?.thickness ?? 3]}
-                  onValueChange={([v]) =>
-                    setDraft({ ...draft, highlight: { ...(draft.highlight || {}), thickness: v } })
-                  }
+                  onValueChange={([v]) => updateHighlight({ thickness: v })}
                 />
               </div>
             </div>
