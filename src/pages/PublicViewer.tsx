@@ -303,6 +303,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
   const introPlayedRef = useRef(false);
   const [introNeedsTap, setIntroNeedsTap] = useState(false);
+  const [, setResizeTick] = useState(0);
+  useEffect(() => {
+    const onResize = () => setResizeTick((n) => n + 1);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
 
   useEffect(() => {
     if (!slug && !flyerId) return;
