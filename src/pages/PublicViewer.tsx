@@ -299,6 +299,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
   const [enlarged, setEnlarged] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
@@ -762,6 +763,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   aria-label="Enlarge image"
                   onClick={(e) => {
                     e.stopPropagation();
+                    setZoomPopup(popup);
                     setZoomImage(popup.payload.mediaUrl!);
                   }}
                   className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-medium text-foreground border border-border shadow-sm hover:bg-background transition"
@@ -826,15 +828,52 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       </Dialog>
 
       {/* Image lightbox (tap popup image to enlarge) */}
-      <Dialog open={!!zoomImage} onOpenChange={(v) => !v && setZoomImage(null)}>
+      <Dialog
+        open={!!zoomImage}
+        onOpenChange={(v) => {
+          if (!v) {
+            setZoomImage(null);
+            setZoomPopup(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-[95vw] w-fit p-2 bg-transparent border-none shadow-none">
           {zoomImage && (
-            <img
-              src={zoomImage}
-              alt="Zoomed"
-              className="max-h-[90vh] max-w-[95vw] w-auto h-auto rounded cursor-zoom-out object-contain"
-              onClick={() => setZoomImage(null)}
-            />
+            <div className="relative max-h-[90vh] max-w-[95vw]">
+              <img
+                src={zoomImage}
+                alt="Zoomed"
+                className="block max-h-[90vh] max-w-[95vw] w-auto h-auto rounded object-contain"
+                onClick={() => {
+                  if (!zoomPopup?.payload.hotspots?.length) setZoomImage(null);
+                }}
+                draggable={false}
+              />
+              {(zoomPopup?.payload.hotspots || []).map((h) => (
+                <button
+                  key={h.id}
+                  type="button"
+                  aria-label={h.label || "Hotspot"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const action = h.action;
+                    setZoomImage(null);
+                    setZoomPopup(null);
+                    runPopupButton(action);
+                  }}
+                  className={`absolute border-2 border-primary/70 bg-primary/10 hover:bg-primary/30 transition cursor-pointer ${
+                    h.shape === "ellipse" ? "rounded-full" : "rounded-sm"
+                  }`}
+                  style={{
+                    left: `${h.x * 100}%`,
+                    top: `${h.y * 100}%`,
+                    width: `${h.width * 100}%`,
+                    height: `${h.height * 100}%`,
+                  }}
+                  title={h.label}
+                />
+              ))}
+            </div>
           )}
         </DialogContent>
       </Dialog>
