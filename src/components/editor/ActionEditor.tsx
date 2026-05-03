@@ -664,6 +664,17 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                 imageUrl={p.mediaUrl}
                 hotspots={p.hotspots || []}
                 onChange={(hotspots) => update({ hotspots })}
+                onPersist={() => {
+                  if (!embedded) {
+                    // Commit current draft (with latest hotspots) to parent immediately
+                    onChange({
+                      id: draft?.id || crypto.randomUUID(),
+                      type: type as ActionType,
+                      payload: { ...p },
+                      ...(draft?.highlight ? { highlight: draft.highlight } : {}),
+                    });
+                  }
+                }}
               />
             )}
             {allowPopupButtons && (
