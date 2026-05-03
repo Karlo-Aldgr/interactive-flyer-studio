@@ -414,6 +414,7 @@ function PopupHotspotsEditor({
                 type="button"
                 size="sm"
                 onClick={() => {
+                  onPersist?.();
                   toast.success(`Saved ${hotspots.length} hotspot${hotspots.length === 1 ? "" : "s"}`);
                   setFullscreen(false);
                 }}
