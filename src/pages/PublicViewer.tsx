@@ -837,7 +837,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
-      {/* Image lightbox (tap popup image to enlarge) */}
+      {/* Image lightbox (opened only from the Enlarge button) */}
       <Dialog
         open={!!zoomImage}
         onOpenChange={(v) => {
@@ -847,16 +847,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           }
         }}
       >
-        <DialogContent className="max-w-[95vw] w-fit p-2 bg-transparent border-none shadow-none">
+        <DialogContent
+          className="max-w-[95vw] w-fit p-2 bg-transparent border-none shadow-none"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           {zoomImage && (
             <div className="relative max-h-[90vh] max-w-[95vw]">
               <img
                 src={zoomImage}
                 alt="Zoomed"
                 className="block max-h-[90vh] max-w-[95vw] w-auto h-auto rounded object-contain"
-                onClick={() => {
-                  if (!zoomPopup?.payload.hotspots?.length) setZoomImage(null);
-                }}
                 draggable={false}
               />
               {(zoomPopup?.payload.hotspots || []).map((h) => (
@@ -866,10 +866,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   aria-label={h.label || "Hotspot"}
                   onClick={(e) => {
                     e.stopPropagation();
-                    const action = h.action;
-                    setZoomImage(null);
-                    setZoomPopup(null);
-                    runPopupButton(action);
+                    runPopupButton(h.action);
                   }}
                   className={`absolute border-2 border-primary/70 bg-primary/10 hover:bg-primary/30 transition cursor-pointer ${
                     h.shape === "ellipse" ? "rounded-full" : "rounded-sm"
