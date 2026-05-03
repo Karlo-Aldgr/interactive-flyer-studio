@@ -483,11 +483,14 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     }
   }
 
-  function runPopupButton(a: LayerAction) {
+  function runPopupButton(a: LayerAction, closeZoom = false) {
     logClick(null, "popup_button:" + a.type);
     setPopup(null);
-    // small delay so the dialog closes before next opens
-    setTimeout(() => executeAction(a, null), 50);
+    if (closeZoom) {
+      setZoomImage(null);
+      setZoomPopup(null);
+    }
+    executeAction(a, null);
   }
 
   async function submitForm() {
