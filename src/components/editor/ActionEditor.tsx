@@ -275,11 +275,13 @@ function PopupHotspotsEditor({
   hotspots,
   onChange,
   depth,
+  onPersist,
 }: {
   imageUrl?: string;
   hotspots: PopupHotspot[];
   onChange: (h: PopupHotspot[]) => void;
   depth: number;
+  onPersist?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
