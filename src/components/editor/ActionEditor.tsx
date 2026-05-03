@@ -275,11 +275,13 @@ function PopupHotspotsEditor({
   hotspots,
   onChange,
   depth,
+  onPersist,
 }: {
   imageUrl?: string;
   hotspots: PopupHotspot[];
   onChange: (h: PopupHotspot[]) => void;
   depth: number;
+  onPersist?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
@@ -412,6 +414,7 @@ function PopupHotspotsEditor({
                 type="button"
                 size="sm"
                 onClick={() => {
+                  onPersist?.();
                   toast.success(`Saved ${hotspots.length} hotspot${hotspots.length === 1 ? "" : "s"}`);
                   setFullscreen(false);
                 }}
@@ -661,6 +664,17 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                 imageUrl={p.mediaUrl}
                 hotspots={p.hotspots || []}
                 onChange={(hotspots) => update({ hotspots })}
+                onPersist={() => {
+                  if (!embedded) {
+                    // Commit current draft (with latest hotspots) to parent immediately
+                    onChange({
+                      id: draft?.id || crypto.randomUUID(),
+                      type: type as ActionType,
+                      payload: { ...p },
+                      ...(draft?.highlight ? { highlight: draft.highlight } : {}),
+                    });
+                  }
+                }}
               />
             )}
             {allowPopupButtons && (
