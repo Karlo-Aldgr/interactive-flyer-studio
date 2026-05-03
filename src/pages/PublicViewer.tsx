@@ -739,39 +739,49 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             {popup?.payload.body && <DialogDescription>{popup.payload.body}</DialogDescription>}
           </DialogHeader>
           {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
-            <img
-              src={popup.payload.ticketImageUrl}
-              alt="Ticket"
-              className="w-full rounded cursor-zoom-in transition hover:opacity-90"
-              onClick={() => setZoomImage(popup.payload.ticketImageUrl!)}
-            />
+            <div className="relative w-full">
+              <img
+                src={popup.payload.ticketImageUrl}
+                alt="Ticket"
+                className="block w-full rounded"
+                draggable={false}
+              />
+              <button
+                type="button"
+                aria-label="Enlarge image"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setZoomImage(popup.payload.ticketImageUrl!);
+                }}
+                className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-medium text-foreground border border-border shadow-sm hover:bg-background transition"
+              >
+                <LucideIcons.Maximize2 className="h-3.5 w-3.5" />
+                Enlarge
+              </button>
+            </div>
           )}
           {popup?.type !== "buy_ticket" && popup?.payload.mediaUrl && (() => {
-            const hasHotspots = (popup.payload.hotspots?.length ?? 0) > 0;
             return (
             <div className="relative w-full">
               <img
                 src={popup.payload.mediaUrl}
                 alt=""
-                className={`block w-full rounded transition ${hasHotspots ? "" : "cursor-zoom-in hover:opacity-95"}`}
-                onClick={hasHotspots ? undefined : () => setZoomImage(popup.payload.mediaUrl!)}
+                className="block w-full rounded"
                 draggable={false}
               />
-              {hasHotspots && (
-                <button
-                  type="button"
-                  aria-label="Enlarge image"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setZoomPopup(popup);
-                    setZoomImage(popup.payload.mediaUrl!);
-                  }}
-                  className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-medium text-foreground border border-border shadow-sm hover:bg-background transition"
-                >
-                  <LucideIcons.Maximize2 className="h-3.5 w-3.5" />
-                  Enlarge
-                </button>
-              )}
+              <button
+                type="button"
+                aria-label="Enlarge image"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setZoomPopup(popup);
+                  setZoomImage(popup.payload.mediaUrl!);
+                }}
+                className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-medium text-foreground border border-border shadow-sm hover:bg-background transition"
+              >
+                <LucideIcons.Maximize2 className="h-3.5 w-3.5" />
+                Enlarge
+              </button>
               {(popup.payload.hotspots || []).map((h) => (
                 <button
                   key={h.id}
