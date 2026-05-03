@@ -483,11 +483,14 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     }
   }
 
-  function runPopupButton(a: LayerAction) {
+  function runPopupButton(a: LayerAction, closeZoom = false) {
     logClick(null, "popup_button:" + a.type);
     setPopup(null);
-    // small delay so the dialog closes before next opens
-    setTimeout(() => executeAction(a, null), 50);
+    if (closeZoom) {
+      setZoomImage(null);
+      setZoomPopup(null);
+    }
+    executeAction(a, null);
   }
 
   async function submitForm() {
@@ -866,7 +869,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   aria-label={h.label || "Hotspot"}
                   onClick={(e) => {
                     e.stopPropagation();
-                    runPopupButton(h.action);
+                    runPopupButton(h.action, true);
                   }}
                   className={`absolute border-2 border-primary/70 bg-primary/10 hover:bg-primary/30 transition cursor-pointer ${
                     h.shape === "ellipse" ? "rounded-full" : "rounded-sm"
