@@ -869,7 +869,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   aria-label={h.label || "Hotspot"}
                   onClick={(e) => {
                     e.stopPropagation();
-                    runPopupButton(h.action);
+                    runPopupButton(h.action, true);
                   }}
                   className={`absolute border-2 border-primary/70 bg-primary/10 hover:bg-primary/30 transition cursor-pointer ${
                     h.shape === "ellipse" ? "rounded-full" : "rounded-sm"
