@@ -932,6 +932,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
           </>
         )}
 
+        {type === "rsvp" && (
           <>
             <p className="text-[11px] text-muted-foreground">Pops up an RSVP form. Submissions are saved and visible in your dashboard.</p>
             <Label className="text-xs">Fields to collect</Label>
