@@ -861,6 +861,17 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               {popup.payload.ticketCtaLabel || "Buy ticket"}
             </Button>
           )}
+          {popup?.type === "buy_product" && popup.payload.productPaymentUrl && (
+            <Button
+              className="w-full"
+              onClick={() => {
+                logClick(null, "buy_product_cta");
+                window.open(popup.payload.productPaymentUrl!, "_blank", "noopener,noreferrer");
+              }}
+            >
+              {popup.payload.productCtaLabel || "Buy now"}
+            </Button>
+          )}
           {popup?.payload.buttons && popup.payload.buttons.length > 0 && (
             <div className="flex flex-col gap-2">
               {popup.payload.buttons.map((b) => (
