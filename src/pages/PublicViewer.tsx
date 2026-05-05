@@ -742,7 +742,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       <Dialog open={!!popup} onOpenChange={(v) => !v && setPopup(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{popup?.payload.title || (popup?.type === "buy_ticket" ? "Get your ticket" : "Info")}</DialogTitle>
+            <DialogTitle>{popup?.payload.title || (popup?.type === "buy_ticket" ? "Get your ticket" : popup?.type === "buy_product" ? (popup.payload.productName || "Buy product") : "Info")}</DialogTitle>
             {popup?.payload.body && <DialogDescription>{popup.payload.body}</DialogDescription>}
           </DialogHeader>
           {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
@@ -767,7 +767,44 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               </button>
             </div>
           )}
-          {popup?.type !== "buy_ticket" && popup?.payload.mediaUrl && (() => {
+          {popup?.type === "buy_product" && (
+            <div className="space-y-3">
+              {popup.payload.productImageUrl && (
+                <div className="relative w-full">
+                  <img
+                    src={popup.payload.productImageUrl}
+                    alt={popup.payload.productName || "Product"}
+                    className="block w-full rounded object-cover max-h-[60vh]"
+                    draggable={false}
+                  />
+                  <button
+                    type="button"
+                    aria-label="Enlarge image"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setZoomImage(popup.payload.productImageUrl!);
+                    }}
+                    className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-medium text-foreground border border-border shadow-sm hover:bg-background transition"
+                  >
+                    <LucideIcons.Maximize2 className="h-3.5 w-3.5" />
+                    Enlarge
+                  </button>
+                </div>
+              )}
+              {(popup.payload.productPrice || popup.payload.productCurrency) && (
+                <div className="text-2xl font-semibold text-foreground">
+                  {popup.payload.productCurrency ? `${popup.payload.productCurrency} ` : ""}
+                  {popup.payload.productPrice}
+                </div>
+              )}
+              {popup.payload.productDescription && (
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {popup.payload.productDescription}
+                </p>
+              )}
+            </div>
+          )}
+          {popup?.type !== "buy_ticket" && popup?.type !== "buy_product" && popup?.payload.mediaUrl && (() => {
             return (
             <div className="relative w-full">
               <img
