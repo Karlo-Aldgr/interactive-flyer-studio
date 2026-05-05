@@ -450,6 +450,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         // Show as popup with ticket image + buy button
         setPopup(a);
         break;
+      case "buy_product":
+        // Show as popup with product details + buy button
+        setPopup(a);
+        break;
       case "rsvp":
         setFormAction(a);
         setFormData({});
