@@ -17,7 +17,8 @@ export type ActionType =
   | "checkout"
   | "coupon"
   | "map"
-  | "audio";
+  | "audio"
+  | "buy_product";
 
 export interface PopupButton {
   id: string;
@@ -93,6 +94,14 @@ export interface ActionPayload {
   mapLat?: number;
   mapLng?: number;
   mapProvider?: "google" | "apple" | "auto";
+  // buy_product (payment link based — Stripe / PayPal / Venmo / Cash App, etc.)
+  productName?: string;
+  productPrice?: string;        // e.g. "25" or "25.00" — free-form so users can include their own currency
+  productCurrency?: string;     // e.g. "USD", "EUR", "$" — display only
+  productImageUrl?: string;
+  productDescription?: string;
+  productPaymentUrl?: string;   // payment link the buyer is sent to
+  productCtaLabel?: string;     // e.g. "Buy now"
 }
 
 export interface LayerStyle {

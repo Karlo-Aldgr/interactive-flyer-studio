@@ -41,9 +41,10 @@ const ACTION_LABELS: Record<ActionType, string> = {
   checkout: "Link to checkout",
   coupon: "Coupon",
   map: "Open in maps (GPS)",
+  buy_product: "Buy product",
 };
 
-const PRESET_TYPES: ActionType[] = ["buy_ticket", "rsvp", "checkout", "coupon", "map"];
+const PRESET_TYPES: ActionType[] = ["buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map"];
 const BASIC_TYPES: ActionType[] = [
   "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
@@ -85,6 +86,8 @@ function isValid(draft: LayerAction | null): boolean {
       return true;
     case "map":
       return !!(p.mapAddress || (typeof p.mapLat === "number" && typeof p.mapLng === "number"));
+    case "buy_product":
+      return !!(p.productName && p.productPaymentUrl);
     default: return true;
   }
 }
@@ -889,6 +892,42 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
             <div>
               <Label className="text-xs">Description (optional)</Label>
               <Textarea className="mt-1" rows={2} value={p.body || ""} onChange={(e) => update({ body: e.target.value })} />
+            </div>
+          </>
+        )}
+
+        {type === "buy_product" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">
+              Shows your product (image, name, price, description) in a popup with a Buy button that opens your payment link — works with Stripe, PayPal, Venmo, Cash App, or any URL.
+            </p>
+            <AssetUpload label="Product image (optional)" value={p.productImageUrl} onChange={(url) => update({ productImageUrl: url })} />
+            <div>
+              <Label className="text-xs">Product name</Label>
+              <Input className="mt-1" value={p.productName || ""} onChange={(e) => update({ productName: e.target.value })} placeholder="e.g. Signed poster" />
+            </div>
+            <div className="grid grid-cols-[1fr_90px] gap-2">
+              <div>
+                <Label className="text-xs">Price</Label>
+                <Input className="mt-1" value={p.productPrice || ""} onChange={(e) => update({ productPrice: e.target.value })} placeholder="25.00" />
+              </div>
+              <div>
+                <Label className="text-xs">Currency</Label>
+                <Input className="mt-1" value={p.productCurrency || ""} onChange={(e) => update({ productCurrency: e.target.value })} placeholder="USD" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Description (optional)</Label>
+              <Textarea className="mt-1" rows={2} value={p.productDescription || ""} onChange={(e) => update({ productDescription: e.target.value })} placeholder="Short product details, size, pickup info, etc." />
+            </div>
+            <div>
+              <Label className="text-xs">Payment link</Label>
+              <Input className="mt-1" value={p.productPaymentUrl || ""} onChange={(e) => update({ productPaymentUrl: e.target.value })} placeholder="https://buy.stripe.com/... or https://venmo.com/..." />
+              <p className="mt-1 text-[11px] text-muted-foreground">Tip: use the "Generate payment link" tool in the toolbar to create a Venmo / Cash App / PayPal link.</p>
+            </div>
+            <div>
+              <Label className="text-xs">Buy button label</Label>
+              <Input className="mt-1" value={p.productCtaLabel || ""} onChange={(e) => update({ productCtaLabel: e.target.value })} placeholder="Buy now" />
             </div>
           </>
         )}
