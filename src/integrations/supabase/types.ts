@@ -315,6 +315,7 @@ export type Database = {
         | "coupon"
         | "map"
         | "audio"
+        | "buy_product"
       app_role: "admin" | "user"
       event_type: "view" | "click" | "submit" | "reveal"
       flyer_status: "draft" | "published"
@@ -462,6 +463,7 @@ export const Constants = {
         "coupon",
         "map",
         "audio",
+        "buy_product",
       ],
       app_role: ["admin", "user"],
       event_type: ["view", "click", "submit", "reveal"],
