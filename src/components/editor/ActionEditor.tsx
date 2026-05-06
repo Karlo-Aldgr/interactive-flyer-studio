@@ -730,6 +730,28 @@ function AirMessagesEditor({
                     </Button>
                   )}
                 </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-[11px] w-20">Intro at</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={60000}
+                    step={100}
+                    className="h-7 w-24 text-xs"
+                    placeholder="Auto"
+                    value={b.delayMs ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      update(i, { delayMs: v === "" ? undefined : Math.max(0, Math.min(60000, Number(v) || 0)) });
+                    }}
+                  />
+                  <span className="text-[10px] text-muted-foreground">ms from start — blank uses delay between bubbles</span>
+                  {b.delayMs !== undefined && (
+                    <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => update(i, { delayMs: undefined })}>
+                      Auto
+                    </Button>
+                  )}
+                </div>
                 <AssetUpload
                   label="Image (optional)"
                   value={b.imageUrl}
