@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ActionType, LayerAction, PopupButton, PopupHotspot } from "@/types/flyer";
+import { ActionType, LayerAction, PopupButton, PopupHotspot, AirMessageBubble, PollOption } from "@/types/flyer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
@@ -42,9 +42,11 @@ const ACTION_LABELS: Record<ActionType, string> = {
   coupon: "Coupon",
   map: "Open in maps (GPS)",
   buy_product: "Buy product",
+  air_messages: "Air messages (chat bubbles)",
+  poll: "Poll",
 };
 
-const PRESET_TYPES: ActionType[] = ["buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map"];
+const PRESET_TYPES: ActionType[] = ["air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map"];
 const BASIC_TYPES: ActionType[] = [
   "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
@@ -88,6 +90,10 @@ function isValid(draft: LayerAction | null): boolean {
       return !!(p.mapAddress || (typeof p.mapLat === "number" && typeof p.mapLng === "number"));
     case "buy_product":
       return !!(p.productName && p.productPaymentUrl);
+    case "air_messages":
+      return !!(p.bubbles && p.bubbles.some((b) => b.text || b.imageUrl));
+    case "poll":
+      return !!(p.pollQuestion && p.pollOptions && p.pollOptions.filter((o) => o.label?.trim()).length >= 2);
     default: return true;
   }
 }
