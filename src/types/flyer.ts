@@ -108,6 +108,7 @@ export interface ActionPayload {
   // air_messages — iMessage-style bubble sequence
   bubbles?: AirMessageBubble[];
   bubbleStaggerMs?: number;     // delay between bubbles, default 900
+  bubbleStartDelayMs?: number;  // delay before the FIRST bubble appears, default 0
   // Auto-trigger: fire this action automatically when the page loads
   autoTrigger?: boolean;
 

@@ -558,13 +558,15 @@ function PopupHotspotsEditor({
 }
 
 function AirMessagesEditor({
-  bubbles, onChange, depth, staggerMs, onStaggerChange, onAddAsLayer,
+  bubbles, onChange, depth, staggerMs, onStaggerChange, startDelayMs, onStartDelayChange, onAddAsLayer,
 }: {
   bubbles: AirMessageBubble[];
   onChange: (b: AirMessageBubble[]) => void;
   depth: number;
   staggerMs: number;
   onStaggerChange: (ms: number) => void;
+  startDelayMs: number;
+  onStartDelayChange: (ms: number) => void;
   /** When provided, the "Add bubble" button creates a brand new layer instead of
    *  pushing into the current layer's bubbles array. */
   onAddAsLayer?: () => void;
@@ -609,6 +611,20 @@ function AirMessagesEditor({
       <p className="text-[11px] text-muted-foreground">
         Bright pill-shaped chat bubbles that animate in one after another. Resize the bubble area on the canvas — text auto-fits to the box.
       </p>
+
+      <div className="flex items-center gap-2">
+        <Label className="text-xs">Start delay</Label>
+        <Input
+          type="number"
+          min={0}
+          max={60000}
+          step={100}
+          className="h-7 w-24 text-xs"
+          value={startDelayMs}
+          onChange={(e) => onStartDelayChange(Math.max(0, Math.min(60000, Number(e.target.value) || 0)))}
+        />
+        <span className="text-[11px] text-muted-foreground">ms before first bubble</span>
+      </div>
 
       <div className="flex items-center gap-2">
         <Label className="text-xs">Delay between bubbles</Label>
@@ -1261,8 +1277,10 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
             depth={depth}
             bubbles={p.bubbles || []}
             staggerMs={p.bubbleStaggerMs ?? 900}
+            startDelayMs={p.bubbleStartDelayMs ?? 0}
             onChange={(bubbles) => update({ bubbles })}
             onStaggerChange={(ms) => update({ bubbleStaggerMs: ms })}
+            onStartDelayChange={(ms) => update({ bubbleStartDelayMs: ms })}
             onAddAsLayer={embedded ? undefined : () => {
               const newAction: LayerAction = {
                 id: crypto.randomUUID(),
