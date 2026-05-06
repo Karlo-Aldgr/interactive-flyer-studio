@@ -33,6 +33,7 @@ export function Canvas() {
   const cancelCrop = useEditorStore((s) => s.cancelCrop);
   const introReplayKey = useEditorStore((s) => s.introReplayKey);
   const setStageRef = useEditorStore((s) => s.setStageRef);
+  const previewAction = useEditorStore((s) => s.previewAction);
 
   const stageRef = useRef<any>(null);
   const trRef = useRef<any>(null);
