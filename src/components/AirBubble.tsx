@@ -38,12 +38,18 @@ export function AirBubble({
   const bold = bubble.bold ?? true;
   const text = applyCase(bubble.text || "", bubble.textCase);
 
-  // Auto-fit font size to container height when fitHeight is provided.
+  // Auto-fit font size to container height when fitHeight is provided AND no manual size is set.
   const textRef = useRef<HTMLSpanElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [fontSize, setFontSize] = useState(baseFontSize);
+  const manualSize = bubble.fontSize;
+  const [fontSize, setFontSize] = useState(manualSize ?? baseFontSize);
 
   useLayoutEffect(() => {
+    if (manualSize) {
+      setFontSize(manualSize);
+      if (textRef.current) textRef.current.style.fontSize = manualSize + "px";
+      return;
+    }
     if (!fitHeight || !textRef.current || !wrapRef.current) {
       setFontSize(baseFontSize);
       return;
@@ -62,7 +68,7 @@ export function AirBubble({
     }
     span.style.fontSize = best + "px";
     setFontSize(best);
-  }, [text, maxWidth, fitHeight, baseFontSize, bold, bubble.imageUrl]);
+  }, [text, maxWidth, fitHeight, baseFontSize, bold, bubble.imageUrl, manualSize]);
 
   const padX = Math.max(14, Math.round((fitHeight ?? 56) * 0.32));
   const padY = Math.max(8, Math.round((fitHeight ?? 56) * 0.18));
