@@ -1332,6 +1332,21 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
           </>
         )}
 
+        {draft && !embedded && (
+          <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs font-semibold uppercase tracking-wide">Auto-trigger on page load</Label>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">Run this action automatically when the viewer opens the page (instead of waiting for a tap).</p>
+              </div>
+              <Switch
+                checked={!!p.autoTrigger}
+                onCheckedChange={(v) => update({ autoTrigger: v })}
+              />
+            </div>
+          </div>
+        )}
+
         {draft && (
           <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 space-y-3">
             <div className="flex items-center justify-between">
