@@ -157,7 +157,7 @@ export default function Dashboard() {
                   <Link to={`/editor/${f.id}`} className="block">
                     <div className="aspect-[3/4] gradient-canvas border-b border-border relative">
                       {f.thumbnail_url ? (
-                        <img src={f.thumbnail_url} alt={f.title} className="h-full w-full object-contain" loading="lazy" />
+                        <img src={f.thumbnail_url} alt={f.title} className="h-full w-full object-cover" loading="lazy" />
                       ) : (
                         <div className="flex h-full items-center justify-center text-muted-foreground">
                           <FileText className="h-10 w-10 opacity-40" />
