@@ -1297,6 +1297,11 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                     tail: "down",
                     bold: true,
                   }],
+                  // Inherit playback config from the source layer so the new bubble
+                  // actually appears on its own (it would otherwise sit on a hotspot
+                  // with no trigger).
+                  autoTrigger: p.autoTrigger !== false,
+                  bubbleStartDelayMs: p.bubbleStartDelayMs ?? 0,
                   bubbleStaggerMs: p.bubbleStaggerMs ?? 900,
                 },
               };
