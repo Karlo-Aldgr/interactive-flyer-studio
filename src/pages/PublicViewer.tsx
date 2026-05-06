@@ -757,6 +757,21 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             </KLayer>
           )}
         </Stage>
+        {/* Inline air-messages overlay — positioned over the flyer, no backdrop. */}
+        {airMessages && (
+          <AirMessagesInline
+            action={airMessages.action}
+            sourceLayer={airMessages.layer}
+            scale={scale}
+            canvasW={W}
+            canvasH={H}
+            onClose={() => setAirMessages(null)}
+            onRunBubbleAction={(a) => {
+              logClick(null, "air_message:" + a.type);
+              executeAction(a, null);
+            }}
+          />
+        )}
       </div>
 
       {/* Pagination */}
