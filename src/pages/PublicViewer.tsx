@@ -758,20 +758,21 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           )}
         </Stage>
         {/* Inline air-messages overlay — positioned over the flyer, no backdrop. */}
-        {airMessages && (
+        {airMessages.map((am) => (
           <AirMessagesInline
-            action={airMessages.action}
-            sourceLayer={airMessages.layer}
+            key={am.action.id}
+            action={am.action}
+            sourceLayer={am.layer}
             scale={scale}
             canvasW={W}
             canvasH={H}
-            onClose={() => setAirMessages(null)}
+            onClose={() => setAirMessages((prev) => prev.filter((p) => p.action.id !== am.action.id))}
             onRunBubbleAction={(a) => {
               logClick(null, "air_message:" + a.type);
               executeAction(a, null);
             }}
           />
-        )}
+        ))}
       </div>
 
       {/* Pagination */}
