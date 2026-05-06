@@ -1183,33 +1183,28 @@ const REACTION_EMOJI: Record<string, string> = {
 };
 
 function AirMessagesDialog({
-  action, onClose, onRunBubbleAction,
+  action, sourceLayer, scale, canvasW, canvasH, onClose, onRunBubbleAction,
 }: {
   action: LayerAction | null;
+  sourceLayer: Layer | null;
+  scale: number;
+  canvasW: number;
+  canvasH: number;
   onClose: () => void;
   onRunBubbleAction: (a: LayerAction) => void;
 }) {
   const bubbles: AirMessageBubble[] = action?.payload.bubbles || [];
   const stagger = action?.payload.bubbleStaggerMs ?? 900;
   const [visible, setVisible] = useState(0);
-  const [typingSide, setTypingSide] = useState<"left" | "right" | null>(null);
 
   useEffect(() => {
-    if (!action) {
-      setVisible(0);
-      setTypingSide(null);
-      return;
-    }
+    if (!action) { setVisible(0); return; }
     setVisible(0);
-    setTypingSide(null);
     const timers: number[] = [];
-    bubbles.forEach((b, i) => {
-      // Show typing indicator briefly before each bubble
-      timers.push(window.setTimeout(() => setTypingSide(b.side), i * stagger + 50));
+    bubbles.forEach((_, i) => {
       timers.push(window.setTimeout(() => {
-        setTypingSide(null);
         setVisible((v) => Math.max(v, i + 1));
-      }, i * stagger + Math.min(stagger - 100, 600)));
+      }, i * stagger + 250));
     });
     return () => timers.forEach((t) => clearTimeout(t));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1217,86 +1212,77 @@ function AirMessagesDialog({
 
   if (!action) return null;
 
+  // Layout: if we have a source layer, render the bubbles at that exact canvas
+  // rect (scaled to viewport). Otherwise fall back to a centered overlay.
+  const useLayer = !!sourceLayer;
+  const rect = useLayer
+    ? {
+        left: sourceLayer!.position.x * scale,
+        top: sourceLayer!.position.y * scale,
+        width: sourceLayer!.size.width * scale,
+        height: sourceLayer!.size.height * scale,
+      }
+    : {
+        left: canvasW * scale * 0.08,
+        top: canvasH * scale * 0.35,
+        width: canvasW * scale * 0.84,
+        height: canvasH * scale * 0.30,
+      };
+
+  const gap = 10 * scale;
+  const perBubbleHeight = bubbles.length > 0
+    ? Math.max(28, (rect.height - gap * (bubbles.length - 1)) / bubbles.length)
+    : 60;
+
   return (
-    <Dialog open={!!action} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden bg-[#f2f2f7] dark:bg-zinc-900">
-        <div className="flex items-center justify-between border-b border-border bg-card/80 px-4 py-2 backdrop-blur">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-xs">💬</div>
-            <span className="text-sm font-semibold">{action.payload.title || "Messages"}</span>
-          </div>
-        </div>
-        <div className="flex flex-col gap-1.5 px-3 py-4 max-h-[70vh] overflow-y-auto">
-          {bubbles.slice(0, visible).map((b, i) => {
-            const isRight = b.side === "right";
-            const hasAction = !!b.action;
-            return (
-              <div
-                key={b.id}
-                className={`flex w-full ${isRight ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
-              >
-                <div className={`relative max-w-[78%] ${isRight ? "items-end" : "items-start"} flex flex-col gap-1`}>
-                  {b.imageUrl && (
-                    <button
-                      type="button"
-                      disabled={!hasAction}
-                      onClick={() => hasAction && onRunBubbleAction(b.action!)}
-                      className={`overflow-hidden rounded-2xl ${hasAction ? "cursor-pointer hover:opacity-90" : "cursor-default"}`}
-                    >
-                      <img src={b.imageUrl} alt="" className="block max-h-64 w-auto object-cover" draggable={false} />
-                    </button>
-                  )}
-                  {b.text && (
-                    <button
-                      type="button"
-                      disabled={!hasAction}
-                      onClick={() => hasAction && onRunBubbleAction(b.action!)}
-                      className={`relative px-3.5 py-2 text-[15px] leading-snug whitespace-pre-wrap text-left rounded-2xl shadow-sm ${
-                        isRight
-                          ? "bg-[#3b82f6] text-white rounded-br-md"
-                          : "bg-white dark:bg-zinc-800 text-foreground rounded-bl-md"
-                      } ${hasAction ? "cursor-pointer hover:brightness-95 active:scale-[0.98] transition" : "cursor-default"}`}
-                    >
-                      {b.text}
-                      {hasAction && (
-                        <span className="ml-1 inline-block align-middle text-[10px] opacity-70">↗</span>
-                      )}
-                    </button>
-                  )}
-                  {b.reaction && REACTION_EMOJI[b.reaction] && (
-                    <div
-                      className={`absolute -top-3 ${isRight ? "-left-2" : "-right-2"} flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-sm shadow`}
-                    >
-                      {REACTION_EMOJI[b.reaction]}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          {typingSide && visible < bubbles.length && (
-            <div className={`flex w-full ${typingSide === "right" ? "justify-end" : "justify-start"}`}>
-              <div className={`flex gap-1 px-3.5 py-2.5 rounded-2xl shadow-sm ${
-                typingSide === "right" ? "bg-[#3b82f6]" : "bg-white dark:bg-zinc-800"
-              }`}>
-                {[0, 150, 300].map((d) => (
-                  <span
-                    key={d}
-                    className={`h-1.5 w-1.5 rounded-full ${typingSide === "right" ? "bg-white/80" : "bg-zinc-400"} animate-bounce`}
-                    style={{ animationDelay: `${d}ms` }}
-                  />
-                ))}
-              </div>
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 60,
+        background: "rgba(0,0,0,0.35)",
+        backdropFilter: "blur(2px)",
+        animation: "fadeIn 200ms ease-out",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "absolute",
+          left: rect.left, top: rect.top, width: rect.width, height: rect.height,
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center",
+          gap,
+        }}
+      >
+        {bubbles.slice(0, visible).map((b) => {
+          const hasAction = !!b.action;
+          return (
+            <div
+              key={b.id}
+              style={{
+                animation: "airBubbleIn 320ms cubic-bezier(0.34,1.56,0.64,1) both",
+                width: "100%", display: "flex", justifyContent: "center",
+              }}
+            >
+              <AirBubble
+                bubble={b}
+                maxWidth={rect.width}
+                fitHeight={perBubbleHeight}
+                interactive={hasAction}
+                onClick={() => hasAction && onRunBubbleAction(b.action!)}
+              />
             </div>
-          )}
-          {visible >= bubbles.length && bubbles.length > 0 && (
-            <div className="mt-2 flex justify-center">
-              <Button size="sm" variant="ghost" onClick={onClose} className="text-xs">Close</Button>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+          );
+        })}
+      </div>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes airBubbleIn {
+          0% { opacity: 0; transform: translateY(12px) scale(0.92); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+    </div>
   );
 }
 
