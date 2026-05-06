@@ -1065,6 +1065,22 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
       {/* Coupon */}
       <CouponDialog action={coupon} onClose={() => setCoupon(null)} onRedeem={(url) => { logClick(null, "coupon_redeem"); window.open(url, "_blank", "noopener,noreferrer"); }} />
+
+      <AirMessagesDialog
+        action={airMessages}
+        onClose={() => setAirMessages(null)}
+        onRunBubbleAction={(a) => {
+          logClick(null, "air_message:" + a.type);
+          executeAction(a, null);
+        }}
+      />
+
+      <PollDialog
+        action={poll}
+        onClose={() => setPoll(null)}
+        flyerId={flyer.id}
+        previewMode={previewMode}
+      />
     </div>
   );
 }
