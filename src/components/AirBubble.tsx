@@ -38,15 +38,18 @@ export function AirBubble({
   const bold = bubble.bold ?? true;
   const text = applyCase(bubble.text || "", bubble.textCase);
 
-  // Auto-fit font size to container height when fitHeight is provided AND no manual size is set.
+  // Auto-fit font size. Always keep text readable: enforce a minimum font size
+  // (so small fitHeight on mobile doesn't shrink text into unreadable pixels)
+  // and let the bubble grow taller when needed by relaxing the height constraint.
   const textRef = useRef<HTMLSpanElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const manualSize = bubble.fontSize;
-  const [fontSize, setFontSize] = useState(manualSize ?? baseFontSize);
+  const MIN_READABLE = 14;
+  const [fontSize, setFontSize] = useState(manualSize ?? Math.max(MIN_READABLE, baseFontSize));
 
   useLayoutEffect(() => {
     if (!textRef.current || !wrapRef.current) {
-      setFontSize(manualSize ?? baseFontSize);
+      setFontSize(manualSize ?? Math.max(MIN_READABLE, baseFontSize));
       return;
     }
     const wrap = wrapRef.current;
@@ -63,16 +66,22 @@ export function AirBubble({
       setFontSize(baseFontSize);
       return;
     }
-    // Binary search for largest size <= upper that fits both width and height.
-    let lo = 8;
-    let hi = upper;
-    let best = lo;
+    // Binary search for largest size that fits width. Floor the lower bound at
+    // MIN_READABLE so text stays legible even if it overflows the requested
+    // fitHeight (the bubble will simply grow vertically).
+    const lo0 = Math.min(MIN_READABLE, upper);
+    let lo = lo0;
+    let hi = Math.max(upper, lo0);
+    let best = lo0;
     for (let i = 0; i < 14 && lo <= hi; i++) {
       const mid = Math.floor((lo + hi) / 2);
       span.style.fontSize = mid + "px";
-      const heightOk = fitHeight ? wrap.scrollHeight <= fitHeight + 1 : true;
       const widthOk = wrap.scrollWidth <= maxWidth + 1;
-      if (heightOk && widthOk) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
+      // Only respect fitHeight when it's tall enough to host readable text.
+      const heightOk = fitHeight && fitHeight >= MIN_READABLE * 2.2
+        ? wrap.scrollHeight <= fitHeight + 1
+        : true;
+      if (widthOk && heightOk) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
     }
     span.style.fontSize = best + "px";
     setFontSize(best);
