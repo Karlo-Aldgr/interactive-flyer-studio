@@ -302,7 +302,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
   const [enlarged, setEnlarged] = useState(false);
-  const [airMessages, setAirMessages] = useState<{ action: LayerAction; layer: Layer | null } | null>(null);
+  const [airMessages, setAirMessages] = useState<Array<{ action: LayerAction; layer: Layer | null }>>([]);
   const [poll, setPoll] = useState<LayerAction | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const stageWrapRef = useRef<HTMLDivElement | null>(null);
@@ -470,7 +470,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         setCoupon(a);
         break;
       case "air_messages":
-        setAirMessages({ action: a, layer: layer ?? null });
+        setAirMessages((prev) => (prev.some((p) => p.action.id === a.id) ? prev : [...prev, { action: a, layer: layer ?? null }]));
         break;
       case "poll":
         setPoll(a);
@@ -758,20 +758,21 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           )}
         </Stage>
         {/* Inline air-messages overlay — positioned over the flyer, no backdrop. */}
-        {airMessages && (
+        {airMessages.map((am) => (
           <AirMessagesInline
-            action={airMessages.action}
-            sourceLayer={airMessages.layer}
+            key={am.action.id}
+            action={am.action}
+            sourceLayer={am.layer}
             scale={scale}
             canvasW={W}
             canvasH={H}
-            onClose={() => setAirMessages(null)}
+            onClose={() => setAirMessages((prev) => prev.filter((p) => p.action.id !== am.action.id))}
             onRunBubbleAction={(a) => {
               logClick(null, "air_message:" + a.type);
               executeAction(a, null);
             }}
           />
-        )}
+        ))}
       </div>
 
       {/* Pagination */}
