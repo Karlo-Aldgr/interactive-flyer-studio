@@ -93,6 +93,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   pendingCrop: null,
   stageRef: null,
   setStageRef: (s) => set({ stageRef: s }),
+  previewAction: null,
+  setPreviewAction: (p) => set({ previewAction: p }),
   introReplayKey: 0,
   replayIntro: () => set((s) => ({ introReplayKey: s.introReplayKey + 1 })),
 
