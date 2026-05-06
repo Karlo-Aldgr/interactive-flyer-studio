@@ -117,13 +117,24 @@ export interface ActionPayload {
   pollMultiple?: boolean;       // allow voting for more than one option
 }
 
+export type BubbleTextCase = "as-is" | "upper" | "lower";
+export type BubbleTail = "none" | "down" | "up" | "left" | "right";
+
 export interface AirMessageBubble {
   id: string;
-  side: "left" | "right";       // left = grey (incoming), right = blue (outgoing)
+  /** @deprecated kept for back-compat; new bubbles ignore left/right grey/blue split */
+  side?: "left" | "right";
   text?: string;
   imageUrl?: string;
   reaction?: "heart" | "like" | "dislike" | "haha" | "exclaim" | "question" | "";
   action?: LayerAction | null;  // tap action
+  // Per-bubble look (the big bright pill style)
+  bgColor?: string;        // e.g. "#1d9bf0" — solid or gradient start
+  bgColor2?: string;       // optional gradient end
+  textColor?: string;      // default white
+  textCase?: BubbleTextCase; // default "as-is"
+  tail?: BubbleTail;       // default "down"
+  bold?: boolean;          // default true
 }
 
 export interface PollOption {
