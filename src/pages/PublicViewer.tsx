@@ -305,6 +305,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [airMessages, setAirMessages] = useState<{ action: LayerAction; layer: Layer | null } | null>(null);
   const [poll, setPoll] = useState<LayerAction | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const stageWrapRef = useRef<HTMLDivElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
   const introPlayedRef = useRef(false);
   const [introNeedsTap, setIntroNeedsTap] = useState(false);
