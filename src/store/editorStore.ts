@@ -25,6 +25,10 @@ interface EditorState {
   // konva stage ref (set by Canvas) — used to render social thumbnails
   stageRef: any | null;
   setStageRef: (s: any | null) => void;
+  // Live (uncommitted) action draft for the selected layer — used to preview
+  // air messages on the canvas while the user is editing the action panel.
+  previewAction: { layerId: string; action: LayerAction | null } | null;
+  setPreviewAction: (p: { layerId: string; action: LayerAction | null } | null) => void;
   // hydrate
   hydrate: (flyer: Flyer, pages: FlyerPage[]) => void;
   setFlyer: (patch: Partial<Flyer>) => void;
