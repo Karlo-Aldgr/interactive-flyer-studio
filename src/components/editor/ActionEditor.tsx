@@ -938,7 +938,26 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
           </>
         )}
 
-        {type === "rsvp" && (
+        {type === "air_messages" && (
+          <AirMessagesEditor
+            depth={depth}
+            bubbles={p.bubbles || []}
+            staggerMs={p.bubbleStaggerMs ?? 900}
+            onChange={(bubbles) => update({ bubbles })}
+            onStaggerChange={(ms) => update({ bubbleStaggerMs: ms })}
+          />
+        )}
+
+        {type === "poll" && (
+          <PollEditor
+            question={p.pollQuestion || ""}
+            options={p.pollOptions || []}
+            multiple={!!p.pollMultiple}
+            onChange={(patch) => update(patch)}
+          />
+        )}
+
+
           <>
             <p className="text-[11px] text-muted-foreground">Pops up an RSVP form. Submissions are saved and visible in your dashboard.</p>
             <Label className="text-xs">Fields to collect</Label>
