@@ -301,7 +301,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
   const [enlarged, setEnlarged] = useState(false);
-  const [airMessages, setAirMessages] = useState<LayerAction | null>(null);
+  const [airMessages, setAirMessages] = useState<{ action: LayerAction; layer: Layer | null } | null>(null);
   const [poll, setPoll] = useState<LayerAction | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
@@ -468,7 +468,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         setCoupon(a);
         break;
       case "air_messages":
-        setAirMessages(a);
+        setAirMessages({ action: a, layer: layer ?? null });
         break;
       case "poll":
         setPoll(a);
