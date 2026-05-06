@@ -128,7 +128,7 @@ export function AirBubble({
         position: "relative",
         maxWidth,
         width: fitHeight ? maxWidth : "auto",
-        height: fitHeight,
+        minHeight: fitHeight,
         padding: `${padY}px ${padX}px`,
         background: bg1 === bg2 ? bg1 : `linear-gradient(135deg, ${bg1}, ${bg2})`,
         color: textColor,
