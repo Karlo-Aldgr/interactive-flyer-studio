@@ -1196,13 +1196,14 @@ function AirMessagesInline({
 }) {
   const bubbles: AirMessageBubble[] = action.payload.bubbles || [];
   const stagger = action.payload.bubbleStaggerMs ?? 900;
+  const startDelay = Math.max(0, action.payload.bubbleStartDelayMs ?? 0);
   const [visible, setVisible] = useState(0);
 
   useEffect(() => {
     setVisible(0);
     const timers: number[] = [];
     bubbles.forEach((b, i) => {
-      const t = (typeof b.delayMs === "number" ? b.delayMs : i * stagger) + 250;
+      const t = (typeof b.delayMs === "number" ? b.delayMs : i * stagger) + 250 + startDelay;
       timers.push(window.setTimeout(() => {
         setVisible((v) => Math.max(v, i + 1));
       }, t));
