@@ -6,7 +6,7 @@ import useImage from "use-image";
 import * as LucideIcons from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { supabase } from "@/integrations/supabase/client";
-import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
+import { Flyer, FlyerPage, Layer, LayerAction, AirMessageBubble } from "@/types/flyer";
 import { IntroAnimatedGroup, resolveIntro } from "@/components/editor/IntroAnimatedGroup";
 import { Loader2, Copy, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -301,6 +301,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
   const [enlarged, setEnlarged] = useState(false);
+  const [airMessages, setAirMessages] = useState<LayerAction | null>(null);
+  const [poll, setPoll] = useState<LayerAction | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
   const introPlayedRef = useRef(false);
@@ -465,6 +467,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "coupon":
         setCoupon(a);
         break;
+      case "air_messages":
+        setAirMessages(a);
+        break;
+      case "poll":
+        setPoll(a);
+        break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
         const isApple = (() => {
@@ -567,6 +575,26 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       window.removeEventListener("keydown", onTap);
     };
   }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop]);
+
+  // Auto-trigger any actions on the current page that have payload.autoTrigger === true.
+  const autoFiredRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (loading || !flyer || pages.length === 0) return;
+    const page = pages[pageIndex];
+    if (!page) return;
+    const fired = autoFiredRef.current;
+    let i = 0;
+    page.layers.forEach((l) => {
+      const a = l.action;
+      if (!a || !a.payload?.autoTrigger) return;
+      const key = `${page.id}:${a.id}`;
+      if (fired.has(key)) return;
+      fired.add(key);
+      setTimeout(() => executeAction(a, l), 350 + i * 250);
+      i++;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageIndex, loading, flyer?.id, pages.length]);
 
   if (loading) {
     return (
@@ -1037,6 +1065,22 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
       {/* Coupon */}
       <CouponDialog action={coupon} onClose={() => setCoupon(null)} onRedeem={(url) => { logClick(null, "coupon_redeem"); window.open(url, "_blank", "noopener,noreferrer"); }} />
+
+      <AirMessagesDialog
+        action={airMessages}
+        onClose={() => setAirMessages(null)}
+        onRunBubbleAction={(a) => {
+          logClick(null, "air_message:" + a.type);
+          executeAction(a, null);
+        }}
+      />
+
+      <PollDialog
+        action={poll}
+        onClose={() => setPoll(null)}
+        flyerId={flyer.id}
+        previewMode={previewMode}
+      />
     </div>
   );
 }
@@ -1115,6 +1159,306 @@ function CouponDialog({
               <Button className="w-full" onClick={() => onRedeem(p.couponRedeemUrl!)}>Redeem now</Button>
             )}
           </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AirMessagesDialog — iMessage-style bubble sequence
+// ---------------------------------------------------------------------------
+
+const REACTION_EMOJI: Record<string, string> = {
+  heart: "❤️",
+  like: "👍",
+  dislike: "👎",
+  haha: "😂",
+  exclaim: "‼️",
+  question: "❓",
+};
+
+function AirMessagesDialog({
+  action, onClose, onRunBubbleAction,
+}: {
+  action: LayerAction | null;
+  onClose: () => void;
+  onRunBubbleAction: (a: LayerAction) => void;
+}) {
+  const bubbles: AirMessageBubble[] = action?.payload.bubbles || [];
+  const stagger = action?.payload.bubbleStaggerMs ?? 900;
+  const [visible, setVisible] = useState(0);
+  const [typingSide, setTypingSide] = useState<"left" | "right" | null>(null);
+
+  useEffect(() => {
+    if (!action) {
+      setVisible(0);
+      setTypingSide(null);
+      return;
+    }
+    setVisible(0);
+    setTypingSide(null);
+    const timers: number[] = [];
+    bubbles.forEach((b, i) => {
+      // Show typing indicator briefly before each bubble
+      timers.push(window.setTimeout(() => setTypingSide(b.side), i * stagger + 50));
+      timers.push(window.setTimeout(() => {
+        setTypingSide(null);
+        setVisible((v) => Math.max(v, i + 1));
+      }, i * stagger + Math.min(stagger - 100, 600)));
+    });
+    return () => timers.forEach((t) => clearTimeout(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [action?.id]);
+
+  if (!action) return null;
+
+  return (
+    <Dialog open={!!action} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden bg-[#f2f2f7] dark:bg-zinc-900">
+        <div className="flex items-center justify-between border-b border-border bg-card/80 px-4 py-2 backdrop-blur">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-xs">💬</div>
+            <span className="text-sm font-semibold">{action.payload.title || "Messages"}</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1.5 px-3 py-4 max-h-[70vh] overflow-y-auto">
+          {bubbles.slice(0, visible).map((b, i) => {
+            const isRight = b.side === "right";
+            const hasAction = !!b.action;
+            return (
+              <div
+                key={b.id}
+                className={`flex w-full ${isRight ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+              >
+                <div className={`relative max-w-[78%] ${isRight ? "items-end" : "items-start"} flex flex-col gap-1`}>
+                  {b.imageUrl && (
+                    <button
+                      type="button"
+                      disabled={!hasAction}
+                      onClick={() => hasAction && onRunBubbleAction(b.action!)}
+                      className={`overflow-hidden rounded-2xl ${hasAction ? "cursor-pointer hover:opacity-90" : "cursor-default"}`}
+                    >
+                      <img src={b.imageUrl} alt="" className="block max-h-64 w-auto object-cover" draggable={false} />
+                    </button>
+                  )}
+                  {b.text && (
+                    <button
+                      type="button"
+                      disabled={!hasAction}
+                      onClick={() => hasAction && onRunBubbleAction(b.action!)}
+                      className={`relative px-3.5 py-2 text-[15px] leading-snug whitespace-pre-wrap text-left rounded-2xl shadow-sm ${
+                        isRight
+                          ? "bg-[#3b82f6] text-white rounded-br-md"
+                          : "bg-white dark:bg-zinc-800 text-foreground rounded-bl-md"
+                      } ${hasAction ? "cursor-pointer hover:brightness-95 active:scale-[0.98] transition" : "cursor-default"}`}
+                    >
+                      {b.text}
+                      {hasAction && (
+                        <span className="ml-1 inline-block align-middle text-[10px] opacity-70">↗</span>
+                      )}
+                    </button>
+                  )}
+                  {b.reaction && REACTION_EMOJI[b.reaction] && (
+                    <div
+                      className={`absolute -top-3 ${isRight ? "-left-2" : "-right-2"} flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-sm shadow`}
+                    >
+                      {REACTION_EMOJI[b.reaction]}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {typingSide && visible < bubbles.length && (
+            <div className={`flex w-full ${typingSide === "right" ? "justify-end" : "justify-start"}`}>
+              <div className={`flex gap-1 px-3.5 py-2.5 rounded-2xl shadow-sm ${
+                typingSide === "right" ? "bg-[#3b82f6]" : "bg-white dark:bg-zinc-800"
+              }`}>
+                {[0, 150, 300].map((d) => (
+                  <span
+                    key={d}
+                    className={`h-1.5 w-1.5 rounded-full ${typingSide === "right" ? "bg-white/80" : "bg-zinc-400"} animate-bounce`}
+                    style={{ animationDelay: `${d}ms` }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {visible >= bubbles.length && bubbles.length > 0 && (
+            <div className="mt-2 flex justify-center">
+              <Button size="sm" variant="ghost" onClick={onClose} className="text-xs">Close</Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PollDialog — anonymous, live results
+// ---------------------------------------------------------------------------
+
+const POLL_SESSION_KEY = "ff_poll_session";
+function getPollSessionId(): string {
+  try {
+    let id = localStorage.getItem(POLL_SESSION_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(POLL_SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    return "anon-" + Math.random().toString(36).slice(2);
+  }
+}
+
+function PollDialog({
+  action, onClose, flyerId, previewMode,
+}: {
+  action: LayerAction | null;
+  onClose: () => void;
+  flyerId: string;
+  previewMode: boolean;
+}) {
+  const question = action?.payload.pollQuestion || "";
+  const options = action?.payload.pollOptions || [];
+  const multiple = !!action?.payload.pollMultiple;
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [myVotes, setMyVotes] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [voted, setVoted] = useState(false);
+  const sessionId = useMemo(() => getPollSessionId(), []);
+
+  // Load counts + check if I already voted
+  useEffect(() => {
+    if (!action) return;
+    setVoted(false);
+    setMyVotes(new Set());
+    setCounts({});
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("poll_votes")
+        .select("option_id, session_id")
+        .eq("action_id", action.id);
+      if (cancelled) return;
+      const c: Record<string, number> = {};
+      const mine = new Set<string>();
+      (data || []).forEach((row: any) => {
+        c[row.option_id] = (c[row.option_id] || 0) + 1;
+        if (row.session_id === sessionId) mine.add(row.option_id);
+      });
+      setCounts(c);
+      setMyVotes(mine);
+      if (mine.size > 0) setVoted(true);
+    })();
+    return () => { cancelled = true; };
+  }, [action?.id, sessionId]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!action) return;
+    const channel = supabase
+      .channel(`poll-${action.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "poll_votes", filter: `action_id=eq.${action.id}` },
+        (payload: any) => {
+          const row = payload.new;
+          setCounts((c) => ({ ...c, [row.option_id]: (c[row.option_id] || 0) + 1 }));
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [action?.id]);
+
+  if (!action) return null;
+
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  async function vote(optionId: string) {
+    if (voted && !multiple) return;
+    if (myVotes.has(optionId)) return;
+    if (previewMode) {
+      toast.info("Voting is disabled in preview mode");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.from("poll_votes").insert([{
+      action_id: action!.id,
+      flyer_id: flyerId,
+      session_id: sessionId,
+      option_id: optionId,
+    }] as any);
+    setLoading(false);
+    if (error) {
+      toast.error("Could not record your vote");
+      return;
+    }
+    // Optimistic update (realtime will also fire, dedupe via unique index already prevents dupes)
+    setMyVotes((m) => new Set(m).add(optionId));
+    if (!multiple) setVoted(true);
+    toast.success("Vote recorded");
+  }
+
+  const showResults = voted || myVotes.size > 0;
+
+  return (
+    <Dialog open={!!action} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{question || "Poll"}</DialogTitle>
+          <DialogDescription>
+            {multiple ? "Pick all that apply." : "Tap an option to vote."} {total > 0 && `· ${total} vote${total === 1 ? "" : "s"}`}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          {options.map((o) => {
+            const c = counts[o.id] || 0;
+            const pct = total > 0 ? Math.round((c / total) * 100) : 0;
+            const mine = myVotes.has(o.id);
+            const disabled = (voted && !multiple && !mine) || mine;
+            return (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => vote(o.id)}
+                disabled={disabled || loading}
+                className={`relative w-full overflow-hidden rounded-md border text-left transition ${
+                  mine
+                    ? "border-primary bg-primary/5"
+                    : disabled
+                    ? "border-border bg-muted/30"
+                    : "border-border bg-card hover:border-primary/60 hover:bg-primary/5"
+                }`}
+              >
+                {showResults && (
+                  <div
+                    className="absolute inset-y-0 left-0 bg-primary/15 transition-all"
+                    style={{ width: `${pct}%` }}
+                  />
+                )}
+                <div className="relative flex items-center justify-between px-3 py-2.5">
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    {mine && <Check className="h-4 w-4 text-primary" />}
+                    {o.label || "(empty)"}
+                  </span>
+                  {showResults && (
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      {pct}% · {c}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {showResults && (
+          <p className="text-center text-[11px] text-muted-foreground">
+            {multiple ? "Tap more options to add votes." : "Thanks for voting!"}
+          </p>
         )}
       </DialogContent>
     </Dialog>

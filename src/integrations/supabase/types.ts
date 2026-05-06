@@ -267,6 +267,33 @@ export type Database = {
           },
         ]
       }
+      poll_votes: {
+        Row: {
+          action_id: string
+          created_at: string
+          flyer_id: string
+          id: string
+          option_id: string
+          session_id: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string
+          flyer_id: string
+          id?: string
+          option_id: string
+          session_id: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string
+          flyer_id?: string
+          id?: string
+          option_id?: string
+          session_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -316,6 +343,8 @@ export type Database = {
         | "map"
         | "audio"
         | "buy_product"
+        | "air_messages"
+        | "poll"
       app_role: "admin" | "user"
       event_type: "view" | "click" | "submit" | "reveal"
       flyer_status: "draft" | "published"
@@ -464,6 +493,8 @@ export const Constants = {
         "map",
         "audio",
         "buy_product",
+        "air_messages",
+        "poll",
       ],
       app_role: ["admin", "user"],
       event_type: ["view", "click", "submit", "reveal"],

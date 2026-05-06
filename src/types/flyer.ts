@@ -18,7 +18,9 @@ export type ActionType =
   | "coupon"
   | "map"
   | "audio"
-  | "buy_product";
+  | "buy_product"
+  | "air_messages"
+  | "poll";
 
 export interface PopupButton {
   id: string;
@@ -102,6 +104,31 @@ export interface ActionPayload {
   productDescription?: string;
   productPaymentUrl?: string;   // payment link the buyer is sent to
   productCtaLabel?: string;     // e.g. "Buy now"
+
+  // air_messages — iMessage-style bubble sequence
+  bubbles?: AirMessageBubble[];
+  bubbleStaggerMs?: number;     // delay between bubbles, default 900
+  // Auto-trigger: fire this action automatically when the page loads
+  autoTrigger?: boolean;
+
+  // poll — anonymous, live results stored in poll_votes
+  pollQuestion?: string;
+  pollOptions?: PollOption[];
+  pollMultiple?: boolean;       // allow voting for more than one option
+}
+
+export interface AirMessageBubble {
+  id: string;
+  side: "left" | "right";       // left = grey (incoming), right = blue (outgoing)
+  text?: string;
+  imageUrl?: string;
+  reaction?: "heart" | "like" | "dislike" | "haha" | "exclaim" | "question" | "";
+  action?: LayerAction | null;  // tap action
+}
+
+export interface PollOption {
+  id: string;
+  label: string;
 }
 
 export interface LayerStyle {
