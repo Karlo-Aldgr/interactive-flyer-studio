@@ -470,7 +470,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         setCoupon(a);
         break;
       case "air_messages":
-        setAirMessages({ action: a, layer: layer ?? null });
+        setAirMessages((prev) => (prev.some((p) => p.action.id === a.id) ? prev : [...prev, { action: a, layer: layer ?? null }]));
         break;
       case "poll":
         setPoll(a);
