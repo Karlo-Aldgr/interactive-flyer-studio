@@ -129,6 +129,7 @@ export interface AirMessageBubble {
 export interface PollOption {
   id: string;
   label: string;
+}
 
 export interface LayerStyle {
   fill?: string;
