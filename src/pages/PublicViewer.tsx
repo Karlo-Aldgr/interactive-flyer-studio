@@ -576,6 +576,26 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     };
   }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop]);
 
+  // Auto-trigger any actions on the current page that have payload.autoTrigger === true.
+  const autoFiredRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (loading || !flyer || pages.length === 0) return;
+    const page = pages[pageIndex];
+    if (!page) return;
+    const fired = autoFiredRef.current;
+    let i = 0;
+    page.layers.forEach((l) => {
+      const a = l.action;
+      if (!a || !a.payload?.autoTrigger) return;
+      const key = `${page.id}:${a.id}`;
+      if (fired.has(key)) return;
+      fired.add(key);
+      setTimeout(() => executeAction(a, l), 350 + i * 250);
+      i++;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageIndex, loading, flyer?.id, pages.length]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
