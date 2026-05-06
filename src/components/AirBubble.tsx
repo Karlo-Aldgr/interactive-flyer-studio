@@ -142,7 +142,7 @@ export function AirBubble({
           fontWeight: bold ? 800 : 500,
           letterSpacing: bubble.textCase === "upper" ? "0.02em" : "0",
           lineHeight: 1.05,
-          whiteSpace: fitHeight ? "nowrap" : "normal",
+          whiteSpace: fitHeight && !manualSize ? "nowrap" : "normal",
           overflow: "hidden",
           textOverflow: "ellipsis",
         }}
