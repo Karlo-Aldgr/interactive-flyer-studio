@@ -558,13 +558,15 @@ function PopupHotspotsEditor({
 }
 
 function AirMessagesEditor({
-  bubbles, onChange, depth, staggerMs, onStaggerChange, onAddAsLayer,
+  bubbles, onChange, depth, staggerMs, onStaggerChange, startDelayMs, onStartDelayChange, onAddAsLayer,
 }: {
   bubbles: AirMessageBubble[];
   onChange: (b: AirMessageBubble[]) => void;
   depth: number;
   staggerMs: number;
   onStaggerChange: (ms: number) => void;
+  startDelayMs: number;
+  onStartDelayChange: (ms: number) => void;
   /** When provided, the "Add bubble" button creates a brand new layer instead of
    *  pushing into the current layer's bubbles array. */
   onAddAsLayer?: () => void;
