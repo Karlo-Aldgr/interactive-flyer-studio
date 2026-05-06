@@ -323,6 +323,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  addImageLayer: (src, w, h) => {
     const s = get();
     const pageId = s.selectedPageId;
     if (!pageId) return;
