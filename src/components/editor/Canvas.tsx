@@ -182,6 +182,7 @@ export function Canvas() {
       <div className="shadow-elegant" style={containerStyle}>
         <div
           style={{
+            position: "relative",
             width: W * zoom,
             height: H * zoom,
             background: page.background.color || "#fff",
