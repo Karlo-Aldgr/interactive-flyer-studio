@@ -709,6 +709,27 @@ function AirMessagesEditor({
                     </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-[11px] w-20">Font size</Label>
+                  <Input
+                    type="number"
+                    min={8}
+                    max={200}
+                    className="h-7 w-20 text-xs"
+                    placeholder="Auto"
+                    value={b.fontSize ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      update(i, { fontSize: v === "" ? undefined : Math.max(8, Math.min(200, Number(v) || 0)) });
+                    }}
+                  />
+                  <span className="text-[10px] text-muted-foreground">px — leave blank to auto-fit</span>
+                  {b.fontSize !== undefined && (
+                    <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => update(i, { fontSize: undefined })}>
+                      Auto
+                    </Button>
+                  )}
+                </div>
                 <AssetUpload
                   label="Image (optional)"
                   value={b.imageUrl}
