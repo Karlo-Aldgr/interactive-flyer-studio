@@ -838,6 +838,8 @@ function PollEditor({
 export function ActionEditor({ action, onChange, depth = 0, embedded = false }: Props) {
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
+  const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
+  const setPreviewAction = useEditorStore((s) => s.setPreviewAction);
   const currentPage = pages.find((p) => p.id === selectedPageId);
 
   const [draft, setDraft] = useState<LayerAction | null>(action);
@@ -852,6 +854,15 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
     if (embedded) onChange(draft);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft]);
+
+  // Publish the current draft to the editor store so the canvas can render
+  // a live preview (e.g. air-message bubbles) before the user clicks Save.
+  useEffect(() => {
+    if (embedded || !selectedLayerId) return;
+    setPreviewAction({ layerId: selectedLayerId, action: draft });
+    return () => setPreviewAction(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, selectedLayerId, embedded]);
 
   const type = draft?.type ?? "open_url";
   const p = draft?.payload ?? {};
