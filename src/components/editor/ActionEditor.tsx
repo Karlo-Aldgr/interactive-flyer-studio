@@ -557,6 +557,219 @@ function PopupHotspotsEditor({
   );
 }
 
+function AirMessagesEditor({
+  bubbles, onChange, depth, staggerMs, onStaggerChange,
+}: {
+  bubbles: AirMessageBubble[];
+  onChange: (b: AirMessageBubble[]) => void;
+  depth: number;
+  staggerMs: number;
+  onStaggerChange: (ms: number) => void;
+}) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+
+  function add(side: "left" | "right") {
+    const next: AirMessageBubble = {
+      id: crypto.randomUUID(),
+      side,
+      text: "",
+      action: null,
+    };
+    onChange([...bubbles, next]);
+    setOpenIdx(bubbles.length);
+  }
+  function update(i: number, patch: Partial<AirMessageBubble>) {
+    onChange(bubbles.map((b, idx) => (idx === i ? { ...b, ...patch } : b)));
+  }
+  function move(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= bubbles.length) return;
+    const next = [...bubbles];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  }
+  function remove(i: number) {
+    onChange(bubbles.filter((_, idx) => idx !== i));
+    if (openIdx === i) setOpenIdx(null);
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] text-muted-foreground">
+        iMessage-style chat bubbles that animate in one after another. Each bubble can hold text, an image, a tapback reaction, and its own tap action (open URL, popup, poll, etc.).
+      </p>
+
+      <div className="flex items-center gap-2">
+        <Label className="text-xs">Delay between bubbles</Label>
+        <Input
+          type="number"
+          min={100}
+          max={5000}
+          step={100}
+          className="h-7 w-24 text-xs"
+          value={staggerMs}
+          onChange={(e) => onStaggerChange(Math.max(100, Number(e.target.value) || 900))}
+        />
+        <span className="text-[11px] text-muted-foreground">ms</span>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Bubbles ({bubbles.length})</Label>
+        <div className="flex gap-1">
+          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => add("left")}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> Grey
+          </Button>
+          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => add("right")}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> Blue
+          </Button>
+        </div>
+      </div>
+
+      {bubbles.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">No bubbles yet. Add a grey (incoming) or blue (outgoing) bubble.</p>
+      )}
+
+      <div className="space-y-2">
+        {bubbles.map((b, i) => (
+          <div key={b.id} className="rounded border border-border bg-muted/30 p-2">
+            <div className="flex items-center gap-1">
+              <span className={`h-3 w-3 rounded-full ${b.side === "right" ? "bg-blue-500" : "bg-zinc-400"}`} />
+              <Input
+                className="h-7 flex-1 text-xs"
+                value={b.text || ""}
+                placeholder={b.imageUrl ? "(image only)" : "Message text"}
+                onChange={(e) => update(i, { text: e.target.value })}
+              />
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(i, -1)} disabled={i === 0}>
+                <ChevronUp className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(i, 1)} disabled={i === bubbles.length - 1}>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setOpenIdx(openIdx === i ? null : i)}>
+                {openIdx === i ? "−" : "…"}
+              </Button>
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(i)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            {openIdx === i && (
+              <div className="mt-2 space-y-2 border-t border-border pt-2">
+                <div className="flex items-center gap-2">
+                  <Label className="text-[11px]">Side</Label>
+                  <Select value={b.side} onValueChange={(v) => update(i, { side: v as "left" | "right" })}>
+                    <SelectTrigger className="h-7 w-32 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="left">Grey (incoming)</SelectItem>
+                      <SelectItem value="right">Blue (outgoing)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <AssetUpload
+                  label="Image (optional)"
+                  value={b.imageUrl}
+                  onChange={(url) => update(i, { imageUrl: url })}
+                />
+                <div className="flex items-center gap-2">
+                  <Label className="text-[11px]">Tapback reaction</Label>
+                  <Select value={b.reaction || "none"} onValueChange={(v) => update(i, { reaction: v === "none" ? "" : (v as any) })}>
+                    <SelectTrigger className="h-7 w-32 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="heart">❤️ Heart</SelectItem>
+                      <SelectItem value="like">👍 Like</SelectItem>
+                      <SelectItem value="dislike">👎 Dislike</SelectItem>
+                      <SelectItem value="haha">😂 Haha</SelectItem>
+                      <SelectItem value="exclaim">‼️ Emphasize</SelectItem>
+                      <SelectItem value="question">❓ Question</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="rounded border border-border bg-background p-2">
+                  <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Tap action (optional)</Label>
+                  <div className="mt-1">
+                    <ActionEditor
+                      embedded
+                      depth={depth + 1}
+                      action={b.action || null}
+                      onChange={(a) => update(i, { action: a })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PollEditor({
+  question, options, multiple, onChange,
+}: {
+  question: string;
+  options: PollOption[];
+  multiple: boolean;
+  onChange: (patch: { pollQuestion?: string; pollOptions?: PollOption[]; pollMultiple?: boolean }) => void;
+}) {
+  function setOpts(opts: PollOption[]) { onChange({ pollOptions: opts }); }
+  function addOpt() {
+    setOpts([...(options || []), { id: crypto.randomUUID(), label: "" }]);
+  }
+  function updateOpt(i: number, label: string) {
+    setOpts(options.map((o, idx) => (idx === i ? { ...o, label } : o)));
+  }
+  function removeOpt(i: number) {
+    setOpts(options.filter((_, idx) => idx !== i));
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] text-muted-foreground">
+        Anonymous poll with live results. Each viewer can vote once per option from their device. Results update in real time for everyone.
+      </p>
+      <div>
+        <Label className="text-xs">Question</Label>
+        <Input
+          className="mt-1"
+          value={question}
+          onChange={(e) => onChange({ pollQuestion: e.target.value })}
+          placeholder="What's your favorite?"
+        />
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Options</Label>
+          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={addOpt}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> Add
+          </Button>
+        </div>
+        {(options || []).map((o, i) => (
+          <div key={o.id} className="flex items-center gap-1">
+            <Input
+              className="h-8 flex-1 text-sm"
+              value={o.label}
+              placeholder={`Option ${i + 1}`}
+              onChange={(e) => updateOpt(i, e.target.value)}
+            />
+            <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeOpt(i)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+        {(options?.length || 0) < 2 && (
+          <p className="text-[11px] text-muted-foreground">Add at least 2 options.</p>
+        )}
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Allow multiple choices</Label>
+        <Switch checked={multiple} onCheckedChange={(v) => onChange({ pollMultiple: v })} />
+      </div>
+    </div>
+  );
+}
+
 export function ActionEditor({ action, onChange, depth = 0, embedded = false }: Props) {
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
