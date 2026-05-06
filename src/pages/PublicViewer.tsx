@@ -1240,9 +1240,8 @@ function AirMessagesDialog({
       onClick={onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 60,
-        background: "rgba(0,0,0,0.35)",
-        backdropFilter: "blur(2px)",
-        animation: "fadeIn 200ms ease-out",
+        background: "transparent",
+        pointerEvents: "auto",
       }}
     >
       <div
