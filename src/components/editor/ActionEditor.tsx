@@ -1263,6 +1263,28 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
             staggerMs={p.bubbleStaggerMs ?? 900}
             onChange={(bubbles) => update({ bubbles })}
             onStaggerChange={(ms) => update({ bubbleStaggerMs: ms })}
+            onAddAsLayer={embedded ? undefined : () => {
+              const newAction: LayerAction = {
+                id: crypto.randomUUID(),
+                type: "air_messages",
+                payload: {
+                  bubbles: [{
+                    id: crypto.randomUUID(),
+                    text: "",
+                    action: null,
+                    bgColor: "#1d9bf0",
+                    bgColor2: "#0a66c2",
+                    textColor: "#ffffff",
+                    textCase: "upper",
+                    tail: "down",
+                    bold: true,
+                  }],
+                  bubbleStaggerMs: p.bubbleStaggerMs ?? 900,
+                },
+              };
+              addAirBubbleLayer(newAction);
+              toast.success("New bubble layer added — drag it to position");
+            }}
           />
         )}
 
