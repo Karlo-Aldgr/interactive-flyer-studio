@@ -676,7 +676,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </>
         )}
       </button>
-      <div style={{ width: W * scale, height: H * scale, background: page.background.color || "#fff" }}>
+      <div ref={stageWrapRef} style={{ position: "relative", width: W * scale, height: H * scale, background: page.background.color || "#fff" }}>
         <Stage width={W * scale} height={H * scale} scaleX={scale} scaleY={scale}>
           <KLayer>
             <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
