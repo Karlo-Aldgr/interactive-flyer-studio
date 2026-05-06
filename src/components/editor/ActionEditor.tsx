@@ -1277,8 +1277,10 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
             depth={depth}
             bubbles={p.bubbles || []}
             staggerMs={p.bubbleStaggerMs ?? 900}
+            startDelayMs={p.bubbleStartDelayMs ?? 0}
             onChange={(bubbles) => update({ bubbles })}
             onStaggerChange={(ms) => update({ bubbleStaggerMs: ms })}
+            onStartDelayChange={(ms) => update({ bubbleStartDelayMs: ms })}
             onAddAsLayer={embedded ? undefined : () => {
               const newAction: LayerAction = {
                 id: crypto.randomUUID(),
