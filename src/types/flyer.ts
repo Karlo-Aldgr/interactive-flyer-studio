@@ -135,6 +135,7 @@ export interface AirMessageBubble {
   textCase?: BubbleTextCase; // default "as-is"
   tail?: BubbleTail;       // default "down"
   bold?: boolean;          // default true
+  fontSize?: number;       // manual font size in px; if unset, auto-fit to bubble height
 }
 
 export interface PollOption {
