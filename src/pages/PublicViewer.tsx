@@ -467,6 +467,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "coupon":
         setCoupon(a);
         break;
+      case "air_messages":
+        setAirMessages(a);
+        break;
+      case "poll":
+        setPoll(a);
+        break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
         const isApple = (() => {
