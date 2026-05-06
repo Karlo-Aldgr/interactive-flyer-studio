@@ -626,19 +626,21 @@ function AirMessagesEditor({
         <span className="text-[11px] text-muted-foreground">ms before first bubble</span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Label className="text-xs">Delay between bubbles</Label>
-        <Input
-          type="number"
-          min={100}
-          max={5000}
-          step={100}
-          className="h-7 w-24 text-xs"
-          value={staggerMs}
-          onChange={(e) => onStaggerChange(Math.max(100, Number(e.target.value) || 900))}
-        />
-        <span className="text-[11px] text-muted-foreground">ms</span>
-      </div>
+      {bubbles.length > 1 && (
+        <div className="flex items-center gap-2">
+          <Label className="text-xs">Delay between bubbles</Label>
+          <Input
+            type="number"
+            min={100}
+            max={5000}
+            step={100}
+            className="h-7 w-24 text-xs"
+            value={staggerMs}
+            onChange={(e) => onStaggerChange(Math.max(100, Number(e.target.value) || 900))}
+          />
+          <span className="text-[11px] text-muted-foreground">ms</span>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <Label className="text-xs">Bubbles ({bubbles.length})</Label>
