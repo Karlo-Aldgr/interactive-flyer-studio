@@ -58,6 +58,7 @@ interface EditorState {
   addLayer: (type: Layer["type"]) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
   addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }, shape?: "rect" | "ellipse") => void;
+  addAirBubbleLayer: (action: LayerAction, size?: { width: number; height: number }) => void;
   updateLayer: (id: string, patch: Partial<Layer>) => void;
   updateLayerStyle: (id: string, patch: Partial<LayerStyle>) => void;
   updateLayerContent: (id: string, patch: Partial<LayerContent>) => void;
@@ -286,6 +287,33 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!page) return;
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
     const layer = defaultLayer(type, pageId, page.layers.length);
+    set({
+      pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
+      selectedLayerId: layer.id,
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  addAirBubbleLayer: (action, size) => {
+    const s = get();
+    const pageId = s.selectedPageId;
+    if (!pageId) return;
+    const page = s.pages.find((p) => p.id === pageId);
+    if (!page) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const base = defaultLayer("hotspot", pageId, page.layers.length);
+    const w = size?.width ?? 600;
+    const h = size?.height ?? 120;
+    // Stagger position so a fresh bubble layer doesn't sit exactly on top of others
+    const offset = (page.layers.length % 6) * 24;
+    const layer: Layer = {
+      ...base,
+      position: { x: base.position.x + offset, y: base.position.y + offset },
+      size: { width: w, height: h },
+      action,
+    };
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,

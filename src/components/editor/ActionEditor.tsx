@@ -558,18 +558,21 @@ function PopupHotspotsEditor({
 }
 
 function AirMessagesEditor({
-  bubbles, onChange, depth, staggerMs, onStaggerChange,
+  bubbles, onChange, depth, staggerMs, onStaggerChange, onAddAsLayer,
 }: {
   bubbles: AirMessageBubble[];
   onChange: (b: AirMessageBubble[]) => void;
   depth: number;
   staggerMs: number;
   onStaggerChange: (ms: number) => void;
+  /** When provided, the "Add bubble" button creates a brand new layer instead of
+   *  pushing into the current layer's bubbles array. */
+  onAddAsLayer?: () => void;
 }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
-  function add() {
-    const next: AirMessageBubble = {
+  function defaultBubble(): AirMessageBubble {
+    return {
       id: crypto.randomUUID(),
       text: "",
       action: null,
@@ -580,7 +583,10 @@ function AirMessagesEditor({
       tail: "down",
       bold: true,
     };
-    onChange([...bubbles, next]);
+  }
+  function add() {
+    if (onAddAsLayer) { onAddAsLayer(); return; }
+    onChange([...bubbles, defaultBubble()]);
     setOpenIdx(bubbles.length);
   }
   function update(i: number, patch: Partial<AirMessageBubble>) {
@@ -862,6 +868,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
   const setPreviewAction = useEditorStore((s) => s.setPreviewAction);
+  const addAirBubbleLayer = useEditorStore((s) => s.addAirBubbleLayer);
   const currentPage = pages.find((p) => p.id === selectedPageId);
 
   const [draft, setDraft] = useState<LayerAction | null>(action);
@@ -1256,6 +1263,28 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
             staggerMs={p.bubbleStaggerMs ?? 900}
             onChange={(bubbles) => update({ bubbles })}
             onStaggerChange={(ms) => update({ bubbleStaggerMs: ms })}
+            onAddAsLayer={embedded ? undefined : () => {
+              const newAction: LayerAction = {
+                id: crypto.randomUUID(),
+                type: "air_messages",
+                payload: {
+                  bubbles: [{
+                    id: crypto.randomUUID(),
+                    text: "",
+                    action: null,
+                    bgColor: "#1d9bf0",
+                    bgColor2: "#0a66c2",
+                    textColor: "#ffffff",
+                    textCase: "upper",
+                    tail: "down",
+                    bold: true,
+                  }],
+                  bubbleStaggerMs: p.bubbleStaggerMs ?? 900,
+                },
+              };
+              addAirBubbleLayer(newAction);
+              toast.success("New bubble layer added — drag it to position");
+            }}
           />
         )}
 
