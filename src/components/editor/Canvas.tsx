@@ -4,6 +4,7 @@ import { useEditorStore } from "@/store/editorStore";
 import { LayerRenderer } from "./LayerRenderer";
 import { HighlightOverlay } from "./HighlightOverlay";
 import { IntroAnimatedGroup, resolveIntro } from "./IntroAnimatedGroup";
+import { AirBubble } from "@/components/AirBubble";
 import { Button } from "@/components/ui/button";
 import { X, Check } from "lucide-react";
 
