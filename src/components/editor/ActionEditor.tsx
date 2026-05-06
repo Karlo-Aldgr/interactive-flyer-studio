@@ -568,12 +568,17 @@ function AirMessagesEditor({
 }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
-  function add(side: "left" | "right") {
+  function add() {
     const next: AirMessageBubble = {
       id: crypto.randomUUID(),
-      side,
       text: "",
       action: null,
+      bgColor: "#1d9bf0",
+      bgColor2: "#0a66c2",
+      textColor: "#ffffff",
+      textCase: "upper",
+      tail: "down",
+      bold: true,
     };
     onChange([...bubbles, next]);
     setOpenIdx(bubbles.length);
@@ -596,7 +601,7 @@ function AirMessagesEditor({
   return (
     <div className="space-y-2">
       <p className="text-[11px] text-muted-foreground">
-        iMessage-style chat bubbles that animate in one after another. Each bubble can hold text, an image, a tapback reaction, and its own tap action (open URL, popup, poll, etc.).
+        Bright pill-shaped chat bubbles that animate in one after another. Resize the bubble area on the canvas — text auto-fits to the box.
       </p>
 
       <div className="flex items-center gap-2">
@@ -615,25 +620,27 @@ function AirMessagesEditor({
 
       <div className="flex items-center justify-between">
         <Label className="text-xs">Bubbles ({bubbles.length})</Label>
-        <div className="flex gap-1">
-          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => add("left")}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Grey
-          </Button>
-          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => add("right")}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Blue
-          </Button>
-        </div>
+        <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={add}>
+          <Plus className="mr-1 h-3.5 w-3.5" /> Add bubble
+        </Button>
       </div>
 
       {bubbles.length === 0 && (
-        <p className="text-[11px] text-muted-foreground">No bubbles yet. Add a grey (incoming) or blue (outgoing) bubble.</p>
+        <p className="text-[11px] text-muted-foreground">No bubbles yet. Click "Add bubble" to create one.</p>
       )}
 
       <div className="space-y-2">
         {bubbles.map((b, i) => (
           <div key={b.id} className="rounded border border-border bg-muted/30 p-2">
             <div className="flex items-center gap-1">
-              <span className={`h-3 w-3 rounded-full ${b.side === "right" ? "bg-blue-500" : "bg-zinc-400"}`} />
+              <span
+                className="h-4 w-4 rounded-full border border-border"
+                style={{
+                  background: (b.bgColor && b.bgColor2 && b.bgColor !== b.bgColor2)
+                    ? `linear-gradient(135deg, ${b.bgColor}, ${b.bgColor2})`
+                    : (b.bgColor || "#1d9bf0"),
+                }}
+              />
               <Input
                 className="h-7 flex-1 text-xs"
                 value={b.text || ""}
@@ -655,15 +662,52 @@ function AirMessagesEditor({
             </div>
             {openIdx === i && (
               <div className="mt-2 space-y-2 border-t border-border pt-2">
-                <div className="flex items-center gap-2">
-                  <Label className="text-[11px]">Side</Label>
-                  <Select value={b.side} onValueChange={(v) => update(i, { side: v as "left" | "right" })}>
-                    <SelectTrigger className="h-7 w-32 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="left">Grey (incoming)</SelectItem>
-                      <SelectItem value="right">Blue (outgoing)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[11px]">Color</Label>
+                    <Input type="color" className="mt-1 h-8 w-full" value={b.bgColor || "#1d9bf0"}
+                      onChange={(e) => update(i, { bgColor: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-[11px]">Gradient end</Label>
+                    <Input type="color" className="mt-1 h-8 w-full" value={b.bgColor2 || b.bgColor || "#0a66c2"}
+                      onChange={(e) => update(i, { bgColor2: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-[11px]">Text color</Label>
+                    <Input type="color" className="mt-1 h-8 w-full" value={b.textColor || "#ffffff"}
+                      onChange={(e) => update(i, { textColor: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-[11px]">Case</Label>
+                    <Select value={b.textCase || "as-is"} onValueChange={(v) => update(i, { textCase: v as any })}>
+                      <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="as-is">As typed</SelectItem>
+                        <SelectItem value="upper">UPPERCASE</SelectItem>
+                        <SelectItem value="lower">lowercase</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-[11px]">Tail</Label>
+                    <Select value={b.tail || "down"} onValueChange={(v) => update(i, { tail: v as any })}>
+                      <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="down">Down ▼</SelectItem>
+                        <SelectItem value="up">Up ▲</SelectItem>
+                        <SelectItem value="left">Left ◀</SelectItem>
+                        <SelectItem value="right">Right ▶</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={b.bold ?? true} onCheckedChange={(v) => update(i, { bold: v })} />
+                      <Label className="text-[11px]">Bold</Label>
+                    </div>
+                  </div>
                 </div>
                 <AssetUpload
                   label="Image (optional)"
