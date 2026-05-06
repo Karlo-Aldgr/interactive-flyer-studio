@@ -132,7 +132,7 @@ export function AirBubble({
         justifyContent: "center",
         textAlign: "center",
         opacity: preview ? 0.95 : 1,
-        overflow: "visible",
+        overflow: "hidden",
       }}
     >
       {bubble.imageUrl && (
@@ -150,9 +150,12 @@ export function AirBubble({
           fontWeight: bold ? 800 : 500,
           letterSpacing: bubble.textCase === "upper" ? "0.02em" : "0",
           lineHeight: 1.05,
-          whiteSpace: fitHeight && !manualSize ? "nowrap" : "normal",
+          whiteSpace: "normal",
+          wordBreak: "break-word",
+          overflowWrap: "break-word",
           overflow: "hidden",
           textOverflow: "ellipsis",
+          maxWidth: "100%",
         }}
       >
         {text}
