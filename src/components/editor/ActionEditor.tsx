@@ -868,6 +868,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
   const setPreviewAction = useEditorStore((s) => s.setPreviewAction);
+  const addAirBubbleLayer = useEditorStore((s) => s.addAirBubbleLayer);
   const currentPage = pages.find((p) => p.id === selectedPageId);
 
   const [draft, setDraft] = useState<LayerAction | null>(action);
