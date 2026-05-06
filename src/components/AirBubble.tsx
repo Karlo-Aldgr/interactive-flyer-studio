@@ -45,26 +45,34 @@ export function AirBubble({
   const [fontSize, setFontSize] = useState(manualSize ?? baseFontSize);
 
   useLayoutEffect(() => {
-    if (manualSize) {
-      setFontSize(manualSize);
-      if (textRef.current) textRef.current.style.fontSize = manualSize + "px";
+    if (!textRef.current || !wrapRef.current) {
+      setFontSize(manualSize ?? baseFontSize);
       return;
     }
-    if (!fitHeight || !textRef.current || !wrapRef.current) {
+    const wrap = wrapRef.current;
+    const span = textRef.current;
+    // Upper bound: manual size if set, else fitHeight-derived, else baseFontSize.
+    const upper = manualSize
+      ? manualSize
+      : fitHeight
+        ? Math.max(baseFontSize, Math.floor(fitHeight * 0.9))
+        : baseFontSize;
+    // If we have no fit height and no manual size, just use baseFontSize.
+    if (!fitHeight && !manualSize) {
+      span.style.fontSize = baseFontSize + "px";
       setFontSize(baseFontSize);
       return;
     }
-    // Binary search for largest font size that fits.
-    const wrap = wrapRef.current;
-    const span = textRef.current;
+    // Binary search for largest size <= upper that fits both width and height.
     let lo = 8;
-    let hi = Math.max(baseFontSize, Math.floor(fitHeight * 0.9));
+    let hi = upper;
     let best = lo;
-    for (let i = 0; i < 12 && lo <= hi; i++) {
+    for (let i = 0; i < 14 && lo <= hi; i++) {
       const mid = Math.floor((lo + hi) / 2);
       span.style.fontSize = mid + "px";
-      const fits = wrap.scrollHeight <= fitHeight + 1 && wrap.scrollWidth <= maxWidth + 1;
-      if (fits) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
+      const heightOk = fitHeight ? wrap.scrollHeight <= fitHeight + 1 : true;
+      const widthOk = wrap.scrollWidth <= maxWidth + 1;
+      if (heightOk && widthOk) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
     }
     span.style.fontSize = best + "px";
     setFontSize(best);
@@ -124,7 +132,7 @@ export function AirBubble({
         justifyContent: "center",
         textAlign: "center",
         opacity: preview ? 0.95 : 1,
-        overflow: "visible",
+        overflow: "hidden",
       }}
     >
       {bubble.imageUrl && (
@@ -142,9 +150,12 @@ export function AirBubble({
           fontWeight: bold ? 800 : 500,
           letterSpacing: bubble.textCase === "upper" ? "0.02em" : "0",
           lineHeight: 1.05,
-          whiteSpace: fitHeight && !manualSize ? "nowrap" : "normal",
+          whiteSpace: "normal",
+          wordBreak: "break-word",
+          overflowWrap: "break-word",
           overflow: "hidden",
           textOverflow: "ellipsis",
+          maxWidth: "100%",
         }}
       >
         {text}
