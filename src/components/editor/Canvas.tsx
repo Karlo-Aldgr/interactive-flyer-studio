@@ -33,6 +33,7 @@ export function Canvas() {
   const cancelCrop = useEditorStore((s) => s.cancelCrop);
   const introReplayKey = useEditorStore((s) => s.introReplayKey);
   const setStageRef = useEditorStore((s) => s.setStageRef);
+  const previewAction = useEditorStore((s) => s.previewAction);
 
   const stageRef = useRef<any>(null);
   const trRef = useRef<any>(null);
@@ -425,9 +426,14 @@ export function Canvas() {
             }}
           >
             {sortedLayers
-              .filter((l) => l.action?.type === "air_messages")
               .map((l) => {
-                const bubbles = l.action?.payload?.bubbles || [];
+                // For the selected layer, prefer the live (uncommitted) draft from
+                // the action editor so users see their changes without saving first.
+                const effective = (previewAction && previewAction.layerId === l.id)
+                  ? previewAction.action
+                  : l.action;
+                if (!effective || effective.type !== "air_messages") return null;
+                const bubbles = effective.payload?.bubbles || [];
                 if (bubbles.length === 0) return null;
                 const gap = 10;
                 const perBubbleHeight = Math.max(28, (l.size.height - gap * (bubbles.length - 1)) / bubbles.length);
