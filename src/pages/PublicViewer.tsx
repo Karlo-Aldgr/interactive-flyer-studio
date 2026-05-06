@@ -1201,10 +1201,11 @@ function AirMessagesInline({
   useEffect(() => {
     setVisible(0);
     const timers: number[] = [];
-    bubbles.forEach((_, i) => {
+    bubbles.forEach((b, i) => {
+      const t = (typeof b.delayMs === "number" ? b.delayMs : i * stagger) + 250;
       timers.push(window.setTimeout(() => {
         setVisible((v) => Math.max(v, i + 1));
-      }, i * stagger + 250));
+      }, t));
     });
     return () => timers.forEach((t) => clearTimeout(t));
     // eslint-disable-next-line react-hooks/exhaustive-deps
