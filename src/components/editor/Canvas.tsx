@@ -4,6 +4,7 @@ import { useEditorStore } from "@/store/editorStore";
 import { LayerRenderer } from "./LayerRenderer";
 import { HighlightOverlay } from "./HighlightOverlay";
 import { IntroAnimatedGroup, resolveIntro } from "./IntroAnimatedGroup";
+import { AirBubble } from "@/components/AirBubble";
 import { Button } from "@/components/ui/button";
 import { X, Check } from "lucide-react";
 
@@ -182,6 +183,7 @@ export function Canvas() {
       <div className="shadow-elegant" style={containerStyle}>
         <div
           style={{
+            position: "relative",
             width: W * zoom,
             height: H * zoom,
             background: page.background.color || "#fff",
@@ -412,6 +414,55 @@ export function Canvas() {
               </KLayer>
             )}
           </Stage>
+
+          {/* Air-message DOM overlay — preview each air_messages action where its layer sits.
+              pointer-events: none so the underlying Konva layer remains selectable/draggable/resizable. */}
+          <div
+            style={{
+              position: "absolute", inset: 0, pointerEvents: "none",
+              transform: `scale(${zoom})`, transformOrigin: "top left",
+              width: W, height: H,
+            }}
+          >
+            {sortedLayers
+              .filter((l) => l.action?.type === "air_messages")
+              .map((l) => {
+                const bubbles = l.action?.payload?.bubbles || [];
+                if (bubbles.length === 0) return null;
+                const gap = 10;
+                const perBubbleHeight = Math.max(28, (l.size.height - gap * (bubbles.length - 1)) / bubbles.length);
+                const isSel = selectedLayerId === l.id;
+                return (
+                  <div
+                    key={"air-" + l.id}
+                    style={{
+                      position: "absolute",
+                      left: l.position.x,
+                      top: l.position.y,
+                      width: l.size.width,
+                      height: l.size.height,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      outline: isSel ? "1.5px dashed hsl(var(--primary))" : "none",
+                      outlineOffset: 2,
+                    }}
+                  >
+                    {bubbles.map((b) => (
+                      <AirBubble
+                        key={b.id}
+                        bubble={b}
+                        maxWidth={l.size.width}
+                        fitHeight={perBubbleHeight}
+                        preview
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+          </div>
         </div>
       </div>
     </div>
