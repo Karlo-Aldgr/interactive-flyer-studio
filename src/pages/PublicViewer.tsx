@@ -1083,18 +1083,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       {/* Coupon */}
       <CouponDialog action={coupon} onClose={() => setCoupon(null)} onRedeem={(url) => { logClick(null, "coupon_redeem"); window.open(url, "_blank", "noopener,noreferrer"); }} />
 
-      <AirMessagesDialog
-        action={airMessages?.action ?? null}
-        sourceLayer={airMessages?.layer ?? null}
-        scale={scale}
-        canvasW={W}
-        canvasH={H}
-        onClose={() => setAirMessages(null)}
-        onRunBubbleAction={(a) => {
-          logClick(null, "air_message:" + a.type);
-          executeAction(a, null);
-        }}
-      />
+      {/* Air messages render inline inside the stage wrapper above (no floating overlay). */}
 
       <PollDialog
         action={poll}
