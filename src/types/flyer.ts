@@ -18,7 +18,9 @@ export type ActionType =
   | "coupon"
   | "map"
   | "audio"
-  | "buy_product";
+  | "buy_product"
+  | "air_messages"
+  | "poll";
 
 export interface PopupButton {
   id: string;
