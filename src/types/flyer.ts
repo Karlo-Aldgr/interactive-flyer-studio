@@ -136,6 +136,8 @@ export interface AirMessageBubble {
   tail?: BubbleTail;       // default "down"
   bold?: boolean;          // default true
   fontSize?: number;       // manual font size in px; if unset, auto-fit to bubble height
+  /** Manual intro time in ms from sequence start. If unset, falls back to index * bubbleStaggerMs. */
+  delayMs?: number;
 }
 
 export interface PollOption {
