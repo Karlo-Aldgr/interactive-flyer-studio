@@ -613,6 +613,20 @@ function AirMessagesEditor({
       </p>
 
       <div className="flex items-center gap-2">
+        <Label className="text-xs">Start delay</Label>
+        <Input
+          type="number"
+          min={0}
+          max={60000}
+          step={100}
+          className="h-7 w-24 text-xs"
+          value={startDelayMs}
+          onChange={(e) => onStartDelayChange(Math.max(0, Math.min(60000, Number(e.target.value) || 0)))}
+        />
+        <span className="text-[11px] text-muted-foreground">ms before first bubble</span>
+      </div>
+
+      <div className="flex items-center gap-2">
         <Label className="text-xs">Delay between bubbles</Label>
         <Input
           type="number"
