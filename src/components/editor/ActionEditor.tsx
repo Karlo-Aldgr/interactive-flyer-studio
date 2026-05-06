@@ -558,18 +558,21 @@ function PopupHotspotsEditor({
 }
 
 function AirMessagesEditor({
-  bubbles, onChange, depth, staggerMs, onStaggerChange,
+  bubbles, onChange, depth, staggerMs, onStaggerChange, onAddAsLayer,
 }: {
   bubbles: AirMessageBubble[];
   onChange: (b: AirMessageBubble[]) => void;
   depth: number;
   staggerMs: number;
   onStaggerChange: (ms: number) => void;
+  /** When provided, the "Add bubble" button creates a brand new layer instead of
+   *  pushing into the current layer's bubbles array. */
+  onAddAsLayer?: () => void;
 }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
-  function add() {
-    const next: AirMessageBubble = {
+  function defaultBubble(): AirMessageBubble {
+    return {
       id: crypto.randomUUID(),
       text: "",
       action: null,
@@ -580,7 +583,10 @@ function AirMessagesEditor({
       tail: "down",
       bold: true,
     };
-    onChange([...bubbles, next]);
+  }
+  function add() {
+    if (onAddAsLayer) { onAddAsLayer(); return; }
+    onChange([...bubbles, defaultBubble()]);
     setOpenIdx(bubbles.length);
   }
   function update(i: number, patch: Partial<AirMessageBubble>) {
