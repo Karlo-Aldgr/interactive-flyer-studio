@@ -765,8 +765,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   return true;
                 })
                 .map((l) => {
-                  const shape: "rect" | "ellipse" =
-                    l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
+                  const shape: "rect" | "ellipse" | "polygon" =
+                    l.type === "hotspot" && l.content.hotspotShape === "ellipse"
+                      ? "ellipse"
+                      : l.type === "hotspot" && l.content.hotspotShape === "polygon"
+                      ? "polygon"
+                      : "rect";
                   return <PulseHighlight key={"pulse-" + l.id} layer={l} shape={shape} />;
                 })}
             </KLayer>
