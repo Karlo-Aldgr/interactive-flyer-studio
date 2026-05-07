@@ -148,7 +148,7 @@ export function Canvas() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedLayerId, page, deleteLayer, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop]);
+  }, [selectedLayerId, page, deleteLayer, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop, tracePoints]);
 
   if (!page || !flyer) return null;
 
