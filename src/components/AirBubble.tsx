@@ -57,21 +57,20 @@ export function AirBubble({
     }
     const wrap = wrapRef.current;
     const span = textRef.current;
-    // Upper bound: manual size if set, else fitHeight-derived, else baseFontSize.
-    const upper = manualSize
-      ? manualSize
-      : fitHeight
-        ? Math.max(baseFontSize, Math.floor(fitHeight * 0.9))
-        : baseFontSize;
-    // If we have no fit height and no manual size, just use baseFontSize.
-    if (!fitHeight && !manualSize) {
+    // Manual size: honor the creator's exact value, no shrinking.
+    if (manualSize) {
+      span.style.fontSize = manualSize + "px";
+      setFontSize(manualSize);
+      return;
+    }
+    // No fit height -> use baseFontSize as-is.
+    if (!fitHeight) {
       span.style.fontSize = baseFontSize + "px";
       setFontSize(baseFontSize);
       return;
     }
-    // Binary search for largest size that fits width. Floor the lower bound at
-    // MIN_READABLE so text stays legible even if it overflows the requested
-    // fitHeight (the bubble will simply grow vertically).
+    // Auto-fit: binary search for largest size fitting width (and height when tall enough).
+    const upper = Math.max(baseFontSize, Math.floor(fitHeight * 0.9));
     const lo0 = Math.min(MIN_READABLE, upper);
     let lo = lo0;
     let hi = Math.max(upper, lo0);
@@ -80,8 +79,7 @@ export function AirBubble({
       const mid = Math.floor((lo + hi) / 2);
       span.style.fontSize = mid + "px";
       const widthOk = wrap.scrollWidth <= maxWidth + 1;
-      // Only respect fitHeight when it's tall enough to host readable text.
-      const heightOk = fitHeight && fitHeight >= MIN_READABLE * 2.2
+      const heightOk = fitHeight >= MIN_READABLE * 2.2
         ? wrap.scrollHeight <= fitHeight + 1
         : true;
       if (widthOk && heightOk) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
