@@ -236,13 +236,28 @@ export function Canvas() {
                 if (p) { setDrawStart(p); setDrawCurrent(p); }
                 return;
               }
+              if (drawMode === "hotspot-trace") {
+                const p = getStagePos(e);
+                if (p) setTracePoints((pts) => [...pts, p]);
+                return;
+              }
               if (drawMode === "crop") return;
               if (e.target === e.target.getStage()) selectLayer(null);
+            }}
+            onDblClick={() => {
+              if (drawMode === "hotspot-trace") commitTrace();
+            }}
+            onDblTap={() => {
+              if (drawMode === "hotspot-trace") commitTrace();
             }}
             onMouseMove={(e) => {
               if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart) {
                 const p = getStagePos(e);
                 if (p) setDrawCurrent(p);
+              }
+              if (drawMode === "hotspot-trace") {
+                const p = getStagePos(e);
+                if (p) setTraceCursor(p);
               }
             }}
             onMouseUp={() => {
