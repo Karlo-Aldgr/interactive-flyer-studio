@@ -158,6 +158,19 @@ export function Toolbar() {
         </TooltipTrigger>
         <TooltipContent side="right">Hotspot circle (drag to draw)</TooltipContent>
       </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={drawMode === "hotspot-trace" ? "default" : "ghost"}
+            size="icon"
+            className="h-12 w-12"
+            onClick={() => setDrawMode(drawMode === "hotspot-trace" ? null : "hotspot-trace")}
+          >
+            <PenTool className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Trace shape hotspot (click points, double-click to finish)</TooltipContent>
+      </Tooltip>
       <div className="my-1 h-px w-8 bg-border" />
       <Tooltip>
         <TooltipTrigger asChild>
