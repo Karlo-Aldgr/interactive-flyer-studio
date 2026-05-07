@@ -26,6 +26,7 @@ export function Canvas() {
   const drawMode = useEditorStore((s) => s.drawMode);
   const setDrawMode = useEditorStore((s) => s.setDrawMode);
   const addHotspotLayer = useEditorStore((s) => s.addHotspotLayer);
+  const addPolygonHotspotLayer = useEditorStore((s) => s.addPolygonHotspotLayer);
   const showHitboxes = useEditorStore((s) => s.showHitboxes);
   const deviceFrame = useEditorStore((s) => s.deviceFrame);
   const pendingCrop = useEditorStore((s) => s.pendingCrop);
