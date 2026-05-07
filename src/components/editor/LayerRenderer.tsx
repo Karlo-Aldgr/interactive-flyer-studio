@@ -145,8 +145,48 @@ export function LayerRenderer(props: Props) {
       );
     case "hotspot": {
       // Invisible-but-hit-testable shape so the user can select, drag, resize, and rotate it.
-      const isEllipse = layer.content.hotspotShape === "ellipse";
-      if (isEllipse) {
+      const shape = layer.content.hotspotShape;
+      // If a tap highlight is enabled, hide the dashed editor outline so creators
+      // don't see two overlapping rings (the highlight overlay already shows where it is).
+      const hl = layer.action?.highlight;
+      const highlightVisible =
+        !!layer.action && hl?.enabled !== false && (hl?.style ?? "pulse") !== "none";
+      const strokeProps = highlightVisible
+        ? { stroke: undefined, strokeWidth: 0, dash: undefined as number[] | undefined }
+        : { stroke: "#7c3aed", strokeWidth: 1, dash: [6, 4] };
+
+      if (shape === "polygon") {
+        const pts = layer.content.hotspotPoints || [];
+        // Draw the polygon following the layer's bbox; we draw with absolute coords
+        // so disable the standard x/y/width/height position to avoid double offset.
+        const flat: number[] = [];
+        for (const p of pts) {
+          flat.push(layer.position.x + p.x * layer.size.width, layer.position.y + p.y * layer.size.height);
+        }
+        const { onDragEnd, onTransformEnd, ...rest } = commonProps;
+        return (
+          <Line
+            {...rest}
+            x={0}
+            y={0}
+            width={undefined}
+            height={undefined}
+            points={flat}
+            closed
+            fill="rgba(124,58,237,0.001)"
+            {...strokeProps}
+            onDragEnd={(e: any) => {
+              // Translate all points by drag delta then reset node position.
+              const dx = e.target.x();
+              const dy = e.target.y();
+              if (!dx && !dy) return;
+              e.target.position({ x: 0, y: 0 });
+              onChange({ position: { x: layer.position.x + dx, y: layer.position.y + dy } });
+            }}
+          />
+        );
+      }
+      if (shape === "ellipse") {
         return (
           <Ellipse
             {...commonProps}
@@ -155,9 +195,7 @@ export function LayerRenderer(props: Props) {
             radiusX={layer.size.width / 2}
             radiusY={layer.size.height / 2}
             fill="rgba(124,58,237,0.001)"
-            stroke="#7c3aed"
-            strokeWidth={1}
-            dash={[6, 4]}
+            {...strokeProps}
           />
         );
       }
@@ -165,9 +203,7 @@ export function LayerRenderer(props: Props) {
         <Rect
           {...commonProps}
           fill="rgba(124,58,237,0.001)"
-          stroke="#7c3aed"
-          strokeWidth={1}
-          dash={[6, 4]}
+          {...strokeProps}
         />
       );
     }

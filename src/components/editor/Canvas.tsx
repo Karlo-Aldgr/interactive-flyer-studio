@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Stage, Layer as KLayer, Rect, Transformer, Ellipse, Group, Text } from "react-konva";
+import { Stage, Layer as KLayer, Rect, Transformer, Ellipse, Group, Text, Line, Circle as KCircle } from "react-konva";
 import { useEditorStore } from "@/store/editorStore";
 import { LayerRenderer } from "./LayerRenderer";
 import { HighlightOverlay } from "./HighlightOverlay";
@@ -26,6 +26,7 @@ export function Canvas() {
   const drawMode = useEditorStore((s) => s.drawMode);
   const setDrawMode = useEditorStore((s) => s.setDrawMode);
   const addHotspotLayer = useEditorStore((s) => s.addHotspotLayer);
+  const addPolygonHotspotLayer = useEditorStore((s) => s.addPolygonHotspotLayer);
   const showHitboxes = useEditorStore((s) => s.showHitboxes);
   const deviceFrame = useEditorStore((s) => s.deviceFrame);
   const pendingCrop = useEditorStore((s) => s.pendingCrop);
@@ -49,6 +50,21 @@ export function Canvas() {
 
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
+  const [tracePoints, setTracePoints] = useState<Array<{ x: number; y: number }>>([]);
+  const [traceCursor, setTraceCursor] = useState<{ x: number; y: number } | null>(null);
+
+  function commitTrace() {
+    if (tracePoints.length >= 3) {
+      addPolygonHotspotLayer(tracePoints);
+    }
+    setTracePoints([]);
+    setTraceCursor(null);
+  }
+  function cancelTrace() {
+    setTracePoints([]);
+    setTraceCursor(null);
+    setDrawMode(null);
+  }
 
   const page = pages.find((p) => p.id === selectedPageId);
   const W = flyer?.settings.width ?? 900;
@@ -101,6 +117,7 @@ export function Canvas() {
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (e.key === "Escape") {
         if (drawMode === "crop") { cancelCrop(); return; }
+        if (drawMode === "hotspot-trace") { cancelTrace(); return; }
         if (drawMode) {
           setDrawMode(null);
           setDrawStart(null);
@@ -110,6 +127,10 @@ export function Canvas() {
       }
       if (e.key === "Enter" && drawMode === "crop" && cropRect) {
         cropCanvas(cropRect);
+        return;
+      }
+      if (e.key === "Enter" && drawMode === "hotspot-trace") {
+        commitTrace();
         return;
       }
       if (!selectedLayerId) return;
@@ -127,7 +148,7 @@ export function Canvas() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedLayerId, page, deleteLayer, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop]);
+  }, [selectedLayerId, page, deleteLayer, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop, tracePoints]);
 
   if (!page || !flyer) return null;
 
@@ -169,6 +190,18 @@ export function Canvas() {
           </Button>
         </div>
       )}
+      {drawMode === "hotspot-trace" && (
+        <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
+          <span className="font-medium">Click to add points ({tracePoints.length})</span>
+          <span className="text-muted-foreground">— Double-click or Enter to finish, Esc to cancel</span>
+          <Button size="sm" className="h-7" onClick={commitTrace} disabled={tracePoints.length < 3}>
+            <Check className="mr-1 h-3.5 w-3.5" /> Finish
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelTrace}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
       {drawMode === "crop" && cropRect && (
         <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
           <span className="font-medium">Adjust the crop region</span>
@@ -188,7 +221,7 @@ export function Canvas() {
             width: W * zoom,
             height: H * zoom,
             background: page.background.color || "#fff",
-            cursor: drawMode === "hotspot" || drawMode === "hotspot-ellipse" ? "crosshair" : "default",
+            cursor: drawMode === "hotspot" || drawMode === "hotspot-ellipse" || drawMode === "hotspot-trace" ? "crosshair" : "default",
           }}
         >
           <Stage
@@ -203,13 +236,28 @@ export function Canvas() {
                 if (p) { setDrawStart(p); setDrawCurrent(p); }
                 return;
               }
+              if (drawMode === "hotspot-trace") {
+                const p = getStagePos(e);
+                if (p) setTracePoints((pts) => [...pts, p]);
+                return;
+              }
               if (drawMode === "crop") return;
               if (e.target === e.target.getStage()) selectLayer(null);
+            }}
+            onDblClick={() => {
+              if (drawMode === "hotspot-trace") commitTrace();
+            }}
+            onDblTap={() => {
+              if (drawMode === "hotspot-trace") commitTrace();
             }}
             onMouseMove={(e) => {
               if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart) {
                 const p = getStagePos(e);
                 if (p) setDrawCurrent(p);
+              }
+              if (drawMode === "hotspot-trace") {
+                const p = getStagePos(e);
+                if (p) setTraceCursor(p);
               }
             }}
             onMouseUp={() => {
@@ -302,8 +350,12 @@ export function Canvas() {
                     return true;
                   })
                   .map((l) => {
-                    const shape: "rect" | "ellipse" =
-                      l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
+                    const shape: "rect" | "ellipse" | "polygon" =
+                      l.type === "hotspot" && l.content.hotspotShape === "ellipse"
+                        ? "ellipse"
+                        : l.type === "hotspot" && l.content.hotspotShape === "polygon"
+                        ? "polygon"
+                        : "rect";
                     return <HighlightOverlay key={"hl-" + l.id} layer={l} shape={shape} />;
                   })}
               {previewRect && (
@@ -324,6 +376,43 @@ export function Canvas() {
                     dash={[6, 4]} listening={false}
                   />
                 )
+              )}
+              {drawMode === "hotspot-trace" && tracePoints.length > 0 && (
+                <>
+                  <Line
+                    points={[
+                      ...tracePoints.flatMap((p) => [p.x, p.y]),
+                      ...(traceCursor ? [traceCursor.x, traceCursor.y] : []),
+                    ]}
+                    stroke="#7c3aed"
+                    strokeWidth={1.5}
+                    dash={[6, 4]}
+                    closed={false}
+                    listening={false}
+                  />
+                  {tracePoints.length >= 3 && traceCursor && (
+                    <Line
+                      points={[traceCursor.x, traceCursor.y, tracePoints[0].x, tracePoints[0].y]}
+                      stroke="#7c3aed"
+                      strokeWidth={1}
+                      dash={[3, 3]}
+                      opacity={0.5}
+                      listening={false}
+                    />
+                  )}
+                  {tracePoints.map((p, i) => (
+                    <KCircle
+                      key={i}
+                      x={p.x}
+                      y={p.y}
+                      radius={4}
+                      fill="#fff"
+                      stroke="#7c3aed"
+                      strokeWidth={1.5}
+                      listening={false}
+                    />
+                  ))}
+                </>
               )}
               <Transformer
                 ref={trRef}

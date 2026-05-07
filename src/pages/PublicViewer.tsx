@@ -18,7 +18,7 @@ import { runAddToCalendar } from "@/lib/calendarHelpers";
 import { toast } from "sonner";
 
 // Highlight ring shown around tappable layers in the viewer.
-function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" }) {
+function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" | "polygon" }) {
   const ref = useRef<any>(null);
   const cornerRefs = useRef<any[]>([]);
   const hl = layer.action?.highlight ?? {};
@@ -103,6 +103,32 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
   }
 
   const dashed = style === "dashed";
+
+  if (shape === "polygon") {
+    const pts = layer.content.hotspotPoints || [];
+    const flat: number[] = [];
+    for (const p of pts) {
+      flat.push(layer.position.x + p.x * layer.size.width, layer.position.y + p.y * layer.size.height);
+    }
+    return (
+      <Line
+        ref={ref}
+        points={flat}
+        closed
+        stroke={color}
+        strokeWidth={thickness}
+        opacity={baseOpacity}
+        dash={dashed ? [thickness * 3, thickness * 2] : undefined}
+        shadowColor={color}
+        shadowBlur={style === "glow" ? 16 : style === "pulse" ? 12 : 0}
+        shadowOpacity={style === "glow" ? 0.7 : style === "pulse" ? 0.6 : 0}
+        fill={style === "solid" || style === "dashed" ? undefined : `${color}14`}
+        lineJoin="round"
+        listening={false}
+      />
+    );
+  }
+
   const common = {
     ref,
     x: layer.position.x,
@@ -254,8 +280,25 @@ function renderLayer(l: Layer, onClick: () => void, hidden: boolean) {
       );
     case "hotspot": {
       // Invisible to viewers — interactive only
-      const isEllipse = l.content.hotspotShape === "ellipse";
-      if (isEllipse) {
+      const shape = l.content.hotspotShape;
+      if (shape === "polygon") {
+        const pts = l.content.hotspotPoints || [];
+        const flat: number[] = [];
+        for (const p of pts) {
+          flat.push(l.position.x + p.x * l.size.width, l.position.y + p.y * l.size.height);
+        }
+        const { x, y, width, height, ...rest } = common;
+        return (
+          <Line
+            key={l.id}
+            {...rest}
+            points={flat}
+            closed
+            fill="rgba(0,0,0,0.001)"
+          />
+        );
+      }
+      if (shape === "ellipse") {
         return (
           <Ellipse
             key={l.id}
@@ -722,8 +765,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   return true;
                 })
                 .map((l) => {
-                  const shape: "rect" | "ellipse" =
-                    l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
+                  const shape: "rect" | "ellipse" | "polygon" =
+                    l.type === "hotspot" && l.content.hotspotShape === "ellipse"
+                      ? "ellipse"
+                      : l.type === "hotspot" && l.content.hotspotShape === "polygon"
+                      ? "polygon"
+                      : "rect";
                   return <PulseHighlight key={"pulse-" + l.id} layer={l} shape={shape} />;
                 })}
             </KLayer>

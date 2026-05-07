@@ -18,7 +18,7 @@ interface EditorState {
   past: Snapshot[];
   future: Snapshot[];
   dirty: boolean;
-  drawMode: null | "hotspot" | "hotspot-ellipse" | "crop";
+  drawMode: null | "hotspot" | "hotspot-ellipse" | "hotspot-trace" | "crop";
   showHitboxes: boolean;
   deviceFrame: DeviceFrame;
   pendingCrop: { width: number; height: number } | null;
@@ -35,7 +35,7 @@ interface EditorState {
   setZoom: (z: number) => void;
   selectPage: (id: string) => void;
   selectLayer: (id: string | null) => void;
-  setDrawMode: (mode: null | "hotspot" | "hotspot-ellipse" | "crop") => void;
+  setDrawMode: (mode: null | "hotspot" | "hotspot-ellipse" | "hotspot-trace" | "crop") => void;
   toggleHitboxes: () => void;
   setDeviceFrame: (f: DeviceFrame) => void;
   startCrop: (size: { width: number; height: number }) => void;
@@ -58,6 +58,7 @@ interface EditorState {
   addLayer: (type: Layer["type"]) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
   addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }, shape?: "rect" | "ellipse") => void;
+  addPolygonHotspotLayer: (points: Array<{ x: number; y: number }>) => void;
   addAirBubbleLayer: (action: LayerAction, size?: { width: number; height: number }) => void;
   updateLayer: (id: string, patch: Partial<Layer>) => void;
   updateLayerStyle: (id: string, patch: Partial<LayerStyle>) => void;
@@ -361,6 +362,37 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       position: { x: rect.x, y: rect.y },
       size: { width: rect.width, height: rect.height },
       content: { ...base.content, hotspotShape: shape },
+    };
+    set({
+      pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
+      selectedLayerId: layer.id,
+      drawMode: null,
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  addPolygonHotspotLayer: (points) => {
+    const s = get();
+    const pageId = s.selectedPageId;
+    if (!pageId || points.length < 3) return;
+    const page = s.pages.find((p) => p.id === pageId);
+    if (!page) return;
+    const xs = points.map((p) => p.x);
+    const ys = points.map((p) => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const w = Math.max(8, maxX - minX);
+    const h = Math.max(8, maxY - minY);
+    const norm = points.map((p) => ({ x: (p.x - minX) / w, y: (p.y - minY) / h }));
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const base = defaultLayer("hotspot", pageId, page.layers.length);
+    const layer: Layer = {
+      ...base,
+      position: { x: minX, y: minY },
+      size: { width: w, height: h },
+      content: { ...base.content, hotspotShape: "polygon", hotspotPoints: norm },
     };
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
