@@ -117,6 +117,7 @@ export function Canvas() {
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (e.key === "Escape") {
         if (drawMode === "crop") { cancelCrop(); return; }
+        if (drawMode === "hotspot-trace") { cancelTrace(); return; }
         if (drawMode) {
           setDrawMode(null);
           setDrawStart(null);
@@ -126,6 +127,10 @@ export function Canvas() {
       }
       if (e.key === "Enter" && drawMode === "crop" && cropRect) {
         cropCanvas(cropRect);
+        return;
+      }
+      if (e.key === "Enter" && drawMode === "hotspot-trace") {
+        commitTrace();
         return;
       }
       if (!selectedLayerId) return;
