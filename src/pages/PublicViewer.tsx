@@ -18,7 +18,7 @@ import { runAddToCalendar } from "@/lib/calendarHelpers";
 import { toast } from "sonner";
 
 // Highlight ring shown around tappable layers in the viewer.
-function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" }) {
+function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" | "polygon" }) {
   const ref = useRef<any>(null);
   const cornerRefs = useRef<any[]>([]);
   const hl = layer.action?.highlight ?? {};
