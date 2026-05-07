@@ -58,6 +58,7 @@ interface EditorState {
   addLayer: (type: Layer["type"]) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
   addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }, shape?: "rect" | "ellipse") => void;
+  addPolygonHotspotLayer: (points: Array<{ x: number; y: number }>) => void;
   addAirBubbleLayer: (action: LayerAction, size?: { width: number; height: number }) => void;
   updateLayer: (id: string, patch: Partial<Layer>) => void;
   updateLayerStyle: (id: string, patch: Partial<LayerStyle>) => void;
