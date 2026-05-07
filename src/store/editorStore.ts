@@ -373,6 +373,37 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  addPolygonHotspotLayer: (points) => {
+    const s = get();
+    const pageId = s.selectedPageId;
+    if (!pageId || points.length < 3) return;
+    const page = s.pages.find((p) => p.id === pageId);
+    if (!page) return;
+    const xs = points.map((p) => p.x);
+    const ys = points.map((p) => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const w = Math.max(8, maxX - minX);
+    const h = Math.max(8, maxY - minY);
+    const norm = points.map((p) => ({ x: (p.x - minX) / w, y: (p.y - minY) / h }));
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const base = defaultLayer("hotspot", pageId, page.layers.length);
+    const layer: Layer = {
+      ...base,
+      position: { x: minX, y: minY },
+      size: { width: w, height: h },
+      content: { ...base.content, hotspotShape: "polygon", hotspotPoints: norm },
+    };
+    set({
+      pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
+      selectedLayerId: layer.id,
+      drawMode: null,
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
   updateLayer: (id, patch) => {
     const s = get();
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
