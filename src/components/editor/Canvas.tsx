@@ -190,6 +190,18 @@ export function Canvas() {
           </Button>
         </div>
       )}
+      {drawMode === "hotspot-trace" && (
+        <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
+          <span className="font-medium">Click to add points ({tracePoints.length})</span>
+          <span className="text-muted-foreground">— Double-click or Enter to finish, Esc to cancel</span>
+          <Button size="sm" className="h-7" onClick={commitTrace} disabled={tracePoints.length < 3}>
+            <Check className="mr-1 h-3.5 w-3.5" /> Finish
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelTrace}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
       {drawMode === "crop" && cropRect && (
         <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
           <span className="font-medium">Adjust the crop region</span>
