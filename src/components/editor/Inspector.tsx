@@ -73,27 +73,14 @@ export function Inspector() {
               <Label className="text-xs">Shape</Label>
               <Select
                 value={layer.content.hotspotShape || "rect"}
-                onValueChange={(v) => {
-                  if (v === "polygon") {
-                    // Switching to polygon without points: prompt user to draw via Toolbar tool.
-                    useEditorStore.getState().setDrawMode("hotspot-trace");
-                    return;
-                  }
-                  updateLayerContent(layer.id, { hotspotShape: v as any, hotspotPoints: undefined });
-                }}
+                onValueChange={(v) => updateLayerContent(layer.id, { hotspotShape: v as any })}
               >
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="rect">Rectangle</SelectItem>
                   <SelectItem value="ellipse">Ellipse</SelectItem>
-                  <SelectItem value="polygon">Trace shape</SelectItem>
                 </SelectContent>
               </Select>
-              {layer.content.hotspotShape === "polygon" && (
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  {(layer.content.hotspotPoints?.length ?? 0)} points traced. Use the trace tool in the toolbar to redraw.
-                </p>
-              )}
             </div>
           </>
         )}

@@ -175,9 +175,7 @@ export interface LayerContent {
   label?: string;
   shape?: "rect" | "circle" | "line";
   hidden?: boolean; // for reveal action targets
-  hotspotShape?: "rect" | "ellipse" | "polygon";
-  /** For polygon hotspots: points in [0..1] of the layer's bbox (size). */
-  hotspotPoints?: Array<{ x: number; y: number }>;
+  hotspotShape?: "rect" | "ellipse";
 }
 
 export type HighlightStyle = "none" | "pulse" | "solid" | "dashed" | "glow" | "corners" | "circle";

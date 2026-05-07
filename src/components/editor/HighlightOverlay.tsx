@@ -10,7 +10,7 @@ export function HighlightOverlay({
   shape,
 }: {
   layer: Layer;
-  shape: "rect" | "ellipse" | "polygon";
+  shape: "rect" | "ellipse";
 }) {
   const ref = useRef<any>(null);
   const hl = layer.action?.highlight ?? {};
@@ -94,32 +94,6 @@ export function HighlightOverlay({
   }
 
   const dashed = style === "dashed";
-
-  if (shape === "polygon") {
-    const pts = layer.content.hotspotPoints || [];
-    const flat: number[] = [];
-    for (const p of pts) {
-      flat.push(layer.position.x + p.x * layer.size.width, layer.position.y + p.y * layer.size.height);
-    }
-    return (
-      <Line
-        ref={ref}
-        points={flat}
-        closed
-        stroke={color}
-        strokeWidth={thickness}
-        opacity={baseOpacity}
-        dash={dashed ? [thickness * 3, thickness * 2] : undefined}
-        shadowColor={color}
-        shadowBlur={style === "glow" ? 16 : style === "pulse" ? 12 : 0}
-        shadowOpacity={style === "glow" ? 0.7 : style === "pulse" ? 0.6 : 0}
-        fill={style === "solid" || style === "dashed" ? undefined : `${color}14`}
-        lineJoin="round"
-        listening={false}
-      />
-    );
-  }
-
   const common = {
     ref,
     x: layer.position.x,
