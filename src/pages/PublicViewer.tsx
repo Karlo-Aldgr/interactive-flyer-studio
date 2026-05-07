@@ -280,8 +280,25 @@ function renderLayer(l: Layer, onClick: () => void, hidden: boolean) {
       );
     case "hotspot": {
       // Invisible to viewers — interactive only
-      const isEllipse = l.content.hotspotShape === "ellipse";
-      if (isEllipse) {
+      const shape = l.content.hotspotShape;
+      if (shape === "polygon") {
+        const pts = l.content.hotspotPoints || [];
+        const flat: number[] = [];
+        for (const p of pts) {
+          flat.push(l.position.x + p.x * l.size.width, l.position.y + p.y * l.size.height);
+        }
+        const { x, y, width, height, ...rest } = common;
+        return (
+          <Line
+            key={l.id}
+            {...rest}
+            points={flat}
+            closed
+            fill="rgba(0,0,0,0.001)"
+          />
+        );
+      }
+      if (shape === "ellipse") {
         return (
           <Ellipse
             key={l.id}
