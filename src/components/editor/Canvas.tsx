@@ -377,6 +377,43 @@ export function Canvas() {
                   />
                 )
               )}
+              {drawMode === "hotspot-trace" && tracePoints.length > 0 && (
+                <>
+                  <Line
+                    points={[
+                      ...tracePoints.flatMap((p) => [p.x, p.y]),
+                      ...(traceCursor ? [traceCursor.x, traceCursor.y] : []),
+                    ]}
+                    stroke="#7c3aed"
+                    strokeWidth={1.5}
+                    dash={[6, 4]}
+                    closed={false}
+                    listening={false}
+                  />
+                  {tracePoints.length >= 3 && traceCursor && (
+                    <Line
+                      points={[traceCursor.x, traceCursor.y, tracePoints[0].x, tracePoints[0].y]}
+                      stroke="#7c3aed"
+                      strokeWidth={1}
+                      dash={[3, 3]}
+                      opacity={0.5}
+                      listening={false}
+                    />
+                  )}
+                  {tracePoints.map((p, i) => (
+                    <KCircle
+                      key={i}
+                      x={p.x}
+                      y={p.y}
+                      radius={4}
+                      fill="#fff"
+                      stroke="#7c3aed"
+                      strokeWidth={1.5}
+                      listening={false}
+                    />
+                  ))}
+                </>
+              )}
               <Transformer
                 ref={trRef}
                 rotateEnabled
