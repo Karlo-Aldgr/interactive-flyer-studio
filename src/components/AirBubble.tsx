@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { AirMessageBubble } from "@/types/flyer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const REACTION_EMOJI: Record<string, string> = {
   heart: "❤️", like: "👍", dislike: "👎", haha: "😂", exclaim: "‼️", question: "❓",
@@ -43,7 +44,9 @@ export function AirBubble({
   // and let the bubble grow taller when needed by relaxing the height constraint.
   const textRef = useRef<HTMLSpanElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const manualSize = bubble.fontSize;
+  const isMobile = useIsMobile();
+  // Desktop honors the user-set fontSize as a manual size; mobile always auto-fits for readability.
+  const manualSize = isMobile ? undefined : bubble.fontSize;
   const MIN_READABLE = 14;
   const [fontSize, setFontSize] = useState(manualSize ?? Math.max(MIN_READABLE, baseFontSize));
 

@@ -733,8 +733,8 @@ function AirMessagesEditor({
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-[11px] w-20">Font size</Label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Label className="text-[11px] w-28">Desktop font size</Label>
                   <Input
                     type="number"
                     min={8}
@@ -747,7 +747,7 @@ function AirMessagesEditor({
                       update(i, { fontSize: v === "" ? undefined : Math.max(8, Math.min(200, Number(v) || 0)) });
                     }}
                   />
-                  <span className="text-[10px] text-muted-foreground">px — leave blank to auto-fit</span>
+                  <span className="text-[10px] text-muted-foreground">px — mobile auto-fits for readability</span>
                   {b.fontSize !== undefined && (
                     <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => update(i, { fontSize: undefined })}>
                       Auto
