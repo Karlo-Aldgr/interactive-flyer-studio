@@ -50,6 +50,21 @@ export function Canvas() {
 
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
+  const [tracePoints, setTracePoints] = useState<Array<{ x: number; y: number }>>([]);
+  const [traceCursor, setTraceCursor] = useState<{ x: number; y: number } | null>(null);
+
+  function commitTrace() {
+    if (tracePoints.length >= 3) {
+      addPolygonHotspotLayer(tracePoints);
+    }
+    setTracePoints([]);
+    setTraceCursor(null);
+  }
+  function cancelTrace() {
+    setTracePoints([]);
+    setTraceCursor(null);
+    setDrawMode(null);
+  }
 
   const page = pages.find((p) => p.id === selectedPageId);
   const W = flyer?.settings.width ?? 900;
