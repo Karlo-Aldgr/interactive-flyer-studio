@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { AirMessageBubble } from "@/types/flyer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const REACTION_EMOJI: Record<string, string> = {
   heart: "❤️", like: "👍", dislike: "👎", haha: "😂", exclaim: "‼️", question: "❓",
