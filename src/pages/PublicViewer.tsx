@@ -1259,21 +1259,23 @@ function AirMessagesInline({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [action.id]);
 
+  // Render in canvas coords; outer wrapper applies CSS scale so geometry
+  // matches the editor PC view exactly on every device.
   const rect = sourceLayer
     ? {
-        left: sourceLayer.position.x * scale,
-        top: sourceLayer.position.y * scale,
-        width: sourceLayer.size.width * scale,
-        height: sourceLayer.size.height * scale,
+        left: sourceLayer.position.x,
+        top: sourceLayer.position.y,
+        width: sourceLayer.size.width,
+        height: sourceLayer.size.height,
       }
     : {
-        left: canvasW * scale * 0.08,
-        top: canvasH * scale * 0.35,
-        width: canvasW * scale * 0.84,
-        height: canvasH * scale * 0.30,
+        left: canvasW * 0.08,
+        top: canvasH * 0.35,
+        width: canvasW * 0.84,
+        height: canvasH * 0.30,
       };
 
-  const gap = 10 * scale;
+  const gap = 10;
   const perBubbleHeight = bubbles.length > 0
     ? Math.max(28, (rect.height - gap * (bubbles.length - 1)) / bubbles.length)
     : 60;
@@ -1282,55 +1284,77 @@ function AirMessagesInline({
     <div
       style={{
         position: "absolute",
-        left: rect.left, top: rect.top, width: rect.width, height: rect.height,
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        gap,
+        left: 0,
+        top: 0,
+        width: canvasW * scale,
+        height: canvasH * scale,
+        pointerEvents: "none",
         zIndex: 30,
-        pointerEvents: "none", // bubbles re-enable individually if interactive
       }}
     >
-      {bubbles.slice(0, visible).map((b) => {
-        const hasAction = !!b.action;
-        return (
-          <div
-            key={b.id}
-            style={{
-              animation: "airBubbleIn 320ms cubic-bezier(0.34,1.56,0.64,1) both",
-              width: "100%", display: "flex", justifyContent: "center",
-              pointerEvents: hasAction ? "auto" : "none",
-            }}
-          >
-            <AirBubble
-              bubble={b}
-              maxWidth={rect.width}
-              fitHeight={perBubbleHeight}
-              scale={scale}
-              interactive={hasAction}
-              onClick={() => hasAction && onRunBubbleAction(b.action!)}
-            />
-          </div>
-        );
-      })}
-      {/* Tiny dismiss control so users can clear the sequence without a backdrop */}
-      <button
-        onClick={onClose}
-        aria-label="Dismiss messages"
+      <div
         style={{
-          position: "absolute", top: -10, right: -10,
-          width: 22, height: 22, borderRadius: "9999px",
-          background: "rgba(0,0,0,0.55)", color: "#fff",
-          border: "none", cursor: "pointer", fontSize: 14, lineHeight: "20px",
-          pointerEvents: "auto",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: canvasW,
+          height: canvasH,
+          transform: `scale(${scale})`,
+          transformOrigin: "0 0",
+          pointerEvents: "none",
         }}
-      >×</button>
-      <style>{`
-        @keyframes airBubbleIn {
-          0% { opacity: 0; transform: translateY(12px) scale(0.92); }
-          100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-      `}</style>
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: rect.left, top: rect.top, width: rect.width, height: rect.height,
+            display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            gap,
+            pointerEvents: "none",
+          }}
+        >
+          {bubbles.slice(0, visible).map((b) => {
+            const hasAction = !!b.action;
+            return (
+              <div
+                key={b.id}
+                style={{
+                  animation: "airBubbleIn 320ms cubic-bezier(0.34,1.56,0.64,1) both",
+                  width: "100%", display: "flex", justifyContent: "center",
+                  pointerEvents: hasAction ? "auto" : "none",
+                }}
+              >
+                <AirBubble
+                  bubble={b}
+                  maxWidth={rect.width}
+                  fitHeight={perBubbleHeight}
+                  interactive={hasAction}
+                  onClick={() => hasAction && onRunBubbleAction(b.action!)}
+                />
+              </div>
+            );
+          })}
+          <button
+            onClick={onClose}
+            aria-label="Dismiss messages"
+            style={{
+              position: "absolute", top: -10, right: -10,
+              width: 22, height: 22, borderRadius: "9999px",
+              background: "rgba(0,0,0,0.55)", color: "#fff",
+              border: "none", cursor: "pointer", fontSize: 14, lineHeight: "20px",
+              pointerEvents: "auto",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+            }}
+          >×</button>
+          <style>{`
+            @keyframes airBubbleIn {
+              0% { opacity: 0; transform: translateY(12px) scale(0.92); }
+              100% { opacity: 1; transform: translateY(0) scale(1); }
+            }
+          `}</style>
+        </div>
+      </div>
     </div>
   );
 }
