@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
-  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music,
+  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -322,6 +322,16 @@ export function TopBar({ saving }: Props) {
         <span className="text-xs text-muted-foreground">
           {saving ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Saving...</span> : "Saved"}
         </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild size="sm" variant="outline">
+              <Link to={`/analytics/${flyer.id}`}>
+                <BarChart3 className="mr-1 h-4 w-4" /> Results
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>View live poll results</TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button asChild size="sm" variant="outline">
