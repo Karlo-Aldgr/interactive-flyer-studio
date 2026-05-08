@@ -1,4 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+
+/** Resolve true once every provided image src has loaded (or errored / timed out). */
+function useImagesReady(srcs: string[], timeoutMs = 4000): boolean {
+  const key = srcs.filter(Boolean).join("|");
+  const [ready, setReady] = useState(srcs.length === 0);
+  useEffect(() => {
+    const list = srcs.filter(Boolean);
+    if (list.length === 0) { setReady(true); return; }
+    setReady(false);
+    let done = 0;
+    let cancelled = false;
+    const finish = () => { if (!cancelled && ++done >= list.length) setReady(true); };
+    const imgs = list.map((src) => {
+      const img = new Image();
+      img.onload = finish;
+      img.onerror = finish;
+      img.src = src;
+      return img;
+    });
+    const t = setTimeout(() => { if (!cancelled) setReady(true); }, timeoutMs);
+    return () => { cancelled = true; clearTimeout(t); imgs.forEach((i) => { i.onload = null; i.onerror = null; }); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, timeoutMs]);
+  return ready;
+}
 import { useParams } from "react-router-dom";
 import { Stage, Layer as KLayer, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage, Group } from "react-konva";
 import Konva from "konva";
