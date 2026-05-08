@@ -325,6 +325,16 @@ export function TopBar({ saving }: Props) {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button asChild size="sm" variant="outline">
+              <Link to={`/analytics/${flyer.id}`}>
+                <BarChart3 className="mr-1 h-4 w-4" /> Results
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>View live poll results</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild size="sm" variant="outline">
               <a href={`/preview/${flyer.id}`} target="_blank" rel="noreferrer">
                 <Eye className="mr-1 h-4 w-4" />Preview <span className="ml-1 hidden text-[10px] uppercase tracking-wide text-muted-foreground sm:inline">(private)</span>
               </a>
