@@ -1,4 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+
+/** Resolve true once every provided image src has loaded (or errored / timed out). */
+function useImagesReady(srcs: string[], timeoutMs = 4000): boolean {
+  const key = srcs.filter(Boolean).join("|");
+  const [ready, setReady] = useState(srcs.length === 0);
+  useEffect(() => {
+    const list = srcs.filter(Boolean);
+    if (list.length === 0) { setReady(true); return; }
+    setReady(false);
+    let done = 0;
+    let cancelled = false;
+    const finish = () => { if (!cancelled && ++done >= list.length) setReady(true); };
+    const imgs = list.map((src) => {
+      const img = new Image();
+      img.onload = finish;
+      img.onerror = finish;
+      img.src = src;
+      return img;
+    });
+    const t = setTimeout(() => { if (!cancelled) setReady(true); }, timeoutMs);
+    return () => { cancelled = true; clearTimeout(t); imgs.forEach((i) => { i.onload = null; i.onerror = null; }); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, timeoutMs]);
+  return ready;
+}
 import { useParams } from "react-router-dom";
 import { Stage, Layer as KLayer, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage, Group } from "react-konva";
 import Konva from "konva";
@@ -301,6 +326,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
+  const [popupImageReady, setPopupImageReady] = useState(false);
+  const [zoomImageReady, setZoomImageReady] = useState(false);
+  useEffect(() => { setPopupImageReady(false); }, [popup?.id, popup?.payload?.mediaUrl]);
+  useEffect(() => { setZoomImageReady(false); }, [zoomImage]);
   const [enlarged, setEnlarged] = useState(false);
   const [airMessages, setAirMessages] = useState<Array<{ action: LayerAction; layer: Layer | null }>>([]);
   const [poll, setPoll] = useState<LayerAction | null>(null);
@@ -619,6 +648,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const page = pages[pageIndex];
   const W = flyer.settings.width;
   const H = flyer.settings.height;
+  // Wait for image layers to load before drawing hotspot/highlight overlays so
+  // viewers see the image first, never naked rings on a blank background.
+  const pageImageSrcs = useMemo(
+    () => page.layers.filter((l) => l.type === "image" && l.content.src).map((l) => l.content.src!),
+    [page.id, page.layers],
+  );
+  const imagesReady = useImagesReady(pageImageSrcs);
   // Hide layers initially that are referenced by any reveal action and not yet revealed
   const hiddenIds = new Set<string>();
   pages.forEach((p) =>
@@ -710,7 +746,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             })()}
           </KLayer>
           {/* Pulsing highlights to indicate tappable hotspots */}
-          {(flyer.settings?.highlightsEnabled ?? true) && (
+          {imagesReady && (flyer.settings?.highlightsEnabled ?? true) && (
             <KLayer listening={false}>
               {page.layers
                 .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
@@ -728,7 +764,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 })}
             </KLayer>
           )}
-          {previewMode && showHitboxes && (
+          {imagesReady && previewMode && showHitboxes && (
             <KLayer listening={false}>
               {page.layers
                 .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
@@ -858,6 +894,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 alt=""
                 className="block w-full rounded"
                 draggable={false}
+                onLoad={() => setPopupImageReady(true)}
+                onError={() => setPopupImageReady(true)}
               />
               <button
                 type="button"
@@ -872,7 +910,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 <LucideIcons.Maximize2 className="h-3.5 w-3.5" />
                 Enlarge
               </button>
-              {(popup.payload.hotspots || []).map((h) => (
+              {popupImageReady && (popup.payload.hotspots || []).map((h) => (
                 <button
                   key={h.id}
                   type="button"
@@ -959,8 +997,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 alt="Zoomed"
                 className="block max-h-[90vh] max-w-[95vw] w-auto h-auto rounded object-contain"
                 draggable={false}
+                onLoad={() => setZoomImageReady(true)}
+                onError={() => setZoomImageReady(true)}
               />
-              {(zoomPopup?.payload.hotspots || []).map((h) => (
+              {zoomImageReady && (zoomPopup?.payload.hotspots || []).map((h) => (
                 <button
                   key={h.id}
                   type="button"
@@ -1259,6 +1299,7 @@ function AirMessagesInline({
               bubble={b}
               maxWidth={rect.width}
               fitHeight={perBubbleHeight}
+              scale={scale}
               interactive={hasAction}
               onClick={() => hasAction && onRunBubbleAction(b.action!)}
             />
