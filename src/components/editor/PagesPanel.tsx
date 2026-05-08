@@ -133,6 +133,26 @@ export function PagesPanel() {
 
       {activePage && (
         <div className="space-y-3 border-t border-border bg-muted/20 p-3">
+          <div className="text-xs font-semibold uppercase text-muted-foreground">Page background</div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="color"
+              className="h-9 w-14 p-1"
+              value={activePage.background.color || "#ffffff"}
+              onChange={(e) => setPageBackground(activePage.id, e.target.value)}
+            />
+            <Input
+              type="text"
+              className="h-9 flex-1 text-xs"
+              value={activePage.background.color || "#ffffff"}
+              onChange={(e) => setPageBackground(activePage.id, e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      {activePage && (
+        <div className="space-y-3 border-t border-border bg-muted/20 p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" />
