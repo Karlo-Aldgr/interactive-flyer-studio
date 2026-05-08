@@ -826,10 +826,21 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
       {/* Popup (also used for buy_ticket) */}
       <Dialog open={!!popup} onOpenChange={(v) => !v && setPopup(null)}>
-        <DialogContent style={{ background: page?.background?.color || undefined }}>
+        <DialogContent
+          style={{
+            background:
+              popup?.type === "popup" && !popup?.payload.mediaUrl && popup?.payload.popupBgColor
+                ? popup.payload.popupBgColor
+                : page?.background?.color || undefined,
+            color:
+              popup?.type === "popup" && !popup?.payload.mediaUrl && popup?.payload.popupTextColor
+                ? popup.payload.popupTextColor
+                : undefined,
+          }}
+        >
           <DialogHeader>
-            <DialogTitle>{popup?.payload.title || (popup?.type === "buy_ticket" ? "Get your ticket" : popup?.type === "buy_product" ? (popup.payload.productName || "Buy product") : "Info")}</DialogTitle>
-            {popup?.payload.body && <DialogDescription>{popup.payload.body}</DialogDescription>}
+            <DialogTitle style={{ color: "inherit" }}>{popup?.payload.title || (popup?.type === "buy_ticket" ? "Get your ticket" : popup?.type === "buy_product" ? (popup.payload.productName || "Buy product") : "Info")}</DialogTitle>
+            {popup?.payload.body && <DialogDescription style={{ color: "inherit", opacity: 0.9 }}>{popup.payload.body}</DialogDescription>}
           </DialogHeader>
           {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
             <div className="relative w-full">
