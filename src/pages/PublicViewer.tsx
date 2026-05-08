@@ -910,7 +910,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 <LucideIcons.Maximize2 className="h-3.5 w-3.5" />
                 Enlarge
               </button>
-              {(popup.payload.hotspots || []).map((h) => (
+              {popupImageReady && (popup.payload.hotspots || []).map((h) => (
                 <button
                   key={h.id}
                   type="button"
