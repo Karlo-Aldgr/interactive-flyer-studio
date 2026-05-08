@@ -53,6 +53,8 @@ export interface ActionPayload {
   mediaUrl?: string;
   buttons?: PopupButton[];
   hotspots?: PopupHotspot[];
+  popupBgColor?: string;
+  popupTextColor?: string;
   // video
   videoUrl?: string;
   // audio
