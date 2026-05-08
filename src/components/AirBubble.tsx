@@ -40,9 +40,9 @@ export function AirBubble({
 
   const textRef = useRef<HTMLSpanElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  // Manual size set by the creator — honored on every device, scaled to viewport.
-  const manualSize = bubble.fontSize ? bubble.fontSize * scale : undefined;
-  const MIN_READABLE = 14 * scale;
+  // Manual size set by the creator — honored on every device.
+  const manualSize = bubble.fontSize ? bubble.fontSize : undefined;
+  const MIN_READABLE = 14;
   const [fontSize, setFontSize] = useState(manualSize ?? Math.max(MIN_READABLE, baseFontSize));
 
   useLayoutEffect(() => {
