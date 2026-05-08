@@ -742,7 +742,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             })()}
           </KLayer>
           {/* Pulsing highlights to indicate tappable hotspots */}
-          {(flyer.settings?.highlightsEnabled ?? true) && (
+          {imagesReady && (flyer.settings?.highlightsEnabled ?? true) && (
             <KLayer listening={false}>
               {page.layers
                 .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
