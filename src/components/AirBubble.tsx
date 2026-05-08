@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { AirMessageBubble } from "@/types/flyer";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const REACTION_EMOJI: Record<string, string> = {
   heart: "❤️", like: "👍", dislike: "👎", haha: "😂", exclaim: "‼️", question: "❓",
@@ -14,6 +13,13 @@ interface Props {
   fitHeight?: number;
   /** Default font size (px) used as the upper bound when auto-fitting. */
   baseFontSize?: number;
+  /**
+   * Render scale (canvas-px → CSS-px). Manual `bubble.fontSize` and the
+   * minimum-readable floor are multiplied by this so the bubble looks
+   * identical on every viewport (mobile / tablet / PC) and matches the
+   * editor's PC preview shape.
+   */
+  scale?: number;
   /** Click handler — only wired when bubble has a tap action. */
   onClick?: () => void;
   /** Visual hint that this bubble is interactive. */
@@ -30,7 +36,7 @@ function applyCase(text: string, c?: string): string {
 }
 
 export function AirBubble({
-  bubble, maxWidth, fitHeight, baseFontSize = 22, onClick, interactive, preview,
+  bubble, maxWidth, fitHeight, baseFontSize = 22, scale = 1, onClick, interactive, preview,
 }: Props) {
   const bg1 = bubble.bgColor || "#1d9bf0";
   const bg2 = bubble.bgColor2 || bg1;
@@ -39,15 +45,11 @@ export function AirBubble({
   const bold = bubble.bold ?? true;
   const text = applyCase(bubble.text || "", bubble.textCase);
 
-  // Auto-fit font size. Always keep text readable: enforce a minimum font size
-  // (so small fitHeight on mobile doesn't shrink text into unreadable pixels)
-  // and let the bubble grow taller when needed by relaxing the height constraint.
   const textRef = useRef<HTMLSpanElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
-  // Desktop honors the user-set fontSize as a manual size; mobile always auto-fits for readability.
-  const manualSize = isMobile ? undefined : bubble.fontSize;
-  const MIN_READABLE = 14;
+  // Manual size set by the creator — honored on every device, scaled to viewport.
+  const manualSize = bubble.fontSize ? bubble.fontSize * scale : undefined;
+  const MIN_READABLE = 14 * scale;
   const [fontSize, setFontSize] = useState(manualSize ?? Math.max(MIN_READABLE, baseFontSize));
 
   useLayoutEffect(() => {
@@ -57,19 +59,16 @@ export function AirBubble({
     }
     const wrap = wrapRef.current;
     const span = textRef.current;
-    // Manual size: honor the creator's exact value, no shrinking.
     if (manualSize) {
       span.style.fontSize = manualSize + "px";
       setFontSize(manualSize);
       return;
     }
-    // No fit height -> use baseFontSize as-is.
     if (!fitHeight) {
       span.style.fontSize = baseFontSize + "px";
       setFontSize(baseFontSize);
       return;
     }
-    // Auto-fit: binary search for largest size fitting width (and height when tall enough).
     const upper = Math.max(baseFontSize, Math.floor(fitHeight * 0.9));
     const lo0 = Math.min(MIN_READABLE, upper);
     let lo = lo0;
@@ -86,11 +85,11 @@ export function AirBubble({
     }
     span.style.fontSize = best + "px";
     setFontSize(best);
-  }, [text, maxWidth, fitHeight, baseFontSize, bold, bubble.imageUrl, manualSize]);
+  }, [text, maxWidth, fitHeight, baseFontSize, bold, bubble.imageUrl, manualSize, MIN_READABLE]);
 
   const padX = Math.max(14, Math.round((fitHeight ?? 56) * 0.32));
   const padY = Math.max(8, Math.round((fitHeight ?? 56) * 0.18));
-  const radius = 9999; // pill
+  const radius = 9999;
 
   const tailSize = Math.max(10, Math.round((fitHeight ?? 56) * 0.18));
   const tailStyle: React.CSSProperties = (() => {
