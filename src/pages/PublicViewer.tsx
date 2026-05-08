@@ -894,6 +894,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 alt=""
                 className="block w-full rounded"
                 draggable={false}
+                onLoad={() => setPopupImageReady(true)}
+                onError={() => setPopupImageReady(true)}
               />
               <button
                 type="button"
