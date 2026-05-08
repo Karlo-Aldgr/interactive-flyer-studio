@@ -829,11 +829,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         <DialogContent
           style={{
             background:
-              popup?.type === "popup" && !popup?.payload.mediaUrl && popup?.payload.popupBgColor
-                ? popup.payload.popupBgColor
+              popup?.type === "popup" && !popup?.payload.mediaUrl
+                ? popup.payload.popupBgColor || "#ffffff"
                 : page?.background?.color || undefined,
             color:
-              popup?.type === "popup" && popup?.payload.popupTextColor
+              popup?.type === "popup" && !popup?.payload.mediaUrl
+                ? popup.payload.popupTextColor || "#000000"
+                : popup?.type === "popup" && popup?.payload.popupTextColor
                 ? popup.payload.popupTextColor
                 : undefined,
           }}
