@@ -1050,11 +1050,21 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
-      {/* Intro audio tap prompt (autoplay blocked) */}
-      {introNeedsTap && !audioInfo && (
-        <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card/95 px-4 py-2 text-xs font-medium shadow-elegant backdrop-blur">
-          🔊 Tap anywhere to play sound
-        </div>
+      {/* Intro audio unmute prompt (unmuted autoplay blocked) */}
+      {introNeedsTap && (
+        <button
+          onClick={() => {
+            const el = audioRef.current;
+            if (el) {
+              el.muted = false;
+              el.play().catch(() => {});
+            }
+            setIntroNeedsTap(false);
+          }}
+          className="fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card/95 px-4 py-2 text-xs font-medium shadow-elegant backdrop-blur"
+        >
+          🔊 Tap to unmute
+        </button>
       )}
       {/* Audio mini-player (fixed bottom) */}
       {audioInfo && (
