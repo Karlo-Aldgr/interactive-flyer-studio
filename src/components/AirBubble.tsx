@@ -13,13 +13,6 @@ interface Props {
   fitHeight?: number;
   /** Default font size (px) used as the upper bound when auto-fitting. */
   baseFontSize?: number;
-  /**
-   * Render scale (canvas-px → CSS-px). Manual `bubble.fontSize` and the
-   * minimum-readable floor are multiplied by this so the bubble looks
-   * identical on every viewport (mobile / tablet / PC) and matches the
-   * editor's PC preview shape.
-   */
-  scale?: number;
   /** Click handler — only wired when bubble has a tap action. */
   onClick?: () => void;
   /** Visual hint that this bubble is interactive. */
