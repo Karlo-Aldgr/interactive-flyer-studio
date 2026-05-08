@@ -644,6 +644,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const page = pages[pageIndex];
   const W = flyer.settings.width;
   const H = flyer.settings.height;
+  // Wait for image layers to load before drawing hotspot/highlight overlays so
+  // viewers see the image first, never naked rings on a blank background.
+  const pageImageSrcs = useMemo(
+    () => page.layers.filter((l) => l.type === "image" && l.content.src).map((l) => l.content.src!),
+    [page.id, page.layers],
+  );
+  const imagesReady = useImagesReady(pageImageSrcs);
   // Hide layers initially that are referenced by any reveal action and not yet revealed
   const hiddenIds = new Set<string>();
   pages.forEach((p) =>
