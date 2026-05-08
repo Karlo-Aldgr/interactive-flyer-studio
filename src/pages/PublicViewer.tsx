@@ -760,7 +760,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 })}
             </KLayer>
           )}
-          {previewMode && showHitboxes && (
+          {imagesReady && previewMode && showHitboxes && (
             <KLayer listening={false}>
               {page.layers
                 .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
