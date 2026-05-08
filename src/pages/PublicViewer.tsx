@@ -997,8 +997,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 alt="Zoomed"
                 className="block max-h-[90vh] max-w-[95vw] w-auto h-auto rounded object-contain"
                 draggable={false}
+                onLoad={() => setZoomImageReady(true)}
+                onError={() => setZoomImageReady(true)}
               />
-              {(zoomPopup?.payload.hotspots || []).map((h) => (
+              {zoomImageReady && (zoomPopup?.payload.hotspots || []).map((h) => (
                 <button
                   key={h.id}
                   type="button"
