@@ -1299,6 +1299,7 @@ function AirMessagesInline({
               bubble={b}
               maxWidth={rect.width}
               fitHeight={perBubbleHeight}
+              scale={scale}
               interactive={hasAction}
               onClick={() => hasAction && onRunBubbleAction(b.action!)}
             />
