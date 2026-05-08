@@ -826,7 +826,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
       {/* Popup (also used for buy_ticket) */}
       <Dialog open={!!popup} onOpenChange={(v) => !v && setPopup(null)}>
-        <DialogContent>
+        <DialogContent style={{ background: page?.background?.color || undefined }}>
           <DialogHeader>
             <DialogTitle>{popup?.payload.title || (popup?.type === "buy_ticket" ? "Get your ticket" : popup?.type === "buy_product" ? (popup.payload.productName || "Buy product") : "Info")}</DialogTitle>
             {popup?.payload.body && <DialogDescription>{popup.payload.body}</DialogDescription>}
