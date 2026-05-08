@@ -1003,28 +1003,27 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
               value={p.mediaUrl}
               onChange={(url) => update({ mediaUrl: url })}
             />
-            {!p.mediaUrl && (
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Background color</Label>
-                  <Input
-                    type="color"
-                    className="mt-1 h-9 p-1"
-                    value={p.popupBgColor || "#ffffff"}
-                    onChange={(e) => update({ popupBgColor: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Text color</Label>
-                  <Input
-                    type="color"
-                    className="mt-1 h-9 p-1"
-                    value={p.popupTextColor || "#000000"}
-                    onChange={(e) => update({ popupTextColor: e.target.value })}
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Background color</Label>
+                <Input
+                  type="color"
+                  className="mt-1 h-9 p-1"
+                  value={p.popupBgColor || "#ffffff"}
+                  onChange={(e) => update({ popupBgColor: e.target.value })}
+                />
               </div>
-            )}
+              <div>
+                <Label className="text-xs">Text color</Label>
+                <Input
+                  type="color"
+                  className="mt-1 h-9 p-1"
+                  value={p.popupTextColor || "#000000"}
+                  onChange={(e) => update({ popupTextColor: e.target.value })}
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Background color is used when no image is set.</p>
             {depth < 1 && (
               <PopupHotspotsEditor
                 depth={depth}
