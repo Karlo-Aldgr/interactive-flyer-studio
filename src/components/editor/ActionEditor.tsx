@@ -1314,12 +1314,24 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
         )}
 
         {type === "poll" && (
-          <PollEditor
-            question={p.pollQuestion || ""}
-            options={p.pollOptions || []}
-            multiple={!!p.pollMultiple}
-            onChange={(patch) => update(patch)}
-          />
+          <>
+            <PollEditor
+              question={p.pollQuestion || ""}
+              options={p.pollOptions || []}
+              multiple={!!p.pollMultiple}
+              onChange={(patch) => update(patch)}
+            />
+            {useEditorStore.getState().flyer?.id && (
+              <a
+                href={`/analytics/${useEditorStore.getState().flyer!.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
+              >
+                View live results →
+              </a>
+            )}
+          </>
         )}
 
         {type === "rsvp" && (
