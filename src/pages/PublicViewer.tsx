@@ -833,7 +833,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 ? popup.payload.popupBgColor
                 : page?.background?.color || undefined,
             color:
-              popup?.type === "popup" && !popup?.payload.mediaUrl && popup?.payload.popupTextColor
+              popup?.type === "popup" && popup?.payload.popupTextColor
                 ? popup.payload.popupTextColor
                 : undefined,
           }}
