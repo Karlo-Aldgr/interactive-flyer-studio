@@ -32,6 +32,7 @@ export function PagesPanel() {
   const renamePage = useEditorStore((s) => s.renamePage);
   const reorderPages = useEditorStore((s) => s.reorderPages);
   const setPageIntro = useEditorStore((s) => s.setPageIntro);
+  const setPageBackground = useEditorStore((s) => s.setPageBackground);
   const applyIntroToAllPages = useEditorStore((s) => s.applyIntroToAllPages);
   const replayIntro = useEditorStore((s) => s.replayIntro);
 
@@ -129,6 +130,26 @@ export function PagesPanel() {
           );
         })}
       </div>
+
+      {activePage && (
+        <div className="space-y-3 border-t border-border bg-muted/20 p-3">
+          <div className="text-xs font-semibold uppercase text-muted-foreground">Page background</div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="color"
+              className="h-9 w-14 p-1"
+              value={activePage.background.color || "#ffffff"}
+              onChange={(e) => setPageBackground(activePage.id, e.target.value)}
+            />
+            <Input
+              type="text"
+              className="h-9 flex-1 text-xs"
+              value={activePage.background.color || "#ffffff"}
+              onChange={(e) => setPageBackground(activePage.id, e.target.value)}
+            />
+          </div>
+        </div>
+      )}
 
       {activePage && (
         <div className="space-y-3 border-t border-border bg-muted/20 p-3">
