@@ -565,8 +565,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     }
   }
 
-  // Intro audio: try to autoplay once the flyer loads. If browser blocks autoplay,
-  // show a tap prompt and start on the first user interaction.
+  // Intro audio: auto-start on flyer load. If the browser blocks unmuted
+  // autoplay (common on mobile Safari), fall back to muted autoplay so the
+  // track still begins immediately and the user can pinch/pan freely. A
+  // small pill then offers a one-tap unmute.
   useEffect(() => {
     if (!flyer) return;
     const url = flyer.settings?.introAudioUrl;
@@ -577,34 +579,30 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     el.onended = () => setAudioInfo((s) => (s?.url === url ? null : s));
     audioRef.current = el;
 
-    const start = () => {
+    const tryPlay = async () => {
       if (introPlayedRef.current) return;
-      introPlayedRef.current = true;
-      el.play()
-        .then(() => {
+      try {
+        el.muted = false;
+        await el.play();
+        introPlayedRef.current = true;
+        setAudioInfo({ url, loop });
+        setIntroNeedsTap(false);
+      } catch {
+        // Unmuted autoplay blocked — start muted so the track is rolling, and
+        // show an unmute prompt that doesn't interfere with pinch/pan.
+        try {
+          el.muted = true;
+          await el.play();
+          introPlayedRef.current = true;
           setAudioInfo({ url, loop });
-          setIntroNeedsTap(false);
-        })
-        .catch(() => {
-          // Autoplay blocked — wait for user gesture
-          introPlayedRef.current = false;
           setIntroNeedsTap(true);
-        });
+        } catch {
+          setIntroNeedsTap(true);
+        }
+      }
     };
 
-    start();
-
-    const onTap = () => {
-      if (!introPlayedRef.current) start();
-      window.removeEventListener("pointerdown", onTap);
-      window.removeEventListener("keydown", onTap);
-    };
-    window.addEventListener("pointerdown", onTap);
-    window.addEventListener("keydown", onTap);
-    return () => {
-      window.removeEventListener("pointerdown", onTap);
-      window.removeEventListener("keydown", onTap);
-    };
+    tryPlay();
   }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop]);
 
   // Auto-trigger any actions on the current page that have payload.autoTrigger === true.
