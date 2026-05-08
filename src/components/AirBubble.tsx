@@ -29,7 +29,7 @@ function applyCase(text: string, c?: string): string {
 }
 
 export function AirBubble({
-  bubble, maxWidth, fitHeight, baseFontSize = 22, scale = 1, onClick, interactive, preview,
+  bubble, maxWidth, fitHeight, baseFontSize = 22, onClick, interactive, preview,
 }: Props) {
   const bg1 = bubble.bgColor || "#1d9bf0";
   const bg2 = bubble.bgColor2 || bg1;
