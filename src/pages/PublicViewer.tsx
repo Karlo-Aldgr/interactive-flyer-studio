@@ -734,6 +734,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "poll":
         setPoll(a);
         break;
+      case "subscribe":
+        setSubscribeAction(a);
+        setSubscribeData({ name: "", email: "", phone: "" });
+        break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
         const isApple = (() => {
