@@ -1691,10 +1691,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{checkoutSuccess ? "Order received" : "Checkout"}</DialogTitle>
+            <DialogTitle>{checkoutSuccess ? "Almost done — pay now" : "Checkout"}</DialogTitle>
             <DialogDescription>
               {checkoutSuccess
-                ? "Thanks! The flyer owner will be in touch to confirm your order."
+                ? (() => {
+                    const s = flyer?.settings || ({} as any);
+                    const has = !!(s.payVenmo || s.payCashapp || s.payApplePayContact);
+                    return has
+                      ? "Your order has been recorded. Tap a payment app below to send the total — the seller will confirm once they receive payment."
+                      : "Your order has been recorded. The seller hasn't set up an in-app payment method, so they'll contact you to arrange payment.";
+                  })()
                 : `Please share your contact details so we can confirm your order (${cartCount} item${cartCount === 1 ? "" : "s"}).`}
             </DialogDescription>
           </DialogHeader>
@@ -1711,7 +1717,6 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 if (previewMode) {
                   toast.success("Preview mode — order not submitted");
                   setCheckoutSuccess(true);
-                  setCart([]);
                   return;
                 }
                 setCheckoutSubmitting(true);
@@ -1733,7 +1738,6 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 }
                 logClick(null, "cart_checkout_submit");
                 setCheckoutSuccess(true);
-                setCart([]);
               }}
             >
               <div>
@@ -1790,11 +1794,88 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               </Button>
             </form>
           )}
-          {checkoutSuccess && (
-            <Button className="w-full" onClick={() => { setCheckoutOpen(false); setCheckoutSuccess(false); }}>
-              Done
-            </Button>
-          )}
+          {checkoutSuccess && (() => {
+            const s = (flyer?.settings || {}) as any;
+            const venmoH = (s.payVenmo || "").replace(/^@/, "").trim();
+            const cashH = (s.payCashapp || "").replace(/^\$/, "").trim();
+            const appleC = (s.payApplePayContact || "").trim();
+            const totalStr = cartTotal.toFixed(2);
+            const note = `${flyer?.title || "Flyer"} order (${cartCount} item${cartCount === 1 ? "" : "s"})`;
+            const openPay = (method: string, url: string) => {
+              if (!previewMode && flyer) {
+                supabase.from("form_submissions").insert([{
+                  flyer_id: flyer.id,
+                  data: {
+                    kind: "cart_payment_intent",
+                    payment_method: method,
+                    customer: checkoutData,
+                    total: cartTotal,
+                    currency: cartCurrency,
+                    submitted_at: new Date().toISOString(),
+                  } as any,
+                } as any]);
+                logClick(null, "cart_pay:" + method);
+              }
+              window.open(url, "_blank", "noopener,noreferrer");
+              setCart([]);
+            };
+            const hasAny = venmoH || cashH || appleC;
+            return (
+              <div className="space-y-2">
+                {venmoH && (
+                  <Button
+                    className="w-full justify-start bg-[#3D95CE] hover:bg-[#3D95CE]/90 text-white"
+                    onClick={() =>
+                      openPay(
+                        "venmo",
+                        `https://venmo.com/?txn=pay&audience=public&recipients=${encodeURIComponent(venmoH)}&amount=${encodeURIComponent(totalStr)}&note=${encodeURIComponent(note)}`
+                      )
+                    }
+                  >
+                    Pay with Venmo · {cartCurrency ? `${cartCurrency} ` : ""}{totalStr}
+                  </Button>
+                )}
+                {cashH && (
+                  <Button
+                    className="w-full justify-start bg-[#00D632] hover:bg-[#00D632]/90 text-black"
+                    onClick={() =>
+                      openPay(
+                        "cashapp",
+                        `https://cash.app/$${encodeURIComponent(cashH)}/${encodeURIComponent(totalStr)}`
+                      )
+                    }
+                  >
+                    Pay with Cash App · {cartCurrency ? `${cartCurrency} ` : ""}{totalStr}
+                  </Button>
+                )}
+                {appleC && (
+                  <Button
+                    className="w-full justify-start bg-foreground text-background hover:bg-foreground/90"
+                    onClick={() =>
+                      openPay(
+                        "applecash",
+                        `sms:${appleC}&body=${encodeURIComponent(`Sending ${cartCurrency || "$"}${totalStr} for ${note}`)}`
+                      )
+                    }
+                  >
+                    Apple Cash (iMessage) · {cartCurrency ? `${cartCurrency} ` : ""}{totalStr}
+                  </Button>
+                )}
+                {appleC && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Apple Cash button opens Messages on iPhone — tap the Apple Pay icon there to send the payment.
+                  </p>
+                )}
+                <Button
+                  variant={hasAny ? "outline" : "default"}
+                  className="w-full"
+                  onClick={() => { setCheckoutOpen(false); setCheckoutSuccess(false); setCart([]); }}
+                >
+                  {hasAny ? "I'll pay later" : "Done"}
+                </Button>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
