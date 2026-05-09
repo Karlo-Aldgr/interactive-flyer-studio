@@ -823,6 +823,32 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           introPlayedRef.current = true;
           setAudioInfo({ url, loop });
           setIntroNeedsTap(true);
+          // Unmute on the very first user interaction of any kind so the
+          // viewer never has to find a specific "tap to unmute" button.
+          const unmute = () => {
+            try {
+              el.muted = false;
+              if (el.paused) el.play().catch(() => {});
+              setIntroNeedsTap(false);
+            } catch {
+              /* noop */
+            }
+            cleanup();
+          };
+          const cleanup = () => {
+            window.removeEventListener("pointerdown", unmute, true);
+            window.removeEventListener("touchstart", unmute, true);
+            window.removeEventListener("touchend", unmute, true);
+            window.removeEventListener("mousedown", unmute, true);
+            window.removeEventListener("keydown", unmute, true);
+            window.removeEventListener("wheel", unmute, true);
+          };
+          window.addEventListener("pointerdown", unmute, true);
+          window.addEventListener("touchstart", unmute, true);
+          window.addEventListener("touchend", unmute, true);
+          window.addEventListener("mousedown", unmute, true);
+          window.addEventListener("keydown", unmute, true);
+          window.addEventListener("wheel", unmute, true);
         } catch {
           setIntroNeedsTap(true);
         }
