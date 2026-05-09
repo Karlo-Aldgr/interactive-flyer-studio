@@ -799,6 +799,41 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     }
   }
 
+  async function submitSubscribe() {
+    if (!subscribeAction || !flyer) return;
+    const p = subscribeAction.payload;
+    const nameRequired = p.subscribeNameRequired ?? true;
+    const phoneEnabled = !!p.subscribePhoneEnabled;
+    const phoneRequired = phoneEnabled && !!p.subscribePhoneRequired;
+    const email = subscribeData.email.trim();
+    const name = subscribeData.name.trim();
+    const phone = subscribeData.phone.trim();
+    if (nameRequired && !name) return toast.error("Please enter your name");
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("Please enter a valid email");
+    if (phoneRequired && !phone) return toast.error("Please enter your phone");
+    if (name.length > 200 || email.length > 320 || phone.length > 40) return toast.error("Input too long");
+    setSubscribing(true);
+    const { error } = await supabase.from("subscribers").upsert(
+      [{
+        flyer_id: flyer.id,
+        name: name || null,
+        email: email.toLowerCase(),
+        phone: phoneEnabled && phone ? phone : null,
+        list_name: p.subscribeListName || null,
+        source: "subscribe",
+      }],
+      { onConflict: "flyer_id,email", ignoreDuplicates: false } as any,
+    );
+    setSubscribing(false);
+    if (error) {
+      console.error("[subscribe]", error);
+      toast.error("Could not subscribe — try again");
+      return;
+    }
+    toast.success(p.subscribeSuccessMessage || "You're in! Thanks for subscribing.");
+    setSubscribeAction(null);
+  }
+
   // Intro audio: auto-start on flyer load. If the browser blocks unmuted
   // autoplay (common on mobile Safari), fall back to muted autoplay so the
   // track still begins immediately and the user can pinch/pan freely. A
