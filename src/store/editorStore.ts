@@ -459,10 +459,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const s = get();
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
     set({
-      pages: s.pages.map((p) => ({
-        ...p,
-        layers: p.layers.map((l) => (l.id === id ? { ...l, z_index: l.z_index + 1 } : l)),
-      })),
+      pages: s.pages.map((p) => {
+        if (!p.layers.some((l) => l.id === id)) return p;
+        const sorted = [...p.layers].sort((a, b) => a.z_index - b.z_index);
+        const idx = sorted.findIndex((l) => l.id === id);
+        if (idx < 0 || idx === sorted.length - 1) return p;
+        const a = sorted[idx];
+        const b = sorted[idx + 1];
+        const layers = p.layers.map((l) => {
+          if (l.id === a.id) return { ...l, z_index: b.z_index };
+          if (l.id === b.id) return { ...l, z_index: a.z_index };
+          return l;
+        });
+        return { ...p, layers };
+      }),
       past,
       future: [],
       dirty: true,
@@ -473,10 +483,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const s = get();
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
     set({
-      pages: s.pages.map((p) => ({
-        ...p,
-        layers: p.layers.map((l) => (l.id === id ? { ...l, z_index: Math.max(0, l.z_index - 1) } : l)),
-      })),
+      pages: s.pages.map((p) => {
+        if (!p.layers.some((l) => l.id === id)) return p;
+        const sorted = [...p.layers].sort((a, b) => a.z_index - b.z_index);
+        const idx = sorted.findIndex((l) => l.id === id);
+        if (idx <= 0) return p;
+        const a = sorted[idx];
+        const b = sorted[idx - 1];
+        const layers = p.layers.map((l) => {
+          if (l.id === a.id) return { ...l, z_index: b.z_index };
+          if (l.id === b.id) return { ...l, z_index: a.z_index };
+          return l;
+        });
+        return { ...p, layers };
+      }),
       past,
       future: [],
       dirty: true,
