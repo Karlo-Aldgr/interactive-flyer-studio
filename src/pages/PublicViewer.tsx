@@ -1374,8 +1374,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
-      {/* Intro audio unmute prompt (unmuted autoplay blocked) */}
-      {introNeedsTap && (
+      {/* Intro audio unmute prompt — only show if audio is NOT already playing */}
+      {introNeedsTap && !audioInfo && (
         <button
           onClick={() => {
             const el = audioRef.current;
