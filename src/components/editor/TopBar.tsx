@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
-  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3,
+  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3, Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ShareDialog } from "./ShareDialog";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
 import { IntroAudioDialog } from "./IntroAudioDialog";
+import { SubscribersPanel } from "./SubscribersPanel";
 
 interface Props { saving: boolean }
 
@@ -77,6 +78,7 @@ export function TopBar({ saving }: Props) {
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
   const [payOpen, setPayOpen] = useState(false);
   const [introAudioOpen, setIntroAudioOpen] = useState(false);
+  const [subscribersOpen, setSubscribersOpen] = useState(false);
 
   if (!flyer) return null;
 
@@ -324,6 +326,14 @@ export function TopBar({ saving }: Props) {
         </span>
         <Tooltip>
           <TooltipTrigger asChild>
+            <Button size="sm" variant="outline" onClick={() => setSubscribersOpen(true)}>
+              <Users className="mr-1 h-4 w-4" /> Subscribers
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>View subscribers, export to Excel, mass email</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button asChild size="sm" variant="outline">
               <Link to={`/analytics/${flyer.id}`}>
                 <BarChart3 className="mr-1 h-4 w-4" /> Results
@@ -451,6 +461,13 @@ export function TopBar({ saving }: Props) {
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
       <IntroAudioDialog open={introAudioOpen} onOpenChange={setIntroAudioOpen} />
+      <SubscribersPanel
+        open={subscribersOpen}
+        onOpenChange={setSubscribersOpen}
+        flyerId={flyer.id}
+        flyerTitle={flyer.title}
+        flyerUrl={viewerUrl}
+      />
     </header>
   );
 }

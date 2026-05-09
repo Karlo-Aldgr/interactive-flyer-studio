@@ -294,6 +294,48 @@ export type Database = {
         }
         Relationships: []
       }
+      subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          flyer_id: string
+          id: string
+          layer_id: string | null
+          list_name: string | null
+          name: string | null
+          phone: string | null
+          source: string
+          unsubscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          flyer_id: string
+          id?: string
+          layer_id?: string | null
+          list_name?: string | null
+          name?: string | null
+          phone?: string | null
+          source?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          flyer_id?: string
+          id?: string
+          layer_id?: string | null
+          list_name?: string | null
+          name?: string | null
+          phone?: string | null
+          source?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -345,6 +387,7 @@ export type Database = {
         | "buy_product"
         | "air_messages"
         | "poll"
+        | "subscribe"
       app_role: "admin" | "user"
       event_type: "view" | "click" | "submit" | "reveal"
       flyer_status: "draft" | "published"
@@ -495,6 +538,7 @@ export const Constants = {
         "buy_product",
         "air_messages",
         "poll",
+        "subscribe",
       ],
       app_role: ["admin", "user"],
       event_type: ["view", "click", "submit", "reveal"],

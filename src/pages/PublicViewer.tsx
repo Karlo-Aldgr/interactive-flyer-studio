@@ -522,6 +522,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [enlarged, setEnlarged] = useState(false);
   const [airMessages, setAirMessages] = useState<Array<{ action: LayerAction; layer: Layer | null }>>([]);
   const [poll, setPoll] = useState<LayerAction | null>(null);
+  const [subscribeAction, setSubscribeAction] = useState<LayerAction | null>(null);
+  const [subscribeData, setSubscribeData] = useState<{ name: string; email: string; phone: string }>({ name: "", email: "", phone: "" });
+  const [subscribing, setSubscribing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const stageWrapRef = useRef<HTMLDivElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
@@ -731,6 +734,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "poll":
         setPoll(a);
         break;
+      case "subscribe":
+        setSubscribeAction(a);
+        setSubscribeData({ name: "", email: "", phone: "" });
+        break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
         const isApple = (() => {
@@ -790,6 +797,38 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     if (offerCalendar) {
       setTimeout(() => runAddToCalendar(calPayload), 100);
     }
+  }
+
+  async function submitSubscribe() {
+    if (!subscribeAction || !flyer) return;
+    const p = subscribeAction.payload;
+    const nameRequired = p.subscribeNameRequired ?? true;
+    const phoneEnabled = !!p.subscribePhoneEnabled;
+    const phoneRequired = phoneEnabled && !!p.subscribePhoneRequired;
+    const email = subscribeData.email.trim();
+    const name = subscribeData.name.trim();
+    const phone = subscribeData.phone.trim();
+    if (nameRequired && !name) return toast.error("Please enter your name");
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("Please enter a valid email");
+    if (phoneRequired && !phone) return toast.error("Please enter your phone");
+    if (name.length > 200 || email.length > 320 || phone.length > 40) return toast.error("Input too long");
+    setSubscribing(true);
+    const { error } = await supabase.from("subscribers").insert([{
+      flyer_id: flyer.id,
+      name: name || null,
+      email: email.toLowerCase(),
+      phone: phoneEnabled && phone ? phone : null,
+      list_name: p.subscribeListName || null,
+      source: "subscribe",
+    }]);
+    setSubscribing(false);
+    if (error && (error as any).code !== "23505") {
+      console.error("[subscribe]", error);
+      toast.error("Could not subscribe — try again");
+      return;
+    }
+    toast.success(p.subscribeSuccessMessage || "You're in! Thanks for subscribing.");
+    setSubscribeAction(null);
   }
 
   // Intro audio: auto-start on flyer load. If the browser blocks unmuted
@@ -1395,7 +1434,55 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
-      {/* Checkout confirmation */}
+      {/* Subscribe dialog */}
+      <Dialog open={!!subscribeAction} onOpenChange={(v) => !v && setSubscribeAction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{subscribeAction?.payload.subscribeTitle || "Join our list"}</DialogTitle>
+            {subscribeAction?.payload.subscribeBody && (
+              <DialogDescription>{subscribeAction.payload.subscribeBody}</DialogDescription>
+            )}
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">
+                Name {(subscribeAction?.payload.subscribeNameRequired ?? true) ? "" : "(optional)"}
+              </Label>
+              <Input
+                value={subscribeData.name}
+                maxLength={200}
+                onChange={(e) => setSubscribeData((d) => ({ ...d, name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Email</Label>
+              <Input
+                type="email"
+                value={subscribeData.email}
+                maxLength={320}
+                onChange={(e) => setSubscribeData((d) => ({ ...d, email: e.target.value }))}
+              />
+            </div>
+            {subscribeAction?.payload.subscribePhoneEnabled && (
+              <div>
+                <Label className="text-xs">
+                  Phone {subscribeAction.payload.subscribePhoneRequired ? "" : "(optional)"}
+                </Label>
+                <Input
+                  type="tel"
+                  value={subscribeData.phone}
+                  maxLength={40}
+                  onChange={(e) => setSubscribeData((d) => ({ ...d, phone: e.target.value }))}
+                />
+              </div>
+            )}
+            <Button onClick={submitSubscribe} disabled={subscribing} className="w-full">
+              {subscribing ? "Subscribing..." : (subscribeAction?.payload.subscribeButtonLabel || "Subscribe")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!confirmAction} onOpenChange={(v) => !v && setConfirmAction(null)}>
         <DialogContent>
           <DialogHeader>

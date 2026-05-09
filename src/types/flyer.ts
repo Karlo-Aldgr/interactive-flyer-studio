@@ -20,7 +20,8 @@ export type ActionType =
   | "audio"
   | "buy_product"
   | "air_messages"
-  | "poll";
+  | "poll"
+  | "subscribe";
 
 export interface PopupButton {
   id: string;
@@ -118,6 +119,16 @@ export interface ActionPayload {
   pollQuestion?: string;
   pollOptions?: PollOption[];
   pollMultiple?: boolean;       // allow voting for more than one option
+
+  // subscribe — collects email signups into the subscribers table
+  subscribeTitle?: string;
+  subscribeBody?: string;
+  subscribeButtonLabel?: string;
+  subscribeListName?: string;        // optional tag (e.g. "VIP", "Newsletter")
+  subscribePhoneEnabled?: boolean;   // collect phone (optional field)
+  subscribePhoneRequired?: boolean;  // make phone required
+  subscribeNameRequired?: boolean;   // default true
+  subscribeSuccessMessage?: string;
 }
 
 export type BubbleTextCase = "as-is" | "upper" | "lower";
