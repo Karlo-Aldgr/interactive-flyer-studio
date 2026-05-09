@@ -90,7 +90,7 @@ function isValid(draft: LayerAction | null): boolean {
     case "map":
       return !!(p.mapAddress || (typeof p.mapLat === "number" && typeof p.mapLng === "number"));
     case "buy_product":
-      return !!(p.productName && p.productPaymentUrl);
+      return !!(p.productName && (p.productCartEnabled || p.productPaymentUrl));
     case "air_messages":
       return !!(p.bubbles && p.bubbles.some((b) => b.text || b.imageUrl));
     case "poll":
