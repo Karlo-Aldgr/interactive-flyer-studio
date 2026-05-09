@@ -922,21 +922,54 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 const delay = l.intro
                   ? cfg.delayMs
                   : cfg.delayMs + (cfg.stagger ? idx * cfg.staggerStepMs : 0);
+                // Air-message bubbles anchored to this layer — render in the
+                // same z slot so layers above (e.g. an icon) can occlude them.
+                const attachedBubbles = airMessages.filter((am) => am.layer?.id === l.id);
                 return (
-                  <IntroAnimatedGroup
-                    key={l.id}
-                    preset={cfg.preset}
-                    durationMs={cfg.durationMs}
-                    delayMs={delay}
-                    cx={cx}
-                    cy={cy}
-                    introKey={`${page.id}:${pageIndex}`}
-                  >
-                    {node}
-                  </IntroAnimatedGroup>
+                  <Group key={l.id}>
+                    <IntroAnimatedGroup
+                      preset={cfg.preset}
+                      durationMs={cfg.durationMs}
+                      delayMs={delay}
+                      cx={cx}
+                      cy={cy}
+                      introKey={`${page.id}:${pageIndex}`}
+                    >
+                      {node}
+                    </IntroAnimatedGroup>
+                    {attachedBubbles.map((am) => (
+                      <KonvaAirMessages
+                        key={am.action.id}
+                        action={am.action}
+                        sourceLayer={am.layer}
+                        canvasW={W}
+                        canvasH={H}
+                        onClose={() => setAirMessages((prev) => prev.filter((p) => p.action.id !== am.action.id))}
+                        onRunBubbleAction={(a) => {
+                          logClick(null, "air_message:" + a.type);
+                          executeAction(a, null);
+                        }}
+                      />
+                    ))}
+                  </Group>
                 );
               });
             })()}
+            {/* Page-level air messages (no source layer) — render on top */}
+            {airMessages.filter((am) => !am.layer).map((am) => (
+              <KonvaAirMessages
+                key={am.action.id}
+                action={am.action}
+                sourceLayer={null}
+                canvasW={W}
+                canvasH={H}
+                onClose={() => setAirMessages((prev) => prev.filter((p) => p.action.id !== am.action.id))}
+                onRunBubbleAction={(a) => {
+                  logClick(null, "air_message:" + a.type);
+                  executeAction(a, null);
+                }}
+              />
+            ))}
           </KLayer>
           {/* Pulsing highlights to indicate tappable hotspots */}
           {imagesReady && (flyer.settings?.highlightsEnabled ?? true) && (
