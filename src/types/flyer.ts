@@ -20,7 +20,8 @@ export type ActionType =
   | "audio"
   | "buy_product"
   | "air_messages"
-  | "poll";
+  | "poll"
+  | "subscribe";
 
 export interface PopupButton {
   id: string;
