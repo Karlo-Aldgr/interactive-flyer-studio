@@ -375,6 +375,7 @@ function renderLayer(l: Layer, onClick: () => void, hidden: boolean) {
     height: l.size.height,
     rotation: l.rotation,
     opacity: l.style.opacity ?? 1,
+    listening: hasAction || l.type === "hotspot",
     onClick,
     onTap: onClick,
     onMouseEnter: (e: any) => {
