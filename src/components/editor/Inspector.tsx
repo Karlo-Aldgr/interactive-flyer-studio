@@ -145,6 +145,23 @@ export function Inspector() {
               <Input type="color" className="mt-1 h-9 w-full" value={layer.style.color || "#ffffff"} onChange={(e) => updateLayerStyle(layer.id, { color: e.target.value })} />
             </div>
             <div>
+              <Label className="text-xs">Font size: {layer.style.fontSize ?? 16}</Label>
+              <Slider
+                min={8} max={120} step={1}
+                value={[layer.style.fontSize ?? 16]}
+                onValueChange={([v]) => updateLayerStyle(layer.id, { fontSize: v })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Font weight</Label>
+              <Select value={String(layer.style.fontWeight ?? 600)} onValueChange={(v) => updateLayerStyle(layer.id, { fontWeight: Number(v) })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[300, 400, 500, 600, 700, 800].map((w) => <SelectItem key={w} value={String(w)}>{w}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label className="text-xs">Corner radius: {layer.style.cornerRadius ?? 999}</Label>
               <Slider min={0} max={999} step={1} value={[layer.style.cornerRadius ?? 999]} onValueChange={([v]) => updateLayerStyle(layer.id, { cornerRadius: v })} />
             </div>
