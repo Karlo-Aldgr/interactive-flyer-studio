@@ -1319,7 +1319,21 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               {popup.payload.ticketCtaLabel || "Buy ticket"}
             </Button>
           )}
-          {popup?.type === "buy_product" && popup.payload.productPaymentUrl && (
+          {popup?.type === "buy_product" && popup.payload.productCartEnabled && (
+            <Button
+              className="w-full"
+              onClick={() => {
+                logClick(null, "buy_product_add_to_cart");
+                addToCart(popup, null);
+                setPopup(null);
+                setCartOpen(true);
+              }}
+            >
+              <LucideIcons.ShoppingCart className="h-4 w-4 mr-2" />
+              {popup.payload.productCtaLabel || "Add to cart"}
+            </Button>
+          )}
+          {popup?.type === "buy_product" && !popup.payload.productCartEnabled && popup.payload.productPaymentUrl && (
             <Button
               className="w-full"
               onClick={() => {
