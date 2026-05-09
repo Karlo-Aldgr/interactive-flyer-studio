@@ -1434,7 +1434,55 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
-      {/* Checkout confirmation */}
+      {/* Subscribe dialog */}
+      <Dialog open={!!subscribeAction} onOpenChange={(v) => !v && setSubscribeAction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{subscribeAction?.payload.subscribeTitle || "Join our list"}</DialogTitle>
+            {subscribeAction?.payload.subscribeBody && (
+              <DialogDescription>{subscribeAction.payload.subscribeBody}</DialogDescription>
+            )}
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">
+                Name {(subscribeAction?.payload.subscribeNameRequired ?? true) ? "" : "(optional)"}
+              </Label>
+              <Input
+                value={subscribeData.name}
+                maxLength={200}
+                onChange={(e) => setSubscribeData((d) => ({ ...d, name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Email</Label>
+              <Input
+                type="email"
+                value={subscribeData.email}
+                maxLength={320}
+                onChange={(e) => setSubscribeData((d) => ({ ...d, email: e.target.value }))}
+              />
+            </div>
+            {subscribeAction?.payload.subscribePhoneEnabled && (
+              <div>
+                <Label className="text-xs">
+                  Phone {subscribeAction.payload.subscribePhoneRequired ? "" : "(optional)"}
+                </Label>
+                <Input
+                  type="tel"
+                  value={subscribeData.phone}
+                  maxLength={40}
+                  onChange={(e) => setSubscribeData((d) => ({ ...d, phone: e.target.value }))}
+                />
+              </div>
+            )}
+            <Button onClick={submitSubscribe} disabled={subscribing} className="w-full">
+              {subscribing ? "Subscribing..." : (subscribeAction?.payload.subscribeButtonLabel || "Subscribe")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!confirmAction} onOpenChange={(v) => !v && setConfirmAction(null)}>
         <DialogContent>
           <DialogHeader>
