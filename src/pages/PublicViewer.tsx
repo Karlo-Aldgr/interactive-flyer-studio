@@ -526,6 +526,47 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [subscribeAction, setSubscribeAction] = useState<LayerAction | null>(null);
   const [subscribeData, setSubscribeData] = useState<{ name: string; email: string; phone: string }>({ name: "", email: "", phone: "" });
   const [subscribing, setSubscribing] = useState(false);
+  // Shopping cart for buy_product actions with productCartEnabled
+  type CartItem = {
+    id: string; // stable per product
+    name: string;
+    price: number; // numeric, 0 if not parseable
+    priceDisplay: string;
+    currency: string;
+    image?: string;
+    qty: number;
+  };
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutData, setCheckoutData] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
+  const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  function addToCart(a: LayerAction, layer: Layer | null) {
+    const p = a.payload;
+    const id = p.productId || layer?.id || a.id;
+    const priceNum = Number(String(p.productPrice ?? "").replace(/[^0-9.]/g, "")) || 0;
+    setCart((prev) => {
+      const existing = prev.find((it) => it.id === id);
+      if (existing) return prev.map((it) => (it.id === id ? { ...it, qty: it.qty + 1 } : it));
+      return [
+        ...prev,
+        {
+          id,
+          name: p.productName || "Product",
+          price: priceNum,
+          priceDisplay: p.productPrice || "",
+          currency: p.productCurrency || "",
+          image: p.productImageUrl,
+          qty: 1,
+        },
+      ];
+    });
+    toast.success(`Added "${p.productName || "Product"}" to cart`);
+  }
+  const cartCount = cart.reduce((n, it) => n + it.qty, 0);
+  const cartTotal = cart.reduce((n, it) => n + it.price * it.qty, 0);
+  const cartCurrency = cart.find((it) => it.currency)?.currency || "";
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const stageWrapRef = useRef<HTMLDivElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
