@@ -1019,22 +1019,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             </KLayer>
           )}
         </Stage>
-        {/* Inline air-messages overlay — positioned over the flyer, no backdrop. */}
-        {airMessages.map((am) => (
-          <AirMessagesInline
-            key={am.action.id}
-            action={am.action}
-            sourceLayer={am.layer}
-            scale={scale}
-            canvasW={W}
-            canvasH={H}
-            onClose={() => setAirMessages((prev) => prev.filter((p) => p.action.id !== am.action.id))}
-            onRunBubbleAction={(a) => {
-              logClick(null, "air_message:" + a.type);
-              executeAction(a, null);
-            }}
-          />
-        ))}
+        {/* Air-message bubbles are rendered inside the Konva Stage so they
+            respect per-layer z_index ordering. */}
       </div>
 
       {/* Pagination */}
