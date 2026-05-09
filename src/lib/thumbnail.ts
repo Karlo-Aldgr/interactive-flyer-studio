@@ -1,8 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const TARGET_W = 1200;
-const TARGET_H = 630;
+const MAX_DIM = 1200;
 const BUCKET = "flyer-thumbnails";
+
+function fitDims(w: number, h: number, max = MAX_DIM) {
+  const scale = Math.min(1, max / Math.max(w, h));
+  return { w: Math.round(w * scale), h: Math.round(h * scale) };
+}
 
 export function thumbnailStoragePath(flyerId: string) {
   return `${flyerId}.jpg`;
