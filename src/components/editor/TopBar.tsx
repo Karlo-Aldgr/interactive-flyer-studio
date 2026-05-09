@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ShareDialog } from "./ShareDialog";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
 import { IntroAudioDialog } from "./IntroAudioDialog";
+import { SubscribersPanel } from "./SubscribersPanel";
 
 interface Props { saving: boolean }
 
@@ -77,6 +78,7 @@ export function TopBar({ saving }: Props) {
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
   const [payOpen, setPayOpen] = useState(false);
   const [introAudioOpen, setIntroAudioOpen] = useState(false);
+  const [subscribersOpen, setSubscribersOpen] = useState(false);
 
   if (!flyer) return null;
 
@@ -322,6 +324,14 @@ export function TopBar({ saving }: Props) {
         <span className="text-xs text-muted-foreground">
           {saving ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Saving...</span> : "Saved"}
         </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button size="sm" variant="outline" onClick={() => setSubscribersOpen(true)}>
+              <Users className="mr-1 h-4 w-4" /> Subscribers
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>View subscribers, export to Excel, mass email</TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button asChild size="sm" variant="outline">
