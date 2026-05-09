@@ -473,6 +473,7 @@ export function TopBar({ saving }: Props) {
       />
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
+      <FlyerPaymentSettingsDialog open={paySettingsOpen} onOpenChange={setPaySettingsOpen} />
       <IntroAudioDialog open={introAudioOpen} onOpenChange={setIntroAudioOpen} />
       <SubscribersPanel
         open={subscribersOpen}
