@@ -90,7 +90,7 @@ function isValid(draft: LayerAction | null): boolean {
     case "map":
       return !!(p.mapAddress || (typeof p.mapLat === "number" && typeof p.mapLng === "number"));
     case "buy_product":
-      return !!(p.productName && p.productPaymentUrl);
+      return !!(p.productName && (p.productCartEnabled || p.productPaymentUrl));
     case "air_messages":
       return !!(p.bubbles && p.bubbles.some((b) => b.text || b.imageUrl));
     case "poll":
@@ -1376,6 +1376,20 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
               <Label className="text-xs">Buy button label</Label>
               <Input className="mt-1" value={p.productCtaLabel || ""} onChange={(e) => update({ productCtaLabel: e.target.value })} placeholder="Buy now" />
             </div>
+            <label className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={!!p.productCartEnabled}
+                onChange={(e) => update({ productCartEnabled: e.target.checked })}
+              />
+              <span className="text-xs">
+                <span className="font-medium">Add to cart instead of direct buy</span>
+                <span className="block text-muted-foreground">
+                  Viewers can collect multiple products and check out from a single cart. Orders are saved in the Subscribers/Submissions panel — no payment link required.
+                </span>
+              </span>
+            </label>
           </>
         )}
 

@@ -107,6 +107,8 @@ export interface ActionPayload {
   productDescription?: string;
   productPaymentUrl?: string;   // payment link the buyer is sent to
   productCtaLabel?: string;     // e.g. "Buy now"
+  productCartEnabled?: boolean; // when true, shows "Add to cart" instead of opening payment link directly
+  productId?: string;           // stable id used for cart de-dup; falls back to layer/action id
 
   // air_messages — iMessage-style bubble sequence
   bubbles?: AirMessageBubble[];

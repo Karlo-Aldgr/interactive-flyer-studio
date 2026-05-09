@@ -526,6 +526,47 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [subscribeAction, setSubscribeAction] = useState<LayerAction | null>(null);
   const [subscribeData, setSubscribeData] = useState<{ name: string; email: string; phone: string }>({ name: "", email: "", phone: "" });
   const [subscribing, setSubscribing] = useState(false);
+  // Shopping cart for buy_product actions with productCartEnabled
+  type CartItem = {
+    id: string; // stable per product
+    name: string;
+    price: number; // numeric, 0 if not parseable
+    priceDisplay: string;
+    currency: string;
+    image?: string;
+    qty: number;
+  };
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutData, setCheckoutData] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
+  const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  function addToCart(a: LayerAction, layer: Layer | null) {
+    const p = a.payload;
+    const id = p.productId || layer?.id || a.id;
+    const priceNum = Number(String(p.productPrice ?? "").replace(/[^0-9.]/g, "")) || 0;
+    setCart((prev) => {
+      const existing = prev.find((it) => it.id === id);
+      if (existing) return prev.map((it) => (it.id === id ? { ...it, qty: it.qty + 1 } : it));
+      return [
+        ...prev,
+        {
+          id,
+          name: p.productName || "Product",
+          price: priceNum,
+          priceDisplay: p.productPrice || "",
+          currency: p.productCurrency || "",
+          image: p.productImageUrl,
+          qty: 1,
+        },
+      ];
+    });
+    toast.success(`Added "${p.productName || "Product"}" to cart`);
+  }
+  const cartCount = cart.reduce((n, it) => n + it.qty, 0);
+  const cartTotal = cart.reduce((n, it) => n + it.price * it.qty, 0);
+  const cartCurrency = cart.find((it) => it.currency)?.currency || "";
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const stageWrapRef = useRef<HTMLDivElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
@@ -1278,7 +1319,21 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               {popup.payload.ticketCtaLabel || "Buy ticket"}
             </Button>
           )}
-          {popup?.type === "buy_product" && popup.payload.productPaymentUrl && (
+          {popup?.type === "buy_product" && popup.payload.productCartEnabled && (
+            <Button
+              className="w-full"
+              onClick={() => {
+                logClick(null, "buy_product_add_to_cart");
+                addToCart(popup, null);
+                setPopup(null);
+                setCartOpen(true);
+              }}
+            >
+              <LucideIcons.ShoppingCart className="h-4 w-4 mr-2" />
+              {popup.payload.productCtaLabel || "Add to cart"}
+            </Button>
+          )}
+          {popup?.type === "buy_product" && !popup.payload.productCartEnabled && popup.payload.productPaymentUrl && (
             <Button
               className="w-full"
               onClick={() => {
@@ -1529,6 +1584,219 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         flyerId={flyer.id}
         previewMode={previewMode}
       />
+
+      {/* Floating cart icon — appears only when there are items */}
+      {cartCount > 0 && !cartOpen && (
+        <button
+          type="button"
+          aria-label={`Open cart (${cartCount} item${cartCount === 1 ? "" : "s"})`}
+          onClick={() => setCartOpen(true)}
+          className="fixed top-3 right-16 z-50 inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card/95 shadow-elegant backdrop-blur hover:bg-card transition"
+        >
+          <LucideIcons.ShoppingCart className="h-4 w-4" />
+          <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+            {cartCount}
+          </span>
+        </button>
+      )}
+
+      {/* Cart drawer */}
+      <Dialog open={cartOpen} onOpenChange={setCartOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LucideIcons.ShoppingCart className="h-5 w-5" />
+              Your cart
+            </DialogTitle>
+            <DialogDescription>
+              {cart.length === 0 ? "Your cart is empty." : `${cartCount} item${cartCount === 1 ? "" : "s"}`}
+            </DialogDescription>
+          </DialogHeader>
+          {cart.length > 0 && (
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+              {cart.map((it) => (
+                <div key={it.id} className="flex items-center gap-3 rounded-md border border-border p-2">
+                  {it.image ? (
+                    <img src={it.image} alt={it.name} className="h-14 w-14 rounded object-cover" />
+                  ) : (
+                    <div className="h-14 w-14 rounded bg-muted flex items-center justify-center">
+                      <LucideIcons.Package className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{it.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {it.currency ? `${it.currency} ` : ""}{it.priceDisplay || it.price.toFixed(2)}
+                    </div>
+                    <div className="mt-1 inline-flex items-center gap-1">
+                      <button
+                        className="h-6 w-6 rounded border border-border hover:bg-muted"
+                        onClick={() =>
+                          setCart((prev) =>
+                            prev
+                              .map((x) => (x.id === it.id ? { ...x, qty: x.qty - 1 } : x))
+                              .filter((x) => x.qty > 0)
+                          )
+                        }
+                      >−</button>
+                      <span className="text-xs w-6 text-center">{it.qty}</span>
+                      <button
+                        className="h-6 w-6 rounded border border-border hover:bg-muted"
+                        onClick={() =>
+                          setCart((prev) => prev.map((x) => (x.id === it.id ? { ...x, qty: x.qty + 1 } : x)))
+                        }
+                      >+</button>
+                    </div>
+                  </div>
+                  <button
+                    aria-label="Remove"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => setCart((prev) => prev.filter((x) => x.id !== it.id))}
+                  >
+                    <LucideIcons.X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {cart.length > 0 && (
+            <>
+              <div className="flex items-center justify-between border-t border-border pt-3">
+                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="text-lg font-semibold">
+                  {cartCurrency ? `${cartCurrency} ` : ""}{cartTotal.toFixed(2)}
+                </span>
+              </div>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  setCartOpen(false);
+                  setCheckoutOpen(true);
+                }}
+              >
+                Checkout
+              </Button>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Checkout form */}
+      <Dialog
+        open={checkoutOpen}
+        onOpenChange={(v) => {
+          setCheckoutOpen(v);
+          if (!v) setCheckoutSuccess(false);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{checkoutSuccess ? "Order received" : "Checkout"}</DialogTitle>
+            <DialogDescription>
+              {checkoutSuccess
+                ? "Thanks! The flyer owner will be in touch to confirm your order."
+                : `Please share your contact details so we can confirm your order (${cartCount} item${cartCount === 1 ? "" : "s"}).`}
+            </DialogDescription>
+          </DialogHeader>
+          {!checkoutSuccess && (
+            <form
+              className="space-y-3"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!flyer) return;
+                if (!checkoutData.name || !checkoutData.email) {
+                  toast.error("Name and email are required");
+                  return;
+                }
+                if (previewMode) {
+                  toast.success("Preview mode — order not submitted");
+                  setCheckoutSuccess(true);
+                  setCart([]);
+                  return;
+                }
+                setCheckoutSubmitting(true);
+                const { error } = await supabase.from("form_submissions").insert([{
+                  flyer_id: flyer.id,
+                  data: {
+                    kind: "cart_order",
+                    customer: checkoutData,
+                    items: cart,
+                    total: cartTotal,
+                    currency: cartCurrency,
+                    submitted_at: new Date().toISOString(),
+                  } as any,
+                } as any]);
+                setCheckoutSubmitting(false);
+                if (error) {
+                  toast.error(error.message);
+                  return;
+                }
+                logClick(null, "cart_checkout_submit");
+                setCheckoutSuccess(true);
+                setCart([]);
+              }}
+            >
+              <div>
+                <Label className="text-xs">Name *</Label>
+                <Input
+                  className="mt-1"
+                  required
+                  value={checkoutData.name}
+                  onChange={(e) => setCheckoutData((d) => ({ ...d, name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Email *</Label>
+                <Input
+                  className="mt-1"
+                  type="email"
+                  required
+                  value={checkoutData.email}
+                  onChange={(e) => setCheckoutData((d) => ({ ...d, email: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Phone</Label>
+                <Input
+                  className="mt-1"
+                  value={checkoutData.phone}
+                  onChange={(e) => setCheckoutData((d) => ({ ...d, phone: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Shipping address</Label>
+                <Input
+                  className="mt-1"
+                  value={checkoutData.address}
+                  onChange={(e) => setCheckoutData((d) => ({ ...d, address: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Notes (optional)</Label>
+                <Input
+                  className="mt-1"
+                  value={checkoutData.notes}
+                  onChange={(e) => setCheckoutData((d) => ({ ...d, notes: e.target.value }))}
+                />
+              </div>
+              <div className="flex items-center justify-between border-t border-border pt-3">
+                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="text-base font-semibold">
+                  {cartCurrency ? `${cartCurrency} ` : ""}{cartTotal.toFixed(2)}
+                </span>
+              </div>
+              <Button type="submit" className="w-full" disabled={checkoutSubmitting}>
+                {checkoutSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Place order"}
+              </Button>
+            </form>
+          )}
+          {checkoutSuccess && (
+            <Button className="w-full" onClick={() => { setCheckoutOpen(false); setCheckoutSuccess(false); }}>
+              Done
+            </Button>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
