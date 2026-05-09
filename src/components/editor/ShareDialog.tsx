@@ -189,7 +189,7 @@ export function ShareDialog({
               loading="lazy"
             />
           ) : (
-            <div className="flex aspect-[1200/630] w-full items-center justify-center text-xs text-muted-foreground">
+            <div className="flex aspect-[3/4] w-full items-center justify-center text-xs text-muted-foreground">
               {regenerating ? (
                 <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Generating preview…</span>
               ) : (
