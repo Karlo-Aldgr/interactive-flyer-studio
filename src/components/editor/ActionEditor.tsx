@@ -1390,6 +1390,11 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                 </span>
               </span>
             </label>
+            {p.productCartEnabled && (
+              <p className="text-[11px] text-muted-foreground">
+                Tip: open <strong>Checkout</strong> in the top bar to set this flyer's Venmo / Cash App / Apple Cash so buyers can pay you directly when they check out.
+              </p>
+            )}
           </>
         )}
 
