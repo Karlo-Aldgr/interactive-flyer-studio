@@ -44,9 +44,10 @@ const ACTION_LABELS: Record<ActionType, string> = {
   buy_product: "Buy product",
   air_messages: "Air messages (chat bubbles)",
   poll: "Poll",
+  subscribe: "Subscribe (email signup)",
 };
 
-const PRESET_TYPES: ActionType[] = ["air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map"];
+const PRESET_TYPES: ActionType[] = ["subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map"];
 const BASIC_TYPES: ActionType[] = [
   "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
