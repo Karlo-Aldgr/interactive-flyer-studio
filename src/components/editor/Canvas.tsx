@@ -1,18 +1,114 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Stage, Layer as KLayer, Rect, Transformer, Ellipse, Group, Text } from "react-konva";
+import { Stage, Layer as KLayer, Rect, Transformer, Ellipse, Group, Text, Image as KonvaImage, Line } from "react-konva";
+import useImage from "use-image";
 import { useEditorStore } from "@/store/editorStore";
 import { LayerRenderer } from "./LayerRenderer";
 import { HighlightOverlay } from "./HighlightOverlay";
 import { IntroAnimatedGroup, resolveIntro } from "./IntroAnimatedGroup";
-import { AirBubble } from "@/components/AirBubble";
 import { Button } from "@/components/ui/button";
 import { X, Check } from "lucide-react";
+import type { AirMessageBubble, Layer as FlyerLayer } from "@/types/flyer";
 
 const ACTION_LABEL: Record<string, string> = {
   open_url: "URL", popup: "Popup", video: "Video", call: "Call",
   sms: "SMS", form: "Form", navigate: "Page", reveal: "Reveal", add_to_calendar: "Calendar",
   buy_ticket: "Ticket", rsvp: "RSVP", checkout: "Checkout", coupon: "Coupon", map: "Map",
 };
+
+function applyBubbleCase(text: string, c?: string): string {
+  if (c === "upper") return text.toUpperCase();
+  if (c === "lower") return text.toLowerCase();
+  return text;
+}
+
+function estimateBubbleFontSize(text: string, width: number, height: number, manual?: number) {
+  if (manual) return manual;
+  const availableW = Math.max(16, width - Math.max(28, height * 0.64));
+  const availableH = Math.max(12, height - Math.max(16, height * 0.36));
+  let size = Math.min(36, Math.max(14, availableH * 0.62));
+  while (size > 12) {
+    const charsPerLine = Math.max(1, Math.floor(availableW / (size * 0.56)));
+    const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
+    if (lines * size * 1.05 <= availableH + 2) break;
+    size -= 1;
+  }
+  return size;
+}
+
+function BubblePreview({ bubble, width, height }: { bubble: AirMessageBubble; width: number; height: number }) {
+  const [img] = useImage(bubble.imageUrl || "", "anonymous");
+  const text = applyBubbleCase(bubble.text || "", bubble.textCase);
+  const bg1 = bubble.bgColor || "#1d9bf0";
+  const bg2 = bubble.bgColor2 || bg1;
+  const textColor = bubble.textColor || "#ffffff";
+  const padX = Math.max(14, Math.round(height * 0.32));
+  const padY = Math.max(8, Math.round(height * 0.18));
+  const imageSize = bubble.imageUrl ? Math.max(16, height - padY * 2) : 0;
+  const textX = bubble.imageUrl ? padX + imageSize + 8 : padX;
+  const fontSize = estimateBubbleFontSize(text, width - (bubble.imageUrl ? imageSize + 8 : 0), height, bubble.fontSize);
+  const tailSize = Math.max(10, Math.round(height * 0.18));
+  const tail = bubble.tail ?? "down";
+  const gradient = bg1 !== bg2;
+
+  const rectFill = gradient
+    ? { fillLinearGradientStartPoint: { x: 0, y: 0 }, fillLinearGradientEndPoint: { x: width, y: height }, fillLinearGradientColorStops: [0, bg1, 1, bg2] }
+    : { fill: bg1 };
+
+  return (
+    <Group listening={false}>
+      <Rect width={width} height={height} cornerRadius={height / 2} shadowColor="rgba(0,0,0,0.28)" shadowBlur={14} shadowOffsetY={4} shadowOpacity={0.5} {...rectFill} />
+      {tail !== "none" && (
+        <Line
+          closed
+          points={
+            tail === "up"
+              ? [width / 2 - tailSize, 1, width / 2 + tailSize, 1, width / 2, -tailSize]
+              : tail === "left"
+                ? [1, height / 2 - tailSize, 1, height / 2 + tailSize, -tailSize, height / 2]
+                : tail === "right"
+                  ? [width - 1, height / 2 - tailSize, width - 1, height / 2 + tailSize, width + tailSize, height / 2]
+                  : [width / 2 - tailSize, height - 1, width / 2 + tailSize, height - 1, width / 2, height + tailSize]
+          }
+          fill={tail === "up" || tail === "left" ? bg1 : bg2}
+        />
+      )}
+      {img && bubble.imageUrl && (
+        <KonvaImage image={img} x={padX} y={padY} width={imageSize} height={imageSize} cornerRadius={12} />
+      )}
+      <Text
+        x={textX}
+        y={padY}
+        width={Math.max(10, width - textX - padX)}
+        height={Math.max(10, height - padY * 2)}
+        text={text}
+        fontSize={fontSize}
+        fontStyle={bubble.bold === false ? "500" : "800"}
+        fill={textColor}
+        align="center"
+        verticalAlign="middle"
+        wrap="word"
+        ellipsis
+        listening={false}
+      />
+    </Group>
+  );
+}
+
+function AirMessagesPreview({ layer }: { layer: FlyerLayer }) {
+  const bubbles = layer.action?.payload?.bubbles || [];
+  if (layer.action?.type !== "air_messages" || bubbles.length === 0) return null;
+  const gap = 10;
+  const bubbleHeight = Math.max(28, (layer.size.height - gap * (bubbles.length - 1)) / bubbles.length);
+  return (
+    <Group x={layer.position.x} y={layer.position.y} opacity={0.95} listening={false}>
+      {bubbles.map((bubble, index) => (
+        <Group key={bubble.id} y={index * (bubbleHeight + gap)}>
+          <BubblePreview bubble={bubble} width={layer.size.width} height={bubbleHeight} />
+        </Group>
+      ))}
+    </Group>
+  );
+}
 
 export function Canvas() {
   const flyer = useEditorStore((s) => s.flyer);
@@ -272,14 +368,16 @@ export function Canvas() {
                   : cfg.delayMs + (cfg.stagger ? idx * cfg.staggerStepMs : 0);
                 const cx = l.position.x + l.size.width / 2;
                 const cy = l.position.y + l.size.height / 2;
-                const h = l.action?.highlight;
+                const effectiveAction = previewAction && previewAction.layerId === l.id ? previewAction.action : l.action;
+                const h = effectiveAction?.highlight;
                 const showHighlight =
                   (flyer.settings.highlightsEnabled ?? true) &&
-                  !!l.action &&
+                  !!effectiveAction &&
                   h?.enabled !== false &&
                   (h?.style ?? "pulse") !== "none";
                 const highlightShape: "rect" | "ellipse" =
                   l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
+                const renderLayer = effectiveAction === l.action ? l : { ...l, action: effectiveAction };
                 return (
                   <IntroAnimatedGroup
                     key={l.id}
@@ -301,7 +399,8 @@ export function Canvas() {
                         else delete nodeRefs.current[l.id];
                       }}
                     />
-                    {showHighlight && <HighlightOverlay layer={l} shape={highlightShape} />}
+                    {effectiveAction?.type === "air_messages" && <AirMessagesPreview layer={renderLayer} />}
+                    {showHighlight && <HighlightOverlay layer={renderLayer} shape={highlightShape} />}
                   </IntroAnimatedGroup>
                 );
               })}
@@ -415,59 +514,6 @@ export function Canvas() {
             )}
           </Stage>
 
-          {/* Air-message DOM overlay — preview each air_messages action where its layer sits.
-              pointer-events: none so the underlying Konva layer remains selectable/draggable/resizable. */}
-          <div
-            style={{
-              position: "absolute", inset: 0, pointerEvents: "none",
-              transform: `scale(${zoom})`, transformOrigin: "top left",
-              width: W, height: H,
-            }}
-          >
-            {sortedLayers
-              .map((l) => {
-                // For the selected layer, prefer the live (uncommitted) draft from
-                // the action editor so users see their changes without saving first.
-                const effective = (previewAction && previewAction.layerId === l.id)
-                  ? previewAction.action
-                  : l.action;
-                if (!effective || effective.type !== "air_messages") return null;
-                const bubbles = effective.payload?.bubbles || [];
-                if (bubbles.length === 0) return null;
-                const gap = 10;
-                const perBubbleHeight = Math.max(28, (l.size.height - gap * (bubbles.length - 1)) / bubbles.length);
-                const isSel = selectedLayerId === l.id;
-                return (
-                  <div
-                    key={"air-" + l.id}
-                    style={{
-                      position: "absolute",
-                      left: l.position.x,
-                      top: l.position.y,
-                      width: l.size.width,
-                      height: l.size.height,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      outline: isSel ? "1.5px dashed hsl(var(--primary))" : "none",
-                      outlineOffset: 2,
-                    }}
-                  >
-                    {bubbles.map((b) => (
-                      <AirBubble
-                        key={b.id}
-                        bubble={b}
-                        maxWidth={l.size.width}
-                        fitHeight={perBubbleHeight}
-                        preview
-                      />
-                    ))}
-                  </div>
-                );
-              })}
-          </div>
         </div>
       </div>
     </div>
