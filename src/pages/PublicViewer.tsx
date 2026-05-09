@@ -850,48 +850,52 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       if (introPlayedRef.current) return;
       try {
         el.muted = false;
+        el.currentTime = 0;
         await el.play();
         introPlayedRef.current = true;
         setAudioInfo({ url, loop });
         setIntroNeedsTap(false);
       } catch {
-        // Unmuted autoplay blocked — start muted so the track is rolling, and
-        // show an unmute prompt that doesn't interfere with pinch/pan.
-        try {
-          el.muted = true;
-          await el.play();
-          introPlayedRef.current = true;
-          setAudioInfo({ url, loop });
-          setIntroNeedsTap(true);
-          // Unmute on the very first user interaction of any kind so the
-          // viewer never has to find a specific "tap to unmute" button.
-          const unmute = () => {
-            try {
-              el.muted = false;
-              if (el.paused) el.play().catch(() => {});
+        // Unmuted autoplay blocked (mobile Safari / Chrome). Do NOT fall back
+        // to muted autoplay — that causes the track to advance silently and
+        // become audible mid-song after the first tap. Instead, keep the
+        // audio paused at 0:00 and let the first user gesture start it.
+        try { el.pause(); } catch { /* noop */ }
+        el.currentTime = 0;
+        setIntroNeedsTap(true);
+
+        // First user interaction of any kind: start playback synchronously
+        // from the beginning. Must run inside the gesture handler so the
+        // play() call is allowed by the browser.
+        const startFromTap = () => {
+          try {
+            el.muted = false;
+            el.currentTime = 0;
+            const p = el.play();
+            if (p && typeof p.then === "function") {
+              p.then(() => {
+                introPlayedRef.current = true;
+                setAudioInfo({ url, loop });
+                setIntroNeedsTap(false);
+              }).catch(() => { /* user can tap the prompt button */ });
+            } else {
+              introPlayedRef.current = true;
+              setAudioInfo({ url, loop });
               setIntroNeedsTap(false);
-            } catch {
-              /* noop */
             }
-            cleanup();
-          };
-          const cleanup = () => {
-            window.removeEventListener("pointerdown", unmute, true);
-            window.removeEventListener("touchstart", unmute, true);
-            window.removeEventListener("touchend", unmute, true);
-            window.removeEventListener("mousedown", unmute, true);
-            window.removeEventListener("keydown", unmute, true);
-            window.removeEventListener("wheel", unmute, true);
-          };
-          window.addEventListener("pointerdown", unmute, true);
-          window.addEventListener("touchstart", unmute, true);
-          window.addEventListener("touchend", unmute, true);
-          window.addEventListener("mousedown", unmute, true);
-          window.addEventListener("keydown", unmute, true);
-          window.addEventListener("wheel", unmute, true);
-        } catch {
-          setIntroNeedsTap(true);
-        }
+          } catch { /* noop */ }
+          cleanup();
+        };
+        const cleanup = () => {
+          window.removeEventListener("pointerdown", startFromTap, true);
+          window.removeEventListener("touchend", startFromTap, true);
+          window.removeEventListener("mousedown", startFromTap, true);
+          window.removeEventListener("keydown", startFromTap, true);
+        };
+        window.addEventListener("pointerdown", startFromTap, true);
+        window.addEventListener("touchend", startFromTap, true);
+        window.addEventListener("mousedown", startFromTap, true);
+        window.addEventListener("keydown", startFromTap, true);
       }
     };
 
@@ -1382,13 +1386,19 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             const el = audioRef.current;
             if (el) {
               el.muted = false;
-              el.play().catch(() => {});
+              el.currentTime = 0;
+              el.play()
+                .then(() => {
+                  introPlayedRef.current = true;
+                  setAudioInfo({ url: el.src, loop: el.loop });
+                })
+                .catch(() => {});
             }
             setIntroNeedsTap(false);
           }}
           className="fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card/95 px-4 py-2 text-xs font-medium shadow-elegant backdrop-blur"
         >
-          🔊 Tap to unmute
+          🔊 Tap to play audio
         </button>
       )}
       {/* Audio mini-player — small pill at top-left so it never overlaps canvas buttons */}
