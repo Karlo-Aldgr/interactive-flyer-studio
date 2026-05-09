@@ -1390,14 +1390,14 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           🔊 Tap to unmute
         </button>
       )}
-      {/* Audio mini-player (fixed bottom) */}
+      {/* Audio mini-player — small pill at top-left so it never overlaps canvas buttons */}
       {audioInfo && (
-        <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-card/95 px-4 py-2 shadow-elegant backdrop-blur">
-          <span className="text-xs font-medium">♪ Now playing{audioInfo.loop ? " (loop)" : ""}</span>
+        <div className="fixed top-3 left-3 z-50 flex items-center gap-2 rounded-full border border-border bg-card/95 px-2.5 py-1 shadow-elegant backdrop-blur">
+          <span className="text-[11px] font-medium">♪{audioInfo.loop ? " loop" : ""}</span>
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 px-2 text-xs"
+            className="h-6 px-2 text-[11px]"
             onClick={() => {
               audioRef.current?.pause();
               if (audioRef.current) audioRef.current.currentTime = 0;
