@@ -159,6 +159,195 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
   return <Rect {...common} cornerRadius={layer.style.cornerRadius || 8} />;
 }
 
+// ---------------------------------------------------------------------------
+// Konva-rendered air-message bubbles — kept inside the Stage so they respect
+// per-layer z_index ordering (the previous HTML overlay always sat above
+// every layer, breaking layering for images placed on top of bubbles).
+// ---------------------------------------------------------------------------
+
+function applyBubbleCase(text: string, c?: string): string {
+  if (c === "upper") return text.toUpperCase();
+  if (c === "lower") return text.toLowerCase();
+  return text;
+}
+
+function estimateBubbleFontSize(text: string, width: number, height: number, manual?: number) {
+  if (manual) return manual;
+  const availableW = Math.max(16, width - Math.max(28, height * 0.64));
+  const availableH = Math.max(12, height - Math.max(16, height * 0.36));
+  let size = Math.min(36, Math.max(14, availableH * 0.62));
+  while (size > 12) {
+    const charsPerLine = Math.max(1, Math.floor(availableW / (size * 0.56)));
+    const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
+    if (lines * size * 1.05 <= availableH + 2) break;
+    size -= 1;
+  }
+  return size;
+}
+
+function KonvaBubble({
+  bubble, width, height, interactive, onTap,
+}: {
+  bubble: AirMessageBubble;
+  width: number;
+  height: number;
+  interactive: boolean;
+  onTap: () => void;
+}) {
+  const [img] = useImage(bubble.imageUrl || "", "anonymous");
+  const text = applyBubbleCase(bubble.text || "", bubble.textCase);
+  const bg1 = bubble.bgColor || "#1d9bf0";
+  const bg2 = bubble.bgColor2 || bg1;
+  const textColor = bubble.textColor || "#ffffff";
+  const padX = Math.max(14, Math.round(height * 0.32));
+  const padY = Math.max(8, Math.round(height * 0.18));
+  const imageSize = bubble.imageUrl ? Math.max(16, height - padY * 2) : 0;
+  const textX = bubble.imageUrl ? padX + imageSize + 8 : padX;
+  const fontSize = estimateBubbleFontSize(text, width - (bubble.imageUrl ? imageSize + 8 : 0), height, bubble.fontSize);
+  const tailSize = Math.max(10, Math.round(height * 0.18));
+  const tail = bubble.tail ?? "down";
+  const gradient = bg1 !== bg2;
+
+  const rectFill: any = gradient
+    ? { fillLinearGradientStartPoint: { x: 0, y: 0 }, fillLinearGradientEndPoint: { x: width, y: height }, fillLinearGradientColorStops: [0, bg1, 1, bg2] }
+    : { fill: bg1 };
+
+  const handleEnter = (e: any) => {
+    if (!interactive) return;
+    const stage = e.target.getStage();
+    if (stage) stage.container().style.cursor = "pointer";
+  };
+  const handleLeave = (e: any) => {
+    const stage = e.target.getStage();
+    if (stage) stage.container().style.cursor = "default";
+  };
+
+  return (
+    <Group
+      onClick={interactive ? onTap : undefined}
+      onTap={interactive ? onTap : undefined}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      listening={interactive}
+    >
+      <Rect width={width} height={height} cornerRadius={height / 2} shadowColor="rgba(0,0,0,0.28)" shadowBlur={14} shadowOffsetY={4} shadowOpacity={0.5} {...rectFill} />
+      {tail !== "none" && (
+        <Line
+          closed
+          points={
+            tail === "up"
+              ? [width / 2 - tailSize, 1, width / 2 + tailSize, 1, width / 2, -tailSize]
+              : tail === "left"
+                ? [1, height / 2 - tailSize, 1, height / 2 + tailSize, -tailSize, height / 2]
+                : tail === "right"
+                  ? [width - 1, height / 2 - tailSize, width - 1, height / 2 + tailSize, width + tailSize, height / 2]
+                  : [width / 2 - tailSize, height - 1, width / 2 + tailSize, height - 1, width / 2, height + tailSize]
+          }
+          fill={tail === "up" || tail === "left" ? bg1 : bg2}
+        />
+      )}
+      {img && bubble.imageUrl && (
+        <KonvaImage image={img} x={padX} y={padY} width={imageSize} height={imageSize} cornerRadius={12} />
+      )}
+      <Text
+        x={textX}
+        y={padY}
+        width={Math.max(10, width - textX - padX)}
+        height={Math.max(10, height - padY * 2)}
+        text={text}
+        fontSize={fontSize}
+        fontStyle={bubble.bold === false ? "500" : "800"}
+        fill={textColor}
+        align="center"
+        verticalAlign="middle"
+        wrap="word"
+        ellipsis
+        listening={false}
+      />
+    </Group>
+  );
+}
+
+function KonvaAirMessages({
+  action, sourceLayer, canvasW, canvasH, onClose, onRunBubbleAction,
+}: {
+  action: LayerAction;
+  sourceLayer: Layer | null;
+  canvasW: number;
+  canvasH: number;
+  onClose: () => void;
+  onRunBubbleAction: (a: LayerAction) => void;
+}) {
+  const bubbles: AirMessageBubble[] = action.payload.bubbles || [];
+  const stagger = action.payload.bubbleStaggerMs ?? 900;
+  const startDelay = Math.max(0, action.payload.bubbleStartDelayMs ?? 0);
+  const [visible, setVisible] = useState(0);
+
+  useEffect(() => {
+    setVisible(0);
+    const timers: number[] = [];
+    bubbles.forEach((b, i) => {
+      const t = (typeof b.delayMs === "number" ? b.delayMs : i * stagger) + 250 + startDelay;
+      timers.push(window.setTimeout(() => {
+        setVisible((v) => Math.max(v, i + 1));
+      }, t));
+    });
+    return () => timers.forEach((t) => clearTimeout(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [action.id]);
+
+  const rect = sourceLayer
+    ? { x: sourceLayer.position.x, y: sourceLayer.position.y, width: sourceLayer.size.width, height: sourceLayer.size.height }
+    : { x: canvasW * 0.08, y: canvasH * 0.35, width: canvasW * 0.84, height: canvasH * 0.30 };
+
+  const gap = 10;
+  const count = Math.max(1, bubbles.length);
+  const perBubbleHeight = Math.max(28, (rect.height - gap * (count - 1)) / count);
+  const closeR = 11;
+
+  return (
+    <Group x={rect.x} y={rect.y}>
+      {bubbles.slice(0, visible).map((b, i) => {
+        const hasAction = !!b.action;
+        return (
+          <Group key={b.id} y={i * (perBubbleHeight + gap)}>
+            <KonvaBubble
+              bubble={b}
+              width={rect.width}
+              height={perBubbleHeight}
+              interactive={hasAction}
+              onTap={() => hasAction && onRunBubbleAction(b.action!)}
+            />
+          </Group>
+        );
+      })}
+      {/* Close button — top-right of the bubble cluster */}
+      <Group
+        x={rect.width - closeR}
+        y={-closeR}
+        onClick={onClose}
+        onTap={onClose}
+        onMouseEnter={(e: any) => { const s = e.target.getStage(); if (s) s.container().style.cursor = "pointer"; }}
+        onMouseLeave={(e: any) => { const s = e.target.getStage(); if (s) s.container().style.cursor = "default"; }}
+      >
+        <Circle radius={closeR} fill="rgba(0,0,0,0.55)" />
+        <Text
+          x={-closeR}
+          y={-closeR}
+          width={closeR * 2}
+          height={closeR * 2}
+          text="×"
+          fill="#fff"
+          fontSize={closeR * 1.5}
+          align="center"
+          verticalAlign="middle"
+          listening={false}
+        />
+      </Group>
+    </Group>
+  );
+}
+
 function ImageNode({ layer, props }: { layer: Layer; props: any }) {
   const [img] = useImage(layer.content.src ?? "", "anonymous");
   return <KonvaImage {...props} image={img} cornerRadius={layer.style.cornerRadius} />;
