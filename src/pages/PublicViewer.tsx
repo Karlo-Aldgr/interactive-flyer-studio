@@ -592,6 +592,44 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     })();
   }, [slug, flyerId, previewMode]);
 
+  // Dynamically set document title and OG meta tags so social previews
+  // (iMessage, etc. — anything that executes JS) match the actual flyer.
+  useEffect(() => {
+    if (!flyer) return;
+    const title = flyer.title || "Flyer";
+    const description = `View "${title}" — interactive flyer.`;
+    const image =
+      (flyer as any).thumbnail_url ||
+      `${window.location.origin}/og.png`;
+    const url = window.location.href;
+
+    const prevTitle = document.title;
+    document.title = title;
+
+    const setMeta = (selector: string, attr: string, name: string, content: string) => {
+      let tag = document.head.querySelector<HTMLMetaElement>(selector);
+      if (!tag) {
+        tag = document.createElement("meta");
+        tag.setAttribute(attr, name);
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute("content", content);
+    };
+
+    setMeta(`meta[property="og:title"]`, "property", "og:title", title);
+    setMeta(`meta[property="og:description"]`, "property", "og:description", description);
+    setMeta(`meta[property="og:image"]`, "property", "og:image", image);
+    setMeta(`meta[property="og:url"]`, "property", "og:url", url);
+    setMeta(`meta[name="description"]`, "name", "description", description);
+    setMeta(`meta[name="twitter:title"]`, "name", "twitter:title", title);
+    setMeta(`meta[name="twitter:description"]`, "name", "twitter:description", description);
+    setMeta(`meta[name="twitter:image"]`, "name", "twitter:image", image);
+
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [flyer]);
+
   function logClick(layer: Layer | null, type: string) {
     if (!flyer || previewMode) return;
     supabase.from("analytics_events").insert([{
