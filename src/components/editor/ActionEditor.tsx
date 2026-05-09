@@ -95,6 +95,8 @@ function isValid(draft: LayerAction | null): boolean {
       return !!(p.bubbles && p.bubbles.some((b) => b.text || b.imageUrl));
     case "poll":
       return !!(p.pollQuestion && p.pollOptions && p.pollOptions.filter((o) => o.label?.trim()).length >= 2);
+    case "subscribe":
+      return true;
     default: return true;
   }
 }
