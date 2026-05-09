@@ -1,37 +1,22 @@
-## What I found
+## Goal
+Make the shared link preview image match what's shown in the editor — no white/background padding around the flyer.
 
-The flyer is loading and the audio is already playing, but on mobile the interactive canvas controls are unreliable:
+## Cause
+`src/lib/thumbnail.ts` currently composes the share image into a fixed 1200×630 canvas and **contains** the flyer inside it, filling the leftover space with the flyer background color. That's the "extra padding" appearing in link previews. The Cloudflare share worker and `index.html` also hardcode `og:image:width=1200` / `height=630`.
 
-- The yellow **subscribe** button is drawn inside Konva, but tapping it is likely being blocked by the separate highlight canvas layer sitting above the content.
-- The red air-message bubble has an action, but it is rendered inside the same Konva stage and needs more reliable mobile tap handling.
-- The hover/highlight behavior is currently disabled for the red/yellow areas because their action highlight style is set to `none`, so there is no visible hover/tap cue.
-- The audio prompt should not stay visible as “tap to start/unmute” once the audio is already playing.
+## Changes
 
-## Plan
+1. **`src/lib/thumbnail.ts`**
+   - Replace `composeSocialImage` so the output canvas matches the flyer's own aspect ratio (scaled so the longest side ≤ 1200px). No letterbox bars, no background fill — just the flyer pixels.
+   - Update `stageToSocialDataURL` to render at the flyer's native aspect at up to 1200px on the longest side.
+   - `uploadManualThumbnail` (used when a user uploads their own preview image): stop forcing 1200×630 with padding — preserve the uploaded image's aspect ratio (still cap longest side at 1200 for size).
 
-1. **Fix touch/click events in the public flyer viewer**
-   - Change the highlight overlay layer so it cannot sit above and steal mobile taps.
-   - Keep highlights visible but render them behind or non-blocking relative to clickable content.
-   - Make all actionable Konva groups explicitly interactive with `listening`, `onClick`, `onTap`, and pointer/touch handlers.
+2. **`worker/share-worker.js`**
+   - Remove the hardcoded `og:image:width=1200` / `og:image:height=630` meta tags (or omit dimensions). Social platforms will display the image at its real ratio without padding.
 
-2. **Make subscribe button taps reliable**
-   - Ensure button actions fire from the whole button group, not only from its background rect.
-   - Add a transparent hit rectangle if needed so the full button area is tappable on mobile.
-   - Verify tapping the yellow subscribe button opens the subscribe dialog.
+3. **`index.html`**
+   - Remove the hardcoded `og:image:width` / `og:image:height` for the site-wide default OG image, so per-flyer images aren't forced into 1.91:1 framing by stale defaults. (The default `og.png` itself is unchanged.)
 
-3. **Make red air-message bubble taps reliable**
-   - Add a full-size hit area to each air-message bubble so the entire bubble responds to taps.
-   - Ensure nested bubble actions call `executeAction`, including subscribe actions.
-   - Verify the red bubble opens its subscribe flow.
-
-4. **Restore visible hover/tap indication**
-   - If an action has `highlight.style: none`, don’t show a pulsing border, but still allow a subtle mobile-friendly active/hover cursor state.
-   - Add pointer cursor for actionable layers on desktop and tap feedback on mobile.
-
-5. **Remove the lingering audio prompt**
-   - Hide the “tap to unmute/start” prompt whenever audio is already playing.
-   - Keep the mini-player only, so users see **Now playing / Stop** without a confusing extra tap prompt.
-
-6. **Validate on mobile viewport**
-   - Open the published flyer route at mobile size.
-   - Test: audio prompt gone, yellow subscribe opens dialog, red bubble opens subscribe/action, and interactive regions show a cue.
+## Notes
+- Existing thumbnails already uploaded with padding will keep their padding until the user re-publishes / regenerates the preview. New publishes will look like the editor.
+- Facebook/Messenger/WhatsApp accept arbitrary image aspect ratios; they'll crop to their own preview frame but won't add background padding around the flyer.

@@ -1,8 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const TARGET_W = 1200;
-const TARGET_H = 630;
+const MAX_DIM = 1200;
 const BUCKET = "flyer-thumbnails";
+
+function fitDims(w: number, h: number, max = MAX_DIM) {
+  const scale = Math.min(1, max / Math.max(w, h));
+  return { w: Math.round(w * scale), h: Math.round(h * scale) };
+}
 
 export function thumbnailStoragePath(flyerId: string) {
   return `${flyerId}.jpg`;
@@ -13,26 +17,14 @@ export function thumbnailPublicUrl(ownerId: string, flyerId: string) {
   return data.publicUrl;
 }
 
-function drawContainedImage(img: HTMLImageElement, background = "#ffffff"): Blob | PromiseLike<Blob> {
+function drawContainedImage(img: HTMLImageElement, _background = "#ffffff"): Blob | PromiseLike<Blob> {
+  // Preserve the source image's own aspect ratio — no padding.
+  const { w, h } = fitDims(img.naturalWidth, img.naturalHeight);
   const out = document.createElement("canvas");
-  out.width = TARGET_W;
-  out.height = TARGET_H;
+  out.width = w;
+  out.height = h;
   const ctx = out.getContext("2d")!;
-  ctx.fillStyle = background;
-  ctx.fillRect(0, 0, TARGET_W, TARGET_H);
-
-  const imgAspect = img.naturalWidth / img.naturalHeight;
-  const targetAspect = TARGET_W / TARGET_H;
-  let dw: number;
-  let dh: number;
-  if (imgAspect > targetAspect) {
-    dw = TARGET_W;
-    dh = TARGET_W / imgAspect;
-  } else {
-    dh = TARGET_H;
-    dw = TARGET_H * imgAspect;
-  }
-  ctx.drawImage(img, (TARGET_W - dw) / 2, (TARGET_H - dh) / 2, dw, dh);
+  ctx.drawImage(img, 0, 0, w, h);
 
   return new Promise<Blob>((resolve, reject) => {
     out.toBlob(
@@ -44,7 +36,8 @@ function drawContainedImage(img: HTMLImageElement, background = "#ffffff"): Blob
 }
 
 /**
- * Render a Konva stage to a JPEG dataURL covering the flyer page in native pixels.
+ * Render a Konva stage to a JPEG dataURL at the flyer's native aspect ratio
+ * (longest side capped at MAX_DIM).
  */
 export function stageToSocialDataURL(
   stage: any,
@@ -53,7 +46,8 @@ export function stageToSocialDataURL(
   _background: string
 ): string | null {
   if (!stage) return null;
-  const stagePixelRatio = Math.min(2, Math.max(1, TARGET_W / flyerW));
+  const { w: targetW } = fitDims(flyerW, flyerH);
+  const stagePixelRatio = Math.min(2, Math.max(1, targetW / flyerW));
   const scale = stage.scaleX() || 1;
   const dataUrl: string = stage.toDataURL({
     x: 0,
@@ -71,32 +65,17 @@ export async function composeSocialImage(
   rawDataUrl: string,
   flyerW: number,
   flyerH: number,
-  background: string
+  _background: string
 ): Promise<Blob> {
   const img = await loadImage(rawDataUrl);
 
+  // Output the flyer at its own aspect ratio — no letterbox padding.
+  const { w, h } = fitDims(flyerW, flyerH);
   const out = document.createElement("canvas");
-  out.width = TARGET_W;
-  out.height = TARGET_H;
+  out.width = w;
+  out.height = h;
   const ctx = out.getContext("2d")!;
-  ctx.fillStyle = background || "#ffffff";
-  ctx.fillRect(0, 0, TARGET_W, TARGET_H);
-
-  // Fit (contain) the flyer inside 1200x630
-  const flyerAspect = flyerW / flyerH;
-  const targetAspect = TARGET_W / TARGET_H;
-  let dw: number;
-  let dh: number;
-  if (flyerAspect > targetAspect) {
-    dw = TARGET_W;
-    dh = TARGET_W / flyerAspect;
-  } else {
-    dh = TARGET_H;
-    dw = TARGET_H * flyerAspect;
-  }
-  const dx = (TARGET_W - dw) / 2;
-  const dy = (TARGET_H - dh) / 2;
-  ctx.drawImage(img, dx, dy, dw, dh);
+  ctx.drawImage(img, 0, 0, w, h);
 
   return await new Promise<Blob>((resolve, reject) => {
     out.toBlob(
