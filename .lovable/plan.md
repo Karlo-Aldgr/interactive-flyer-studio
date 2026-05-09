@@ -1,16 +1,17 @@
 Plan:
 
-1. Update `src/pages/PublicViewer.tsx` intro-audio fallback:
-   - Stop using muted autoplay as the mobile fallback.
-   - If unmuted autoplay is blocked, reset `currentTime` to `0`, keep the audio paused, and show the existing start/unmute prompt.
-   - Do not mark the intro as played until audible playback actually starts.
+1. Make shared preview images use the actual flyer crop only:
+   - Keep the thumbnail generator output at the flyer’s own aspect ratio with no white/letterbox background.
+   - Ensure regenerated thumbnails overwrite the stored preview image for the flyer.
 
-2. Make the first user tap start the intro audio from the beginning:
-   - Replace the global “unmute while already playing” handlers with a single gesture handler that sets `currentTime = 0`, unmutes, and calls `play()` directly inside the tap/click event.
-   - Keep the prompt hidden after successful playback and show the mini-player only when audible audio is playing.
+2. Make the share dialog preview match the real flyer instead of stretching inside a wide preview card:
+   - Change the preview image display so it is shown at its natural flyer aspect ratio, centered, without adding white side gutters.
+   - Keep the upload/regenerate buttons the same.
 
-3. Update the prompt text from “Tap to unmute” to a clearer start-audio label, because on mobile the audio will no longer be secretly playing muted in the background.
+3. Refresh the current flyer’s preview:
+   - Regenerate the social preview from page 1 after the code change.
+   - You’ll still need to copy/share the published `/f/...` link again; some apps cache link previews, so Messenger/iMessage may need a fresh paste or their cache to expire.
 
 Technical details:
-- This avoids the browser behavior you’re seeing: the audio timeline starts muted on page load, then becomes audible mid-track after a tap.
-- Mobile browsers still require a user gesture for audible audio, but the first tap will now start from `0:00` instead of unmuting halfway through.
+- The screenshot is showing a `1200×630` default/social-card-style image with the portrait flyer centered and white on both sides.
+- The code already started moving generated thumbnails away from `1200×630`; this pass will make the UI and regeneration path consistently use the flyer-only image.

@@ -140,10 +140,9 @@ export function TopBar({ saving }: Props) {
 
   function openShare() {
     setShareOpen(true);
-    // Auto-generate if missing.
-    if (!flyer?.thumbnail_url) {
-      void ensureThumbnail(false);
-    }
+    // Always regenerate so any old letterboxed/padded preview gets replaced
+    // with a flyer-only image at the flyer's native aspect ratio.
+    void ensureThumbnail(true);
   }
 
   async function togglePublish() {
