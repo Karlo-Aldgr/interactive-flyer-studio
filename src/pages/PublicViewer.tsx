@@ -813,19 +813,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     if (phoneRequired && !phone) return toast.error("Please enter your phone");
     if (name.length > 200 || email.length > 320 || phone.length > 40) return toast.error("Input too long");
     setSubscribing(true);
-    const { error } = await supabase.from("subscribers").upsert(
-      [{
-        flyer_id: flyer.id,
-        name: name || null,
-        email: email.toLowerCase(),
-        phone: phoneEnabled && phone ? phone : null,
-        list_name: p.subscribeListName || null,
-        source: "subscribe",
-      }],
-      { onConflict: "flyer_id,email", ignoreDuplicates: false } as any,
-    );
+    const { error } = await supabase.from("subscribers").insert([{
+      flyer_id: flyer.id,
+      name: name || null,
+      email: email.toLowerCase(),
+      phone: phoneEnabled && phone ? phone : null,
+      list_name: p.subscribeListName || null,
+      source: "subscribe",
+    }]);
     setSubscribing(false);
-    if (error) {
+    if (error && (error as any).code !== "23505") {
       console.error("[subscribe]", error);
       toast.error("Could not subscribe — try again");
       return;
