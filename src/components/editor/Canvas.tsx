@@ -70,10 +70,15 @@ export function Canvas() {
     }
   }, [drawMode, pendingCrop, W, H]);
 
-  const sortedLayers = useMemo(
-    () => (page ? [...page.layers].sort((a, b) => a.z_index - b.z_index) : []),
-    [page]
-  );
+  const sortedLayers = useMemo(() => {
+    if (!page) return [];
+    const layerOrder = new Map(page.layers.map((layer, index) => [layer.id, index]));
+    return [...page.layers].sort((a, b) =>
+      a.z_index === b.z_index
+        ? (layerOrder.get(b.id) ?? 0) - (layerOrder.get(a.id) ?? 0)
+        : a.z_index - b.z_index
+    );
+  }, [page]);
 
   useEffect(() => {
     if (!trRef.current) return;
@@ -267,6 +272,14 @@ export function Canvas() {
                   : cfg.delayMs + (cfg.stagger ? idx * cfg.staggerStepMs : 0);
                 const cx = l.position.x + l.size.width / 2;
                 const cy = l.position.y + l.size.height / 2;
+                const h = l.action?.highlight;
+                const showHighlight =
+                  (flyer.settings.highlightsEnabled ?? true) &&
+                  !!l.action &&
+                  h?.enabled !== false &&
+                  (h?.style ?? "pulse") !== "none";
+                const highlightShape: "rect" | "ellipse" =
+                  l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
                 return (
                   <IntroAnimatedGroup
                     key={l.id}
@@ -288,24 +301,10 @@ export function Canvas() {
                         else delete nodeRefs.current[l.id];
                       }}
                     />
+                    {showHighlight && <HighlightOverlay layer={l} shape={highlightShape} />}
                   </IntroAnimatedGroup>
                 );
               })}
-              {/* Live preview of tap highlights for layers with actions */}
-              {(flyer.settings.highlightsEnabled ?? true) &&
-                sortedLayers
-                  .filter((l) => {
-                    const h = l.action?.highlight;
-                    if (!l.action) return false;
-                    if (h?.enabled === false) return false;
-                    if ((h?.style ?? "pulse") === "none") return false;
-                    return true;
-                  })
-                  .map((l) => {
-                    const shape: "rect" | "ellipse" =
-                      l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
-                    return <HighlightOverlay key={"hl-" + l.id} layer={l} shape={shape} />;
-                  })}
               {previewRect && (
                 drawMode === "hotspot-ellipse" ? (
                   <Ellipse
