@@ -79,6 +79,11 @@ const snap = (pages: FlyerPage[]): Snapshot => ({
   pages: JSON.parse(JSON.stringify(pages)),
 });
 
+const orderLayersByZ = (layers: Layer[]) =>
+  [...layers].sort((a, b) => (a.z_index === b.z_index ? layers.indexOf(a) - layers.indexOf(b) : a.z_index - b.z_index));
+
+const resequenceLayers = (layers: Layer[]) => layers.map((layer, z_index) => ({ ...layer, z_index }));
+
 export const useEditorStore = create<EditorState>((set, get) => ({
   flyer: null,
   pages: [],
@@ -461,17 +466,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => {
         if (!p.layers.some((l) => l.id === id)) return p;
-        const sorted = [...p.layers].sort((a, b) => a.z_index - b.z_index);
+        const sorted = orderLayersByZ(p.layers);
         const idx = sorted.findIndex((l) => l.id === id);
         if (idx < 0 || idx === sorted.length - 1) return p;
-        const a = sorted[idx];
-        const b = sorted[idx + 1];
-        const layers = p.layers.map((l) => {
-          if (l.id === a.id) return { ...l, z_index: b.z_index };
-          if (l.id === b.id) return { ...l, z_index: a.z_index };
-          return l;
-        });
-        return { ...p, layers };
+        const reordered = [...sorted];
+        [reordered[idx], reordered[idx + 1]] = [reordered[idx + 1], reordered[idx]];
+        return { ...p, layers: resequenceLayers(reordered) };
       }),
       past,
       future: [],
@@ -485,17 +485,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => {
         if (!p.layers.some((l) => l.id === id)) return p;
-        const sorted = [...p.layers].sort((a, b) => a.z_index - b.z_index);
+        const sorted = orderLayersByZ(p.layers);
         const idx = sorted.findIndex((l) => l.id === id);
         if (idx <= 0) return p;
-        const a = sorted[idx];
-        const b = sorted[idx - 1];
-        const layers = p.layers.map((l) => {
-          if (l.id === a.id) return { ...l, z_index: b.z_index };
-          if (l.id === b.id) return { ...l, z_index: a.z_index };
-          return l;
-        });
-        return { ...p, layers };
+        const reordered = [...sorted];
+        [reordered[idx - 1], reordered[idx]] = [reordered[idx], reordered[idx - 1]];
+        return { ...p, layers: resequenceLayers(reordered) };
       }),
       past,
       future: [],
