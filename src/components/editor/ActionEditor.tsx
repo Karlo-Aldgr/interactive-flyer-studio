@@ -1138,6 +1138,87 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
           </>
         )}
 
+        {type === "subscribe" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">
+              Collect name + email signups. Subscribers appear in your Subscribers list (top bar) where you can export to Excel/CSV or compose a mass email.
+            </p>
+            <div>
+              <Label className="text-xs">Title</Label>
+              <Input
+                className="mt-1"
+                value={p.subscribeTitle || ""}
+                placeholder="Join our list"
+                onChange={(e) => update({ subscribeTitle: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Body</Label>
+              <Textarea
+                className="mt-1"
+                rows={2}
+                value={p.subscribeBody || ""}
+                placeholder="Get updates straight to your inbox."
+                onChange={(e) => update({ subscribeBody: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Button label</Label>
+                <Input
+                  className="mt-1"
+                  value={p.subscribeButtonLabel || ""}
+                  placeholder="Subscribe"
+                  onChange={(e) => update({ subscribeButtonLabel: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">List name (optional)</Label>
+                <Input
+                  className="mt-1"
+                  value={p.subscribeListName || ""}
+                  placeholder="Newsletter"
+                  onChange={(e) => update({ subscribeListName: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2 rounded border border-border p-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Require name</Label>
+                <Switch
+                  checked={p.subscribeNameRequired ?? true}
+                  onCheckedChange={(v) => update({ subscribeNameRequired: v })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Also collect phone</Label>
+                <Switch
+                  checked={!!p.subscribePhoneEnabled}
+                  onCheckedChange={(v) => update({ subscribePhoneEnabled: v })}
+                />
+              </div>
+              {p.subscribePhoneEnabled && (
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Phone required</Label>
+                  <Switch
+                    checked={!!p.subscribePhoneRequired}
+                    onCheckedChange={(v) => update({ subscribePhoneRequired: v })}
+                  />
+                </div>
+              )}
+            </div>
+            <div>
+              <Label className="text-xs">Success message</Label>
+              <Input
+                className="mt-1"
+                value={p.subscribeSuccessMessage || ""}
+                placeholder="You're in! Thanks for subscribing."
+                onChange={(e) => update({ subscribeSuccessMessage: e.target.value })}
+              />
+            </div>
+          </>
+        )}
+
         {type === "navigate" && (
           <div>
             <Label className="text-xs">Go to page</Label>
