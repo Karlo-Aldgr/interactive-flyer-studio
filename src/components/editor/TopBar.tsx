@@ -218,7 +218,7 @@ export function TopBar({ saving }: Props) {
       : viewerUrl;
 
   return (
-    <header className="flex h-14 items-center gap-3 border-b border-border bg-card px-3">
+    <header className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
       <Button asChild variant="ghost" size="sm">
         <Link to="/dashboard"><ChevronLeft className="mr-1 h-4 w-4" />Dashboard</Link>
       </Button>
