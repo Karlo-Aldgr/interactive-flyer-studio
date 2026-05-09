@@ -368,14 +368,16 @@ export function Canvas() {
                   : cfg.delayMs + (cfg.stagger ? idx * cfg.staggerStepMs : 0);
                 const cx = l.position.x + l.size.width / 2;
                 const cy = l.position.y + l.size.height / 2;
-                const h = l.action?.highlight;
+                const effectiveAction = previewAction && previewAction.layerId === l.id ? previewAction.action : l.action;
+                const h = effectiveAction?.highlight;
                 const showHighlight =
                   (flyer.settings.highlightsEnabled ?? true) &&
-                  !!l.action &&
+                  !!effectiveAction &&
                   h?.enabled !== false &&
                   (h?.style ?? "pulse") !== "none";
                 const highlightShape: "rect" | "ellipse" =
                   l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
+                const renderLayer = effectiveAction === l.action ? l : { ...l, action: effectiveAction };
                 return (
                   <IntroAnimatedGroup
                     key={l.id}
@@ -397,7 +399,8 @@ export function Canvas() {
                         else delete nodeRefs.current[l.id];
                       }}
                     />
-                    {showHighlight && <HighlightOverlay layer={l} shape={highlightShape} />}
+                    {effectiveAction?.type === "air_messages" && <AirMessagesPreview layer={renderLayer} />}
+                    {showHighlight && <HighlightOverlay layer={renderLayer} shape={highlightShape} />}
                   </IntroAnimatedGroup>
                 );
               })}
@@ -511,59 +514,6 @@ export function Canvas() {
             )}
           </Stage>
 
-          {/* Air-message DOM overlay — preview each air_messages action where its layer sits.
-              pointer-events: none so the underlying Konva layer remains selectable/draggable/resizable. */}
-          <div
-            style={{
-              position: "absolute", inset: 0, pointerEvents: "none",
-              transform: `scale(${zoom})`, transformOrigin: "top left",
-              width: W, height: H,
-            }}
-          >
-            {sortedLayers
-              .map((l) => {
-                // For the selected layer, prefer the live (uncommitted) draft from
-                // the action editor so users see their changes without saving first.
-                const effective = (previewAction && previewAction.layerId === l.id)
-                  ? previewAction.action
-                  : l.action;
-                if (!effective || effective.type !== "air_messages") return null;
-                const bubbles = effective.payload?.bubbles || [];
-                if (bubbles.length === 0) return null;
-                const gap = 10;
-                const perBubbleHeight = Math.max(28, (l.size.height - gap * (bubbles.length - 1)) / bubbles.length);
-                const isSel = selectedLayerId === l.id;
-                return (
-                  <div
-                    key={"air-" + l.id}
-                    style={{
-                      position: "absolute",
-                      left: l.position.x,
-                      top: l.position.y,
-                      width: l.size.width,
-                      height: l.size.height,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      outline: isSel ? "1.5px dashed hsl(var(--primary))" : "none",
-                      outlineOffset: 2,
-                    }}
-                  >
-                    {bubbles.map((b) => (
-                      <AirBubble
-                        key={b.id}
-                        bubble={b}
-                        maxWidth={l.size.width}
-                        fitHeight={perBubbleHeight}
-                        preview
-                      />
-                    ))}
-                  </div>
-                );
-              })}
-          </div>
         </div>
       </div>
     </div>
