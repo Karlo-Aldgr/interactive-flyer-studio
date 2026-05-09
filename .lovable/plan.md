@@ -1,46 +1,38 @@
-## Why the iPhone bubble looks like a giant circle
+# Fix: Air-message bubbles ignore layer order in preview
 
-`AirBubble` derives its visible geometry from many independent inputs that today are scaled inconsistently between editor and viewer:
+## Problem
 
-- `maxWidth` and `fitHeight` are passed in **scaled CSS px** (multiplied by viewport scale).
-- Manual `bubble.fontSize` is now also multiplied by `scale` (recent change).
-- But `padX`/`padY` use `Math.max(14, fitHeight * 0.32)` and `Math.max(8, fitHeight * 0.18)` — the `14`/`8` floors are absolute CSS px, so on small viewports padding stops scaling proportionally.
-- `tailSize` has the same `Math.max(10, …)` floor.
-- `MIN_READABLE = 14 * scale` — but the auto-fit branch uses `Math.max(MIN_READABLE, baseFontSize)` where `baseFontSize=22` is unscaled.
-- `width: fitHeight ? maxWidth : "auto"` forces the container to the full source-layer width even when the text is short, so any extra height from wrapping or padding turns a wide rounded-rect into a near-circle (border-radius is 9999).
+In the editor, the white hand image is the top layer and correctly renders above the "FOLLOW OUR TIKTOK PAGE" air-message bubble (photo 2). In Preview / published view (photo 1), the same hand image disappears behind the bubble.
 
-Result: on iPhone the floors dominate, padding and tail are oversized relative to the shrunk text, the bubble is forced to full source-width, and `border-radius: 9999` makes it render as a giant circle. In the editor PC preview none of the floors trigger so the pill looks correct.
+## Root cause
 
-## Fix: render the bubble in canvas coordinates, scale the wrapper
+`src/pages/PublicViewer.tsx` renders the page in two stacked layers:
 
-Instead of trying to multiply every internal dimension by `scale`, render the bubble at its **native canvas pixel size** (identical to editor PC) and apply a single CSS `transform: scale(scale)` on the wrapping div. This guarantees pixel-perfect parity with the editor PC view on every device — same paddings, same tail, same font, same radius, same wrap points.
+1. A Konva `<Stage>` containing all real layers (image, hotspot, text, etc.) sorted by `z_index`.
+2. An HTML `<AirMessagesInline>` overlay (lines ~800-815) rendered as a sibling `div` *after* the `<Stage>`.
 
-### Changes
+Because the overlay is a separate DOM node sitting on top of the canvas, every air-message bubble is always painted above every Konva layer, regardless of `z_index`. The editor was already fixed by moving the bubble previews into the Konva render loop; the viewer was not.
 
-**`src/components/AirBubble.tsx`**
-- Remove the `scale` prop and all `* scale` multiplications.
-- Restore `manualSize = bubble.fontSize` (no scale).
-- Restore `MIN_READABLE = 14`.
-- Keep the rest of the bubble logic unchanged (paddings, tail, radius, auto-fit) — they will operate on canvas-px values just like in the editor.
+## Fix
 
-**`src/pages/PublicViewer.tsx` (`AirMessagesInline`)**
-- Compute `rect` in **canvas px** (drop the `* scale`):
-  - `left/top/width/height = sourceLayer.position.x / .y / .size.width / .size.height` (unscaled).
-  - Fallback rect uses `canvasW * 0.08`, etc. (unscaled).
-- `gap = 10` (unscaled).
-- `perBubbleHeight` computed from unscaled `rect.height`.
-- Wrap the absolute-positioned overlay div in a parent that applies `transform: scale(scale)` with `transformOrigin: "0 0"`, and position that parent at `left: 0, top: 0, width: canvasW * scale, height: canvasH * scale` over the Stage.
-- Inner overlay div uses the unscaled `rect` values for `left/top/width/height`.
-- Pass `maxWidth={rect.width}` and `fitHeight={perBubbleHeight}` (now canvas px) to `<AirBubble>` — no `scale` prop.
+Mirror the editor approach in `PublicViewer.tsx`:
 
-**`src/components/editor/Canvas.tsx`**
-- No change needed; it already renders in canvas coords.
+1. Build a Konva-based `AirBubbleKonva` renderer (Group + Rect + Text + tail Line + optional KonvaImage), matching the visual style of the existing HTML `AirBubble` component (background color, text color, font size, padding, tail direction, optional avatar/image).
+2. Inside the `<KLayer>` map at line ~725, when iterating `sorted` layers, also check whether any active `airMessages` entry has `am.layer.id === l.id`. If so, render the Konva bubble in the same iteration step (after the layer, in the same Group), so it inherits the layer's z position. Bubbles whose `sourceLayer` is null (page-level air messages) render at the very top of the layer list, as today.
+3. Remove the HTML `<AirMessagesInline>` block (lines 800-815). Keep the close button and click handlers wired through Konva `onClick` / `onTap` on the bubble Group.
+4. Preserve existing behavior: `onClose` removes the bubble from `airMessages`, tapping the bubble runs `onRunBubbleAction`, scale/positioning uses the Stage's coordinate space (no more manual `scale`/`canvasW`/`canvasH` math needed since we're inside the Stage).
 
-### Out of scope
-- Image-load gating (already in place).
-- Editor mobile-preview behavior, animation, tail logic, color logic.
-- Any change to how the source layer rect is authored.
+## Files to change
 
-### Files touched
-- `src/components/AirBubble.tsx` — remove `scale` prop and multiplications.
-- `src/pages/PublicViewer.tsx` — render `AirMessagesInline` content at canvas resolution inside a `transform: scale(scale)` wrapper; drop per-value scaling.
+- `src/pages/PublicViewer.tsx` — add Konva air-bubble component, integrate into the sorted-layer render loop, delete the HTML overlay block.
+
+## Out of scope
+
+- Editor canvas (already fixed).
+- `AirBubble.tsx` HTML component (still used elsewhere if needed; left untouched).
+- Any data model / store changes.
+- Popup, video, form, coupon dialogs — unrelated.
+
+## Validation
+
+After the change, in the published `/f/:slug` view: trigger the air-message, confirm the white hand image renders above the bubble, matching the editor (photo 2). Confirm the close (×) button and bubble tap-to-action still work, and that bubbles whose source layer is below the hand are correctly occluded by the hand.
