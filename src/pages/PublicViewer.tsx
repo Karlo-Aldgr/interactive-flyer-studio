@@ -971,7 +971,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                       delayMs={delay}
                       cx={cx}
                       cy={cy}
-                      introKey={`${page.id}:${pageIndex}`}
+                      introKey={`${page.id}:${pageIndex}:${imagesReady ? "ready" : "wait"}`}
                     >
                       {node}
                     </IntroAnimatedGroup>
