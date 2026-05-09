@@ -262,6 +262,10 @@ export interface FlyerSettings {
   // Intro audio: plays once on first view of the flyer
   introAudioUrl?: string;
   introAudioLoop?: boolean;
+  // Per-flyer payment handles for cart checkout (P2P money transfer apps)
+  payVenmo?: string;             // Venmo username, no leading @
+  payCashapp?: string;           // Cash App $Cashtag, no leading $
+  payApplePayContact?: string;   // Phone number or email registered with Apple Cash (used via iMessage)
 }
 
 export interface Flyer {

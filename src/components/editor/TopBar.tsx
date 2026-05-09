@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
-  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3, Users,
+  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3, Users, Wallet,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareDialog } from "./ShareDialog";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
+import { FlyerPaymentSettingsDialog } from "./FlyerPaymentSettingsDialog";
 import { IntroAudioDialog } from "./IntroAudioDialog";
 import { SubscribersPanel } from "./SubscribersPanel";
 
@@ -79,6 +80,7 @@ export function TopBar({ saving }: Props) {
   const [payOpen, setPayOpen] = useState(false);
   const [introAudioOpen, setIntroAudioOpen] = useState(false);
   const [subscribersOpen, setSubscribersOpen] = useState(false);
+  const [paySettingsOpen, setPaySettingsOpen] = useState(false);
 
   if (!flyer) return null;
 
@@ -371,11 +373,23 @@ export function TopBar({ saving }: Props) {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant={(flyer.settings.payVenmo || flyer.settings.payCashapp || flyer.settings.payApplePayContact) ? "default" : "outline"}
+              onClick={() => setPaySettingsOpen(true)}
+            >
+              <Wallet className="mr-1 h-4 w-4" /> Checkout
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Set Venmo / Cash App / Apple Cash for cart checkout</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button size="sm" variant="outline" onClick={() => setPayOpen(true)}>
               <DollarSign className="mr-1 h-4 w-4" /> Pay link
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Generate a Venmo / Cash App / PayPal link to send to customers</TooltipContent>
+          <TooltipContent>Generate a one-off Venmo / Cash App / PayPal link to send to customers</TooltipContent>
         </Tooltip>
         {flyer.status === "published" && (
           <Button size="sm" variant="outline" onClick={openShare}>
@@ -459,6 +473,7 @@ export function TopBar({ saving }: Props) {
       />
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
+      <FlyerPaymentSettingsDialog open={paySettingsOpen} onOpenChange={setPaySettingsOpen} />
       <IntroAudioDialog open={introAudioOpen} onOpenChange={setIntroAudioOpen} />
       <SubscribersPanel
         open={subscribersOpen}
