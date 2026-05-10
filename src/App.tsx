@@ -16,6 +16,7 @@ const Editor = lazy(() => import("./pages/Editor"));
 const PublicViewer = lazy(() => import("./pages/PublicViewer"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const AdminContacts = lazy(() => import("./pages/AdminContacts"));
 
 const queryClient = new QueryClient();
 
