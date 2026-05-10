@@ -1910,7 +1910,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 )}
                 {appleC && (
                   <Button
-                    className="w-full justify-start bg-foreground text-background hover:bg-foreground/90"
+                    className="w-full justify-start gap-2 bg-foreground text-background hover:bg-foreground/90"
                     onClick={() => {
                       const body = `Sending ${cartCurrency || "$"}${totalStr} for ${note}`;
                       const isEmail = appleC.includes("@");
@@ -1921,12 +1921,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                       openPay("applecash", url);
                     }}
                   >
-                    Apple Cash (iMessage) · {cartCurrency ? `${cartCurrency} ` : ""}{totalStr}
+                    <MessageSquare className="h-4 w-4" />
+                    Open Messages for Apple Cash · {cartCurrency ? `${cartCurrency} ` : ""}{totalStr}
                   </Button>
                 )}
                 {appleC && (
                   <p className="text-[11px] text-muted-foreground">
-                    Apple Cash button opens Messages on iPhone — tap the Apple Pay icon there to send the payment.
+                    On iPhone this opens Messages to the seller with a prefilled note. To send the money, tap the <strong>+</strong> (or Apps) button inside Messages and choose <strong>Apple Cash</strong>.
                   </p>
                 )}
                 <Button
