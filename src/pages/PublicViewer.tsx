@@ -1871,7 +1871,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 } as any]);
                 logClick(null, "cart_pay:" + method);
               }
-              window.open(url, "_blank", "noopener,noreferrer");
+              // sms: links must navigate the current window on iOS — window.open opens a blank tab and nothing happens
+              if (url.startsWith("sms:") || url.startsWith("tel:") || url.startsWith("mailto:")) {
+                window.location.href = url;
+              } else {
+                window.open(url, "_blank", "noopener,noreferrer");
+              }
               setCart([]);
             };
             const hasAny = venmoH || cashH || appleC;
