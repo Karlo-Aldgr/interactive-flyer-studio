@@ -1195,11 +1195,15 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         <DialogContent
           style={{
             background:
-              popup?.type === "popup" && !popup?.payload.mediaUrl
+              popup?.type === "buy_product" || popup?.type === "buy_ticket"
+                ? "#ffffff"
+                : popup?.type === "popup" && !popup?.payload.mediaUrl
                 ? popup.payload.popupBgColor || "#ffffff"
                 : page?.background?.color || undefined,
             color:
-              popup?.type === "popup" && !popup?.payload.mediaUrl
+              popup?.type === "buy_product" || popup?.type === "buy_ticket"
+                ? "#000000"
+                : popup?.type === "popup" && !popup?.payload.mediaUrl
                 ? popup.payload.popupTextColor || "#000000"
                 : popup?.type === "popup" && popup?.payload.popupTextColor
                 ? popup.payload.popupTextColor
