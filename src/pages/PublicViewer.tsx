@@ -518,7 +518,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
   const [popupImageReady, setPopupImageReady] = useState(false);
   const [zoomImageReady, setZoomImageReady] = useState(false);
-  useEffect(() => { setPopupImageReady(false); }, [popup?.id, popup?.payload?.mediaUrl]);
+  useEffect(() => { setPopupImageReady(false); setPopupQty(1); }, [popup?.id, popup?.payload?.mediaUrl]);
   useEffect(() => { setZoomImageReady(false); }, [zoomImage]);
   const [enlarged, setEnlarged] = useState(false);
   const [airMessages, setAirMessages] = useState<Array<{ action: LayerAction; layer: Layer | null }>>([]);
@@ -538,17 +538,19 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   };
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [popupQty, setPopupQty] = useState(1);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutData, setCheckoutData] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
-  function addToCart(a: LayerAction, layer: Layer | null) {
+  function addToCart(a: LayerAction, layer: Layer | null, qty: number = 1) {
     const p = a.payload;
     const id = p.productId || layer?.id || a.id;
     const priceNum = Number(String(p.productPrice ?? "").replace(/[^0-9.]/g, "")) || 0;
+    const addQty = Math.max(1, Math.floor(qty || 1));
     setCart((prev) => {
       const existing = prev.find((it) => it.id === id);
-      if (existing) return prev.map((it) => (it.id === id ? { ...it, qty: it.qty + 1 } : it));
+      if (existing) return prev.map((it) => (it.id === id ? { ...it, qty: it.qty + addQty } : it));
       return [
         ...prev,
         {
@@ -558,11 +560,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           priceDisplay: p.productPrice || "",
           currency: p.productCurrency || "",
           image: p.productImageUrl,
-          qty: 1,
+          qty: addQty,
         },
       ];
     });
-    toast.success(`Added "${p.productName || "Product"}" to cart`);
+    toast.success(`Added ${addQty} × "${p.productName || "Product"}" to cart`);
   }
   const cartCount = cart.reduce((n, it) => n + it.qty, 0);
   const cartTotal = cart.reduce((n, it) => n + it.price * it.qty, 0);
@@ -1319,20 +1321,62 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               {popup.payload.ticketCtaLabel || "Buy ticket"}
             </Button>
           )}
-          {popup?.type === "buy_product" && popup.payload.productCartEnabled && (
-            <Button
-              className="w-full"
-              onClick={() => {
-                logClick(null, "buy_product_add_to_cart");
-                addToCart(popup, null);
-                setPopup(null);
-                setCartOpen(true);
-              }}
-            >
-              <LucideIcons.ShoppingCart className="h-4 w-4 mr-2" />
-              {popup.payload.productCtaLabel || "Add to cart"}
-            </Button>
-          )}
+          {popup?.type === "buy_product" && popup.payload.productCartEnabled && (() => {
+            const unit = Number(String(popup.payload.productPrice ?? "").replace(/[^0-9.]/g, "")) || 0;
+            const cur = popup.payload.productCurrency ? `${popup.payload.productCurrency} ` : "";
+            const subtotal = unit * popupQty;
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-foreground">Quantity</span>
+                  <div className="inline-flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Decrease quantity"
+                      className="h-8 w-8 rounded-md border border-border hover:bg-muted disabled:opacity-50"
+                      disabled={popupQty <= 1}
+                      onClick={() => setPopupQty((q) => Math.max(1, q - 1))}
+                    >−</button>
+                    <input
+                      type="number"
+                      min={1}
+                      max={999}
+                      value={popupQty}
+                      onChange={(e) => {
+                        const n = parseInt(e.target.value, 10);
+                        setPopupQty(Number.isFinite(n) && n > 0 ? Math.min(999, n) : 1);
+                      }}
+                      className="h-8 w-14 rounded-md border border-border bg-background text-center text-sm"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Increase quantity"
+                      className="h-8 w-8 rounded-md border border-border hover:bg-muted"
+                      onClick={() => setPopupQty((q) => Math.min(999, q + 1))}
+                    >+</button>
+                  </div>
+                </div>
+                {unit > 0 && (
+                  <div className="flex items-center justify-between border-t border-border pt-2">
+                    <span className="text-sm text-muted-foreground">Subtotal</span>
+                    <span className="text-base font-semibold">{cur}{subtotal.toFixed(2)}</span>
+                  </div>
+                )}
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    logClick(null, "buy_product_add_to_cart");
+                    addToCart(popup, null, popupQty);
+                    setPopup(null);
+                    setCartOpen(true);
+                  }}
+                >
+                  <LucideIcons.ShoppingCart className="h-4 w-4 mr-2" />
+                  {popup.payload.productCtaLabel || "Add to cart"}
+                </Button>
+              </div>
+            );
+          })()}
           {popup?.type === "buy_product" && !popup.payload.productCartEnabled && popup.payload.productPaymentUrl && (
             <Button
               className="w-full"
