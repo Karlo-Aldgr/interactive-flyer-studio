@@ -25,7 +25,8 @@ function appleCashLink(contact: string, amount = "1", currency = "$") {
   const c = contact.trim();
   if (!c) return "";
   const body = encodeURIComponent(`Sending ${currency}${amount} test`);
-  return `sms:${c}&body=${body}`;
+  if (c.includes("@")) return `mailto:${c}?body=${body}`;
+  return `sms:${c.replace(/[^\d+]/g, "")}?&body=${body}`;
 }
 
 export function FlyerPaymentSettingsDialog({ open, onOpenChange }: Props) {
