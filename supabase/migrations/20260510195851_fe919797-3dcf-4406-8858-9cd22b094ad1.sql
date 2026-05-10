@@ -1,0 +1,3 @@
+CREATE POLICY "admins read all subscribers" ON public.subscribers FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "admins read all form_submissions" ON public.form_submissions FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "admins read all flyers" ON public.flyers FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
