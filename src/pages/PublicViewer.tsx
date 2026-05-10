@@ -766,7 +766,14 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         setFormData({});
         break;
       case "checkout":
-        if (a.payload.title) setConfirmAction(a);
+        if (a.payload.productName) {
+          // Reuse the buy_product popup flow (with quantity picker + cart)
+          setPopup({
+            ...a,
+            type: "buy_product",
+            payload: { ...a.payload, productCartEnabled: true },
+          });
+        } else if (a.payload.title) setConfirmAction(a);
         else if (a.payload.checkoutUrl) window.open(a.payload.checkoutUrl, "_blank", "noopener,noreferrer");
         break;
       case "coupon":
