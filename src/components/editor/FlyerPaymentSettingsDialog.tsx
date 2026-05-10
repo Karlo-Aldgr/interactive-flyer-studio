@@ -113,7 +113,15 @@ export function FlyerPaymentSettingsDialog({ open, onOpenChange }: Props) {
                 size="sm"
                 variant="outline"
                 disabled={!apple.trim()}
-                onClick={() => window.open(appleCashLink(apple), "_blank", "noopener,noreferrer")}
+                onClick={() => {
+                  const url = appleCashLink(apple);
+                  if (!url) return;
+                  if (url.startsWith("sms:") || url.startsWith("mailto:")) {
+                    window.location.href = url;
+                  } else {
+                    window.open(url, "_blank", "noopener,noreferrer");
+                  }
+                }}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
