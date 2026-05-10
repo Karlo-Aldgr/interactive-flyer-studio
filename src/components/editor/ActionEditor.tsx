@@ -1523,9 +1523,44 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
 
         {type === "checkout" && (
           <>
-            <p className="text-[11px] text-muted-foreground">Opens your checkout link directly when tapped.</p>
+            <p className="text-[11px] text-muted-foreground">
+              Add product details below to open a quantity picker that drops the item into the shopping cart. Leave them blank to simply open a checkout URL.
+            </p>
+
+            <div className="rounded-md border border-border bg-muted/30 p-2 space-y-2">
+              <div className="text-xs font-medium">Product (optional — enables cart)</div>
+              <div>
+                <Label className="text-xs">Product name</Label>
+                <Input className="mt-1" value={p.productName || ""} onChange={(e) => update({ productName: e.target.value, productCartEnabled: true })} placeholder="T-shirt" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Price</Label>
+                  <Input className="mt-1" value={p.productPrice || ""} onChange={(e) => update({ productPrice: e.target.value })} placeholder="25" />
+                </div>
+                <div>
+                  <Label className="text-xs">Currency</Label>
+                  <Input className="mt-1" value={p.productCurrency || ""} onChange={(e) => update({ productCurrency: e.target.value })} placeholder="$" />
+                </div>
+              </div>
+              <AssetUpload label="Product image" value={p.productImageUrl} onChange={(url) => update({ productImageUrl: url })} />
+              <div>
+                <Label className="text-xs">Description</Label>
+                <Textarea className="mt-1" rows={2} value={p.productDescription || ""} onChange={(e) => update({ productDescription: e.target.value })} placeholder="Short description shown in the popup" />
+              </div>
+              <div>
+                <Label className="text-xs">Add-to-cart button label</Label>
+                <Input className="mt-1" value={p.productCtaLabel || ""} onChange={(e) => update({ productCtaLabel: e.target.value })} placeholder="Add to cart" />
+              </div>
+              {!!p.productName && (
+                <p className="text-[11px] text-muted-foreground">
+                  Tip: open <strong>Checkout</strong> in the top bar to set this flyer's Venmo / Cash App / Apple Cash so buyers can pay you directly.
+                </p>
+              )}
+            </div>
+
             <div>
-              <Label className="text-xs">Checkout URL</Label>
+              <Label className="text-xs">Checkout URL (used only when no product is set)</Label>
               <Input className="mt-1" value={p.checkoutUrl || ""} onChange={(e) => update({ checkoutUrl: e.target.value })} placeholder="https://buy.stripe.com/..." />
             </div>
             <div className="flex items-center justify-between">
