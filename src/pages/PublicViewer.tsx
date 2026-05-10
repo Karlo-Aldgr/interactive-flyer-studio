@@ -1911,12 +1911,15 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 {appleC && (
                   <Button
                     className="w-full justify-start bg-foreground text-background hover:bg-foreground/90"
-                    onClick={() =>
-                      openPay(
-                        "applecash",
-                        `sms:${appleC}&body=${encodeURIComponent(`Sending ${cartCurrency || "$"}${totalStr} for ${note}`)}`
-                      )
-                    }
+                    onClick={() => {
+                      const body = `Sending ${cartCurrency || "$"}${totalStr} for ${note}`;
+                      const isEmail = appleC.includes("@");
+                      // iOS requires `?&body=` (or `?body=`) — `&body=` without `?` is ignored and Messages won't open
+                      const url = isEmail
+                        ? `mailto:${appleC}?subject=${encodeURIComponent(note)}&body=${encodeURIComponent(body)}`
+                        : `sms:${appleC.replace(/[^\d+]/g, "")}?&body=${encodeURIComponent(body)}`;
+                      openPay("applecash", url);
+                    }}
                   >
                     Apple Cash (iMessage) · {cartCurrency ? `${cartCurrency} ` : ""}{totalStr}
                   </Button>
