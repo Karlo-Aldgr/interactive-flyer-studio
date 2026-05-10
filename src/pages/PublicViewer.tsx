@@ -538,6 +538,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   };
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [popupQty, setPopupQty] = useState(1);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutData, setCheckoutData] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
