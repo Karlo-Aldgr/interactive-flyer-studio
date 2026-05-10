@@ -543,13 +543,14 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [checkoutData, setCheckoutData] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
-  function addToCart(a: LayerAction, layer: Layer | null) {
+  function addToCart(a: LayerAction, layer: Layer | null, qty: number = 1) {
     const p = a.payload;
     const id = p.productId || layer?.id || a.id;
     const priceNum = Number(String(p.productPrice ?? "").replace(/[^0-9.]/g, "")) || 0;
+    const addQty = Math.max(1, Math.floor(qty || 1));
     setCart((prev) => {
       const existing = prev.find((it) => it.id === id);
-      if (existing) return prev.map((it) => (it.id === id ? { ...it, qty: it.qty + 1 } : it));
+      if (existing) return prev.map((it) => (it.id === id ? { ...it, qty: it.qty + addQty } : it));
       return [
         ...prev,
         {
@@ -559,11 +560,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           priceDisplay: p.productPrice || "",
           currency: p.productCurrency || "",
           image: p.productImageUrl,
-          qty: 1,
+          qty: addQty,
         },
       ];
     });
-    toast.success(`Added "${p.productName || "Product"}" to cart`);
+    toast.success(`Added ${addQty} × "${p.productName || "Product"}" to cart`);
   }
   const cartCount = cart.reduce((n, it) => n + it.qty, 0);
   const cartTotal = cart.reduce((n, it) => n + it.price * it.qty, 0);
