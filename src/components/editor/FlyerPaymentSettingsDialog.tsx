@@ -25,7 +25,8 @@ function appleCashLink(contact: string, amount = "1", currency = "$") {
   const c = contact.trim();
   if (!c) return "";
   const body = encodeURIComponent(`Sending ${currency}${amount} test`);
-  return `sms:${c}&body=${body}`;
+  if (c.includes("@")) return `mailto:${c}?body=${body}`;
+  return `sms:${c.replace(/[^\d+]/g, "")}?&body=${body}`;
 }
 
 export function FlyerPaymentSettingsDialog({ open, onOpenChange }: Props) {
@@ -112,7 +113,15 @@ export function FlyerPaymentSettingsDialog({ open, onOpenChange }: Props) {
                 size="sm"
                 variant="outline"
                 disabled={!apple.trim()}
-                onClick={() => window.open(appleCashLink(apple), "_blank", "noopener,noreferrer")}
+                onClick={() => {
+                  const url = appleCashLink(apple);
+                  if (!url) return;
+                  if (url.startsWith("sms:") || url.startsWith("mailto:")) {
+                    window.location.href = url;
+                  } else {
+                    window.open(url, "_blank", "noopener,noreferrer");
+                  }
+                }}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
