@@ -124,6 +124,9 @@ export default function FlyerPortal() {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [flyerTitle, setFlyerTitle] = useState("");
+  const [flyerMeta, setFlyerMeta] = useState<{ status?: string; public_slug?: string | null; thumbnail_url?: string | null } | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [portalLinkOpen, setPortalLinkOpen] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
