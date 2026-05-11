@@ -198,6 +198,31 @@ export default function FlyerPortal() {
     return out;
   }, [actions]);
 
+  // Every action type used in this flyer (top-level + popup buttons + hotspots)
+  const allActionTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of actions) {
+      if (a.type) set.add(a.type);
+      const p = a.payload || {};
+      for (const b of p.buttons || []) if (b?.action?.type) set.add(b.action.type);
+      for (const h of p.hotspots || []) if (h?.action?.type) set.add(h.action.type);
+    }
+    return Array.from(set);
+  }, [actions]);
+
+  const ACTION_LABELS: Record<string, string> = {
+    open_url: "Links", call: "Calls", sms: "SMS", email: "Emails",
+    share: "Shares", coupon: "Coupons", download: "Downloads",
+    map: "Map", directions: "Directions", video: "Videos", audio: "Audio",
+    popup: "Popups", lightbox: "Lightbox", navigate: "Navigation",
+    add_to_calendar: "Calendar adds", social: "Social",
+  };
+  const COVERED_ACTION_TYPES = new Set([
+    "poll", "book_appointment", "subscribe", "form", "rsvp",
+    "checkout", "buy_ticket", "buy_product",
+  ]);
+  const extraActionTypes = allActionTypes.filter((t) => !COVERED_ACTION_TYPES.has(t));
+
   const layerLabel = useMemo(() => {
     const m: Record<string, { label: string; type: string }> = {};
     for (const l of layers) {
