@@ -262,7 +262,20 @@ export default function FlyerPortal() {
   const dailyViews = Object.entries(dailyViewsMap).sort(([a], [b]) => (a < b ? -1 : 1)).slice(-30);
   const maxDaily = Math.max(1, ...dailyViews.map(([, c]) => c));
 
-  const cartOrders = submissions.filter((s) => s?.data?.kind === "cart_order");
+  const payLaterOrderIds = new Set(
+    submissions
+      .filter((s) => s?.data?.kind === "cart_pay_later" && s?.data?.order_id)
+      .map((s) => s.data.order_id as string)
+  );
+  const cartOrders = submissions
+    .filter((s) => s?.data?.kind === "cart_order")
+    .map((s) => {
+      // Pay-later marker overrides any other status (unless owner already completed it)
+      const isPayLater = payLaterOrderIds.has(s.id);
+      const effective: OrderStatus =
+        isPayLater && s.status !== "completed" ? "pay_later" : ((s.status as OrderStatus) || "new");
+      return { ...s, status: effective, _payLater: isPayLater };
+    });
   const cartCounts: Record<OrderStatus, number> = { new: 0, on_hold: 0, pay_later: 0, completed: 0 };
   for (const o of cartOrders) {
     const s = (o.status as OrderStatus) || "new";
