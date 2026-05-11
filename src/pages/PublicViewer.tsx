@@ -561,6 +561,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [checkoutData, setCheckoutData] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   function addToCart(a: LayerAction, layer: Layer | null, qty: number = 1) {
     const p = a.payload;
     const id = p.productId || layer?.id || a.id;
