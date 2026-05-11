@@ -20,23 +20,38 @@ export default function Dashboard() {
     setLoading(true);
     const { data, error } = await supabase
       .from("flyers")
-      .select("*, pages(index, layers(type, z_index, content))")
+      .select("id, owner_id, title, status, public_slug, thumbnail_url, settings, created_at, updated_at")
       .order("updated_at", { ascending: false });
     if (error) {
       toast.error(error.message);
       setLoading(false);
       return;
     }
-    const enriched = (data ?? []).map((f: any) => {
-      if (f.thumbnail_url) return f;
-      const firstPage = [...(f.pages ?? [])].sort((a, b) => a.index - b.index)[0];
-      const imageLayer = firstPage?.layers
-        ?.filter((l: any) => l.type === "image" && l.content?.src)
-        .sort((a: any, b: any) => (a.z_index ?? 0) - (b.z_index ?? 0))[0];
-      return { ...f, thumbnail_url: imageLayer?.content?.src ?? null };
-    });
-    setFlyers(enriched as any);
+    const flyersData = (data ?? []) as any[];
+    setFlyers(flyersData as any);
     setLoading(false);
+
+    // Lazily backfill thumbnails for flyers without one (cap to avoid stalls)
+    const missing = flyersData.filter((f) => !f.thumbnail_url).slice(0, 12);
+    if (missing.length === 0) return;
+    await Promise.all(
+      missing.map(async (f) => {
+        const { data: pages } = await supabase
+          .from("pages")
+          .select("id, index, layers(type, z_index, content)")
+          .eq("flyer_id", f.id)
+          .order("index", { ascending: true })
+          .limit(1);
+        const firstPage = pages?.[0] as any;
+        const imageLayer = firstPage?.layers
+          ?.filter((l: any) => l.type === "image" && l.content?.src)
+          .sort((a: any, b: any) => (a.z_index ?? 0) - (b.z_index ?? 0))[0];
+        const src = imageLayer?.content?.src;
+        if (src) {
+          setFlyers((prev) => prev.map((x) => (x.id === f.id ? { ...x, thumbnail_url: src } : x)));
+        }
+      })
+    );
   };
 
   useEffect(() => { load(); }, []);
