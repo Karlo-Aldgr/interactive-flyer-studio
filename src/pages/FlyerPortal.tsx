@@ -216,6 +216,9 @@ export default function FlyerPortal() {
     map: "Map", directions: "Directions", video: "Videos", audio: "Audio",
     popup: "Popups", lightbox: "Lightbox", navigate: "Navigation",
     add_to_calendar: "Calendar adds", social: "Social",
+    pay_later_view: "Pay Later views", pay_later_call: "Pay Later · Call",
+    pay_later_sms: "Pay Later · Text", pay_later_email: "Pay Later · Email",
+    pay_later_paid: "Pay Later · Marked Paid",
   };
   const COVERED_ACTION_TYPES = new Set([
     "poll", "book_appointment", "subscribe", "form", "rsvp",
@@ -283,8 +286,26 @@ export default function FlyerPortal() {
   }
   const [openOrder, setOpenOrder] = useState<FormSubmission | null>(null);
 
+  async function logPortalEvent(
+    actionType: string,
+    extra: Record<string, any> = {},
+    eventType: "view" | "click" = "click"
+  ) {
+    if (!flyerId) return;
+    try {
+      await supabase.from("analytics_events").insert([{
+        flyer_id: flyerId,
+        event_type: eventType as any,
+        metadata: { action_type: actionType, source: "portal", ...extra } as any,
+      } as any]);
+    } catch (e) {
+      console.warn("portal analytics insert failed", e);
+    }
+  }
+
   async function setOrderStatus(id: string, status: OrderStatus) {
     const prev = submissions;
+    const wasPayLater = prev.find((s) => s.id === id)?.status === "pay_later";
     setSubmissions((arr) => arr.map((s) => (s.id === id ? { ...s, status } : s)));
     setOpenOrder((o) => (o && o.id === id ? { ...o, status } : o));
     const { error } = await supabase.from("form_submissions").update({ status } as any).eq("id", id);
@@ -293,6 +314,9 @@ export default function FlyerPortal() {
       toast.error(error.message);
     } else {
       toast.success("Status updated");
+      if (wasPayLater && status === "completed") {
+        logPortalEvent("pay_later_paid", { order_id: id });
+      }
     }
   }
 
@@ -598,7 +622,10 @@ export default function FlyerPortal() {
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => setOpenOrder(s)}
+                        onClick={() => {
+                          setOpenOrder(s);
+                          if (s.status === "pay_later") logPortalEvent("pay_later_view", { order_id: s.id }, "view");
+                        }}
                         className={`w-full rounded border-l-4 ${meta.ring} border border-border p-2 text-left text-xs transition hover:bg-muted/50`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -707,10 +734,21 @@ export default function FlyerPortal() {
                     <div className="flex flex-wrap gap-2">
                       {c.phone && (
                         <>
-                          <Button asChild size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                          <Button
+                            asChild
+                            size="sm"
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            onClick={() => logPortalEvent("pay_later_call", { order_id: openOrder.id })}
+                          >
                             <a href={`tel:${c.phone}`}>Call</a>
                           </Button>
-                          <Button asChild size="sm" variant="outline" className="border-red-600 text-red-700">
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="outline"
+                            className="border-red-600 text-red-700"
+                            onClick={() => logPortalEvent("pay_later_sms", { order_id: openOrder.id })}
+                          >
                             <a href={`sms:${c.phone}?&body=${encodeURIComponent(`Hi ${c.name || ""}, your order total is ${d.currency || ""}${d.total ?? ""}. Please send payment when you can. Thanks!`)}`}>
                               Text
                             </a>
@@ -718,7 +756,13 @@ export default function FlyerPortal() {
                         </>
                       )}
                       {c.email && (
-                        <Button asChild size="sm" variant="outline" className="border-red-600 text-red-700">
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          className="border-red-600 text-red-700"
+                          onClick={() => logPortalEvent("pay_later_email", { order_id: openOrder.id })}
+                        >
                           <a href={`mailto:${c.email}?subject=${encodeURIComponent("Payment for your order")}&body=${encodeURIComponent(`Hi ${c.name || ""}, your order total is ${d.currency || ""}${d.total ?? ""}. Please send payment when you can. Thanks!`)}`}>
                             Email
                           </a>
