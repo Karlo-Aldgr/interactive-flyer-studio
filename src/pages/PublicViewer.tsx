@@ -38,6 +38,8 @@ function getViewerSessionId(): string {
   } catch {
     return `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   }
+}
+
 import { useParams } from "react-router-dom";
 import { Stage, Layer as KLayer, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage, Group } from "react-konva";
 import Konva from "konva";
