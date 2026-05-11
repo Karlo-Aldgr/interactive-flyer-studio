@@ -241,15 +241,39 @@ export default function FlyerPortal() {
   ]);
   const extraActionTypes = allActionTypes.filter((t) => !COVERED_ACTION_TYPES.has(t));
 
-  const layerLabel = useMemo(() => {
-    const m: Record<string, { label: string; type: string }> = {};
-    for (const l of layers) {
-      const c = l.content || {};
-      const label = c.text || c.label || c.iconName || c.url || l.type;
-      m[l.id] = { label: String(label).slice(0, 60), type: l.type };
+  // Map layer_id -> array of action types attached (top-level + popup buttons + hotspots).
+  const layerActions = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    for (const a of actions) {
+      if (!a.layer_id) continue;
+      const types = new Set<string>(m[a.layer_id] || []);
+      if (a.type) types.add(a.type);
+      const p = a.payload || {};
+      for (const b of p.buttons || []) if (b?.action?.type) types.add(b.action.type);
+      for (const h of p.hotspots || []) if (h?.action?.type) types.add(h.action.type);
+      m[a.layer_id] = Array.from(types);
     }
     return m;
-  }, [layers]);
+  }, [actions]);
+
+  const layerLabel = useMemo(() => {
+    const m: Record<string, { label: string; type: string; actionTypes: string[] }> = {};
+    for (const l of layers) {
+      const c = l.content || {};
+      const acts = layerActions[l.id] || [];
+      // Prefer an action-derived label for hotspots (which usually have no visible text).
+      const actionLabel = acts.length
+        ? acts.map((t) => ACTION_LABELS[t] || t.replace(/_/g, " ")).join(" + ")
+        : "";
+      const visualLabel = c.text || c.label || c.iconName || c.url || "";
+      const label =
+        l.type === "hotspot"
+          ? (actionLabel || visualLabel || "Hotspot")
+          : (visualLabel || actionLabel || l.type);
+      m[l.id] = { label: String(label).slice(0, 60), type: l.type, actionTypes: acts };
+    }
+    return m;
+  }, [layers, layerActions]);
 
   const viewEvents = events.filter((e) => e.event_type === "view");
   const clickEvents = events.filter((e) => e.event_type === "click");
@@ -261,12 +285,29 @@ export default function FlyerPortal() {
   const uniqueVisitors = Object.keys(sessionViews).length;
   const returnVisitors = Object.values(sessionViews).filter((n) => n > 1).length;
 
-  const layerClicks: Record<string, { label: string; type: string; clicks: number }> = {};
+  type LayerClickAgg = {
+    label: string;
+    type: string;
+    actionTypes: string[];
+    clicks: number;
+    devices: { mobile: number; tablet: number; desktop: number; unknown: number };
+  };
+  const layerClicks: Record<string, LayerClickAgg> = {};
   for (const e of clickEvents) {
     const lid = e.layer_id || "_none";
-    const meta = layerLabel[lid] || { label: lid === "_none" ? "(no layer)" : lid, type: "?" };
-    if (!layerClicks[lid]) layerClicks[lid] = { ...meta, clicks: 0 };
+    const meta = layerLabel[lid] || { label: lid === "_none" ? "(no layer)" : lid, type: "?", actionTypes: [] };
+    if (!layerClicks[lid]) {
+      layerClicks[lid] = {
+        label: meta.label,
+        type: meta.type,
+        actionTypes: meta.actionTypes || [],
+        clicks: 0,
+        devices: { mobile: 0, tablet: 0, desktop: 0, unknown: 0 },
+      };
+    }
     layerClicks[lid].clicks += 1;
+    const dev = deviceFromEvent(e);
+    layerClicks[lid].devices[dev] += 1;
   }
   const topLayerClicks = Object.entries(layerClicks)
     .map(([lid, v]) => ({ lid, ...v }))
