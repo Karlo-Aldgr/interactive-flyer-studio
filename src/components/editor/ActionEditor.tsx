@@ -98,6 +98,8 @@ function isValid(draft: LayerAction | null): boolean {
       return !!(p.pollQuestion && p.pollOptions && p.pollOptions.filter((o) => o.label?.trim()).length >= 2);
     case "subscribe":
       return true;
+    case "book_appointment":
+      return !!(p.apptTitle && p.apptDurationMin);
     default: return true;
   }
 }
