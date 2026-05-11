@@ -286,8 +286,26 @@ export default function FlyerPortal() {
   }
   const [openOrder, setOpenOrder] = useState<FormSubmission | null>(null);
 
+  async function logPortalEvent(
+    actionType: string,
+    extra: Record<string, any> = {},
+    eventType: "view" | "click" = "click"
+  ) {
+    if (!flyerId) return;
+    try {
+      await supabase.from("analytics_events").insert([{
+        flyer_id: flyerId,
+        event_type: eventType as any,
+        metadata: { action_type: actionType, source: "portal", ...extra } as any,
+      } as any]);
+    } catch (e) {
+      console.warn("portal analytics insert failed", e);
+    }
+  }
+
   async function setOrderStatus(id: string, status: OrderStatus) {
     const prev = submissions;
+    const wasPayLater = prev.find((s) => s.id === id)?.status === "pay_later";
     setSubmissions((arr) => arr.map((s) => (s.id === id ? { ...s, status } : s)));
     setOpenOrder((o) => (o && o.id === id ? { ...o, status } : o));
     const { error } = await supabase.from("form_submissions").update({ status } as any).eq("id", id);
@@ -296,6 +314,9 @@ export default function FlyerPortal() {
       toast.error(error.message);
     } else {
       toast.success("Status updated");
+      if (wasPayLater && status === "completed") {
+        logPortalEvent("pay_later_paid", { order_id: id });
+      }
     }
   }
 
