@@ -18,6 +18,7 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminContacts = lazy(() => import("./pages/AdminContacts"));
 const FlyerPortal = lazy(() => import("./pages/FlyerPortal"));
+const PublicFlyerPortal = lazy(() => import("./pages/PublicFlyerPortal"));
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/f/:slug" element={<PublicViewer />} />
               <Route path="/admin/contacts" element={<ProtectedRoute><AdminContacts /></ProtectedRoute>} />
               <Route path="/flyer/:flyerId/portal" element={<ProtectedRoute><FlyerPortal /></ProtectedRoute>} />
+              <Route path="/p/:token" element={<PublicFlyerPortal />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
