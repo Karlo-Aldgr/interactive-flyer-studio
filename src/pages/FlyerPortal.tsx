@@ -10,8 +10,21 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, ChevronLeft, Download, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Download, Loader2, RefreshCw, Share2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import { ShareDialog } from "@/components/editor/ShareDialog";
+import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
+
+const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
+function getShareOrigin() {
+  if (typeof window === "undefined") return PUBLISHED_ORIGIN;
+  const origin = window.location.origin;
+  const isPreviewSandbox =
+    origin.includes("lovableproject.com") ||
+    origin.includes("id-preview--") ||
+    (origin.includes("lovable.app") && origin.includes("preview"));
+  return isPreviewSandbox ? PUBLISHED_ORIGIN : origin;
+}
 
 type OrderStatus = "new" | "on_hold" | "pay_later" | "completed";
 const ORDER_STATUSES: { value: OrderStatus; label: string; cls: string; ring: string }[] = [
@@ -111,6 +124,9 @@ export default function FlyerPortal() {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [flyerTitle, setFlyerTitle] = useState("");
+  const [flyerMeta, setFlyerMeta] = useState<{ status?: string; public_slug?: string | null; thumbnail_url?: string | null } | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [portalLinkOpen, setPortalLinkOpen] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
@@ -126,7 +142,7 @@ export default function FlyerPortal() {
     if (showSpinner) setLoading(true);
     const { data: flyer } = await supabase
       .from("flyers")
-      .select("id, title, owner_id")
+      .select("id, title, owner_id, status, public_slug, thumbnail_url")
       .eq("id", flyerId)
       .maybeSingle();
 
@@ -145,6 +161,11 @@ export default function FlyerPortal() {
     }
     setAuthorized(true);
     setFlyerTitle(flyer?.title || "Flyer");
+    setFlyerMeta({
+      status: (flyer as any)?.status,
+      public_slug: (flyer as any)?.public_slug ?? null,
+      thumbnail_url: (flyer as any)?.thumbnail_url ?? null,
+    });
 
     const { data: pageRows } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);
     const pageIds = (pageRows || []).map((p: any) => p.id);
@@ -463,11 +484,32 @@ export default function FlyerPortal() {
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs"
           />
+          <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
+            <Share2 className="mr-1 h-3.5 w-3.5" /> Share & QR
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setPortalLinkOpen(true)}>
+            <LinkIcon className="mr-1 h-3.5 w-3.5" /> Portal link
+          </Button>
           <Button variant="outline" size="sm" onClick={() => loadData(false)}>
             <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
           </Button>
         </div>
       </div>
+
+      {flyerId && (
+        <>
+          <ShareDialog
+            open={shareOpen}
+            onOpenChange={setShareOpen}
+            displayUrl={flyerMeta?.public_slug ? `${getShareOrigin()}/f/${flyerMeta.public_slug}` : ""}
+            socialUrl={flyerMeta?.public_slug ? `${getShareOrigin()}/f/${flyerMeta.public_slug}` : ""}
+            title={flyerTitle}
+            thumbnailUrl={flyerMeta?.thumbnail_url ?? undefined}
+            isPublished={flyerMeta?.status === "published" && !!flyerMeta?.public_slug}
+          />
+          <PortalLinkDialog flyerId={flyerId} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />
+        </>
+      )}
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
         {[
