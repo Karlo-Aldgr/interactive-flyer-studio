@@ -188,18 +188,134 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
     listening: false,
     fill: style === "solid" || style === "dashed" ? undefined : `${color}14`,
   } as any;
+  // Radar ping rings (only for default "pulse" style) — centered on the layer
+  // and scaled by the animation. Use offset so scaling expands outward from center.
+  const showPings = style === "pulse";
+  const cx = layer.position.x + layer.size.width / 2;
+  const cy = layer.position.y + layer.size.height / 2;
+  const renderPings = () => {
+    if (!showPings) return null;
+    if (shape === "ellipse") {
+      return (
+        <>
+          <Ellipse
+            ref={ping1Ref}
+            x={cx} y={cy}
+            radiusX={layer.size.width / 2}
+            radiusY={layer.size.height / 2}
+            stroke={color}
+            strokeWidth={thickness}
+            opacity={baseOpacity}
+            listening={false}
+          />
+          <Ellipse
+            ref={ping2Ref}
+            x={cx} y={cy}
+            radiusX={layer.size.width / 2}
+            radiusY={layer.size.height / 2}
+            stroke={color}
+            strokeWidth={thickness}
+            opacity={0}
+            listening={false}
+          />
+        </>
+      );
+    }
+    return (
+      <>
+        <Rect
+          ref={ping1Ref}
+          x={cx} y={cy}
+          width={layer.size.width}
+          height={layer.size.height}
+          offsetX={layer.size.width / 2}
+          offsetY={layer.size.height / 2}
+          cornerRadius={layer.style.cornerRadius || 8}
+          stroke={color}
+          strokeWidth={thickness}
+          opacity={baseOpacity}
+          listening={false}
+        />
+        <Rect
+          ref={ping2Ref}
+          x={cx} y={cy}
+          width={layer.size.width}
+          height={layer.size.height}
+          offsetX={layer.size.width / 2}
+          offsetY={layer.size.height / 2}
+          cornerRadius={layer.style.cornerRadius || 8}
+          stroke={color}
+          strokeWidth={thickness}
+          opacity={0}
+          listening={false}
+        />
+      </>
+    );
+  };
+
   if (shape === "ellipse") {
     return (
-      <Ellipse
-        {...common}
-        radiusX={layer.size.width / 2}
-        radiusY={layer.size.height / 2}
-        offsetX={-layer.size.width / 2}
-        offsetY={-layer.size.height / 2}
-      />
+      <>
+        {renderPings()}
+        <Ellipse
+          {...common}
+          radiusX={layer.size.width / 2}
+          radiusY={layer.size.height / 2}
+          offsetX={-layer.size.width / 2}
+          offsetY={-layer.size.height / 2}
+        />
+      </>
     );
   }
-  return <Rect {...common} cornerRadius={layer.style.cornerRadius || 8} />;
+  return (
+    <>
+      {renderPings()}
+      <Rect {...common} cornerRadius={layer.style.cornerRadius || 8} />
+    </>
+  );
+}
+
+/**
+ * One-shot click confirmation ring — expands and fades from the click point,
+ * then auto-removes after ~600ms.
+ */
+function ClickPing({ x, y, color = "#7c3aed", onDone }: { x: number; y: number; color?: string; onDone: () => void }) {
+  const ref = useRef<any>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const duration = 600;
+    const start = performance.now();
+    const anim = new Konva.Animation(() => {
+      const elapsed = performance.now() - start;
+      const p = Math.min(1, elapsed / duration);
+      node.radius(20 + p * 80);
+      node.opacity(1 - p);
+      node.strokeWidth(4 * (1 - p) + 1);
+      if (p >= 1) {
+        anim.stop();
+        onDone();
+      }
+    }, node.getLayer());
+    anim.start();
+    return () => { anim.stop(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <Circle
+      ref={ref}
+      x={x}
+      y={y}
+      radius={20}
+      stroke={color}
+      strokeWidth={4}
+      opacity={1}
+      shadowColor={color}
+      shadowBlur={12}
+      shadowOpacity={0.6}
+      listening={false}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------
