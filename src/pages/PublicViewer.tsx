@@ -680,6 +680,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   useEffect(() => { setPopupImageReady(false); setPopupQty(1); }, [popup?.id, popup?.payload?.mediaUrl]);
   useEffect(() => { setZoomImageReady(false); }, [zoomImage]);
   const [enlarged, setEnlarged] = useState(false);
+  const [clickPings, setClickPings] = useState<Array<{ id: string; x: number; y: number; color: string }>>([]);
   const [airMessages, setAirMessages] = useState<Array<{ action: LayerAction; layer: Layer | null }>>([]);
   const [poll, setPoll] = useState<LayerAction | null>(null);
   const [subscribeAction, setSubscribeAction] = useState<LayerAction | null>(null);
