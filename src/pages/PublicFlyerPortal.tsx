@@ -20,9 +20,13 @@ interface PortalFeatures {
   hasCheckout: boolean;
   hasCalls: boolean;
 }
+interface CartEmail { created_at: string; name: string | null; email: string; phone: string | null; address: string | null; total: number | null; currency: string | null; items: number }
+interface LayerClick { layer_id: string; label: string; type: string; action_type: string | null; clicks: number }
 interface PortalData {
   flyer: { id: string; title: string; status: string; public_slug: string | null; thumbnail_url: string | null; created_at: string };
-  counts: { views: number; subscribers: number; appointments: number; submissions: number; pollVotes: number; purchases: number };
+  counts: { views: number; uniqueVisitors?: number; returnVisitors?: number; clicks?: number; subscribers: number; appointments: number; submissions: number; pollVotes: number; purchases: number; cartOrders?: number; cartRevenue?: number };
+  analytics?: { dailyViews: { date: string; count: number }[]; topLayerClicks: LayerClick[]; actionTypeClicks: Record<string, number> };
+  cartEmails?: CartEmail[];
   subscribers: any[];
   appointments: any[];
   submissions: any[];
