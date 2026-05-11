@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
-  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3, Users, Wallet, Inbox,
+  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3, Users, Wallet, Inbox, Link as LinkIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { PaymentLinkDialog } from "./PaymentLinkDialog";
 import { FlyerPaymentSettingsDialog } from "./FlyerPaymentSettingsDialog";
 import { IntroAudioDialog } from "./IntroAudioDialog";
 import { SubscribersPanel } from "./SubscribersPanel";
+import { PortalLinkDialog } from "./PortalLinkDialog";
 
 interface Props { saving: boolean }
 
@@ -81,6 +82,7 @@ export function TopBar({ saving }: Props) {
   const [introAudioOpen, setIntroAudioOpen] = useState(false);
   const [subscribersOpen, setSubscribersOpen] = useState(false);
   const [paySettingsOpen, setPaySettingsOpen] = useState(false);
+  const [portalLinkOpen, setPortalLinkOpen] = useState(false);
 
   if (!flyer) return null;
 
@@ -345,6 +347,14 @@ export function TopBar({ saving }: Props) {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
+            <Button size="sm" variant="outline" onClick={() => setPortalLinkOpen(true)}>
+              <LinkIcon className="mr-1 h-4 w-4" /> Portal link
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Get a private link + access code to share this flyer's portal</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button asChild size="sm" variant="outline">
               <Link to={`/analytics/${flyer.id}`}>
                 <BarChart3 className="mr-1 h-4 w-4" /> Results
@@ -484,6 +494,7 @@ export function TopBar({ saving }: Props) {
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
       <FlyerPaymentSettingsDialog open={paySettingsOpen} onOpenChange={setPaySettingsOpen} />
+      <PortalLinkDialog flyerId={flyer.id} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />
       <IntroAudioDialog open={introAudioOpen} onOpenChange={setIntroAudioOpen} />
       <SubscribersPanel
         open={subscribersOpen}

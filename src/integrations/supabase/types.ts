@@ -163,6 +163,8 @@ export type Database = {
           created_at: string
           id: string
           owner_id: string
+          portal_access_code: string
+          portal_token: string
           public_slug: string | null
           settings: Json
           status: Database["public"]["Enums"]["flyer_status"]
@@ -174,6 +176,8 @@ export type Database = {
           created_at?: string
           id?: string
           owner_id: string
+          portal_access_code?: string
+          portal_token?: string
           public_slug?: string | null
           settings?: Json
           status?: Database["public"]["Enums"]["flyer_status"]
@@ -185,6 +189,8 @@ export type Database = {
           created_at?: string
           id?: string
           owner_id?: string
+          portal_access_code?: string
+          portal_token?: string
           public_slug?: string | null
           settings?: Json
           status?: Database["public"]["Enums"]["flyer_status"]
