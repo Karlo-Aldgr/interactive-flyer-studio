@@ -216,6 +216,9 @@ export default function FlyerPortal() {
     map: "Map", directions: "Directions", video: "Videos", audio: "Audio",
     popup: "Popups", lightbox: "Lightbox", navigate: "Navigation",
     add_to_calendar: "Calendar adds", social: "Social",
+    pay_later_view: "Pay Later views", pay_later_call: "Pay Later · Call",
+    pay_later_sms: "Pay Later · Text", pay_later_email: "Pay Later · Email",
+    pay_later_paid: "Pay Later · Marked Paid",
   };
   const COVERED_ACTION_TYPES = new Set([
     "poll", "book_appointment", "subscribe", "form", "rsvp",
