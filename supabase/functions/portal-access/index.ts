@@ -1,0 +1,97 @@
+// Public edge function — validates portal token + access code and returns
+// the flyer's portal data (analytics, subscribers, appointments, polls, forms).
+// Deployed with verify_jwt = false so anyone with the link + code can access.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+  try {
+    const { token, code } = await req.json().catch(() => ({}));
+    if (!token || !code) {
+      return json({ error: "Missing token or code" }, 400);
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: flyer, error: flyerErr } = await supabase
+      .from("flyers")
+      .select("id, title, status, public_slug, settings, thumbnail_url, created_at, portal_access_code")
+      .eq("portal_token", token)
+      .maybeSingle();
+
+    if (flyerErr) return json({ error: flyerErr.message }, 500);
+    if (!flyer) return json({ error: "Invalid link" }, 404);
+    if (String(code).trim().toUpperCase() !== String(flyer.portal_access_code).toUpperCase()) {
+      return json({ error: "Invalid access code" }, 401);
+    }
+
+    const flyerId = flyer.id as string;
+    const [
+      { data: subscribers },
+      { data: appointments },
+      { data: submissions },
+      { data: pollVotes },
+      { data: events },
+      { count: viewsCount },
+    ] = await Promise.all([
+      supabase.from("subscribers").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
+      supabase.from("appointments").select("*").eq("flyer_id", flyerId).order("start_at", { ascending: true }),
+      supabase.from("form_submissions").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
+      supabase.from("poll_votes").select("*").eq("flyer_id", flyerId),
+      supabase.from("analytics_events").select("event_type, created_at, metadata, layer_id").eq("flyer_id", flyerId).order("created_at", { ascending: false }).limit(2000),
+      supabase.from("analytics_events").select("*", { count: "exact", head: true }).eq("flyer_id", flyerId).eq("event_type", "view"),
+    ]);
+
+    // Aggregate purchases / clicks from analytics_events metadata when present
+    const purchases = (events || []).filter((e: any) => {
+      const t = (e.event_type || "").toLowerCase();
+      const meta = e.metadata || {};
+      return t === "purchase" || t === "checkout" || meta.purchase === true;
+    });
+
+    return json({
+      flyer: {
+        id: flyer.id,
+        title: flyer.title,
+        status: flyer.status,
+        public_slug: flyer.public_slug,
+        thumbnail_url: flyer.thumbnail_url,
+        created_at: flyer.created_at,
+      },
+      counts: {
+        views: viewsCount ?? 0,
+        subscribers: (subscribers || []).length,
+        appointments: (appointments || []).length,
+        submissions: (submissions || []).length,
+        pollVotes: (pollVotes || []).length,
+        purchases: purchases.length,
+      },
+      subscribers: subscribers || [],
+      appointments: appointments || [],
+      submissions: submissions || [],
+      pollVotes: pollVotes || [],
+      events: events || [],
+    });
+  } catch (e: any) {
+    return json({ error: e?.message || "Server error" }, 500);
+  }
+});
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
