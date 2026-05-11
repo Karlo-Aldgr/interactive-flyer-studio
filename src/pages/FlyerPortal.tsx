@@ -80,6 +80,21 @@ function csv(rows: any[], cols: string[]): string {
   return [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
 }
 
+function getPortalDevice(): "mobile" | "tablet" | "desktop" {
+  try {
+    const ua = navigator.userAgent || "";
+    if (/iPad|Tablet|PlayBook|Silk|(?=.*\bAndroid\b)(?!.*\bMobile\b)/i.test(ua)) return "tablet";
+    if (/Mobi|iPhone|iPod|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return "mobile";
+    return "desktop";
+  } catch { return "desktop"; }
+}
+
+function deviceFromEvent(e: { metadata?: any }): "mobile" | "tablet" | "desktop" | "unknown" {
+  const d = e?.metadata?.device;
+  if (d === "mobile" || d === "tablet" || d === "desktop") return d;
+  return "unknown";
+}
+
 function downloadCsv(name: string, content: string) {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
