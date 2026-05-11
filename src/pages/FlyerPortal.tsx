@@ -17,7 +17,7 @@ type OrderStatus = "new" | "on_hold" | "pay_later" | "completed";
 const ORDER_STATUSES: { value: OrderStatus; label: string; cls: string; ring: string }[] = [
   { value: "new",        label: "New",        cls: "bg-primary text-primary-foreground",                    ring: "border-primary/60 bg-primary/5" },
   { value: "on_hold",    label: "On Hold",    cls: "bg-amber-500 text-white",                                ring: "border-amber-500/50 bg-amber-500/5" },
-  { value: "pay_later",  label: "Pay Later",  cls: "bg-blue-500 text-white",                                 ring: "border-blue-500/50 bg-blue-500/5" },
+  { value: "pay_later",  label: "Pay Later",  cls: "bg-red-600 text-white animate-pulse",                    ring: "border-red-600 bg-red-500/10" },
   { value: "completed",  label: "Completed",  cls: "bg-emerald-600 text-white",                              ring: "border-emerald-600/40 bg-emerald-600/5" },
 ];
 const statusMeta = (s: string | null | undefined) =>
