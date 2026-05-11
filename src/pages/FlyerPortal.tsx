@@ -285,6 +285,20 @@ export default function FlyerPortal() {
     if (cartCounts[s] != null) cartCounts[s] += 1;
   }
   const [openOrder, setOpenOrder] = useState<FormSubmission | null>(null);
+  const [confirmPaid, setConfirmPaid] = useState<FormSubmission | null>(null);
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [payLaterAlertOpen, setPayLaterAlertOpen] = useState(false);
+  const [payLaterAlertShown, setPayLaterAlertShown] = useState(false);
+
+  // One-time per session: prompt the seller to collect payment when pay-later orders are present
+  useEffect(() => {
+    if (loading || payLaterAlertShown) return;
+    const pending = cartOrders.filter((o) => o.status === "pay_later").length;
+    if (pending > 0) {
+      setPayLaterAlertOpen(true);
+      setPayLaterAlertShown(true);
+    }
+  }, [loading, cartOrders, payLaterAlertShown]);
 
   async function logPortalEvent(
     actionType: string,
@@ -303,21 +317,43 @@ export default function FlyerPortal() {
     }
   }
 
-  async function setOrderStatus(id: string, status: OrderStatus) {
+  async function setOrderStatus(
+    id: string,
+    status: OrderStatus,
+    extraData?: Record<string, any>
+  ) {
     const prev = submissions;
-    const wasPayLater = prev.find((s) => s.id === id)?.status === "pay_later";
-    setSubmissions((arr) => arr.map((s) => (s.id === id ? { ...s, status } : s)));
-    setOpenOrder((o) => (o && o.id === id ? { ...o, status } : o));
-    const { error } = await supabase.from("form_submissions").update({ status } as any).eq("id", id);
+    const target = prev.find((s) => s.id === id);
+    const wasPayLater = target?.status === "pay_later";
+    const nextData = extraData ? { ...(target?.data || {}), ...extraData } : target?.data;
+    setSubmissions((arr) =>
+      arr.map((s) => (s.id === id ? { ...s, status, data: nextData ?? s.data } : s))
+    );
+    setOpenOrder((o) => (o && o.id === id ? { ...o, status, data: nextData ?? o.data } : o));
+    const payload: any = { status };
+    if (extraData) payload.data = nextData;
+    const { error } = await supabase.from("form_submissions").update(payload).eq("id", id);
     if (error) {
       setSubmissions(prev);
       toast.error(error.message);
-    } else {
-      toast.success("Status updated");
-      if (wasPayLater && status === "completed") {
-        logPortalEvent("pay_later_paid", { order_id: id });
-      }
+      return false;
     }
+    toast.success("Status updated");
+    if (wasPayLater && status === "completed") {
+      logPortalEvent("pay_later_paid", { order_id: id, paid_by: extraData?.paid_by });
+    }
+    return true;
+  }
+
+  async function confirmMarkPaid() {
+    if (!confirmPaid) return;
+    setMarkingPaid(true);
+    const ok = await setOrderStatus(confirmPaid.id, "completed", {
+      paid_at: new Date().toISOString(),
+      paid_by: user?.email || user?.id || "unknown",
+    });
+    setMarkingPaid(false);
+    if (ok) setConfirmPaid(null);
   }
 
   async function cancelAppointment(id: string) {
