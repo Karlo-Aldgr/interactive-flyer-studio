@@ -207,6 +207,7 @@ export type Database = {
           flyer_id: string
           id: string
           layer_id: string | null
+          status: string
         }
         Insert: {
           created_at?: string
@@ -214,6 +215,7 @@ export type Database = {
           flyer_id: string
           id?: string
           layer_id?: string | null
+          status?: string
         }
         Update: {
           created_at?: string
@@ -221,6 +223,7 @@ export type Database = {
           flyer_id?: string
           id?: string
           layer_id?: string | null
+          status?: string
         }
         Relationships: [
           {
