@@ -484,9 +484,32 @@ export default function FlyerPortal() {
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs"
           />
+          <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
+            <Share2 className="mr-1 h-3.5 w-3.5" /> Share & QR
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setPortalLinkOpen(true)}>
+            <LinkIcon className="mr-1 h-3.5 w-3.5" /> Portal link
+          </Button>
           <Button variant="outline" size="sm" onClick={() => loadData(false)}>
             <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
           </Button>
+        </div>
+      </div>
+
+      {flyerId && (
+        <>
+          <ShareDialog
+            open={shareOpen}
+            onOpenChange={setShareOpen}
+            displayUrl={flyerMeta?.public_slug ? `${getShareOrigin()}/f/${flyerMeta.public_slug}` : ""}
+            socialUrl={flyerMeta?.public_slug ? `${getShareOrigin()}/f/${flyerMeta.public_slug}` : ""}
+            title={flyerTitle}
+            thumbnailUrl={flyerMeta?.thumbnail_url ?? undefined}
+            isPublished={flyerMeta?.status === "published" && !!flyerMeta?.public_slug}
+          />
+          <PortalLinkDialog flyerId={flyerId} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />
+        </>
+      )}
         </div>
       </div>
 
