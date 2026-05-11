@@ -310,7 +310,7 @@ export default function FlyerPortal() {
       await supabase.from("analytics_events").insert([{
         flyer_id: flyerId,
         event_type: eventType as any,
-        metadata: { action_type: actionType, source: "portal", ...extra } as any,
+        metadata: { action_type: actionType, source: "portal", device: getPortalDevice(), ...extra } as any,
       } as any]);
     } catch (e) {
       console.warn("portal analytics insert failed", e);
