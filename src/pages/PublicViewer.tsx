@@ -72,6 +72,8 @@ import { toast } from "sonner";
 // Highlight ring shown around tappable layers in the viewer.
 function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" }) {
   const ref = useRef<any>(null);
+  const ping1Ref = useRef<any>(null);
+  const ping2Ref = useRef<any>(null);
   const cornerRefs = useRef<any[]>([]);
   const hl = layer.action?.highlight ?? {};
   const style = hl.style ?? "pulse";
@@ -89,8 +91,22 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
       const t = (frame.time % period) / period;
       const e = 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
       if (style === "pulse") {
-        node.opacity(baseOpacity * (0.45 + 0.55 * e));
-        node.strokeWidth(thickness + 3 * e);
+        node.opacity(baseOpacity * (0.55 + 0.45 * e));
+        node.strokeWidth(thickness + 2 * e);
+        // Radar ping rings expanding outward
+        const cx = layer.position.x + layer.size.width / 2;
+        const cy = layer.position.y + layer.size.height / 2;
+        const animatePing = (n: any, phase: number) => {
+          if (!n) return;
+          const tp = ((frame.time + phase) % period) / period;
+          const scale = 1 + tp * 0.45;
+          n.scale({ x: scale, y: scale });
+          n.position({ x: cx, y: cy });
+          n.opacity(baseOpacity * (1 - tp));
+          n.strokeWidth(Math.max(1, thickness * (1 - tp * 0.5)));
+        };
+        animatePing(ping1Ref.current, 0);
+        animatePing(ping2Ref.current, period / 2);
       } else {
         // glow: steady stroke, pulsing shadow
         node.shadowOpacity(0.3 + 0.6 * e);
@@ -99,7 +115,7 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
     }, node.getLayer());
     anim.start();
     return () => { anim.stop(); };
-  }, [style, thickness, baseOpacity, color]);
+  }, [style, thickness, baseOpacity, color, layer.position.x, layer.position.y, layer.size.width, layer.size.height]);
 
   if (style === "corners") {
     // Render 4 L-shaped corner brackets
@@ -172,18 +188,134 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
     listening: false,
     fill: style === "solid" || style === "dashed" ? undefined : `${color}14`,
   } as any;
+  // Radar ping rings (only for default "pulse" style) — centered on the layer
+  // and scaled by the animation. Use offset so scaling expands outward from center.
+  const showPings = style === "pulse";
+  const cx = layer.position.x + layer.size.width / 2;
+  const cy = layer.position.y + layer.size.height / 2;
+  const renderPings = () => {
+    if (!showPings) return null;
+    if (shape === "ellipse") {
+      return (
+        <>
+          <Ellipse
+            ref={ping1Ref}
+            x={cx} y={cy}
+            radiusX={layer.size.width / 2}
+            radiusY={layer.size.height / 2}
+            stroke={color}
+            strokeWidth={thickness}
+            opacity={baseOpacity}
+            listening={false}
+          />
+          <Ellipse
+            ref={ping2Ref}
+            x={cx} y={cy}
+            radiusX={layer.size.width / 2}
+            radiusY={layer.size.height / 2}
+            stroke={color}
+            strokeWidth={thickness}
+            opacity={0}
+            listening={false}
+          />
+        </>
+      );
+    }
+    return (
+      <>
+        <Rect
+          ref={ping1Ref}
+          x={cx} y={cy}
+          width={layer.size.width}
+          height={layer.size.height}
+          offsetX={layer.size.width / 2}
+          offsetY={layer.size.height / 2}
+          cornerRadius={layer.style.cornerRadius || 8}
+          stroke={color}
+          strokeWidth={thickness}
+          opacity={baseOpacity}
+          listening={false}
+        />
+        <Rect
+          ref={ping2Ref}
+          x={cx} y={cy}
+          width={layer.size.width}
+          height={layer.size.height}
+          offsetX={layer.size.width / 2}
+          offsetY={layer.size.height / 2}
+          cornerRadius={layer.style.cornerRadius || 8}
+          stroke={color}
+          strokeWidth={thickness}
+          opacity={0}
+          listening={false}
+        />
+      </>
+    );
+  };
+
   if (shape === "ellipse") {
     return (
-      <Ellipse
-        {...common}
-        radiusX={layer.size.width / 2}
-        radiusY={layer.size.height / 2}
-        offsetX={-layer.size.width / 2}
-        offsetY={-layer.size.height / 2}
-      />
+      <>
+        {renderPings()}
+        <Ellipse
+          {...common}
+          radiusX={layer.size.width / 2}
+          radiusY={layer.size.height / 2}
+          offsetX={-layer.size.width / 2}
+          offsetY={-layer.size.height / 2}
+        />
+      </>
     );
   }
-  return <Rect {...common} cornerRadius={layer.style.cornerRadius || 8} />;
+  return (
+    <>
+      {renderPings()}
+      <Rect {...common} cornerRadius={layer.style.cornerRadius || 8} />
+    </>
+  );
+}
+
+/**
+ * One-shot click confirmation ring — expands and fades from the click point,
+ * then auto-removes after ~600ms.
+ */
+function ClickPing({ x, y, color = "#7c3aed", onDone }: { x: number; y: number; color?: string; onDone: () => void }) {
+  const ref = useRef<any>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const duration = 600;
+    const start = performance.now();
+    const anim = new Konva.Animation(() => {
+      const elapsed = performance.now() - start;
+      const p = Math.min(1, elapsed / duration);
+      node.radius(20 + p * 80);
+      node.opacity(1 - p);
+      node.strokeWidth(4 * (1 - p) + 1);
+      if (p >= 1) {
+        anim.stop();
+        onDone();
+      }
+    }, node.getLayer());
+    anim.start();
+    return () => { anim.stop(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <Circle
+      ref={ref}
+      x={x}
+      y={y}
+      radius={20}
+      stroke={color}
+      strokeWidth={4}
+      opacity={1}
+      shadowColor={color}
+      shadowBlur={12}
+      shadowOpacity={0.6}
+      listening={false}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -548,6 +680,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   useEffect(() => { setPopupImageReady(false); setPopupQty(1); }, [popup?.id, popup?.payload?.mediaUrl]);
   useEffect(() => { setZoomImageReady(false); }, [zoomImage]);
   const [enlarged, setEnlarged] = useState(false);
+  const [clickPings, setClickPings] = useState<Array<{ id: string; x: number; y: number; color: string }>>([]);
   const [airMessages, setAirMessages] = useState<Array<{ action: LayerAction; layer: Layer | null }>>([]);
   const [poll, setPoll] = useState<LayerAction | null>(null);
   const [subscribeAction, setSubscribeAction] = useState<LayerAction | null>(null);
@@ -782,8 +915,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     return () => window.removeEventListener("pagehide", onHide);
   }, [flyer, previewMode]);
 
+  function triggerClickPing(x: number, y: number, color?: string) {
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    setClickPings((prev) => [...prev, { id, x, y, color: color || "#7c3aed" }]);
+  }
+
   function runAction(layer: Layer) {
     if (!layer.action) return;
+    const cx = layer.position.x + layer.size.width / 2;
+    const cy = layer.position.y + layer.size.height / 2;
+    triggerClickPing(cx, cy, layer.action.highlight?.color);
     logClick(layer, layer.action.type);
     executeAction(layer.action, layer);
   }
@@ -1246,6 +1387,20 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                     l.type === "hotspot" && l.content.hotspotShape === "ellipse" ? "ellipse" : "rect";
                   return <PulseHighlight key={"pulse-" + l.id} layer={l} shape={shape} />;
                 })}
+            </KLayer>
+          )}
+          {/* One-shot click confirmation rings */}
+          {imagesReady && clickPings.length > 0 && (
+            <KLayer listening={false}>
+              {clickPings.map((p) => (
+                <ClickPing
+                  key={p.id}
+                  x={p.x}
+                  y={p.y}
+                  color={p.color}
+                  onDone={() => setClickPings((prev) => prev.filter((q) => q.id !== p.id))}
+                />
+              ))}
             </KLayer>
           )}
           {imagesReady && previewMode && showHitboxes && (

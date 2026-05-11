@@ -346,6 +346,7 @@ export default function FlyerPortal() {
   const [payLaterAlertOpen, setPayLaterAlertOpen] = useState(false);
   const [payLaterAlertShown, setPayLaterAlertShown] = useState(false);
   const [openLayerActivity, setOpenLayerActivity] = useState<string | null>(null);
+  const [flashedLayerId, setFlashedLayerId] = useState<string | null>(null);
 
   // One-time per session: prompt the seller to collect payment when pay-later orders are present
   useEffect(() => {
@@ -532,8 +533,14 @@ export default function FlyerPortal() {
                       {topLayerClicks.map((r) => (
                         <tr
                           key={r.lid}
-                          onClick={() => setOpenLayerActivity(r.lid)}
-                          className="cursor-pointer border-b border-border/50 last:border-0 hover:bg-muted/40"
+                          onClick={() => {
+                            setFlashedLayerId(r.lid);
+                            setOpenLayerActivity(r.lid);
+                            setTimeout(() => setFlashedLayerId(null), 900);
+                          }}
+                          className={`cursor-pointer border-b border-border/50 last:border-0 transition-colors hover:bg-muted/40 ${
+                            flashedLayerId === r.lid ? "bg-accent/70 ring-2 ring-primary/40 animate-pulse" : ""
+                          }`}
                           title="View activity"
                         >
                           <td className="py-1.5 pr-2">
