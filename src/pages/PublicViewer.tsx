@@ -25,6 +25,16 @@ function useImagesReady(srcs: string[], timeoutMs = 4000): boolean {
   return ready;
 }
 
+/** Coarse device classification for analytics breakdowns. */
+function getViewerDevice(): "mobile" | "tablet" | "desktop" {
+  try {
+    const ua = navigator.userAgent || "";
+    if (/iPad|Tablet|PlayBook|Silk|(?=.*\bAndroid\b)(?!.*\bMobile\b)/i.test(ua)) return "tablet";
+    if (/Mobi|iPhone|iPod|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return "mobile";
+    return "desktop";
+  } catch { return "desktop"; }
+}
+
 /** Stable per-browser session id used to compute unique/return visitors in analytics. */
 function getViewerSessionId(): string {
   try {
