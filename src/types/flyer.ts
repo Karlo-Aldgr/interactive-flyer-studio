@@ -21,7 +21,17 @@ export type ActionType =
   | "buy_product"
   | "air_messages"
   | "poll"
-  | "subscribe";
+  | "subscribe"
+  | "book_appointment";
+
+/** Weekly availability for slot-mode appointments. Day index 0 = Sunday. */
+export interface AppointmentDayAvailability {
+  enabled: boolean;
+  startMinute: number; // minutes from 00:00 local (e.g. 9*60 = 540)
+  endMinute: number;
+}
+
+export type AppointmentMode = "slots" | "free";
 
 export interface PopupButton {
   id: string;
