@@ -24,6 +24,20 @@ function useImagesReady(srcs: string[], timeoutMs = 4000): boolean {
   }, [key, timeoutMs]);
   return ready;
 }
+
+/** Stable per-browser session id used to compute unique/return visitors in analytics. */
+function getViewerSessionId(): string {
+  try {
+    const k = "ff_viewer_sid";
+    let v = localStorage.getItem(k);
+    if (!v) {
+      v = (crypto as any)?.randomUUID?.() || `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(k, v);
+    }
+    return v;
+  } catch {
+    return `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  }
 import { useParams } from "react-router-dom";
 import { Stage, Layer as KLayer, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage, Group } from "react-konva";
 import Konva from "konva";
