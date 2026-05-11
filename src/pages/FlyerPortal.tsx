@@ -161,6 +161,11 @@ export default function FlyerPortal() {
     }
     setAuthorized(true);
     setFlyerTitle(flyer?.title || "Flyer");
+    setFlyerMeta({
+      status: (flyer as any)?.status,
+      public_slug: (flyer as any)?.public_slug ?? null,
+      thumbnail_url: (flyer as any)?.thumbnail_url ?? null,
+    });
 
     const { data: pageRows } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);
     const pageIds = (pageRows || []).map((p: any) => p.id);
