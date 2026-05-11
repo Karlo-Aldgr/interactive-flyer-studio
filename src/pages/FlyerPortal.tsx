@@ -592,6 +592,8 @@ export default function FlyerPortal() {
                 <div className="space-y-2">
                   {cartOrders.map((s) => {
                     const meta = statusMeta(s.status);
+                    const phone = s.data?.customer?.phone;
+                    const email = s.data?.customer?.email;
                     return (
                       <button
                         key={s.id}
@@ -602,11 +604,16 @@ export default function FlyerPortal() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="font-medium truncate">
-                              {s.data?.customer?.name || "—"} · {s.data?.customer?.email || "—"} {s.data?.customer?.phone && `· ${s.data.customer.phone}`}
+                              {s.data?.customer?.name || "—"} · {email || "—"} {phone && `· ${phone}`}
                             </div>
                             <div className="text-muted-foreground">
                               {new Date(s.created_at).toLocaleString()} · {(s.data?.items || []).length} items · {s.data?.currency || ""} {s.data?.total ?? ""}
                             </div>
+                            {s.status === "pay_later" && (
+                              <div className="mt-1 font-semibold text-red-600">
+                                ⚠ Customer chose Pay Later — request payment now
+                              </div>
+                            )}
                           </div>
                           <Badge className={meta.cls}>{meta.label}</Badge>
                         </div>
