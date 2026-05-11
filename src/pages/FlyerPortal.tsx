@@ -80,6 +80,21 @@ function csv(rows: any[], cols: string[]): string {
   return [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
 }
 
+function getPortalDevice(): "mobile" | "tablet" | "desktop" {
+  try {
+    const ua = navigator.userAgent || "";
+    if (/iPad|Tablet|PlayBook|Silk|(?=.*\bAndroid\b)(?!.*\bMobile\b)/i.test(ua)) return "tablet";
+    if (/Mobi|iPhone|iPod|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return "mobile";
+    return "desktop";
+  } catch { return "desktop"; }
+}
+
+function deviceFromEvent(e: { metadata?: any }): "mobile" | "tablet" | "desktop" | "unknown" {
+  const d = e?.metadata?.device;
+  if (d === "mobile" || d === "tablet" || d === "desktop") return d;
+  return "unknown";
+}
+
 function downloadCsv(name: string, content: string) {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -226,15 +241,39 @@ export default function FlyerPortal() {
   ]);
   const extraActionTypes = allActionTypes.filter((t) => !COVERED_ACTION_TYPES.has(t));
 
-  const layerLabel = useMemo(() => {
-    const m: Record<string, { label: string; type: string }> = {};
-    for (const l of layers) {
-      const c = l.content || {};
-      const label = c.text || c.label || c.iconName || c.url || l.type;
-      m[l.id] = { label: String(label).slice(0, 60), type: l.type };
+  // Map layer_id -> array of action types attached (top-level + popup buttons + hotspots).
+  const layerActions = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    for (const a of actions) {
+      if (!a.layer_id) continue;
+      const types = new Set<string>(m[a.layer_id] || []);
+      if (a.type) types.add(a.type);
+      const p = a.payload || {};
+      for (const b of p.buttons || []) if (b?.action?.type) types.add(b.action.type);
+      for (const h of p.hotspots || []) if (h?.action?.type) types.add(h.action.type);
+      m[a.layer_id] = Array.from(types);
     }
     return m;
-  }, [layers]);
+  }, [actions]);
+
+  const layerLabel = useMemo(() => {
+    const m: Record<string, { label: string; type: string; actionTypes: string[] }> = {};
+    for (const l of layers) {
+      const c = l.content || {};
+      const acts = layerActions[l.id] || [];
+      // Prefer an action-derived label for hotspots (which usually have no visible text).
+      const actionLabel = acts.length
+        ? acts.map((t) => ACTION_LABELS[t] || t.replace(/_/g, " ")).join(" + ")
+        : "";
+      const visualLabel = c.text || c.label || c.iconName || c.url || "";
+      const label =
+        l.type === "hotspot"
+          ? (actionLabel || visualLabel || "Hotspot")
+          : (visualLabel || actionLabel || l.type);
+      m[l.id] = { label: String(label).slice(0, 60), type: l.type, actionTypes: acts };
+    }
+    return m;
+  }, [layers, layerActions]);
 
   const viewEvents = events.filter((e) => e.event_type === "view");
   const clickEvents = events.filter((e) => e.event_type === "click");
@@ -246,12 +285,29 @@ export default function FlyerPortal() {
   const uniqueVisitors = Object.keys(sessionViews).length;
   const returnVisitors = Object.values(sessionViews).filter((n) => n > 1).length;
 
-  const layerClicks: Record<string, { label: string; type: string; clicks: number }> = {};
+  type LayerClickAgg = {
+    label: string;
+    type: string;
+    actionTypes: string[];
+    clicks: number;
+    devices: { mobile: number; tablet: number; desktop: number; unknown: number };
+  };
+  const layerClicks: Record<string, LayerClickAgg> = {};
   for (const e of clickEvents) {
     const lid = e.layer_id || "_none";
-    const meta = layerLabel[lid] || { label: lid === "_none" ? "(no layer)" : lid, type: "?" };
-    if (!layerClicks[lid]) layerClicks[lid] = { ...meta, clicks: 0 };
+    const meta = layerLabel[lid] || { label: lid === "_none" ? "(no layer)" : lid, type: "?", actionTypes: [] };
+    if (!layerClicks[lid]) {
+      layerClicks[lid] = {
+        label: meta.label,
+        type: meta.type,
+        actionTypes: meta.actionTypes || [],
+        clicks: 0,
+        devices: { mobile: 0, tablet: 0, desktop: 0, unknown: 0 },
+      };
+    }
     layerClicks[lid].clicks += 1;
+    const dev = deviceFromEvent(e);
+    layerClicks[lid].devices[dev] += 1;
   }
   const topLayerClicks = Object.entries(layerClicks)
     .map(([lid, v]) => ({ lid, ...v }))
@@ -289,6 +345,7 @@ export default function FlyerPortal() {
   const [markingPaid, setMarkingPaid] = useState(false);
   const [payLaterAlertOpen, setPayLaterAlertOpen] = useState(false);
   const [payLaterAlertShown, setPayLaterAlertShown] = useState(false);
+  const [openLayerActivity, setOpenLayerActivity] = useState<string | null>(null);
 
   // One-time per session: prompt the seller to collect payment when pay-later orders are present
   useEffect(() => {
@@ -310,7 +367,7 @@ export default function FlyerPortal() {
       await supabase.from("analytics_events").insert([{
         flyer_id: flyerId,
         event_type: eventType as any,
-        metadata: { action_type: actionType, source: "portal", ...extra } as any,
+        metadata: { action_type: actionType, source: "portal", device: getPortalDevice(), ...extra } as any,
       } as any]);
     } catch (e) {
       console.warn("portal analytics insert failed", e);
@@ -459,13 +516,47 @@ export default function FlyerPortal() {
               {topLayerClicks.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No clicks tracked yet.</p>
               ) : (
-                <div className="space-y-1">
-                  {topLayerClicks.map((r) => (
-                    <div key={r.lid} className="flex items-center justify-between text-sm">
-                      <span><Badge variant="secondary" className="mr-2">{r.type}</Badge>{r.label}</span>
-                      <span className="font-mono">{r.clicks}</span>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                        <th className="py-1 pr-2 font-medium">Hotspot / Layer</th>
+                        <th className="py-1 px-2 text-right font-medium">📱 Mobile</th>
+                        <th className="py-1 px-2 text-right font-medium">📲 Tablet</th>
+                        <th className="py-1 px-2 text-right font-medium">🖥 Desktop</th>
+                        <th className="py-1 px-2 text-right font-medium">?</th>
+                        <th className="py-1 pl-2 text-right font-medium">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topLayerClicks.map((r) => (
+                        <tr
+                          key={r.lid}
+                          onClick={() => setOpenLayerActivity(r.lid)}
+                          className="cursor-pointer border-b border-border/50 last:border-0 hover:bg-muted/40"
+                          title="View activity"
+                        >
+                          <td className="py-1.5 pr-2">
+                            <div className="flex flex-wrap items-center gap-1">
+                              <Badge variant="secondary" className="text-[10px]">{r.type}</Badge>
+                              {r.actionTypes.map((t) => (
+                                <Badge key={t} variant="outline" className="text-[10px] capitalize">
+                                  {ACTION_LABELS[t] || t.replace(/_/g, " ")}
+                                </Badge>
+                              ))}
+                              <span className="truncate">{r.label}</span>
+                            </div>
+                          </td>
+                          <td className="py-1.5 px-2 text-right font-mono">{r.devices.mobile}</td>
+                          <td className="py-1.5 px-2 text-right font-mono">{r.devices.tablet}</td>
+                          <td className="py-1.5 px-2 text-right font-mono">{r.devices.desktop}</td>
+                          <td className="py-1.5 px-2 text-right font-mono text-muted-foreground">{r.devices.unknown}</td>
+                          <td className="py-1.5 pl-2 text-right font-mono font-semibold">{r.clicks}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="mt-2 text-[11px] text-muted-foreground">Click any row to view its full activity log.</p>
                 </div>
               )}
             </CardContent>
@@ -929,6 +1020,95 @@ export default function FlyerPortal() {
               onClick={() => setPayLaterAlertOpen(false)}
             >
               Got it — I'll collect payment first
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!openLayerActivity} onOpenChange={(o) => !o && setOpenLayerActivity(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Hotspot activity</DialogTitle>
+            {openLayerActivity && (() => {
+              const info = layerLabel[openLayerActivity];
+              const agg = layerClicks[openLayerActivity];
+              return (
+                <DialogDescription>
+                  <span className="inline-flex flex-wrap items-center gap-1">
+                    <Badge variant="secondary" className="text-[10px]">{info?.type || "?"}</Badge>
+                    {(info?.actionTypes || []).map((t) => (
+                      <Badge key={t} variant="outline" className="text-[10px] capitalize">
+                        {ACTION_LABELS[t] || t.replace(/_/g, " ")}
+                      </Badge>
+                    ))}
+                    <span className="ml-1 font-medium text-foreground">{info?.label || openLayerActivity}</span>
+                  </span>
+                  {agg && (
+                    <span className="mt-2 block text-xs text-muted-foreground">
+                      {agg.clicks} total · 📱 {agg.devices.mobile} · 📲 {agg.devices.tablet} · 🖥 {agg.devices.desktop}
+                      {agg.devices.unknown ? ` · ? ${agg.devices.unknown}` : ""}
+                    </span>
+                  )}
+                </DialogDescription>
+              );
+            })()}
+          </DialogHeader>
+          {openLayerActivity && (() => {
+            const rows = clickEvents.filter((e) => (e.layer_id || "_none") === openLayerActivity);
+            if (rows.length === 0) {
+              return <p className="text-sm text-muted-foreground">No activity yet.</p>;
+            }
+            return (
+              <div className="max-h-[60vh] space-y-1 overflow-y-auto">
+                {rows.map((e) => {
+                  const dev = deviceFromEvent(e);
+                  const at = e?.metadata?.action_type;
+                  return (
+                    <div key={e.id} className="flex items-center justify-between gap-2 rounded border border-border p-2 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge variant="outline" className="text-[10px] capitalize">
+                            {dev === "mobile" ? "📱 Mobile" : dev === "tablet" ? "📲 Tablet" : dev === "desktop" ? "🖥 Desktop" : "? Unknown"}
+                          </Badge>
+                          {at && (
+                            <Badge variant="secondary" className="text-[10px] capitalize">
+                              {ACTION_LABELS[at] || String(at).replace(/_/g, " ")}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="mt-0.5 text-muted-foreground">
+                          {new Date(e.created_at).toLocaleString()} · session {(e.session_id || "—").slice(0, 8)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!openLayerActivity || (clickEvents.filter((e) => (e.layer_id || "_none") === openLayerActivity).length === 0)}
+              onClick={() => {
+                if (!openLayerActivity) return;
+                const rows = clickEvents.filter((e) => (e.layer_id || "_none") === openLayerActivity);
+                downloadCsv(
+                  `hotspot-activity-${openLayerActivity.slice(0, 8)}.csv`,
+                  csv(
+                    rows.map((e) => ({
+                      created_at: e.created_at,
+                      device: deviceFromEvent(e),
+                      action_type: e?.metadata?.action_type || "",
+                      session_id: e.session_id,
+                    })),
+                    ["created_at", "device", "action_type", "session_id"],
+                  ),
+                );
+              }}
+            >
+              <Download className="mr-1 h-3 w-3" /> CSV
             </Button>
           </DialogFooter>
         </DialogContent>

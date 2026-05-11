@@ -25,6 +25,16 @@ function useImagesReady(srcs: string[], timeoutMs = 4000): boolean {
   return ready;
 }
 
+/** Coarse device classification for analytics breakdowns. */
+function getViewerDevice(): "mobile" | "tablet" | "desktop" {
+  try {
+    const ua = navigator.userAgent || "";
+    if (/iPad|Tablet|PlayBook|Silk|(?=.*\bAndroid\b)(?!.*\bMobile\b)/i.test(ua)) return "tablet";
+    if (/Mobi|iPhone|iPod|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return "mobile";
+    return "desktop";
+  } catch { return "desktop"; }
+}
+
 /** Stable per-browser session id used to compute unique/return visitors in analytics. */
 function getViewerSessionId(): string {
   try {
@@ -659,7 +669,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         const sid = getViewerSessionId();
         const { error: trackErr } = await supabase
           .from("analytics_events")
-          .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: document.referrer || null } } as any]);
+          .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: document.referrer || null, device: getViewerDevice() } } as any]);
         if (trackErr) console.warn("[analytics] view insert failed", trackErr);
       }
     })();
@@ -732,7 +742,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       page_id: layer?.page_id ?? null,
       layer_id: layer?.id ?? null,
       event_type: "click",
-      metadata: { ...metadata, action_type: type } as any,
+      metadata: { ...metadata, action_type: type, device: getViewerDevice() } as any,
     });
   }
 
@@ -747,7 +757,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           flyer_id: flyer.id,
           event_type: "view",
           session_id: getViewerSessionId(),
-          metadata: { beacon: true, referrer: document.referrer || null },
+          metadata: { beacon: true, referrer: document.referrer || null, device: getViewerDevice() },
         });
         const blob = new Blob(
           [JSON.stringify({ apikey, authorization: `Bearer ${apikey}`, body })],
