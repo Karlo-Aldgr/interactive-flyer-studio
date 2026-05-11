@@ -10,8 +10,21 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, ChevronLeft, Download, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Download, Loader2, RefreshCw, Share2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import { ShareDialog } from "@/components/editor/ShareDialog";
+import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
+
+const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
+function getShareOrigin() {
+  if (typeof window === "undefined") return PUBLISHED_ORIGIN;
+  const origin = window.location.origin;
+  const isPreviewSandbox =
+    origin.includes("lovableproject.com") ||
+    origin.includes("id-preview--") ||
+    (origin.includes("lovable.app") && origin.includes("preview"));
+  return isPreviewSandbox ? PUBLISHED_ORIGIN : origin;
+}
 
 type OrderStatus = "new" | "on_hold" | "pay_later" | "completed";
 const ORDER_STATUSES: { value: OrderStatus; label: string; cls: string; ring: string }[] = [
