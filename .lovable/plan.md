@@ -1,44 +1,42 @@
-## Status of analytics capture
+## Goal
 
-I tested directly against the database and confirmed:
-- Your flyer **"Stop Repeating"** is `published` ✅
-- The RLS policy correctly allows anonymous visitors to insert `view`, `click`, etc. events ✅
-- A manual test insert from the anon key succeeded ✅
-- But there are **0 events** stored for this flyer, meaning your QR-code visit never reached the tracking call
+Make every clickable area on the published flyer broadcast a continuous **pulsing signal** so end users immediately know what's tappable. Also add a subtle highlight flash in the portal hotspot activity log when a row is opened.
 
-Likely causes: the page was served from a stale cache (the QR loaded before tracking was added), the network blocked the insert silently (we never log the response), or the page never finished loading. The pipeline itself works — we just have no visibility when it fails.
+## What exists today
 
-## Plan
+`PulseHighlight` in `src/pages/PublicViewer.tsx` already draws a stroked outline that fades opacity / thickens stroke. It's a single static ring — easy to miss, especially on busy flyer art.
 
-### 1. Make analytics tracking reliable + observable
-- In `PublicViewer.tsx`, await the view-event insert and log any error to the console + send a beacon retry on `pagehide` so the event isn't lost when a visitor closes the tab quickly.
-- Same hardening for `logClick`.
-- Add a small "Refresh" button on the portal Analytics tab so you can re-pull after a test visit without reloading.
+## What changes
 
-### 2. Cart orders → clickable with full detail dialog
-In `FlyerPortal.tsx` cart tab:
-- Each row becomes a button that opens a dialog showing: customer (name/email/phone/address), itemized list with qty + price, subtotal/total, currency, payment method, timestamp, raw notes.
-- Add a status badge on each row + status selector inside the dialog with four states:
-  - **New** (default for orders with no status yet) — highlighted with primary accent
-  - **Completed** — green
-  - **On Hold** — amber
-  - **Pay Later** — blue
-- Status changes persist to the database and update the row immediately.
-- Counters at the top of the cart tab: New · On Hold · Pay Later · Completed.
+### 1. Public viewer — radar-style pulsing signal
 
-### 3. Storage for order status
-`form_submissions` currently has no status column and no UPDATE policy. Migration:
-- Add nullable `status text` column to `form_submissions` (values: `new | on_hold | pay_later | completed`).
-- Add an `owner updates submissions` RLS policy so the flyer owner can set/change status.
-- Default existing cart orders to `new` (computed in UI when null).
+In `src/pages/PublicViewer.tsx`, upgrade the existing `PulseHighlight` so the default `style: "pulse"` renders a **continuously expanding signal ring** (radar ping) on top of the existing outline:
 
-### Files touched
-- `supabase/migrations/<new>.sql` — add column + update policy
-- `src/pages/FlyerPortal.tsx` — cart dialog, status badges/selector, counters, refresh
-- `src/pages/PublicViewer.tsx` — awaited inserts, error logging, pagehide beacon
+- Keep the static outline (rect / ellipse / circle) so the shape of the hotspot is always visible.
+- Add 1–2 extra stroked rings driven by `Konva.Animation` that:
+  - Start at the hotspot's bounds with full opacity.
+  - Scale outward ~25% larger over ~1.6s.
+  - Fade opacity to 0 as they expand.
+  - Loop forever, with the second ring offset by half a period for a continuous "ping… ping…" feel.
+- Respect existing per-action `highlight` settings (color, thickness, opacity, enabled, style). If `style` is `corners` / `circle` / `dashed` / `solid` / `glow`, leave current behavior; only `pulse` (the default) gets the new radar effect.
+- Honor the global `flyer.settings.highlightsEnabled` toggle — already wired.
 
-### Out of scope
-- No design-system changes; existing badge variants reused
-- No changes to PublicFlyerPortal (visitor portal) or edge function
+### 2. Click feedback burst
 
-After the migration runs, your next QR visit will be captured, and any cart order will be a tappable card you can move through New → On Hold / Pay Later → Completed.
+When a hotspot is actually tapped, fire a one-shot expanding ring from the click point (separate from the looping signal) so the user gets immediate confirmation. Hook into the existing click handler that calls `logClick` / `executeAction` and push a short-lived ring into a local state array; render it in the same Konva overlay layer and remove it when the animation finishes (~600ms).
+
+### 3. Portal hotspot activity log — row highlight
+
+In `src/pages/FlyerPortal.tsx`, when a user clicks a row in the hotspot activity dialog (or opens the dialog for a layer), briefly flash the row/header with a soft accent background + ring, using existing tokens (`bg-accent`, `ring-primary/40`) and Tailwind's `animate-pulse` for ~1s, then settle. No business-logic changes.
+
+## Technical notes
+
+- All animation lives in `PublicViewer.tsx` (`PulseHighlight` component + a new `ClickPing` component) and `FlyerPortal.tsx` (CSS class toggle via `useState` + `setTimeout`).
+- Uses Konva's existing `Konva.Animation` loop — no new dependencies.
+- Colors come from each action's `highlight.color` (default `#7c3aed`, matches `--primary`).
+- No DB / schema / analytics changes. Pay-later flow, device tracking, and existing pulse settings are untouched.
+
+## Files touched
+
+- `src/pages/PublicViewer.tsx` — extend `PulseHighlight`, add `ClickPing` overlay + click handler wiring.
+- `src/pages/FlyerPortal.tsx` — flash highlight on activity row open.
