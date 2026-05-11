@@ -116,6 +116,17 @@ Deno.serve(async (req) => {
       submissions: submissions || [],
       pollVotes: pollVotes || [],
       events: events || [],
+      features: {
+        actionTypes: Array.from(actionTypes),
+        hasHotspots: hasHotspotLayers,
+        hasAppointments: actionTypes.has("book_appointment"),
+        hasSubscribe: actionTypes.has("subscribe"),
+        hasForms: actionTypes.has("form") || actionTypes.has("rsvp"),
+        hasPolls: actionTypes.has("poll"),
+        hasCheckout: actionTypes.has("checkout") || actionTypes.has("buy_ticket") || actionTypes.has("buy_product"),
+        hasCalls: actionTypes.has("call") || actionTypes.has("sms"),
+      },
+      actions: actions.map((a: any) => ({ id: a.id, type: a.type, layer_id: a.layer_id })),
     });
   } catch (e: any) {
     return json({ error: e?.message || "Server error" }, 500);
