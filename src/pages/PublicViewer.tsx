@@ -1560,6 +1560,17 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
 
+      {/* Appointment booking dialog */}
+      {appointmentAction && flyer && (
+        <AppointmentBookingDialog
+          flyerId={flyer.id}
+          layerId={appointmentAction.layer?.id || null}
+          action={appointmentAction.action}
+          open={!!appointmentAction}
+          onClose={() => setAppointmentAction(null)}
+        />
+      )}
+
       {/* Subscribe dialog */}
       <Dialog open={!!subscribeAction} onOpenChange={(v) => !v && setSubscribeAction(null)}>
         <DialogContent>
