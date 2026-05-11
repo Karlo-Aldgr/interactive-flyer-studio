@@ -516,13 +516,47 @@ export default function FlyerPortal() {
               {topLayerClicks.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No clicks tracked yet.</p>
               ) : (
-                <div className="space-y-1">
-                  {topLayerClicks.map((r) => (
-                    <div key={r.lid} className="flex items-center justify-between text-sm">
-                      <span><Badge variant="secondary" className="mr-2">{r.type}</Badge>{r.label}</span>
-                      <span className="font-mono">{r.clicks}</span>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                        <th className="py-1 pr-2 font-medium">Hotspot / Layer</th>
+                        <th className="py-1 px-2 text-right font-medium">📱 Mobile</th>
+                        <th className="py-1 px-2 text-right font-medium">📲 Tablet</th>
+                        <th className="py-1 px-2 text-right font-medium">🖥 Desktop</th>
+                        <th className="py-1 px-2 text-right font-medium">?</th>
+                        <th className="py-1 pl-2 text-right font-medium">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topLayerClicks.map((r) => (
+                        <tr
+                          key={r.lid}
+                          onClick={() => setOpenLayerActivity(r.lid)}
+                          className="cursor-pointer border-b border-border/50 last:border-0 hover:bg-muted/40"
+                          title="View activity"
+                        >
+                          <td className="py-1.5 pr-2">
+                            <div className="flex flex-wrap items-center gap-1">
+                              <Badge variant="secondary" className="text-[10px]">{r.type}</Badge>
+                              {r.actionTypes.map((t) => (
+                                <Badge key={t} variant="outline" className="text-[10px] capitalize">
+                                  {ACTION_LABELS[t] || t.replace(/_/g, " ")}
+                                </Badge>
+                              ))}
+                              <span className="truncate">{r.label}</span>
+                            </div>
+                          </td>
+                          <td className="py-1.5 px-2 text-right font-mono">{r.devices.mobile}</td>
+                          <td className="py-1.5 px-2 text-right font-mono">{r.devices.tablet}</td>
+                          <td className="py-1.5 px-2 text-right font-mono">{r.devices.desktop}</td>
+                          <td className="py-1.5 px-2 text-right font-mono text-muted-foreground">{r.devices.unknown}</td>
+                          <td className="py-1.5 pl-2 text-right font-mono font-semibold">{r.clicks}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="mt-2 text-[11px] text-muted-foreground">Click any row to view its full activity log.</p>
                 </div>
               )}
             </CardContent>
