@@ -757,7 +757,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           flyer_id: flyer.id,
           event_type: "view",
           session_id: getViewerSessionId(),
-          metadata: { beacon: true, referrer: document.referrer || null },
+          metadata: { beacon: true, referrer: document.referrer || null, device: getViewerDevice() },
         });
         const blob = new Blob(
           [JSON.stringify({ apikey, authorization: `Bearer ${apikey}`, body })],
