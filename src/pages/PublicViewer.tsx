@@ -1389,6 +1389,20 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 })}
             </KLayer>
           )}
+          {/* One-shot click confirmation rings */}
+          {imagesReady && clickPings.length > 0 && (
+            <KLayer listening={false}>
+              {clickPings.map((p) => (
+                <ClickPing
+                  key={p.id}
+                  x={p.x}
+                  y={p.y}
+                  color={p.color}
+                  onDone={() => setClickPings((prev) => prev.filter((q) => q.id !== p.id))}
+                />
+              ))}
+            </KLayer>
+          )}
           {imagesReady && previewMode && showHitboxes && (
             <KLayer listening={false}>
               {page.layers
