@@ -179,6 +179,7 @@ export default function PublicFlyerPortal() {
         </TabsList>
 
         {f.hasAppointments && (
+        <TabsContent value="appointments">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm">Appointments ({data.appointments.length})</CardTitle>
@@ -199,7 +200,9 @@ export default function PublicFlyerPortal() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
+        {f.hasSubscribe && (
         <TabsContent value="subscribers">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -220,7 +223,9 @@ export default function PublicFlyerPortal() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
+        {f.hasForms && (
         <TabsContent value="forms">
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Form submissions ({data.submissions.length})</CardTitle></CardHeader>
@@ -235,7 +240,9 @@ export default function PublicFlyerPortal() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
+        {f.hasPolls && (
         <TabsContent value="polls">
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Poll results ({data.pollVotes.length} votes)</CardTitle></CardHeader>
@@ -250,6 +257,7 @@ export default function PublicFlyerPortal() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
         <TabsContent value="events">
           <Card>
