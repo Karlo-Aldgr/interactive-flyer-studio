@@ -510,8 +510,6 @@ export default function FlyerPortal() {
           <PortalLinkDialog flyerId={flyerId} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />
         </>
       )}
-        </div>
-      </div>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
         {[
