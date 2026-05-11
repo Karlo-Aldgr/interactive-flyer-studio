@@ -423,7 +423,14 @@ export default function FlyerPortal() {
   }
 
   if (!user) return <div className="p-8">Please sign in.</div>;
-  if (loading) return <div className="flex items-center gap-2 p-8"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
+  if (loading) return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="font-display text-lg font-semibold text-foreground animate-pulse">
+        We Are Loading Your Experience
+      </div>
+    </div>
+  );
   if (!authorized) return <div className="p-8 text-destructive">Not authorized.</div>;
 
   const filtered = (arr: any[]) =>

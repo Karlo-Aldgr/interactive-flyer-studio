@@ -14,8 +14,11 @@ export default function Editor() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="font-display text-lg font-semibold text-foreground animate-pulse">
+          We Are Loading Your Experience
+        </div>
       </div>
     );
   }
