@@ -696,6 +696,45 @@ export default function FlyerPortal() {
                   <Badge className={meta.cls}>{meta.label}</Badge>
                   <span className="text-xs text-muted-foreground">{new Date(openOrder.created_at).toLocaleString()}</span>
                 </div>
+                {openOrder.status === "pay_later" && (
+                  <div className="rounded border-2 border-red-600 bg-red-50 dark:bg-red-950/30 p-3 space-y-2">
+                    <div className="font-semibold text-red-700 dark:text-red-400">
+                      ⚠ Pay Later — receive payment from customer
+                    </div>
+                    <p className="text-xs text-red-700/80 dark:text-red-300/80">
+                      The customer placed this order and chose to pay later. Reach out to collect {d.currency || ""} {d.total ?? ""}.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {c.phone && (
+                        <>
+                          <Button asChild size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                            <a href={`tel:${c.phone}`}>Call</a>
+                          </Button>
+                          <Button asChild size="sm" variant="outline" className="border-red-600 text-red-700">
+                            <a href={`sms:${c.phone}?&body=${encodeURIComponent(`Hi ${c.name || ""}, your order total is ${d.currency || ""}${d.total ?? ""}. Please send payment when you can. Thanks!`)}`}>
+                              Text
+                            </a>
+                          </Button>
+                        </>
+                      )}
+                      {c.email && (
+                        <Button asChild size="sm" variant="outline" className="border-red-600 text-red-700">
+                          <a href={`mailto:${c.email}?subject=${encodeURIComponent("Payment for your order")}&body=${encodeURIComponent(`Hi ${c.name || ""}, your order total is ${d.currency || ""}${d.total ?? ""}. Please send payment when you can. Thanks!`)}`}>
+                            Email
+                          </a>
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-emerald-600 text-emerald-700"
+                        onClick={() => setOrderStatus(openOrder.id, "completed")}
+                      >
+                        Mark paid
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div className="rounded border border-border p-2 text-xs space-y-0.5">
                   <div><span className="text-muted-foreground">Name:</span> {c.name || "—"}</div>
                   <div><span className="text-muted-foreground">Email:</span> {c.email || "—"}</div>
