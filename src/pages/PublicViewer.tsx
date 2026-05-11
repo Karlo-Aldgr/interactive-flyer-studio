@@ -699,17 +699,36 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     };
   }, [flyer]);
 
-  function logClick(layer: Layer | null, type: string) {
+  function logAnalyticsEvent(row: Record<string, any>) {
     if (!flyer || previewMode) return;
-    supabase.from("analytics_events").insert([{
-      flyer_id: flyer.id,
+    const payload: Record<string, any> = { flyer_id: flyer.id, session_id: getViewerSessionId(), ...row };
+    // Critical for tel:, sms:, and payment links: keepalive lets the click be
+    // saved even when the browser immediately leaves the page.
+    try {
+      const url = `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/analytics_events`;
+      const apikey = (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      fetch(url, {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          apikey,
+          authorization: `Bearer ${apikey}`,
+          "content-type": "application/json",
+          prefer: "return=minimal",
+        },
+        body: JSON.stringify(payload),
+      }).then((res) => {
+        if (!res.ok) console.warn("[analytics] insert failed", res.status, payload);
+      }).catch((error) => console.warn("[analytics] insert failed", error, payload));
+    } catch {}
+  }
+
+  function logClick(layer: Layer | null, type: string, metadata: Record<string, any> = {}) {
+    logAnalyticsEvent({
       page_id: layer?.page_id ?? null,
       layer_id: layer?.id ?? null,
       event_type: "click",
-      session_id: getViewerSessionId(),
-      metadata: { action_type: type } as any,
-    } as any]).then(({ error }) => {
-      if (error) console.warn("[analytics] click insert failed", error);
+      metadata: { ...metadata, action_type: type } as any,
     });
   }
 
@@ -876,7 +895,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   }
 
   function runPopupButton(a: LayerAction, closeZoom = false) {
-    logClick(null, "popup_button:" + a.type);
+    logClick(null, a.type, { source: "popup_button" });
     setPopup(null);
     if (closeZoom) {
       setZoomImage(null);
@@ -1030,7 +1049,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       const key = `${page.id}:${a.id}`;
       if (fired.has(key)) return;
       fired.add(key);
-      setTimeout(() => executeAction(a, l), 350 + i * 250);
+      setTimeout(() => {
+        logClick(l, a.type, { source: "auto_trigger" });
+        executeAction(a, l);
+      }, 350 + i * 250);
       i++;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1168,7 +1190,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                         canvasH={H}
                         onClose={() => setAirMessages((prev) => prev.filter((p) => p.action.id !== am.action.id))}
                         onRunBubbleAction={(a) => {
-                          logClick(null, "air_message:" + a.type);
+                          logClick(am.layer, a.type, { source: "air_message", parent_action_type: "air_messages" });
                           executeAction(a, null);
                         }}
                       />
@@ -1187,7 +1209,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 canvasH={H}
                 onClose={() => setAirMessages((prev) => prev.filter((p) => p.action.id !== am.action.id))}
                 onRunBubbleAction={(a) => {
-                  logClick(null, "air_message:" + a.type);
+                  logClick(null, a.type, { source: "air_message", parent_action_type: "air_messages" });
                   executeAction(a, null);
                 }}
               />
