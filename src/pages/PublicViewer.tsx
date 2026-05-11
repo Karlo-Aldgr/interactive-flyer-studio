@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
+import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
 import { toast } from "sonner";
 
 // Highlight ring shown around tappable layers in the viewer.
