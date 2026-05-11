@@ -636,7 +636,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
       // analytics: view (skip in preview mode)
       if (!previewMode) {
-        supabase.from("analytics_events").insert([{ flyer_id: f.id, event_type: "view", metadata: {} } as any]);
+        const sid = getViewerSessionId();
+        supabase.from("analytics_events").insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: document.referrer || null } } as any]);
       }
     })();
   }, [slug, flyerId, previewMode]);
