@@ -1187,7 +1187,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                         canvasH={H}
                         onClose={() => setAirMessages((prev) => prev.filter((p) => p.action.id !== am.action.id))}
                         onRunBubbleAction={(a) => {
-                          logClick(null, "air_message:" + a.type);
+                          logClick(am.layer, a.type, { source: "air_message", parent_action_type: "air_messages" });
                           executeAction(a, null);
                         }}
                       />
@@ -1206,7 +1206,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 canvasH={H}
                 onClose={() => setAirMessages((prev) => prev.filter((p) => p.action.id !== am.action.id))}
                 onRunBubbleAction={(a) => {
-                  logClick(null, "air_message:" + a.type);
+                  logClick(null, a.type, { source: "air_message", parent_action_type: "air_messages" });
                   executeAction(a, null);
                 }}
               />
