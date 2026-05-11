@@ -119,11 +119,14 @@ export default function PublicFlyerPortal() {
 
   const allStats = [
     { key: "views", label: "Views", value: data.counts.views, Icon: Eye, show: true },
+    { key: "uniq", label: "Unique visitors", value: data.counts.uniqueVisitors ?? 0, Icon: Users, show: true },
+    { key: "ret", label: "Return visitors", value: data.counts.returnVisitors ?? 0, Icon: Users, show: true },
+    { key: "clicks", label: "Total clicks", value: data.counts.clicks ?? 0, Icon: BarChart3, show: true },
     { key: "subs", label: "Subscribers", value: data.counts.subscribers, Icon: Users, show: f.hasSubscribe },
     { key: "appts", label: "Appointments", value: data.counts.appointments, Icon: CalendarDays, show: f.hasAppointments },
     { key: "forms", label: "Form submissions", value: data.counts.submissions, Icon: FileText, show: f.hasForms },
     { key: "polls", label: "Poll votes", value: data.counts.pollVotes, Icon: BarChart3, show: f.hasPolls },
-    { key: "buy", label: "Purchases", value: data.counts.purchases, Icon: ShoppingCart, show: f.hasCheckout },
+    { key: "cart", label: "Cart orders", value: data.counts.cartOrders ?? 0, Icon: ShoppingCart, show: f.hasCheckout || (data.counts.cartOrders ?? 0) > 0 },
   ];
   const stats = allStats.filter((s) => s.show);
 
@@ -131,9 +134,16 @@ export default function PublicFlyerPortal() {
   const pollAgg: Record<string, number> = {};
   for (const v of data.pollVotes) pollAgg[v.option_id] = (pollAgg[v.option_id] || 0) + 1;
 
+  const cartEmails = data.cartEmails || [];
+  const topClicks = data.analytics?.topLayerClicks || [];
+  const dailyViews = data.analytics?.dailyViews || [];
+  const maxDaily = dailyViews.reduce((m, d) => Math.max(m, d.count), 0) || 1;
+
   const tabDefs = [
+    { value: "analytics", label: "Analytics", show: true },
     { value: "appointments", label: "Appointments", show: f.hasAppointments },
     { value: "subscribers", label: "Subscribers", show: f.hasSubscribe },
+    { value: "cart", label: "Cart emails", show: f.hasCheckout || cartEmails.length > 0 },
     { value: "forms", label: "Form submissions", show: f.hasForms },
     { value: "polls", label: "Polls", show: f.hasPolls },
     { value: "events", label: "Recent activity", show: true },
