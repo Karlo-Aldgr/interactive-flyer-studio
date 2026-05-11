@@ -198,6 +198,31 @@ export default function FlyerPortal() {
     return out;
   }, [actions]);
 
+  // Every action type used in this flyer (top-level + popup buttons + hotspots)
+  const allActionTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of actions) {
+      if (a.type) set.add(a.type);
+      const p = a.payload || {};
+      for (const b of p.buttons || []) if (b?.action?.type) set.add(b.action.type);
+      for (const h of p.hotspots || []) if (h?.action?.type) set.add(h.action.type);
+    }
+    return Array.from(set);
+  }, [actions]);
+
+  const ACTION_LABELS: Record<string, string> = {
+    open_url: "Links", call: "Calls", sms: "SMS", email: "Emails",
+    share: "Shares", coupon: "Coupons", download: "Downloads",
+    map: "Map", directions: "Directions", video: "Videos", audio: "Audio",
+    popup: "Popups", lightbox: "Lightbox", navigate: "Navigation",
+    add_to_calendar: "Calendar adds", social: "Social",
+  };
+  const COVERED_ACTION_TYPES = new Set([
+    "poll", "book_appointment", "subscribe", "form", "rsvp",
+    "checkout", "buy_ticket", "buy_product",
+  ]);
+  const extraActionTypes = allActionTypes.filter((t) => !COVERED_ACTION_TYPES.has(t));
+
   const layerLabel = useMemo(() => {
     const m: Record<string, { label: string; type: string }> = {};
     for (const l of layers) {
@@ -330,6 +355,11 @@ export default function FlyerPortal() {
           <TabsTrigger value="subscribers">Subscribers ({subscribers.length})</TabsTrigger>
           <TabsTrigger value="forms">Forms ({submissions.length})</TabsTrigger>
           <TabsTrigger value="cart">Cart ({cartOrders.length})</TabsTrigger>
+          {extraActionTypes.map((t) => {
+            const count = clickEvents.filter((e) => e?.metadata?.action_type === t).length;
+            const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
+            return <TabsTrigger key={t} value={`act-${t}`} className="capitalize">{label} ({count})</TabsTrigger>;
+          })}
         </TabsList>
 
         <TabsContent value="analytics" className="space-y-4">
@@ -575,6 +605,59 @@ export default function FlyerPortal() {
             </CardContent>
           </Card>
         </TabsContent>
+        {extraActionTypes.map((t) => {
+          const rows = clickEvents.filter((e) => e?.metadata?.action_type === t);
+          const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
+          return (
+            <TabsContent key={t} value={`act-${t}`} className="space-y-2">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm capitalize">{label} — {rows.length} interactions</CardTitle>
+                  <Button
+                    size="sm" variant="outline" disabled={rows.length === 0}
+                    onClick={() =>
+                      downloadCsv(`${t}-interactions.csv`, csv(
+                        rows.map((r) => ({
+                          created_at: r.created_at,
+                          session_id: r.session_id,
+                          layer: layerLabel[r.layer_id || ""]?.label || "",
+                          layer_type: layerLabel[r.layer_id || ""]?.type || "",
+                        })),
+                        ["created_at", "session_id", "layer", "layer_type"]
+                      ))
+                    }
+                  >
+                    <Download className="mr-1 h-3 w-3" /> CSV
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {rows.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No {label.toLowerCase()} tracked yet.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {rows.slice(0, 200).map((r) => {
+                        const lab = layerLabel[r.layer_id || ""];
+                        return (
+                          <div key={r.id} className="flex items-center justify-between rounded border border-border p-2 text-xs">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium truncate">
+                                {lab?.label || "(unknown layer)"}
+                                {lab?.type && <Badge variant="secondary" className="ml-2">{lab.type}</Badge>}
+                              </div>
+                              <div className="text-muted-foreground">
+                                {new Date(r.created_at).toLocaleString()} · session {(r.session_id || "").slice(0, 8) || "—"}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          );
+        })}
       </Tabs>
 
       <Dialog open={!!openOrder} onOpenChange={(o) => !o && setOpenOrder(null)}>
