@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertTriangle, ChevronLeft, Download, RefreshCw, Share2, Link as LinkIcon } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
 
@@ -222,18 +223,26 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
   const dailyViews = Object.entries(dailyViewsMap).sort(([a], [b]) => (a < b ? -1 : 1)).slice(-30);
   const maxDaily = Math.max(1, ...dailyViews.map(([, c]) => c));
 
-  // Weekly activity (last 12 weeks)
-  const weeklyMap: Record<string, { views: number; clicks: number }> = {};
-  for (const e of viewEvents) {
-    const k = isoWeek(new Date(e.created_at));
-    (weeklyMap[k] ||= { views: 0, clicks: 0 }).views += 1;
+  // Weekly activity (last 12 weeks) — multi-metric grouped bars
+  const weeklyMap: Record<string, { views: number; clicks: number; subs: number; appts: number; forms: number; cart: number }> = {};
+  const wk = (ts: string) => isoWeek(new Date(ts));
+  const bump = (k: string, field: keyof (typeof weeklyMap)[string]) => {
+    (weeklyMap[k] ||= { views: 0, clicks: 0, subs: 0, appts: 0, forms: 0, cart: 0 })[field] += 1;
+  };
+  for (const e of viewEvents) bump(wk(e.created_at), "views");
+  for (const e of clickEvents) bump(wk(e.created_at), "clicks");
+  for (const s of subscribers) bump(wk(s.created_at), "subs");
+  for (const a of appointments) bump(wk(a.created_at), "appts");
+  for (const s of submissions) {
+    const kind = s?.data?.kind;
+    if (kind === "cart_order") bump(wk(s.created_at), "cart");
+    else bump(wk(s.created_at), "forms");
   }
-  for (const e of clickEvents) {
-    const k = isoWeek(new Date(e.created_at));
-    (weeklyMap[k] ||= { views: 0, clicks: 0 }).clicks += 1;
-  }
-  const weekly = Object.entries(weeklyMap).sort(([a], [b]) => (a < b ? -1 : 1)).slice(-12);
-  const maxWeekly = Math.max(1, ...weekly.map(([, c]) => Math.max(c.views, c.clicks)));
+  const weekly = Object.entries(weeklyMap)
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .slice(-12)
+    .map(([w, c]) => ({ week: w.replace(/^\d{4}-/, ""), ...c }));
+
 
   const payLaterOrderIds = new Set(
     submissions.filter((s) => s?.data?.kind === "cart_pay_later" && s?.data?.order_id).map((s) => s.data.order_id as string)
@@ -390,23 +399,25 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               {weekly.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No activity yet.</p>
               ) : (
-                <>
-                  <div className="flex h-40 items-end gap-2">
-                    {weekly.map(([w, c]) => (
-                      <div key={w} className="flex flex-1 flex-col items-center gap-1" title={`${w}: ${c.views} views, ${c.clicks} clicks`}>
-                        <div className="flex h-full w-full items-end gap-0.5">
-                          <div className="flex-1 rounded-t bg-primary" style={{ height: `${(c.views / maxWeekly) * 100}%`, minHeight: 2 }} />
-                          <div className="flex-1 rounded-t bg-accent" style={{ height: `${(c.clicks / maxWeekly) * 100}%`, minHeight: 2 }} />
-                        </div>
-                        <div className="text-[9px] text-muted-foreground">{w.replace(/^\d{4}-/, "")}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
-                    <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-primary" /> Views</span>
-                    <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-accent" /> Clicks</span>
-                  </div>
-                </>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={weekly} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barCategoryGap="20%" barGap={2}>
+                    <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="week" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip
+                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                      contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                      labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} iconType="square" />
+                    <Bar dataKey="views"  name="Views"         fill="#4F81BD" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="clicks" name="Clicks"        fill="#E8743B" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="subs"   name="Subscribers"   fill="#A5A5A5" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="appts"  name="Appointments" fill="#F5C242" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="forms"  name="Forms"         fill="#6FAE46" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="cart"   name="Cart orders"   fill="#264E73" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
