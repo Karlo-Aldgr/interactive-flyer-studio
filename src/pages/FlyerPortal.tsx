@@ -346,6 +346,7 @@ export default function FlyerPortal() {
   const [payLaterAlertOpen, setPayLaterAlertOpen] = useState(false);
   const [payLaterAlertShown, setPayLaterAlertShown] = useState(false);
   const [openLayerActivity, setOpenLayerActivity] = useState<string | null>(null);
+  const [flashedLayerId, setFlashedLayerId] = useState<string | null>(null);
 
   // One-time per session: prompt the seller to collect payment when pay-later orders are present
   useEffect(() => {
