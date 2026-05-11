@@ -83,9 +83,69 @@ Deno.serve(async (req) => {
       supabase.from("appointments").select("*").eq("flyer_id", flyerId).order("start_at", { ascending: true }),
       supabase.from("form_submissions").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
       supabase.from("poll_votes").select("*").eq("flyer_id", flyerId),
-      supabase.from("analytics_events").select("event_type, created_at, metadata, layer_id").eq("flyer_id", flyerId).order("created_at", { ascending: false }).limit(2000),
+      supabase.from("analytics_events").select("event_type, created_at, metadata, layer_id, session_id").eq("flyer_id", flyerId).order("created_at", { ascending: false }).limit(5000),
       supabase.from("analytics_events").select("*", { count: "exact", head: true }).eq("flyer_id", flyerId).eq("event_type", "view"),
     ]);
+
+    // ---- Visitor analytics ----
+    const viewEvents = (events || []).filter((e: any) => e.event_type === "view");
+    const clickEvents = (events || []).filter((e: any) => e.event_type === "click");
+    const sessionViews: Record<string, number> = {};
+    for (const e of viewEvents) {
+      const sid = e.session_id || `anon-${e.created_at}`;
+      sessionViews[sid] = (sessionViews[sid] || 0) + 1;
+    }
+    const uniqueVisitors = Object.keys(sessionViews).length;
+    const returnVisitors = Object.values(sessionViews).filter((n) => n > 1).length;
+
+    // Build a layer label map (best-effort) so hotspot clicks show meaningful names
+    const layerLabel: Record<string, { label: string; type: string }> = {};
+    for (const l of layers) {
+      const c = l.content || {};
+      const label = c.text || c.label || c.iconName || c.url || `${l.type}`;
+      layerLabel[l.id] = { label: String(label).slice(0, 60), type: l.type };
+    }
+
+    // Hotspot / layer click breakdown
+    const layerClicks: Record<string, { layer_id: string; label: string; type: string; action_type: string | null; clicks: number }> = {};
+    const actionTypeClicks: Record<string, number> = {};
+    for (const e of clickEvents) {
+      const lid = e.layer_id || "_none";
+      const at = (e.metadata?.action_type as string) || null;
+      const meta = layerLabel[lid] || { label: lid === "_none" ? "(no layer)" : lid, type: "?" };
+      const key = `${lid}|${at || ""}`;
+      if (!layerClicks[key]) {
+        layerClicks[key] = { layer_id: lid, label: meta.label, type: meta.type, action_type: at, clicks: 0 };
+      }
+      layerClicks[key].clicks += 1;
+      if (at) actionTypeClicks[at] = (actionTypeClicks[at] || 0) + 1;
+    }
+    const topLayerClicks = Object.values(layerClicks).sort((a, b) => b.clicks - a.clicks);
+
+    // Daily views (last 30 days bucketed by yyyy-mm-dd)
+    const dailyViewsMap: Record<string, number> = {};
+    for (const e of viewEvents) {
+      const d = new Date(e.created_at).toISOString().slice(0, 10);
+      dailyViewsMap[d] = (dailyViewsMap[d] || 0) + 1;
+    }
+    const dailyViews = Object.entries(dailyViewsMap)
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .slice(-30)
+      .map(([date, count]) => ({ date, count }));
+
+    // Cart orders & customer emails (stored as form_submissions with kind=cart_order)
+    const cartOrders = (submissions || []).filter((s: any) => s?.data?.kind === "cart_order");
+    const cartEmails = cartOrders.map((s: any) => ({
+      created_at: s.created_at,
+      name: s.data?.customer?.name || null,
+      email: s.data?.customer?.email || null,
+      phone: s.data?.customer?.phone || null,
+      address: s.data?.customer?.address || null,
+      total: s.data?.total ?? null,
+      currency: s.data?.currency || null,
+      items: (s.data?.items || []).length,
+    })).filter((r: any) => r.email);
+    const cartTotal = cartOrders.reduce((sum: number, s: any) => sum + (Number(s.data?.total) || 0), 0);
 
     // Aggregate purchases / clicks from analytics_events metadata when present
     const purchases = (events || []).filter((e: any) => {
@@ -105,12 +165,23 @@ Deno.serve(async (req) => {
       },
       counts: {
         views: viewsCount ?? 0,
+        uniqueVisitors,
+        returnVisitors,
+        clicks: clickEvents.length,
         subscribers: (subscribers || []).length,
         appointments: (appointments || []).length,
         submissions: (submissions || []).length,
         pollVotes: (pollVotes || []).length,
         purchases: purchases.length,
+        cartOrders: cartOrders.length,
+        cartRevenue: cartTotal,
       },
+      analytics: {
+        dailyViews,
+        topLayerClicks,
+        actionTypeClicks,
+      },
+      cartEmails,
       subscribers: subscribers || [],
       appointments: appointments || [],
       submissions: submissions || [],

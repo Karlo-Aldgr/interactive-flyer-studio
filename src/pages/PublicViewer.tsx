@@ -24,6 +24,22 @@ function useImagesReady(srcs: string[], timeoutMs = 4000): boolean {
   }, [key, timeoutMs]);
   return ready;
 }
+
+/** Stable per-browser session id used to compute unique/return visitors in analytics. */
+function getViewerSessionId(): string {
+  try {
+    const k = "ff_viewer_sid";
+    let v = localStorage.getItem(k);
+    if (!v) {
+      v = (crypto as any)?.randomUUID?.() || `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(k, v);
+    }
+    return v;
+  } catch {
+    return `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  }
+}
+
 import { useParams } from "react-router-dom";
 import { Stage, Layer as KLayer, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage, Group } from "react-konva";
 import Konva from "konva";
@@ -636,7 +652,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
       // analytics: view (skip in preview mode)
       if (!previewMode) {
-        supabase.from("analytics_events").insert([{ flyer_id: f.id, event_type: "view", metadata: {} } as any]);
+        const sid = getViewerSessionId();
+        supabase.from("analytics_events").insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: document.referrer || null } } as any]);
       }
     })();
   }, [slug, flyerId, previewMode]);
@@ -686,6 +703,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       page_id: layer?.page_id ?? null,
       layer_id: layer?.id ?? null,
       event_type: "click",
+      session_id: getViewerSessionId(),
       metadata: { action_type: type } as any,
     } as any]);
   }

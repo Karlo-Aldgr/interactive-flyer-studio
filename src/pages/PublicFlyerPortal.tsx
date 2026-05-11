@@ -20,9 +20,13 @@ interface PortalFeatures {
   hasCheckout: boolean;
   hasCalls: boolean;
 }
+interface CartEmail { created_at: string; name: string | null; email: string; phone: string | null; address: string | null; total: number | null; currency: string | null; items: number }
+interface LayerClick { layer_id: string; label: string; type: string; action_type: string | null; clicks: number }
 interface PortalData {
   flyer: { id: string; title: string; status: string; public_slug: string | null; thumbnail_url: string | null; created_at: string };
-  counts: { views: number; subscribers: number; appointments: number; submissions: number; pollVotes: number; purchases: number };
+  counts: { views: number; uniqueVisitors?: number; returnVisitors?: number; clicks?: number; subscribers: number; appointments: number; submissions: number; pollVotes: number; purchases: number; cartOrders?: number; cartRevenue?: number };
+  analytics?: { dailyViews: { date: string; count: number }[]; topLayerClicks: LayerClick[]; actionTypeClicks: Record<string, number> };
+  cartEmails?: CartEmail[];
   subscribers: any[];
   appointments: any[];
   submissions: any[];
@@ -115,11 +119,14 @@ export default function PublicFlyerPortal() {
 
   const allStats = [
     { key: "views", label: "Views", value: data.counts.views, Icon: Eye, show: true },
+    { key: "uniq", label: "Unique visitors", value: data.counts.uniqueVisitors ?? 0, Icon: Users, show: true },
+    { key: "ret", label: "Return visitors", value: data.counts.returnVisitors ?? 0, Icon: Users, show: true },
+    { key: "clicks", label: "Total clicks", value: data.counts.clicks ?? 0, Icon: BarChart3, show: true },
     { key: "subs", label: "Subscribers", value: data.counts.subscribers, Icon: Users, show: f.hasSubscribe },
     { key: "appts", label: "Appointments", value: data.counts.appointments, Icon: CalendarDays, show: f.hasAppointments },
     { key: "forms", label: "Form submissions", value: data.counts.submissions, Icon: FileText, show: f.hasForms },
     { key: "polls", label: "Poll votes", value: data.counts.pollVotes, Icon: BarChart3, show: f.hasPolls },
-    { key: "buy", label: "Purchases", value: data.counts.purchases, Icon: ShoppingCart, show: f.hasCheckout },
+    { key: "cart", label: "Cart orders", value: data.counts.cartOrders ?? 0, Icon: ShoppingCart, show: f.hasCheckout || (data.counts.cartOrders ?? 0) > 0 },
   ];
   const stats = allStats.filter((s) => s.show);
 
@@ -127,9 +134,16 @@ export default function PublicFlyerPortal() {
   const pollAgg: Record<string, number> = {};
   for (const v of data.pollVotes) pollAgg[v.option_id] = (pollAgg[v.option_id] || 0) + 1;
 
+  const cartEmails = data.cartEmails || [];
+  const topClicks = data.analytics?.topLayerClicks || [];
+  const dailyViews = data.analytics?.dailyViews || [];
+  const maxDaily = dailyViews.reduce((m, d) => Math.max(m, d.count), 0) || 1;
+
   const tabDefs = [
+    { value: "analytics", label: "Analytics", show: true },
     { value: "appointments", label: "Appointments", show: f.hasAppointments },
     { value: "subscribers", label: "Subscribers", show: f.hasSubscribe },
+    { value: "cart", label: "Cart emails", show: f.hasCheckout || cartEmails.length > 0 },
     { value: "forms", label: "Form submissions", show: f.hasForms },
     { value: "polls", label: "Polls", show: f.hasPolls },
     { value: "events", label: "Recent activity", show: true },
@@ -177,6 +191,82 @@ export default function PublicFlyerPortal() {
             <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
           ))}
         </TabsList>
+
+        <TabsContent value="analytics" className="space-y-3">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Daily views (last 30 days)</CardTitle></CardHeader>
+            <CardContent>
+              {dailyViews.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No views yet.</p>
+              ) : (
+                <div className="flex h-32 items-end gap-1">
+                  {dailyViews.map((d) => (
+                    <div key={d.date} className="flex flex-1 flex-col items-center gap-1" title={`${d.date}: ${d.count}`}>
+                      <div className="w-full rounded-t bg-primary" style={{ height: `${(d.count / maxDaily) * 100}%`, minHeight: 2 }} />
+                      <span className="text-[9px] text-muted-foreground">{d.date.slice(5)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm">Hotspots & clicks ({topClicks.length})</CardTitle>
+              <Button size="sm" variant="outline" onClick={() => downloadCsv("hotspot-clicks.csv",
+                csv(topClicks, ["label", "type", "action_type", "clicks", "layer_id"]))}>
+                <Download className="mr-1 h-3 w-3" /> CSV
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              {topClicks.length === 0 ? <p className="text-sm text-muted-foreground">No clicks yet.</p> :
+                topClicks.map((c) => (
+                  <div key={c.layer_id + (c.action_type || "")} className="flex items-center justify-between rounded border border-border p-2 text-sm">
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{c.label}</div>
+                      <div className="text-xs text-muted-foreground">
+                        <Badge variant="outline" className="mr-1 text-[10px]">{c.type}</Badge>
+                        {c.action_type && <Badge variant="secondary" className="text-[10px]">{c.action_type.replace(/_/g, " ")}</Badge>}
+                      </div>
+                    </div>
+                    <Badge>{c.clicks}</Badge>
+                  </div>
+                ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {(f.hasCheckout || cartEmails.length > 0) && (
+        <TabsContent value="cart">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm">
+                Cart emails ({cartEmails.length})
+                {data.counts.cartRevenue ? <span className="ml-2 text-xs text-muted-foreground">· {data.counts.cartRevenue.toFixed(2)} revenue</span> : null}
+              </CardTitle>
+              <Button size="sm" variant="outline" onClick={() => downloadCsv("cart-emails.csv",
+                csv(cartEmails, ["created_at", "name", "email", "phone", "address", "items", "total", "currency"]))}>
+                <Download className="mr-1 h-3 w-3" /> CSV
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              {cartEmails.length === 0 ? <p className="text-sm text-muted-foreground">No cart orders yet.</p> :
+                cartEmails.map((c, i) => (
+                  <div key={i} className="rounded border border-border p-2 text-sm">
+                    <div className="font-medium">{c.name || "—"} · {c.email}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(c.created_at).toLocaleString()} · {c.items} item{c.items === 1 ? "" : "s"}
+                      {c.total != null && <> · {c.total} {c.currency || ""}</>}
+                      {c.phone && <> · {c.phone}</>}
+                    </div>
+                    {c.address && <div className="text-xs italic text-muted-foreground">{c.address}</div>}
+                  </div>
+                ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        )}
 
         {f.hasAppointments && (
         <TabsContent value="appointments">
