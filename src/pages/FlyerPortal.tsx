@@ -17,7 +17,7 @@ type OrderStatus = "new" | "on_hold" | "pay_later" | "completed";
 const ORDER_STATUSES: { value: OrderStatus; label: string; cls: string; ring: string }[] = [
   { value: "new",        label: "New",        cls: "bg-primary text-primary-foreground",                    ring: "border-primary/60 bg-primary/5" },
   { value: "on_hold",    label: "On Hold",    cls: "bg-amber-500 text-white",                                ring: "border-amber-500/50 bg-amber-500/5" },
-  { value: "pay_later",  label: "Pay Later",  cls: "bg-blue-500 text-white",                                 ring: "border-blue-500/50 bg-blue-500/5" },
+  { value: "pay_later",  label: "Pay Later",  cls: "bg-red-600 text-white animate-pulse",                    ring: "border-red-600 bg-red-500/10" },
   { value: "completed",  label: "Completed",  cls: "bg-emerald-600 text-white",                              ring: "border-emerald-600/40 bg-emerald-600/5" },
 ];
 const statusMeta = (s: string | null | undefined) =>
@@ -262,7 +262,20 @@ export default function FlyerPortal() {
   const dailyViews = Object.entries(dailyViewsMap).sort(([a], [b]) => (a < b ? -1 : 1)).slice(-30);
   const maxDaily = Math.max(1, ...dailyViews.map(([, c]) => c));
 
-  const cartOrders = submissions.filter((s) => s?.data?.kind === "cart_order");
+  const payLaterOrderIds = new Set(
+    submissions
+      .filter((s) => s?.data?.kind === "cart_pay_later" && s?.data?.order_id)
+      .map((s) => s.data.order_id as string)
+  );
+  const cartOrders = submissions
+    .filter((s) => s?.data?.kind === "cart_order")
+    .map((s) => {
+      // Pay-later marker overrides any other status (unless owner already completed it)
+      const isPayLater = payLaterOrderIds.has(s.id);
+      const effective: OrderStatus =
+        isPayLater && s.status !== "completed" ? "pay_later" : ((s.status as OrderStatus) || "new");
+      return { ...s, status: effective, _payLater: isPayLater };
+    });
   const cartCounts: Record<OrderStatus, number> = { new: 0, on_hold: 0, pay_later: 0, completed: 0 };
   for (const o of cartOrders) {
     const s = (o.status as OrderStatus) || "new";
@@ -579,6 +592,8 @@ export default function FlyerPortal() {
                 <div className="space-y-2">
                   {cartOrders.map((s) => {
                     const meta = statusMeta(s.status);
+                    const phone = s.data?.customer?.phone;
+                    const email = s.data?.customer?.email;
                     return (
                       <button
                         key={s.id}
@@ -589,11 +604,16 @@ export default function FlyerPortal() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="font-medium truncate">
-                              {s.data?.customer?.name || "—"} · {s.data?.customer?.email || "—"} {s.data?.customer?.phone && `· ${s.data.customer.phone}`}
+                              {s.data?.customer?.name || "—"} · {email || "—"} {phone && `· ${phone}`}
                             </div>
                             <div className="text-muted-foreground">
                               {new Date(s.created_at).toLocaleString()} · {(s.data?.items || []).length} items · {s.data?.currency || ""} {s.data?.total ?? ""}
                             </div>
+                            {s.status === "pay_later" && (
+                              <div className="mt-1 font-semibold text-red-600">
+                                ⚠ Customer chose Pay Later — request payment now
+                              </div>
+                            )}
                           </div>
                           <Badge className={meta.cls}>{meta.label}</Badge>
                         </div>
@@ -676,6 +696,45 @@ export default function FlyerPortal() {
                   <Badge className={meta.cls}>{meta.label}</Badge>
                   <span className="text-xs text-muted-foreground">{new Date(openOrder.created_at).toLocaleString()}</span>
                 </div>
+                {openOrder.status === "pay_later" && (
+                  <div className="rounded border-2 border-red-600 bg-red-50 dark:bg-red-950/30 p-3 space-y-2">
+                    <div className="font-semibold text-red-700 dark:text-red-400">
+                      ⚠ Pay Later — receive payment from customer
+                    </div>
+                    <p className="text-xs text-red-700/80 dark:text-red-300/80">
+                      The customer placed this order and chose to pay later. Reach out to collect {d.currency || ""} {d.total ?? ""}.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {c.phone && (
+                        <>
+                          <Button asChild size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                            <a href={`tel:${c.phone}`}>Call</a>
+                          </Button>
+                          <Button asChild size="sm" variant="outline" className="border-red-600 text-red-700">
+                            <a href={`sms:${c.phone}?&body=${encodeURIComponent(`Hi ${c.name || ""}, your order total is ${d.currency || ""}${d.total ?? ""}. Please send payment when you can. Thanks!`)}`}>
+                              Text
+                            </a>
+                          </Button>
+                        </>
+                      )}
+                      {c.email && (
+                        <Button asChild size="sm" variant="outline" className="border-red-600 text-red-700">
+                          <a href={`mailto:${c.email}?subject=${encodeURIComponent("Payment for your order")}&body=${encodeURIComponent(`Hi ${c.name || ""}, your order total is ${d.currency || ""}${d.total ?? ""}. Please send payment when you can. Thanks!`)}`}>
+                            Email
+                          </a>
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-emerald-600 text-emerald-700"
+                        onClick={() => setOrderStatus(openOrder.id, "completed")}
+                      >
+                        Mark paid
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div className="rounded border border-border p-2 text-xs space-y-0.5">
                   <div><span className="text-muted-foreground">Name:</span> {c.name || "—"}</div>
                   <div><span className="text-muted-foreground">Email:</span> {c.email || "—"}</div>

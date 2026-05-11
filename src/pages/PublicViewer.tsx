@@ -561,6 +561,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [checkoutData, setCheckoutData] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   function addToCart(a: LayerAction, layer: Layer | null, qty: number = 1) {
     const p = a.payload;
     const id = p.productId || layer?.id || a.id;
@@ -1872,7 +1873,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   return;
                 }
                 setCheckoutSubmitting(true);
-                const { error } = await supabase.from("form_submissions").insert([{
+                const { data: inserted, error } = await supabase.from("form_submissions").insert([{
                   flyer_id: flyer.id,
                   data: {
                     kind: "cart_order",
@@ -1882,12 +1883,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                     currency: cartCurrency,
                     submitted_at: new Date().toISOString(),
                   } as any,
-                } as any]);
+                } as any]).select("id").single();
                 setCheckoutSubmitting(false);
                 if (error) {
                   toast.error(error.message);
                   return;
                 }
+                setPlacedOrderId((inserted as any)?.id || null);
                 logClick(null, "cart_checkout_submit");
                 setCheckoutSuccess(true);
               }}
@@ -2029,8 +2031,28 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 )}
                 <Button
                   variant={hasAny ? "outline" : "default"}
-                  className="w-full"
-                  onClick={() => { setCheckoutOpen(false); setCheckoutSuccess(false); setCart([]); }}
+                  className={hasAny ? "w-full border-red-500 text-red-600 hover:bg-red-50" : "w-full"}
+                  onClick={async () => {
+                    if (hasAny && !previewMode && flyer) {
+                      await supabase.from("form_submissions").insert([{
+                        flyer_id: flyer.id,
+                        data: {
+                          kind: "cart_pay_later",
+                          order_id: placedOrderId,
+                          customer: checkoutData,
+                          total: cartTotal,
+                          currency: cartCurrency,
+                          submitted_at: new Date().toISOString(),
+                        } as any,
+                      } as any]);
+                      logClick(null, "cart_pay:later");
+                      toast.success("Marked as Pay Later — the seller has been notified.");
+                    }
+                    setCheckoutOpen(false);
+                    setCheckoutSuccess(false);
+                    setCart([]);
+                    setPlacedOrderId(null);
+                  }}
                 >
                   {hasAny ? "I'll pay later" : "Done"}
                 </Button>
