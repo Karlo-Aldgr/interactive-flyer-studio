@@ -106,73 +106,72 @@ export default function FlyerPortal() {
   const [search, setSearch] = useState("");
   const [calDate, setCalDate] = useState<Date | undefined>();
 
-  useEffect(() => {
+  const loadData = useCallback(async (showSpinner = true) => {
     if (!user || !flyerId) return;
-    (async () => {
-      setLoading(true);
-      const { data: flyer } = await supabase
-        .from("flyers")
-        .select("id, title, owner_id")
-        .eq("id", flyerId)
+    if (showSpinner) setLoading(true);
+    const { data: flyer } = await supabase
+      .from("flyers")
+      .select("id, title, owner_id")
+      .eq("id", flyerId)
+      .maybeSingle();
+
+    if (!flyer || flyer.owner_id !== user.id) {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
         .maybeSingle();
-
-      if (!flyer || flyer.owner_id !== user.id) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-        if (!roles) {
-          setAuthorized(false);
-          setLoading(false);
-          return;
-        }
+      if (!roles) {
+        setAuthorized(false);
+        setLoading(false);
+        return;
       }
-      setAuthorized(true);
-      setFlyerTitle(flyer?.title || "Flyer");
+    }
+    setAuthorized(true);
+    setFlyerTitle(flyer?.title || "Flyer");
 
-      // Pull pages -> layers -> actions so we can label polls/hotspots
-      const { data: pageRows } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);
-      const pageIds = (pageRows || []).map((p: any) => p.id);
-      let layerRows: any[] = [];
-      let actionRows: any[] = [];
-      if (pageIds.length) {
-        const { data: lr } = await supabase.from("layers").select("id, type, content").in("page_id", pageIds);
-        layerRows = lr || [];
-        const layerIds = layerRows.map((l) => l.id);
-        if (layerIds.length) {
-          const { data: ar } = await supabase
-            .from("actions")
-            .select("id, type, payload, layer_id")
-            .in("layer_id", layerIds);
-          actionRows = ar || [];
-        }
+    const { data: pageRows } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);
+    const pageIds = (pageRows || []).map((p: any) => p.id);
+    let layerRows: any[] = [];
+    let actionRows: any[] = [];
+    if (pageIds.length) {
+      const { data: lr } = await supabase.from("layers").select("id, type, content").in("page_id", pageIds);
+      layerRows = lr || [];
+      const layerIds = layerRows.map((l) => l.id);
+      if (layerIds.length) {
+        const { data: ar } = await supabase
+          .from("actions")
+          .select("id, type, payload, layer_id")
+          .in("layer_id", layerIds);
+        actionRows = ar || [];
       }
+    }
 
-      const [{ data: ap }, { data: sub }, { data: sm }, { data: pv }, { data: ev }] = await Promise.all([
-        supabase.from("appointments").select("*").eq("flyer_id", flyerId).order("start_at", { ascending: true }),
-        supabase.from("subscribers").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
-        supabase.from("form_submissions").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
-        supabase.from("poll_votes").select("*").eq("flyer_id", flyerId),
-        supabase
-          .from("analytics_events")
-          .select("id, event_type, layer_id, session_id, created_at, metadata")
-          .eq("flyer_id", flyerId)
-          .order("created_at", { ascending: false })
-          .limit(5000),
-      ]);
+    const [{ data: ap }, { data: sub }, { data: sm }, { data: pv }, { data: ev }] = await Promise.all([
+      supabase.from("appointments").select("*").eq("flyer_id", flyerId).order("start_at", { ascending: true }),
+      supabase.from("subscribers").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
+      supabase.from("form_submissions").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
+      supabase.from("poll_votes").select("*").eq("flyer_id", flyerId),
+      supabase
+        .from("analytics_events")
+        .select("id, event_type, layer_id, session_id, created_at, metadata")
+        .eq("flyer_id", flyerId)
+        .order("created_at", { ascending: false })
+        .limit(5000),
+    ]);
 
-      setAppointments((ap as Appointment[]) || []);
-      setSubscribers((sub as Subscriber[]) || []);
-      setSubmissions((sm as FormSubmission[]) || []);
-      setPollVotes((pv as PollVote[]) || []);
-      setEvents((ev as AnalyticsEvent[]) || []);
-      setActions(actionRows);
-      setLayers(layerRows);
-      setLoading(false);
-    })();
+    setAppointments((ap as Appointment[]) || []);
+    setSubscribers((sub as Subscriber[]) || []);
+    setSubmissions((sm as FormSubmission[]) || []);
+    setPollVotes((pv as PollVote[]) || []);
+    setEvents((ev as AnalyticsEvent[]) || []);
+    setActions(actionRows);
+    setLayers(layerRows);
+    setLoading(false);
   }, [user, flyerId]);
+
+  useEffect(() => { loadData(true); }, [loadData]);
 
   // Build polls from actions (top-level + nested in popup buttons/hotspots)
   const polls = useMemo(() => {
