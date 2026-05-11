@@ -1049,7 +1049,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       const key = `${page.id}:${a.id}`;
       if (fired.has(key)) return;
       fired.add(key);
-      setTimeout(() => executeAction(a, l), 350 + i * 250);
+      setTimeout(() => {
+        logClick(l, a.type, { source: "auto_trigger" });
+        executeAction(a, l);
+      }, 350 + i * 250);
       i++;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
