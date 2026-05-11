@@ -748,6 +748,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     window.addEventListener("pagehide", onHide);
     return () => window.removeEventListener("pagehide", onHide);
   }, [flyer, previewMode]);
+
+  function runAction(layer: Layer) {
     if (!layer.action) return;
     logClick(layer, layer.action.type);
     executeAction(layer.action, layer);
