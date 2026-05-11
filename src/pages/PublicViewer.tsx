@@ -790,6 +790,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         setSubscribeAction(a);
         setSubscribeData({ name: "", email: "", phone: "" });
         break;
+      case "book_appointment":
+        setAppointmentAction({ action: a, layer });
+        break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
         const isApple = (() => {
