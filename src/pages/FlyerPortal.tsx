@@ -355,6 +355,11 @@ export default function FlyerPortal() {
           <TabsTrigger value="subscribers">Subscribers ({subscribers.length})</TabsTrigger>
           <TabsTrigger value="forms">Forms ({submissions.length})</TabsTrigger>
           <TabsTrigger value="cart">Cart ({cartOrders.length})</TabsTrigger>
+          {extraActionTypes.map((t) => {
+            const count = clickEvents.filter((e) => e?.metadata?.action_type === t).length;
+            const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
+            return <TabsTrigger key={t} value={`act-${t}`} className="capitalize">{label} ({count})</TabsTrigger>;
+          })}
         </TabsList>
 
         <TabsContent value="analytics" className="space-y-4">
