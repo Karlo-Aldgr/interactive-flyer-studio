@@ -605,6 +605,59 @@ export default function FlyerPortal() {
             </CardContent>
           </Card>
         </TabsContent>
+        {extraActionTypes.map((t) => {
+          const rows = clickEvents.filter((e) => e?.metadata?.action_type === t);
+          const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
+          return (
+            <TabsContent key={t} value={`act-${t}`} className="space-y-2">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm capitalize">{label} — {rows.length} interactions</CardTitle>
+                  <Button
+                    size="sm" variant="outline" disabled={rows.length === 0}
+                    onClick={() =>
+                      downloadCsv(`${t}-interactions.csv`, csv(
+                        rows.map((r) => ({
+                          created_at: r.created_at,
+                          session_id: r.session_id,
+                          layer: layerLabel[r.layer_id || ""]?.label || "",
+                          layer_type: layerLabel[r.layer_id || ""]?.type || "",
+                        })),
+                        ["created_at", "session_id", "layer", "layer_type"]
+                      ))
+                    }
+                  >
+                    <Download className="mr-1 h-3 w-3" /> CSV
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {rows.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No {label.toLowerCase()} tracked yet.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {rows.slice(0, 200).map((r) => {
+                        const lab = layerLabel[r.layer_id || ""];
+                        return (
+                          <div key={r.id} className="flex items-center justify-between rounded border border-border p-2 text-xs">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium truncate">
+                                {lab?.label || "(unknown layer)"}
+                                {lab?.type && <Badge variant="secondary" className="ml-2">{lab.type}</Badge>}
+                              </div>
+                              <div className="text-muted-foreground">
+                                {new Date(r.created_at).toLocaleString()} · session {(r.session_id || "").slice(0, 8) || "—"}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          );
+        })}
       </Tabs>
 
       <Dialog open={!!openOrder} onOpenChange={(o) => !o && setOpenOrder(null)}>
