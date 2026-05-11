@@ -108,18 +108,33 @@ export default function PublicFlyerPortal() {
     );
   }
 
-  const stats = [
-    { label: "Views", value: data.counts.views, Icon: Eye },
-    { label: "Subscribers", value: data.counts.subscribers, Icon: Users },
-    { label: "Appointments", value: data.counts.appointments, Icon: CalendarDays },
-    { label: "Form submissions", value: data.counts.submissions, Icon: FileText },
-    { label: "Poll votes", value: data.counts.pollVotes, Icon: BarChart3 },
-    { label: "Purchases", value: data.counts.purchases, Icon: ShoppingCart },
+  const f: PortalFeatures = data.features ?? {
+    actionTypes: [], hasHotspots: false, hasAppointments: true,
+    hasSubscribe: true, hasForms: true, hasPolls: true, hasCheckout: false, hasCalls: false,
+  };
+
+  const allStats = [
+    { key: "views", label: "Views", value: data.counts.views, Icon: Eye, show: true },
+    { key: "subs", label: "Subscribers", value: data.counts.subscribers, Icon: Users, show: f.hasSubscribe },
+    { key: "appts", label: "Appointments", value: data.counts.appointments, Icon: CalendarDays, show: f.hasAppointments },
+    { key: "forms", label: "Form submissions", value: data.counts.submissions, Icon: FileText, show: f.hasForms },
+    { key: "polls", label: "Poll votes", value: data.counts.pollVotes, Icon: BarChart3, show: f.hasPolls },
+    { key: "buy", label: "Purchases", value: data.counts.purchases, Icon: ShoppingCart, show: f.hasCheckout },
   ];
+  const stats = allStats.filter((s) => s.show);
 
   // Aggregate poll votes by option
   const pollAgg: Record<string, number> = {};
   for (const v of data.pollVotes) pollAgg[v.option_id] = (pollAgg[v.option_id] || 0) + 1;
+
+  const tabDefs = [
+    { value: "appointments", label: "Appointments", show: f.hasAppointments },
+    { value: "subscribers", label: "Subscribers", show: f.hasSubscribe },
+    { value: "forms", label: "Form submissions", show: f.hasForms },
+    { value: "polls", label: "Polls", show: f.hasPolls },
+    { value: "events", label: "Recent activity", show: true },
+  ].filter((t) => t.show);
+  const defaultTab = tabDefs[0]?.value || "events";
 
   return (
     <div className="container mx-auto max-w-6xl space-y-4 p-4 md:p-8">
@@ -133,9 +148,18 @@ export default function PublicFlyerPortal() {
         <Badge variant="secondary">Private</Badge>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
-        {stats.map(({ label, value, Icon }) => (
-          <Card key={label}>
+      {f.actionTypes.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {f.actionTypes.map((t) => (
+            <Badge key={t} variant="outline" className="text-xs">{t.replace(/_/g, " ")}</Badge>
+          ))}
+          {f.hasHotspots && <Badge variant="outline" className="text-xs">hotspots</Badge>}
+        </div>
+      )}
+
+      <div className={`grid grid-cols-2 gap-3 md:grid-cols-${Math.min(stats.length, 6)}`}>
+        {stats.map(({ key, label, value, Icon }) => (
+          <Card key={key}>
             <CardContent className="flex items-center gap-3 p-4">
               <Icon className="h-5 w-5 text-primary" />
               <div>
@@ -147,16 +171,14 @@ export default function PublicFlyerPortal() {
         ))}
       </div>
 
-      <Tabs defaultValue="appointments">
+      <Tabs defaultValue={defaultTab}>
         <TabsList className="flex-wrap">
-          <TabsTrigger value="appointments">Appointments</TabsTrigger>
-          <TabsTrigger value="subscribers">Subscribers</TabsTrigger>
-          <TabsTrigger value="forms">Form submissions</TabsTrigger>
-          <TabsTrigger value="polls">Polls</TabsTrigger>
-          <TabsTrigger value="events">Recent activity</TabsTrigger>
+          {tabDefs.map((t) => (
+            <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="appointments">
+        {f.hasAppointments && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm">Appointments ({data.appointments.length})</CardTitle>
