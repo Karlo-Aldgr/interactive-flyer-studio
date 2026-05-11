@@ -653,7 +653,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       // analytics: view (skip in preview mode)
       if (!previewMode) {
         const sid = getViewerSessionId();
-        supabase.from("analytics_events").insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: document.referrer || null } } as any]);
+        const { error: trackErr } = await supabase
+          .from("analytics_events")
+          .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: document.referrer || null } } as any]);
+        if (trackErr) console.warn("[analytics] view insert failed", trackErr);
       }
     })();
   }, [slug, flyerId, previewMode]);
@@ -705,8 +708,46 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       event_type: "click",
       session_id: getViewerSessionId(),
       metadata: { action_type: type } as any,
-    } as any]);
+    } as any]).then(({ error }) => {
+      if (error) console.warn("[analytics] click insert failed", error);
+    });
   }
+
+  // Best-effort beacon on tab close so a quick visit still records a view.
+  useEffect(() => {
+    if (!flyer || previewMode) return;
+    const onHide = () => {
+      try {
+        const url = `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/analytics_events`;
+        const apikey = (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const body = JSON.stringify({
+          flyer_id: flyer.id,
+          event_type: "view",
+          session_id: getViewerSessionId(),
+          metadata: { beacon: true, referrer: document.referrer || null },
+        });
+        const blob = new Blob(
+          [JSON.stringify({ apikey, authorization: `Bearer ${apikey}`, body })],
+          { type: "application/json" },
+        );
+        // Primary: keepalive fetch (carries headers properly)
+        fetch(url, {
+          method: "POST",
+          keepalive: true,
+          headers: {
+            apikey,
+            authorization: `Bearer ${apikey}`,
+            "content-type": "application/json",
+            prefer: "return=minimal",
+          },
+          body,
+        }).catch(() => {});
+        void blob;
+      } catch {}
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => window.removeEventListener("pagehide", onHide);
+  }, [flyer, previewMode]);
 
   function runAction(layer: Layer) {
     if (!layer.action) return;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,8 +9,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, Download, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ChevronLeft, Download, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+
+type OrderStatus = "new" | "on_hold" | "pay_later" | "completed";
+const ORDER_STATUSES: { value: OrderStatus; label: string; cls: string; ring: string }[] = [
+  { value: "new",        label: "New",        cls: "bg-primary text-primary-foreground",                    ring: "border-primary/60 bg-primary/5" },
+  { value: "on_hold",    label: "On Hold",    cls: "bg-amber-500 text-white",                                ring: "border-amber-500/50 bg-amber-500/5" },
+  { value: "pay_later",  label: "Pay Later",  cls: "bg-blue-500 text-white",                                 ring: "border-blue-500/50 bg-blue-500/5" },
+  { value: "completed",  label: "Completed",  cls: "bg-emerald-600 text-white",                              ring: "border-emerald-600/40 bg-emerald-600/5" },
+];
+const statusMeta = (s: string | null | undefined) =>
+  ORDER_STATUSES.find((x) => x.value === (s as OrderStatus)) || ORDER_STATUSES[0];
 
 interface Appointment {
   id: string;
@@ -38,6 +49,7 @@ interface Subscriber {
 interface FormSubmission {
   id: string;
   data: any;
+  status: string | null;
   created_at: string;
   layer_id?: string | null;
 }
@@ -94,73 +106,72 @@ export default function FlyerPortal() {
   const [search, setSearch] = useState("");
   const [calDate, setCalDate] = useState<Date | undefined>();
 
-  useEffect(() => {
+  const loadData = useCallback(async (showSpinner = true) => {
     if (!user || !flyerId) return;
-    (async () => {
-      setLoading(true);
-      const { data: flyer } = await supabase
-        .from("flyers")
-        .select("id, title, owner_id")
-        .eq("id", flyerId)
+    if (showSpinner) setLoading(true);
+    const { data: flyer } = await supabase
+      .from("flyers")
+      .select("id, title, owner_id")
+      .eq("id", flyerId)
+      .maybeSingle();
+
+    if (!flyer || flyer.owner_id !== user.id) {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
         .maybeSingle();
-
-      if (!flyer || flyer.owner_id !== user.id) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-        if (!roles) {
-          setAuthorized(false);
-          setLoading(false);
-          return;
-        }
+      if (!roles) {
+        setAuthorized(false);
+        setLoading(false);
+        return;
       }
-      setAuthorized(true);
-      setFlyerTitle(flyer?.title || "Flyer");
+    }
+    setAuthorized(true);
+    setFlyerTitle(flyer?.title || "Flyer");
 
-      // Pull pages -> layers -> actions so we can label polls/hotspots
-      const { data: pageRows } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);
-      const pageIds = (pageRows || []).map((p: any) => p.id);
-      let layerRows: any[] = [];
-      let actionRows: any[] = [];
-      if (pageIds.length) {
-        const { data: lr } = await supabase.from("layers").select("id, type, content").in("page_id", pageIds);
-        layerRows = lr || [];
-        const layerIds = layerRows.map((l) => l.id);
-        if (layerIds.length) {
-          const { data: ar } = await supabase
-            .from("actions")
-            .select("id, type, payload, layer_id")
-            .in("layer_id", layerIds);
-          actionRows = ar || [];
-        }
+    const { data: pageRows } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);
+    const pageIds = (pageRows || []).map((p: any) => p.id);
+    let layerRows: any[] = [];
+    let actionRows: any[] = [];
+    if (pageIds.length) {
+      const { data: lr } = await supabase.from("layers").select("id, type, content").in("page_id", pageIds);
+      layerRows = lr || [];
+      const layerIds = layerRows.map((l) => l.id);
+      if (layerIds.length) {
+        const { data: ar } = await supabase
+          .from("actions")
+          .select("id, type, payload, layer_id")
+          .in("layer_id", layerIds);
+        actionRows = ar || [];
       }
+    }
 
-      const [{ data: ap }, { data: sub }, { data: sm }, { data: pv }, { data: ev }] = await Promise.all([
-        supabase.from("appointments").select("*").eq("flyer_id", flyerId).order("start_at", { ascending: true }),
-        supabase.from("subscribers").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
-        supabase.from("form_submissions").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
-        supabase.from("poll_votes").select("*").eq("flyer_id", flyerId),
-        supabase
-          .from("analytics_events")
-          .select("id, event_type, layer_id, session_id, created_at, metadata")
-          .eq("flyer_id", flyerId)
-          .order("created_at", { ascending: false })
-          .limit(5000),
-      ]);
+    const [{ data: ap }, { data: sub }, { data: sm }, { data: pv }, { data: ev }] = await Promise.all([
+      supabase.from("appointments").select("*").eq("flyer_id", flyerId).order("start_at", { ascending: true }),
+      supabase.from("subscribers").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
+      supabase.from("form_submissions").select("*").eq("flyer_id", flyerId).order("created_at", { ascending: false }),
+      supabase.from("poll_votes").select("*").eq("flyer_id", flyerId),
+      supabase
+        .from("analytics_events")
+        .select("id, event_type, layer_id, session_id, created_at, metadata")
+        .eq("flyer_id", flyerId)
+        .order("created_at", { ascending: false })
+        .limit(5000),
+    ]);
 
-      setAppointments((ap as Appointment[]) || []);
-      setSubscribers((sub as Subscriber[]) || []);
-      setSubmissions((sm as FormSubmission[]) || []);
-      setPollVotes((pv as PollVote[]) || []);
-      setEvents((ev as AnalyticsEvent[]) || []);
-      setActions(actionRows);
-      setLayers(layerRows);
-      setLoading(false);
-    })();
+    setAppointments((ap as Appointment[]) || []);
+    setSubscribers((sub as Subscriber[]) || []);
+    setSubmissions((sm as FormSubmission[]) || []);
+    setPollVotes((pv as PollVote[]) || []);
+    setEvents((ev as AnalyticsEvent[]) || []);
+    setActions(actionRows);
+    setLayers(layerRows);
+    setLoading(false);
   }, [user, flyerId]);
+
+  useEffect(() => { loadData(true); }, [loadData]);
 
   // Build polls from actions (top-level + nested in popup buttons/hotspots)
   const polls = useMemo(() => {
@@ -227,6 +238,25 @@ export default function FlyerPortal() {
   const maxDaily = Math.max(1, ...dailyViews.map(([, c]) => c));
 
   const cartOrders = submissions.filter((s) => s?.data?.kind === "cart_order");
+  const cartCounts: Record<OrderStatus, number> = { new: 0, on_hold: 0, pay_later: 0, completed: 0 };
+  for (const o of cartOrders) {
+    const s = (o.status as OrderStatus) || "new";
+    if (cartCounts[s] != null) cartCounts[s] += 1;
+  }
+  const [openOrder, setOpenOrder] = useState<FormSubmission | null>(null);
+
+  async function setOrderStatus(id: string, status: OrderStatus) {
+    const prev = submissions;
+    setSubmissions((arr) => arr.map((s) => (s.id === id ? { ...s, status } : s)));
+    setOpenOrder((o) => (o && o.id === id ? { ...o, status } : o));
+    const { error } = await supabase.from("form_submissions").update({ status } as any).eq("id", id);
+    if (error) {
+      setSubmissions(prev);
+      toast.error(error.message);
+    } else {
+      toast.success("Status updated");
+    }
+  }
 
   async function cancelAppointment(id: string) {
     if (!confirm("Cancel this appointment?")) return;
@@ -263,12 +293,17 @@ export default function FlyerPortal() {
           </Button>
           <h1 className="text-xl font-semibold">{flyerTitle} — Portal</h1>
         </div>
-        <Input
-          placeholder="Search name, email, phone…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Search name, email, phone…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
+          <Button variant="outline" size="sm" onClick={() => loadData(false)}>
+            <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
@@ -497,28 +532,117 @@ export default function FlyerPortal() {
 
         <TabsContent value="cart" className="space-y-2">
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Cart orders</CardTitle></CardHeader>
+            <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm">Cart orders</CardTitle>
+              <div className="flex flex-wrap items-center gap-1">
+                {ORDER_STATUSES.map((s) => (
+                  <Badge key={s.value} className={s.cls} variant="default">
+                    {s.label}: {cartCounts[s.value]}
+                  </Badge>
+                ))}
+              </div>
+            </CardHeader>
             <CardContent>
               {cartOrders.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No cart orders yet.</p>
               ) : (
                 <div className="space-y-2">
-                  {cartOrders.map((s) => (
-                    <div key={s.id} className="rounded border border-border p-2 text-xs">
-                      <div className="font-medium">
-                        {s.data?.customer?.name || "—"} · {s.data?.customer?.email || "—"} {s.data?.customer?.phone && `· ${s.data.customer.phone}`}
-                      </div>
-                      <div className="text-muted-foreground">
-                        {new Date(s.created_at).toLocaleString()} · {(s.data?.items || []).length} items · {s.data?.currency || ""} {s.data?.total ?? ""}
-                      </div>
-                    </div>
-                  ))}
+                  {cartOrders.map((s) => {
+                    const meta = statusMeta(s.status);
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setOpenOrder(s)}
+                        className={`w-full rounded border-l-4 ${meta.ring} border border-border p-2 text-left text-xs transition hover:bg-muted/50`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">
+                              {s.data?.customer?.name || "—"} · {s.data?.customer?.email || "—"} {s.data?.customer?.phone && `· ${s.data.customer.phone}`}
+                            </div>
+                            <div className="text-muted-foreground">
+                              {new Date(s.created_at).toLocaleString()} · {(s.data?.items || []).length} items · {s.data?.currency || ""} {s.data?.total ?? ""}
+                            </div>
+                          </div>
+                          <Badge className={meta.cls}>{meta.label}</Badge>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!openOrder} onOpenChange={(o) => !o && setOpenOrder(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Order details</DialogTitle>
+          </DialogHeader>
+          {openOrder && (() => {
+            const d = openOrder.data || {};
+            const c = d.customer || {};
+            const items = d.items || [];
+            const meta = statusMeta(openOrder.status);
+            return (
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <Badge className={meta.cls}>{meta.label}</Badge>
+                  <span className="text-xs text-muted-foreground">{new Date(openOrder.created_at).toLocaleString()}</span>
+                </div>
+                <div className="rounded border border-border p-2 text-xs space-y-0.5">
+                  <div><span className="text-muted-foreground">Name:</span> {c.name || "—"}</div>
+                  <div><span className="text-muted-foreground">Email:</span> {c.email || "—"}</div>
+                  <div><span className="text-muted-foreground">Phone:</span> {c.phone || "—"}</div>
+                  <div><span className="text-muted-foreground">Address:</span> {c.address || "—"}</div>
+                  {d.notes && <div><span className="text-muted-foreground">Notes:</span> {d.notes}</div>}
+                </div>
+                <div className="rounded border border-border">
+                  <div className="border-b border-border px-2 py-1 text-xs font-medium text-muted-foreground">Items</div>
+                  {items.length === 0 ? (
+                    <div className="p-2 text-xs text-muted-foreground">No items.</div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {items.map((it: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between p-2 text-xs">
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-medium">{it.name || it.title || `Item ${i + 1}`}</div>
+                            {it.qty != null && <div className="text-muted-foreground">Qty: {it.qty}</div>}
+                          </div>
+                          <div className="font-mono">{d.currency || ""} {it.price ?? ""}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-t border-border px-2 py-1 text-xs">
+                    <span className="text-muted-foreground">Total</span>
+                    <span className="font-semibold">{d.currency || ""} {d.total ?? ""}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter className="flex-wrap gap-2 sm:justify-start">
+            {ORDER_STATUSES.map((s) => {
+              const active = (openOrder?.status || "new") === s.value;
+              return (
+                <Button
+                  key={s.value}
+                  size="sm"
+                  variant={active ? "default" : "outline"}
+                  className={active ? s.cls : ""}
+                  onClick={() => openOrder && setOrderStatus(openOrder.id, s.value)}
+                >
+                  {s.label}
+                </Button>
+              );
+            })}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
