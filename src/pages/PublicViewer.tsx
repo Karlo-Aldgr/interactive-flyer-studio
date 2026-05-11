@@ -699,17 +699,39 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     };
   }, [flyer]);
 
-  function logClick(layer: Layer | null, type: string) {
+  function logAnalyticsEvent(row: Record<string, any>) {
     if (!flyer || previewMode) return;
-    supabase.from("analytics_events").insert([{
-      flyer_id: flyer.id,
+    const payload = { flyer_id: flyer.id, session_id: getViewerSessionId(), ...row };
+    supabase.from("analytics_events").insert([payload as any]).then(({ error }) => {
+      if (error) console.warn("[analytics] insert failed", error, payload);
+    });
+
+    // Critical for tel:, sms:, and payment links: normal Supabase requests can be
+    // cancelled when the browser immediately leaves the page, so send a keepalive
+    // copy before navigation. Duplicate protection is handled visually in reports.
+    try {
+      const url = `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/analytics_events`;
+      const apikey = (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      fetch(url, {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          apikey,
+          authorization: `Bearer ${apikey}`,
+          "content-type": "application/json",
+          prefer: "return=minimal",
+        },
+        body: JSON.stringify({ ...payload, metadata: { ...(payload.metadata || {}), keepalive: true } }),
+      }).catch(() => {});
+    } catch {}
+  }
+
+  function logClick(layer: Layer | null, type: string, metadata: Record<string, any> = {}) {
+    logAnalyticsEvent({
       page_id: layer?.page_id ?? null,
       layer_id: layer?.id ?? null,
       event_type: "click",
-      session_id: getViewerSessionId(),
-      metadata: { action_type: type } as any,
-    } as any]).then(({ error }) => {
-      if (error) console.warn("[analytics] click insert failed", error);
+      metadata: { ...metadata, action_type: type } as any,
     });
   }
 
