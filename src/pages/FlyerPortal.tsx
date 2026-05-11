@@ -142,7 +142,7 @@ export default function FlyerPortal() {
     if (showSpinner) setLoading(true);
     const { data: flyer } = await supabase
       .from("flyers")
-      .select("id, title, owner_id")
+      .select("id, title, owner_id, status, public_slug, thumbnail_url")
       .eq("id", flyerId)
       .maybeSingle();
 
