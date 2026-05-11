@@ -113,10 +113,10 @@ export default function FlyerPortal() {
     return true;
   }
 
-  async function cancelAppointment(id: string) {
+  async function cancelAppointment(id: string): Promise<void> {
     if (!confirm("Cancel this appointment?")) return;
     const { error } = await supabase.from("appointments").update({ status: "cancelled" }).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setAppointments((arr) => arr.map((a) => (a.id === id ? { ...a, status: "cancelled" } : a)));
     toast.success("Cancelled");
   }
