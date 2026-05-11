@@ -669,7 +669,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         const sid = getViewerSessionId();
         const { error: trackErr } = await supabase
           .from("analytics_events")
-          .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: document.referrer || null } } as any]);
+          .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: document.referrer || null, device: getViewerDevice() } } as any]);
         if (trackErr) console.warn("[analytics] view insert failed", trackErr);
       }
     })();
