@@ -622,7 +622,10 @@ export default function FlyerPortal() {
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => setOpenOrder(s)}
+                        onClick={() => {
+                          setOpenOrder(s);
+                          if (s.status === "pay_later") logPortalEvent("pay_later_view", { order_id: s.id }, "view");
+                        }}
                         className={`w-full rounded border-l-4 ${meta.ring} border border-border p-2 text-left text-xs transition hover:bg-muted/50`}
                       >
                         <div className="flex items-start justify-between gap-2">
