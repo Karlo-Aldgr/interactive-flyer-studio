@@ -2035,26 +2035,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 <Button
                   variant={hasAny ? "outline" : "default"}
                   className={hasAny ? "w-full border-red-500 text-red-600 hover:bg-red-50" : "w-full"}
-                  onClick={async () => {
-                    if (hasAny && !previewMode && flyer) {
-                      await supabase.from("form_submissions").insert([{
-                        flyer_id: flyer.id,
-                        data: {
-                          kind: "cart_pay_later",
-                          order_id: placedOrderId,
-                          customer: checkoutData,
-                          total: cartTotal,
-                          currency: cartCurrency,
-                          submitted_at: new Date().toISOString(),
-                        } as any,
-                      } as any]);
-                      logClick(null, "cart_pay:later");
-                      toast.success("Marked as Pay Later — the seller has been notified.");
+                  onClick={() => {
+                    if (!hasAny) {
+                      setCheckoutOpen(false);
+                      setCheckoutSuccess(false);
+                      setCart([]);
+                      setPlacedOrderId(null);
+                      return;
                     }
-                    setCheckoutOpen(false);
-                    setCheckoutSuccess(false);
-                    setCart([]);
-                    setPlacedOrderId(null);
+                    setPayLaterAccepted(false);
+                    setPayLaterConfirmOpen(true);
                   }}
                 >
                   {hasAny ? "I'll pay later" : "Done"}
