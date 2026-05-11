@@ -49,6 +49,7 @@ interface Subscriber {
 interface FormSubmission {
   id: string;
   data: any;
+  status: string | null;
   created_at: string;
   layer_id?: string | null;
 }
