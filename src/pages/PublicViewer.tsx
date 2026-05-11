@@ -701,7 +701,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
   function logAnalyticsEvent(row: Record<string, any>) {
     if (!flyer || previewMode) return;
-    const payload = { flyer_id: flyer.id, session_id: getViewerSessionId(), ...row };
+    const payload: Record<string, any> = { flyer_id: flyer.id, session_id: getViewerSessionId(), ...row };
     supabase.from("analytics_events").insert([payload as any]).then(({ error }) => {
       if (error) console.warn("[analytics] insert failed", error, payload);
     });
