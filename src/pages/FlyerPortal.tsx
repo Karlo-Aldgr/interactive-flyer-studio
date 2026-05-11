@@ -731,10 +731,21 @@ export default function FlyerPortal() {
                     <div className="flex flex-wrap gap-2">
                       {c.phone && (
                         <>
-                          <Button asChild size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                          <Button
+                            asChild
+                            size="sm"
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            onClick={() => logPortalEvent("pay_later_call", { order_id: openOrder.id })}
+                          >
                             <a href={`tel:${c.phone}`}>Call</a>
                           </Button>
-                          <Button asChild size="sm" variant="outline" className="border-red-600 text-red-700">
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="outline"
+                            className="border-red-600 text-red-700"
+                            onClick={() => logPortalEvent("pay_later_sms", { order_id: openOrder.id })}
+                          >
                             <a href={`sms:${c.phone}?&body=${encodeURIComponent(`Hi ${c.name || ""}, your order total is ${d.currency || ""}${d.total ?? ""}. Please send payment when you can. Thanks!`)}`}>
                               Text
                             </a>
@@ -742,7 +753,13 @@ export default function FlyerPortal() {
                         </>
                       )}
                       {c.email && (
-                        <Button asChild size="sm" variant="outline" className="border-red-600 text-red-700">
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          className="border-red-600 text-red-700"
+                          onClick={() => logPortalEvent("pay_later_email", { order_id: openOrder.id })}
+                        >
                           <a href={`mailto:${c.email}?subject=${encodeURIComponent("Payment for your order")}&body=${encodeURIComponent(`Hi ${c.name || ""}, your order total is ${d.currency || ""}${d.total ?? ""}. Please send payment when you can. Thanks!`)}`}>
                             Email
                           </a>
