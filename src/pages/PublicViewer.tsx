@@ -895,7 +895,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   }
 
   function runPopupButton(a: LayerAction, closeZoom = false) {
-    logClick(null, "popup_button:" + a.type);
+    logClick(null, a.type, { source: "popup_button" });
     setPopup(null);
     if (closeZoom) {
       setZoomImage(null);
