@@ -1024,6 +1024,95 @@ export default function FlyerPortal() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!openLayerActivity} onOpenChange={(o) => !o && setOpenLayerActivity(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Hotspot activity</DialogTitle>
+            {openLayerActivity && (() => {
+              const info = layerLabel[openLayerActivity];
+              const agg = layerClicks[openLayerActivity];
+              return (
+                <DialogDescription>
+                  <span className="inline-flex flex-wrap items-center gap-1">
+                    <Badge variant="secondary" className="text-[10px]">{info?.type || "?"}</Badge>
+                    {(info?.actionTypes || []).map((t) => (
+                      <Badge key={t} variant="outline" className="text-[10px] capitalize">
+                        {ACTION_LABELS[t] || t.replace(/_/g, " ")}
+                      </Badge>
+                    ))}
+                    <span className="ml-1 font-medium text-foreground">{info?.label || openLayerActivity}</span>
+                  </span>
+                  {agg && (
+                    <span className="mt-2 block text-xs text-muted-foreground">
+                      {agg.clicks} total · 📱 {agg.devices.mobile} · 📲 {agg.devices.tablet} · 🖥 {agg.devices.desktop}
+                      {agg.devices.unknown ? ` · ? ${agg.devices.unknown}` : ""}
+                    </span>
+                  )}
+                </DialogDescription>
+              );
+            })()}
+          </DialogHeader>
+          {openLayerActivity && (() => {
+            const rows = clickEvents.filter((e) => (e.layer_id || "_none") === openLayerActivity);
+            if (rows.length === 0) {
+              return <p className="text-sm text-muted-foreground">No activity yet.</p>;
+            }
+            return (
+              <div className="max-h-[60vh] space-y-1 overflow-y-auto">
+                {rows.map((e) => {
+                  const dev = deviceFromEvent(e);
+                  const at = e?.metadata?.action_type;
+                  return (
+                    <div key={e.id} className="flex items-center justify-between gap-2 rounded border border-border p-2 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge variant="outline" className="text-[10px] capitalize">
+                            {dev === "mobile" ? "📱 Mobile" : dev === "tablet" ? "📲 Tablet" : dev === "desktop" ? "🖥 Desktop" : "? Unknown"}
+                          </Badge>
+                          {at && (
+                            <Badge variant="secondary" className="text-[10px] capitalize">
+                              {ACTION_LABELS[at] || String(at).replace(/_/g, " ")}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="mt-0.5 text-muted-foreground">
+                          {new Date(e.created_at).toLocaleString()} · session {(e.session_id || "—").slice(0, 8)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!openLayerActivity || (clickEvents.filter((e) => (e.layer_id || "_none") === openLayerActivity).length === 0)}
+              onClick={() => {
+                if (!openLayerActivity) return;
+                const rows = clickEvents.filter((e) => (e.layer_id || "_none") === openLayerActivity);
+                downloadCsv(
+                  `hotspot-activity-${openLayerActivity.slice(0, 8)}.csv`,
+                  csv(
+                    rows.map((e) => ({
+                      created_at: e.created_at,
+                      device: deviceFromEvent(e),
+                      action_type: e?.metadata?.action_type || "",
+                      session_id: e.session_id,
+                    })),
+                    ["created_at", "device", "action_type", "session_id"],
+                  ),
+                );
+              }}
+            >
+              <Download className="mr-1 h-3 w-3" /> CSV
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
