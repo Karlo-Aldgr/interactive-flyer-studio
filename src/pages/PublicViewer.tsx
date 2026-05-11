@@ -687,6 +687,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       page_id: layer?.page_id ?? null,
       layer_id: layer?.id ?? null,
       event_type: "click",
+      session_id: getViewerSessionId(),
       metadata: { action_type: type } as any,
     } as any]);
   }
