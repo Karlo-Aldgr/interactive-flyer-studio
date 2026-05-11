@@ -260,10 +260,10 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
   const [flashedLayerId, setFlashedLayerId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOwner || payLaterAlertShown) return;
+    if (payLaterAlertShown) return;
     const pending = cartOrders.filter((o) => o.status === "pay_later").length;
     if (pending > 0) { setPayLaterAlertOpen(true); setPayLaterAlertShown(true); }
-  }, [isOwner, cartOrders, payLaterAlertShown]);
+  }, [cartOrders, payLaterAlertShown]);
 
   async function confirmMarkPaid() {
     if (!confirmPaid || !onSetOrderStatus) return;
