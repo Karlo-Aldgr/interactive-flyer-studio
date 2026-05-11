@@ -197,7 +197,8 @@ Deno.serve(async (req) => {
         hasCheckout: actionTypes.has("checkout") || actionTypes.has("buy_ticket") || actionTypes.has("buy_product"),
         hasCalls: actionTypes.has("call") || actionTypes.has("sms"),
       },
-      actions: actions.map((a: any) => ({ id: a.id, type: a.type, layer_id: a.layer_id })),
+      actions: actions.map((a: any) => ({ id: a.id, type: a.type, payload: a.payload, layer_id: a.layer_id })),
+      layers: layers.map((l: any) => ({ id: l.id, type: l.type, content: l.content })),
     });
   } catch (e: any) {
     return json({ error: e?.message || "Server error" }, 500);
