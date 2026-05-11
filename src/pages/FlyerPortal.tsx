@@ -238,6 +238,25 @@ export default function FlyerPortal() {
   const maxDaily = Math.max(1, ...dailyViews.map(([, c]) => c));
 
   const cartOrders = submissions.filter((s) => s?.data?.kind === "cart_order");
+  const cartCounts: Record<OrderStatus, number> = { new: 0, on_hold: 0, pay_later: 0, completed: 0 };
+  for (const o of cartOrders) {
+    const s = (o.status as OrderStatus) || "new";
+    if (cartCounts[s] != null) cartCounts[s] += 1;
+  }
+  const [openOrder, setOpenOrder] = useState<FormSubmission | null>(null);
+
+  async function setOrderStatus(id: string, status: OrderStatus) {
+    const prev = submissions;
+    setSubmissions((arr) => arr.map((s) => (s.id === id ? { ...s, status } : s)));
+    setOpenOrder((o) => (o && o.id === id ? { ...o, status } : o));
+    const { error } = await supabase.from("form_submissions").update({ status } as any).eq("id", id);
+    if (error) {
+      setSubmissions(prev);
+      toast.error(error.message);
+    } else {
+      toast.success("Status updated");
+    }
+  }
 
   async function cancelAppointment(id: string) {
     if (!confirm("Cancel this appointment?")) return;
