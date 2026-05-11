@@ -806,13 +806,17 @@ export default function FlyerPortal() {
                       )}
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="border-emerald-600 text-emerald-700"
-                        onClick={() => setOrderStatus(openOrder.id, "completed")}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => setConfirmPaid(openOrder)}
                       >
-                        Mark paid
+                        Mark paid…
                       </Button>
                     </div>
+                    {d.paid_at && (
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                        Paid · {new Date(d.paid_at).toLocaleString()} · by {d.paid_by || "—"}
+                      </p>
+                    )}
                   </div>
                 )}
                 <div className="rounded border border-border p-2 text-xs space-y-0.5">
