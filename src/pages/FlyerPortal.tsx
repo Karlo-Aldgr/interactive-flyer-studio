@@ -293,12 +293,17 @@ export default function FlyerPortal() {
           </Button>
           <h1 className="text-xl font-semibold">{flyerTitle} — Portal</h1>
         </div>
-        <Input
-          placeholder="Search name, email, phone…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Search name, email, phone…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
+          <Button variant="outline" size="sm" onClick={() => loadData(false)}>
+            <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
