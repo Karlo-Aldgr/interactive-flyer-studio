@@ -915,8 +915,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     return () => window.removeEventListener("pagehide", onHide);
   }, [flyer, previewMode]);
 
+  function triggerClickPing(x: number, y: number, color?: string) {
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    setClickPings((prev) => [...prev, { id, x, y, color: color || "#7c3aed" }]);
+  }
+
   function runAction(layer: Layer) {
     if (!layer.action) return;
+    const cx = layer.position.x + layer.size.width / 2;
+    const cy = layer.position.y + layer.size.height / 2;
+    triggerClickPing(cx, cy, layer.action.highlight?.color);
     logClick(layer, layer.action.type);
     executeAction(layer.action, layer);
   }
