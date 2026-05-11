@@ -72,6 +72,8 @@ import { toast } from "sonner";
 // Highlight ring shown around tappable layers in the viewer.
 function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" }) {
   const ref = useRef<any>(null);
+  const ping1Ref = useRef<any>(null);
+  const ping2Ref = useRef<any>(null);
   const cornerRefs = useRef<any[]>([]);
   const hl = layer.action?.highlight ?? {};
   const style = hl.style ?? "pulse";
@@ -89,8 +91,22 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
       const t = (frame.time % period) / period;
       const e = 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
       if (style === "pulse") {
-        node.opacity(baseOpacity * (0.45 + 0.55 * e));
-        node.strokeWidth(thickness + 3 * e);
+        node.opacity(baseOpacity * (0.55 + 0.45 * e));
+        node.strokeWidth(thickness + 2 * e);
+        // Radar ping rings expanding outward
+        const cx = layer.position.x + layer.size.width / 2;
+        const cy = layer.position.y + layer.size.height / 2;
+        const animatePing = (n: any, phase: number) => {
+          if (!n) return;
+          const tp = ((frame.time + phase) % period) / period;
+          const scale = 1 + tp * 0.45;
+          n.scale({ x: scale, y: scale });
+          n.position({ x: cx, y: cy });
+          n.opacity(baseOpacity * (1 - tp));
+          n.strokeWidth(Math.max(1, thickness * (1 - tp * 0.5)));
+        };
+        animatePing(ping1Ref.current, 0);
+        animatePing(ping2Ref.current, period / 2);
       } else {
         // glow: steady stroke, pulsing shadow
         node.shadowOpacity(0.3 + 0.6 * e);
@@ -99,7 +115,7 @@ function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellip
     }, node.getLayer());
     anim.start();
     return () => { anim.stop(); };
-  }, [style, thickness, baseOpacity, color]);
+  }, [style, thickness, baseOpacity, color, layer.position.x, layer.position.y, layer.size.width, layer.size.height]);
 
   if (style === "corners") {
     // Render 4 L-shaped corner brackets
