@@ -562,6 +562,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  const [payLaterConfirmOpen, setPayLaterConfirmOpen] = useState(false);
+  const [payLaterAccepted, setPayLaterAccepted] = useState(false);
+  const [payLaterSubmitting, setPayLaterSubmitting] = useState(false);
   function addToCart(a: LayerAction, layer: Layer | null, qty: number = 1) {
     const p = a.payload;
     const id = p.productId || layer?.id || a.id;
@@ -2032,26 +2035,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 <Button
                   variant={hasAny ? "outline" : "default"}
                   className={hasAny ? "w-full border-red-500 text-red-600 hover:bg-red-50" : "w-full"}
-                  onClick={async () => {
-                    if (hasAny && !previewMode && flyer) {
-                      await supabase.from("form_submissions").insert([{
-                        flyer_id: flyer.id,
-                        data: {
-                          kind: "cart_pay_later",
-                          order_id: placedOrderId,
-                          customer: checkoutData,
-                          total: cartTotal,
-                          currency: cartCurrency,
-                          submitted_at: new Date().toISOString(),
-                        } as any,
-                      } as any]);
-                      logClick(null, "cart_pay:later");
-                      toast.success("Marked as Pay Later — the seller has been notified.");
+                  onClick={() => {
+                    if (!hasAny) {
+                      setCheckoutOpen(false);
+                      setCheckoutSuccess(false);
+                      setCart([]);
+                      setPlacedOrderId(null);
+                      return;
                     }
-                    setCheckoutOpen(false);
-                    setCheckoutSuccess(false);
-                    setCart([]);
-                    setPlacedOrderId(null);
+                    setPayLaterAccepted(false);
+                    setPayLaterConfirmOpen(true);
                   }}
                 >
                   {hasAny ? "I'll pay later" : "Done"}
@@ -2059,6 +2052,75 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Pay Later acceptance — buyer must agree before order is placed on hold */}
+      <Dialog open={payLaterConfirmOpen} onOpenChange={(o) => !o && !payLaterSubmitting && setPayLaterConfirmOpen(false)}>
+        <DialogContent className="max-w-md border-2 border-red-500">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">⚠ Your order will be placed on hold</DialogTitle>
+            <DialogDescription>
+              By choosing to pay later, you acknowledge that your order <strong>will not be processed,
+              fulfilled, or shipped</strong> until the seller receives full payment. The seller may
+              contact you by phone, text, or email to collect payment.
+            </DialogDescription>
+          </DialogHeader>
+          <label className="flex items-start gap-2 rounded border border-border p-3 text-sm cursor-pointer hover:bg-muted/50">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-red-600"
+              checked={payLaterAccepted}
+              onChange={(e) => setPayLaterAccepted(e.target.checked)}
+            />
+            <span>
+              I understand my order will remain <strong>on hold</strong> until payment is received,
+              and I agree to be contacted by the seller to arrange payment.
+            </span>
+          </label>
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setPayLaterConfirmOpen(false)}
+              disabled={payLaterSubmitting}
+            >
+              Go back
+            </Button>
+            <Button
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              disabled={!payLaterAccepted || payLaterSubmitting}
+              onClick={async () => {
+                if (!flyer) return;
+                setPayLaterSubmitting(true);
+                if (!previewMode) {
+                  await supabase.from("form_submissions").insert([{
+                    flyer_id: flyer.id,
+                    data: {
+                      kind: "cart_pay_later",
+                      order_id: placedOrderId,
+                      customer: checkoutData,
+                      total: cartTotal,
+                      currency: cartCurrency,
+                      buyer_accepted_hold: true,
+                      accepted_at: new Date().toISOString(),
+                      submitted_at: new Date().toISOString(),
+                    } as any,
+                  } as any]);
+                  logClick(null, "cart_pay:later");
+                }
+                setPayLaterSubmitting(false);
+                setPayLaterConfirmOpen(false);
+                setCheckoutOpen(false);
+                setCheckoutSuccess(false);
+                setCart([]);
+                setPlacedOrderId(null);
+                toast.success("Order placed on hold — the seller will reach out to collect payment.");
+              }}
+            >
+              {payLaterSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "I agree & pay later"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

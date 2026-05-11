@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ChevronLeft, Download, Loader2, RefreshCw } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertTriangle, ChevronLeft, Download, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 type OrderStatus = "new" | "on_hold" | "pay_later" | "completed";
@@ -285,6 +285,20 @@ export default function FlyerPortal() {
     if (cartCounts[s] != null) cartCounts[s] += 1;
   }
   const [openOrder, setOpenOrder] = useState<FormSubmission | null>(null);
+  const [confirmPaid, setConfirmPaid] = useState<FormSubmission | null>(null);
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [payLaterAlertOpen, setPayLaterAlertOpen] = useState(false);
+  const [payLaterAlertShown, setPayLaterAlertShown] = useState(false);
+
+  // One-time per session: prompt the seller to collect payment when pay-later orders are present
+  useEffect(() => {
+    if (loading || payLaterAlertShown) return;
+    const pending = cartOrders.filter((o) => o.status === "pay_later").length;
+    if (pending > 0) {
+      setPayLaterAlertOpen(true);
+      setPayLaterAlertShown(true);
+    }
+  }, [loading, cartOrders, payLaterAlertShown]);
 
   async function logPortalEvent(
     actionType: string,
@@ -303,21 +317,43 @@ export default function FlyerPortal() {
     }
   }
 
-  async function setOrderStatus(id: string, status: OrderStatus) {
+  async function setOrderStatus(
+    id: string,
+    status: OrderStatus,
+    extraData?: Record<string, any>
+  ) {
     const prev = submissions;
-    const wasPayLater = prev.find((s) => s.id === id)?.status === "pay_later";
-    setSubmissions((arr) => arr.map((s) => (s.id === id ? { ...s, status } : s)));
-    setOpenOrder((o) => (o && o.id === id ? { ...o, status } : o));
-    const { error } = await supabase.from("form_submissions").update({ status } as any).eq("id", id);
+    const target = prev.find((s) => s.id === id);
+    const wasPayLater = target?.status === "pay_later";
+    const nextData = extraData ? { ...(target?.data || {}), ...extraData } : target?.data;
+    setSubmissions((arr) =>
+      arr.map((s) => (s.id === id ? { ...s, status, data: nextData ?? s.data } : s))
+    );
+    setOpenOrder((o) => (o && o.id === id ? { ...o, status, data: nextData ?? o.data } : o));
+    const payload: any = { status };
+    if (extraData) payload.data = nextData;
+    const { error } = await supabase.from("form_submissions").update(payload).eq("id", id);
     if (error) {
       setSubmissions(prev);
       toast.error(error.message);
-    } else {
-      toast.success("Status updated");
-      if (wasPayLater && status === "completed") {
-        logPortalEvent("pay_later_paid", { order_id: id });
-      }
+      return false;
     }
+    toast.success("Status updated");
+    if (wasPayLater && status === "completed") {
+      logPortalEvent("pay_later_paid", { order_id: id, paid_by: extraData?.paid_by });
+    }
+    return true;
+  }
+
+  async function confirmMarkPaid() {
+    if (!confirmPaid) return;
+    setMarkingPaid(true);
+    const ok = await setOrderStatus(confirmPaid.id, "completed", {
+      paid_at: new Date().toISOString(),
+      paid_by: user?.email || user?.id || "unknown",
+    });
+    setMarkingPaid(false);
+    if (ok) setConfirmPaid(null);
   }
 
   async function cancelAppointment(id: string) {
@@ -770,13 +806,17 @@ export default function FlyerPortal() {
                       )}
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="border-emerald-600 text-emerald-700"
-                        onClick={() => setOrderStatus(openOrder.id, "completed")}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => setConfirmPaid(openOrder)}
                       >
-                        Mark paid
+                        Mark paid…
                       </Button>
                     </div>
+                    {d.paid_at && (
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                        Paid · {new Date(d.paid_at).toLocaleString()} · by {d.paid_by || "—"}
+                      </p>
+                    )}
                   </div>
                 )}
                 <div className="rounded border border-border p-2 text-xs space-y-0.5">
@@ -820,12 +860,76 @@ export default function FlyerPortal() {
                   size="sm"
                   variant={active ? "default" : "outline"}
                   className={active ? s.cls : ""}
-                  onClick={() => openOrder && setOrderStatus(openOrder.id, s.value)}
+                  onClick={() => {
+                    if (!openOrder) return;
+                    if (s.value === "completed" && openOrder.status === "pay_later") {
+                      setConfirmPaid(openOrder);
+                    } else {
+                      setOrderStatus(openOrder.id, s.value);
+                    }
+                  }}
                 >
                   {s.label}
                 </Button>
               );
             })}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Seller confirmation when marking a Pay Later order as paid */}
+      <Dialog open={!!confirmPaid} onOpenChange={(o) => !o && !markingPaid && setConfirmPaid(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" /> Confirm payment received
+            </DialogTitle>
+            <DialogDescription>
+              Only mark this order as paid after you have actually received the funds from the customer.
+              This action will be recorded with your name and the current time.
+            </DialogDescription>
+          </DialogHeader>
+          {confirmPaid && (
+            <div className="rounded border-2 border-red-600 bg-red-50 dark:bg-red-950/30 p-3 text-sm space-y-1">
+              <div><span className="text-muted-foreground">Customer:</span> {confirmPaid.data?.customer?.name || "—"}</div>
+              <div><span className="text-muted-foreground">Amount:</span> <span className="font-semibold">{confirmPaid.data?.currency || ""} {confirmPaid.data?.total ?? ""}</span></div>
+              <div><span className="text-muted-foreground">Marked by:</span> {user?.email || user?.id || "—"}</div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmPaid(null)} disabled={markingPaid}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={confirmMarkPaid}
+              disabled={markingPaid}
+            >
+              {markingPaid ? <Loader2 className="h-4 w-4 animate-spin" /> : "Yes, I received payment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Session-level alert: prompt seller to collect payment for pending Pay Later orders */}
+      <Dialog open={payLaterAlertOpen} onOpenChange={setPayLaterAlertOpen}>
+        <DialogContent className="max-w-md border-2 border-red-600">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" /> Pay Later orders need attention
+            </DialogTitle>
+            <DialogDescription>
+              You have {cartOrders.filter((o) => o.status === "pay_later").length} order(s) waiting for payment.
+              Contact the customer and collect payment <strong>before</strong> processing or fulfilling the order.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              className="w-full bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => setPayLaterAlertOpen(false)}
+            >
+              Got it — I'll collect payment first
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
