@@ -702,13 +702,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   function logAnalyticsEvent(row: Record<string, any>) {
     if (!flyer || previewMode) return;
     const payload: Record<string, any> = { flyer_id: flyer.id, session_id: getViewerSessionId(), ...row };
-    supabase.from("analytics_events").insert([payload as any]).then(({ error }) => {
-      if (error) console.warn("[analytics] insert failed", error, payload);
-    });
-
-    // Critical for tel:, sms:, and payment links: normal Supabase requests can be
-    // cancelled when the browser immediately leaves the page, so send a keepalive
-    // copy before navigation. Duplicate protection is handled visually in reports.
+    // Critical for tel:, sms:, and payment links: keepalive lets the click be
+    // saved even when the browser immediately leaves the page.
     try {
       const url = `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/analytics_events`;
       const apikey = (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -721,8 +716,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           "content-type": "application/json",
           prefer: "return=minimal",
         },
-        body: JSON.stringify({ ...payload, metadata: { ...(payload.metadata || {}), keepalive: true } }),
-      }).catch(() => {});
+        body: JSON.stringify(payload),
+      }).then((res) => {
+        if (!res.ok) console.warn("[analytics] insert failed", res.status, payload);
+      }).catch((error) => console.warn("[analytics] insert failed", error, payload));
     } catch {}
   }
 
