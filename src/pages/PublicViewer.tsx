@@ -1873,7 +1873,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   return;
                 }
                 setCheckoutSubmitting(true);
-                const { error } = await supabase.from("form_submissions").insert([{
+                const { data: inserted, error } = await supabase.from("form_submissions").insert([{
                   flyer_id: flyer.id,
                   data: {
                     kind: "cart_order",
@@ -1883,12 +1883,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                     currency: cartCurrency,
                     submitted_at: new Date().toISOString(),
                   } as any,
-                } as any]);
+                } as any]).select("id").single();
                 setCheckoutSubmitting(false);
                 if (error) {
                   toast.error(error.message);
                   return;
                 }
+                setPlacedOrderId((inserted as any)?.id || null);
                 logClick(null, "cart_checkout_submit");
                 setCheckoutSuccess(true);
               }}
