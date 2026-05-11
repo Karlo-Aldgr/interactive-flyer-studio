@@ -38,6 +38,39 @@ Deno.serve(async (req) => {
     }
 
     const flyerId = flyer.id as string;
+
+    // Discover which action types & hotspots exist in this flyer so the portal
+    // can render only the tabs that match what was actually built.
+    const { data: pages } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);
+    const pageIds = (pages || []).map((p: any) => p.id);
+    let actions: any[] = [];
+    let layers: any[] = [];
+    if (pageIds.length) {
+      const { data: layersData } = await supabase
+        .from("layers")
+        .select("id, type, content")
+        .in("page_id", pageIds);
+      layers = layersData || [];
+      const layerIds = layers.map((l: any) => l.id);
+      if (layerIds.length) {
+        const { data: actionsData } = await supabase
+          .from("actions")
+          .select("id, type, payload, layer_id")
+          .in("layer_id", layerIds);
+        actions = actionsData || [];
+      }
+    }
+
+    // Collect every action type across top-level actions AND nested popup buttons/hotspots
+    const actionTypes = new Set<string>();
+    for (const a of actions) {
+      if (a.type) actionTypes.add(a.type);
+      const p = a.payload || {};
+      for (const b of p.buttons || []) if (b?.action?.type) actionTypes.add(b.action.type);
+      for (const h of p.hotspots || []) if (h?.action?.type) actionTypes.add(h.action.type);
+    }
+    const hasHotspotLayers = layers.some((l: any) => l.type === "hotspot");
+
     const [
       { data: subscribers },
       { data: appointments },
