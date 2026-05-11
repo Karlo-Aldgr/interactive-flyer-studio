@@ -104,6 +104,60 @@ export type Database = {
           },
         ]
       }
+      appointments: {
+        Row: {
+          action_id: string | null
+          created_at: string
+          email: string
+          end_at: string
+          flyer_id: string
+          id: string
+          layer_id: string | null
+          metadata: Json
+          name: string | null
+          note: string | null
+          phone: string | null
+          start_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          action_id?: string | null
+          created_at?: string
+          email: string
+          end_at: string
+          flyer_id: string
+          id?: string
+          layer_id?: string | null
+          metadata?: Json
+          name?: string | null
+          note?: string | null
+          phone?: string | null
+          start_at: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string | null
+          created_at?: string
+          email?: string
+          end_at?: string
+          flyer_id?: string
+          id?: string
+          layer_id?: string | null
+          metadata?: Json
+          name?: string | null
+          note?: string | null
+          phone?: string | null
+          start_at?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flyers: {
         Row: {
           created_at: string
@@ -388,7 +442,9 @@ export type Database = {
         | "air_messages"
         | "poll"
         | "subscribe"
+        | "book_appointment"
       app_role: "admin" | "user"
+      appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
       flyer_status: "draft" | "published"
       layer_type: "text" | "image" | "icon" | "shape" | "button" | "hotspot"
@@ -539,8 +595,10 @@ export const Constants = {
         "air_messages",
         "poll",
         "subscribe",
+        "book_appointment",
       ],
       app_role: ["admin", "user"],
+      appointment_status: ["confirmed", "cancelled"],
       event_type: ["view", "click", "submit", "reveal"],
       flyer_status: ["draft", "published"],
       layer_type: ["text", "image", "icon", "shape", "button", "hotspot"],

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
-  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3, Users, Wallet,
+  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3, Users, Wallet, Inbox,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -332,6 +332,16 @@ export function TopBar({ saving }: Props) {
             </Button>
           </TooltipTrigger>
           <TooltipContent>View subscribers, export to Excel, mass email</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild size="sm" variant="outline">
+              <Link to={`/flyer/${flyer.id}/portal`}>
+                <Inbox className="mr-1 h-4 w-4" /> Portal
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Appointments, subscribers, form submissions</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>

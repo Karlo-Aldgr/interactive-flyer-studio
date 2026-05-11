@@ -21,7 +21,17 @@ export type ActionType =
   | "buy_product"
   | "air_messages"
   | "poll"
-  | "subscribe";
+  | "subscribe"
+  | "book_appointment";
+
+/** Weekly availability for slot-mode appointments. Day index 0 = Sunday. */
+export interface AppointmentDayAvailability {
+  enabled: boolean;
+  startMinute: number; // minutes from 00:00 local (e.g. 9*60 = 540)
+  endMinute: number;
+}
+
+export type AppointmentMode = "slots" | "free";
 
 export interface PopupButton {
   id: string;
@@ -131,6 +141,25 @@ export interface ActionPayload {
   subscribePhoneRequired?: boolean;  // make phone required
   subscribeNameRequired?: boolean;   // default true
   subscribeSuccessMessage?: string;
+
+  // book_appointment — calendar bookings
+  apptMode?: AppointmentMode;            // "slots" | "free"
+  apptTitle?: string;
+  apptLocation?: string;
+  apptDescription?: string;
+  apptDurationMin?: number;              // 15/30/45/60/90/etc.
+  apptBufferMin?: number;                // minutes between slots (slot mode)
+  apptTimezone?: string;                 // IANA tz, e.g. America/New_York
+  apptDateRangeDays?: number;            // how many days ahead bookable
+  apptMaxPerDay?: number;                // optional cap per day
+  apptWeeklyAvailability?: AppointmentDayAvailability[]; // length 7, idx 0 = Sunday
+  apptBlackoutDates?: string[];          // ISO yyyy-mm-dd dates that are unavailable
+  apptCollectPhone?: boolean;
+  apptPhoneRequired?: boolean;
+  apptCollectNote?: boolean;
+  apptConfirmSubject?: string;           // email subject override
+  apptConfirmIntro?: string;             // optional custom intro paragraph in email
+  apptSuccessMessage?: string;           // shown after booking
 }
 
 export type BubbleTextCase = "as-is" | "upper" | "lower";

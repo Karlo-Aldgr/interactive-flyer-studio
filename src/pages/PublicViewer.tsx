@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
+import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
 import { toast } from "sonner";
 
 // Highlight ring shown around tappable layers in the viewer.
@@ -525,6 +526,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [poll, setPoll] = useState<LayerAction | null>(null);
   const [subscribeAction, setSubscribeAction] = useState<LayerAction | null>(null);
   const [subscribeData, setSubscribeData] = useState<{ name: string; email: string; phone: string }>({ name: "", email: "", phone: "" });
+  const [appointmentAction, setAppointmentAction] = useState<{ action: LayerAction; layer: Layer | null } | null>(null);
   const [subscribing, setSubscribing] = useState(false);
   // Shopping cart for buy_product actions with productCartEnabled
   type CartItem = {
@@ -788,6 +790,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "subscribe":
         setSubscribeAction(a);
         setSubscribeData({ name: "", email: "", phone: "" });
+        break;
+      case "book_appointment":
+        setAppointmentAction({ action: a, layer });
         break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
@@ -1554,6 +1559,17 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Appointment booking dialog */}
+      {appointmentAction && flyer && (
+        <AppointmentBookingDialog
+          flyerId={flyer.id}
+          layerId={appointmentAction.layer?.id || null}
+          action={appointmentAction.action}
+          open={!!appointmentAction}
+          onClose={() => setAppointmentAction(null)}
+        />
+      )}
 
       {/* Subscribe dialog */}
       <Dialog open={!!subscribeAction} onOpenChange={(v) => !v && setSubscribeAction(null)}>

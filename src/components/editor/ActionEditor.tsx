@@ -45,9 +45,10 @@ const ACTION_LABELS: Record<ActionType, string> = {
   air_messages: "Air messages (chat bubbles)",
   poll: "Poll",
   subscribe: "Subscribe (email signup)",
+  book_appointment: "Book appointment",
 };
 
-const PRESET_TYPES: ActionType[] = ["subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map"];
+const PRESET_TYPES: ActionType[] = ["book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map"];
 const BASIC_TYPES: ActionType[] = [
   "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
@@ -97,6 +98,8 @@ function isValid(draft: LayerAction | null): boolean {
       return !!(p.pollQuestion && p.pollOptions && p.pollOptions.filter((o) => o.label?.trim()).length >= 2);
     case "subscribe":
       return true;
+    case "book_appointment":
+      return !!(p.apptTitle && p.apptDurationMin);
     default: return true;
   }
 }
@@ -1213,11 +1216,221 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                 className="mt-1"
                 value={p.subscribeSuccessMessage || ""}
                 placeholder="You're in! Thanks for subscribing."
-                onChange={(e) => update({ subscribeSuccessMessage: e.target.value })}
               />
             </div>
           </>
         )}
+
+        {type === "book_appointment" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">
+              Viewers pick a time on a calendar and get a confirmation email with a calendar invite. Manage bookings in the flyer Portal.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Mode</Label>
+                <Select
+                  value={p.apptMode || "slots"}
+                  onValueChange={(v) => update({ apptMode: v as "slots" | "free" })}
+                >
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="slots">Pick from open slots</SelectItem>
+                    <SelectItem value="free">Free pick any time</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Duration (min)</Label>
+                <Select
+                  value={String(p.apptDurationMin || 30)}
+                  onValueChange={(v) => update({ apptDurationMin: Number(v) })}
+                >
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[15, 30, 45, 60, 90, 120].map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n} min</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Title *</Label>
+              <Input
+                className="mt-1"
+                value={p.apptTitle || ""}
+                placeholder="Consultation call"
+                onChange={(e) => update({ apptTitle: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Location (optional)</Label>
+              <Input
+                className="mt-1"
+                value={p.apptLocation || ""}
+                placeholder="Zoom / 123 Main St"
+                onChange={(e) => update({ apptLocation: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Description (optional)</Label>
+              <Textarea
+                className="mt-1"
+                rows={2}
+                value={p.apptDescription || ""}
+                onChange={(e) => update({ apptDescription: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Bookable days ahead</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={365}
+                  className="mt-1"
+                  value={p.apptDateRangeDays ?? 30}
+                  onChange={(e) => update({ apptDateRangeDays: Number(e.target.value) || 30 })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Timezone</Label>
+                <Input
+                  className="mt-1"
+                  value={p.apptTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone}
+                  onChange={(e) => update({ apptTimezone: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {(p.apptMode || "slots") === "slots" && (
+              <div className="space-y-2 rounded border border-border p-2">
+                <Label className="text-xs font-semibold">Weekly availability</Label>
+                {(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]).map((dayName, idx) => {
+                  const wa = p.apptWeeklyAvailability || Array.from({ length: 7 }, (_, i) => ({
+                    enabled: i >= 1 && i <= 5,
+                    startMinute: 9 * 60,
+                    endMinute: 17 * 60,
+                  }));
+                  const day = wa[idx] || { enabled: false, startMinute: 9 * 60, endMinute: 17 * 60 };
+                  const setDay = (patch: Partial<typeof day>) => {
+                    const next = wa.map((d, i) => (i === idx ? { ...day, ...patch } : d));
+                    update({ apptWeeklyAvailability: next });
+                  };
+                  const toTime = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+                  const fromTime = (s: string) => {
+                    const [h, m] = s.split(":").map(Number);
+                    return (h || 0) * 60 + (m || 0);
+                  };
+                  return (
+                    <div key={dayName} className="flex items-center gap-2 text-xs">
+                      <div className="w-10">{dayName}</div>
+                      <Switch checked={day.enabled} onCheckedChange={(v) => setDay({ enabled: v })} />
+                      {day.enabled && (
+                        <>
+                          <Input
+                            type="time"
+                            className="h-7 w-24 text-xs"
+                            value={toTime(day.startMinute)}
+                            onChange={(e) => setDay({ startMinute: fromTime(e.target.value) })}
+                          />
+                          <span>–</span>
+                          <Input
+                            type="time"
+                            className="h-7 w-24 text-xs"
+                            value={toTime(day.endMinute)}
+                            onChange={(e) => setDay({ endMinute: fromTime(e.target.value) })}
+                          />
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <div>
+                    <Label className="text-xs">Buffer (min)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={120}
+                      className="mt-1"
+                      value={p.apptBufferMin ?? 0}
+                      onChange={(e) => update({ apptBufferMin: Number(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Max per day</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="mt-1"
+                      placeholder="No limit"
+                      value={p.apptMaxPerDay ?? ""}
+                      onChange={(e) => update({ apptMaxPerDay: e.target.value ? Number(e.target.value) : undefined })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 rounded border border-border p-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Collect phone</Label>
+                <Switch
+                  checked={!!p.apptCollectPhone}
+                  onCheckedChange={(v) => update({ apptCollectPhone: v })}
+                />
+              </div>
+              {p.apptCollectPhone && (
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Phone required</Label>
+                  <Switch
+                    checked={!!p.apptPhoneRequired}
+                    onCheckedChange={(v) => update({ apptPhoneRequired: v })}
+                  />
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Add note field</Label>
+                <Switch
+                  checked={!!p.apptCollectNote}
+                  onCheckedChange={(v) => update({ apptCollectNote: v })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Email subject (optional)</Label>
+              <Input
+                className="mt-1"
+                value={p.apptConfirmSubject || ""}
+                placeholder="Your appointment is confirmed"
+                onChange={(e) => update({ apptConfirmSubject: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Email intro (optional)</Label>
+              <Textarea
+                className="mt-1"
+                rows={2}
+                value={p.apptConfirmIntro || ""}
+                placeholder="Thanks for booking — looking forward to meeting you!"
+                onChange={(e) => update({ apptConfirmIntro: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Success message</Label>
+              <Input
+                className="mt-1"
+                value={p.apptSuccessMessage || ""}
+                placeholder="You're booked! Check your email for the calendar invite."
+                onChange={(e) => update({ apptSuccessMessage: e.target.value })}
+              />
+            </div>
+          </>
+        )}
+
 
         {type === "navigate" && (
           <div>
