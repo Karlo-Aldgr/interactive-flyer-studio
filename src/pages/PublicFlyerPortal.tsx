@@ -10,6 +10,16 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Lock, Download, Eye, Users, CalendarDays, FileText, BarChart3, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 
+interface PortalFeatures {
+  actionTypes: string[];
+  hasHotspots: boolean;
+  hasAppointments: boolean;
+  hasSubscribe: boolean;
+  hasForms: boolean;
+  hasPolls: boolean;
+  hasCheckout: boolean;
+  hasCalls: boolean;
+}
 interface PortalData {
   flyer: { id: string; title: string; status: string; public_slug: string | null; thumbnail_url: string | null; created_at: string };
   counts: { views: number; subscribers: number; appointments: number; submissions: number; pollVotes: number; purchases: number };
@@ -18,6 +28,8 @@ interface PortalData {
   submissions: any[];
   pollVotes: any[];
   events: any[];
+  features?: PortalFeatures;
+  actions?: Array<{ id: string; type: string; layer_id: string }>;
 }
 
 function csv(rows: any[], cols: string[]): string {
