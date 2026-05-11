@@ -336,6 +336,16 @@ export function TopBar({ saving }: Props) {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button asChild size="sm" variant="outline">
+              <Link to={`/flyer/${flyer.id}/portal`}>
+                <Inbox className="mr-1 h-4 w-4" /> Portal
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Appointments, subscribers, form submissions</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild size="sm" variant="outline">
               <Link to={`/analytics/${flyer.id}`}>
                 <BarChart3 className="mr-1 h-4 w-4" /> Results
               </Link>
