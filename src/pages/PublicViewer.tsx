@@ -525,6 +525,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [poll, setPoll] = useState<LayerAction | null>(null);
   const [subscribeAction, setSubscribeAction] = useState<LayerAction | null>(null);
   const [subscribeData, setSubscribeData] = useState<{ name: string; email: string; phone: string }>({ name: "", email: "", phone: "" });
+  const [appointmentAction, setAppointmentAction] = useState<{ action: LayerAction; layer: Layer | null } | null>(null);
   const [subscribing, setSubscribing] = useState(false);
   // Shopping cart for buy_product actions with productCartEnabled
   type CartItem = {
