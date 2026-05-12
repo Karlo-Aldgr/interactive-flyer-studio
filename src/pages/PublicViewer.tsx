@@ -763,6 +763,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         setLoading(false);
         return;
       }
+      // Auto-unpublish expired event flyers on access (safety net for cron).
+      if (!previewMode && (f as any).category === "event" && (f as any).auto_unpublish_at && new Date((f as any).auto_unpublish_at) <= new Date()) {
+        await supabase.from("flyers").update({ status: "draft" }).eq("id", f.id);
+        setFlyer(null);
+        setLoading(false);
+        return;
+      }
       const { data: pgs } = await supabase
         .from("pages")
         .select("*, layers(*, actions(*))")
