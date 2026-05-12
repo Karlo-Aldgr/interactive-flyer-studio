@@ -226,6 +226,11 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between gap-2 p-4">
                     <div className="min-w-0">
                       <div className="truncate font-semibold">{f.title}</div>
+                      {f.public_slug && (
+                        <div className="truncate font-mono text-[10px] text-muted-foreground/80" title={f.public_slug}>
+                          /f/{f.public_slug}
+                        </div>
+                      )}
                       <div className="text-xs text-muted-foreground">
                         {f.category === "event" && f.event_date
                           ? <>Event {format(new Date(f.event_date + "T00:00:00"), "MMM d, yyyy")}</>
