@@ -24,3 +24,24 @@ export function slugFromFlyerTitle(title: string, currentSlug?: string | null) {
   const suffix = currentSlug?.match(/-([a-z0-9]{4,6})$/i)?.[1] || Math.random().toString(36).slice(2, 7);
   return `${slugBaseFromTitle(title)}-${suffix}`;
 }
+
+/**
+ * The origin used for share links that need rich social previews
+ * (Facebook, WhatsApp, iMessage, etc.). Routes through the Cloudflare
+ * Worker which serves per-flyer OG meta tags to crawlers and 302s
+ * humans to the live viewer.
+ */
+export function getShareOrigin(): string {
+  if (typeof window !== "undefined") {
+    const override = window.localStorage.getItem("flyerflow.shareOrigin");
+    if (override) return override;
+  }
+  return (
+    (import.meta as any).env?.VITE_SHARE_ORIGIN ||
+    "https://tapthatflyer-share.showoffgrafixs.workers.dev"
+  );
+}
+
+export function buildSocialShareUrl(slug: string): string {
+  return `${getShareOrigin().replace(/\/$/, "")}/f/${slug}`;
+}
