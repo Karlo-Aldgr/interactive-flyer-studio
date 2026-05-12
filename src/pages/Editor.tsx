@@ -28,14 +28,14 @@ export default function Editor() {
       <TopBar saving={saving} />
       <div className="flex flex-1 overflow-hidden">
         <Toolbar />
-        <aside className="flex w-60 flex-col border-r border-border bg-card overflow-y-auto">
+        <aside className="hidden md:flex w-60 flex-col border-r border-border bg-card overflow-y-auto">
           <PagesPanel />
           <LayersPanel />
         </aside>
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-hidden min-w-0">
           <Canvas />
         </main>
-        <aside className="w-72 border-l border-border bg-card">
+        <aside className="hidden md:block w-72 border-l border-border bg-card">
           <Inspector />
         </aside>
       </div>
