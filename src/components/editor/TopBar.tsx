@@ -106,7 +106,7 @@ export function TopBar({ saving }: Props) {
   }
 
   function updateTitle(title: string) {
-    if (flyer.status === "published" && isRealFlyerTitle(title) && flyerSlugLooksUntitled(flyer.public_slug)) {
+    if (flyer.status === "published" && isRealFlyerTitle(title)) {
       setFlyer({ title, public_slug: slugFromFlyerTitle(title, flyer.public_slug) });
       return;
     }
