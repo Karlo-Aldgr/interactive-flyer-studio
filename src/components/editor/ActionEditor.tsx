@@ -1871,6 +1871,15 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
           </>
         )}
 
+        {type === "gallery" && (
+          <GalleryEditor
+            title={p.galleryTitle || ""}
+            images={p.galleryImages || []}
+            onTitleChange={(v) => update({ galleryTitle: v })}
+            onImagesChange={(imgs) => update({ galleryImages: imgs })}
+          />
+        )}
+
         {draft && !embedded && (
           <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 space-y-2">
             <div className="flex items-center justify-between">
