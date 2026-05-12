@@ -2011,6 +2011,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
             images={p.galleryImages || []}
             onTitleChange={(v) => update({ galleryTitle: v })}
             onImagesChange={(imgs) => update({ galleryImages: imgs })}
+            depth={depth}
           />
         )}
 
