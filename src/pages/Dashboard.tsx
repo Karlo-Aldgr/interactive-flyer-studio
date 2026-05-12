@@ -171,7 +171,7 @@ export default function Dashboard() {
             <h1 className="font-display text-3xl font-bold">Your flyers</h1>
             <p className="mt-1 text-muted-foreground">Design, publish, and track engagement.</p>
           </div>
-          <Button onClick={create} disabled={creating} className="shadow-glow">
+          <Button onClick={openCreate} disabled={creating} className="shadow-glow">
             {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-1 h-4 w-4" />}
             New flyer
           </Button>
@@ -187,7 +187,7 @@ export default function Dashboard() {
               </div>
               <h3 className="font-display text-lg font-semibold">No flyers yet</h3>
               <p className="max-w-xs text-sm text-muted-foreground">Create your first interactive flyer and publish it in minutes.</p>
-              <Button onClick={create} disabled={creating} className="mt-2"><Plus className="mr-1 h-4 w-4" />Create flyer</Button>
+              <Button onClick={openCreate} disabled={creating} className="mt-2"><Plus className="mr-1 h-4 w-4" />Create flyer</Button>
             </Card>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
