@@ -244,6 +244,77 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New flyer</DialogTitle>
+            <DialogDescription>Pick a category to get started.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setNewCategory("business")}
+                className={cn(
+                  "flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition",
+                  newCategory === "business" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+                )}
+              >
+                <Briefcase className="h-5 w-5 text-primary" />
+                <div className="font-semibold">Business</div>
+                <div className="text-xs text-muted-foreground">Stays published until you unpublish.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewCategory("event")}
+                className={cn(
+                  "flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition",
+                  newCategory === "event" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+                )}
+              >
+                <PartyPopper className="h-5 w-5 text-primary" />
+                <div className="font-semibold">Event</div>
+                <div className="text-xs text-muted-foreground">Auto-unpublishes the day after.</div>
+              </button>
+            </div>
+
+            {newCategory === "event" && (
+              <div className="space-y-2">
+                <Label>Event date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newEventDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newEventDate ? format(newEventDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newEventDate}
+                      onSelect={setNewEventDate}
+                      disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">Flyer will auto-unpublish the day after this date.</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button onClick={create} disabled={creating}>
+              {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-1 h-4 w-4" />}
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
