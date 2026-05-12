@@ -174,22 +174,22 @@ export function ShareDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Share your flyer</DialogTitle>
           <DialogDescription>Anyone with the link can view it. Social previews show your flyer.</DialogDescription>
         </DialogHeader>
 
-        <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
+        <div className="mx-auto w-fit max-h-[35vh] sm:max-h-[40vh] overflow-hidden rounded-lg border border-border bg-muted/30">
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={`${title || "Flyer"} social preview`}
-              className="block h-auto w-full"
+              className="block h-full max-h-[35vh] sm:max-h-[40vh] w-auto object-contain"
               loading="lazy"
             />
           ) : (
-            <div className="flex aspect-[3/4] w-full items-center justify-center text-xs text-muted-foreground">
+            <div className="flex h-40 w-32 items-center justify-center text-xs text-muted-foreground">
               {regenerating ? (
                 <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Generating preview…</span>
               ) : (

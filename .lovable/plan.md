@@ -1,42 +1,24 @@
 ## Goal
-Make the Cloudflare Worker resilient so WhatsApp (and other crawlers) always get a valid `og:image`, even when the Supabase lookup fails or returns no thumbnail.
+On mobile (and short desktop windows) the social-preview image in the Share dialog pushes the link input, QR, and share buttons off-screen. Make the dialog usable without zooming out.
 
-## Changes to `worker/share-worker.js`
+## Changes — `src/components/editor/ShareDialog.tsx`
 
-1. **Hard-coded fallback image constant**
-   - Add `const FALLBACK_IMAGE = "https://interactive-flyer-studio.lovable.app/og.png";` at the top so we always have a known-good absolute URL (WhatsApp requires absolute https URLs ≥ 300×200).
+1. **Make the DialogContent scrollable and height-bounded**
+   - Add `max-h-[90vh] overflow-y-auto` to the `<DialogContent>` of the main share dialog (line 177) so the whole dialog body scrolls when content overflows the viewport.
 
-2. **Simplify and harden `fetchFlyer`**
-   - Wrap the `fetch` in a try/catch that returns `null` on any throw, non-2xx, or JSON parse error.
-   - Add a 3s `AbortController` timeout so a slow Supabase response can't make WhatsApp give up (WhatsApp times out ~5s).
-   - Log failures via `console.log` (visible in Cloudflare tail) so we can see what happened.
+2. **Shrink the social-preview thumbnail**
+   - On the preview wrapper (line 183), constrain its height so the image can't dominate the dialog:
+     - Add `mx-auto max-h-[35vh] sm:max-h-[40vh] w-fit` to the wrapper.
+   - On the `<img>` (line 188), change `block h-auto w-full` → `block h-full max-h-[35vh] sm:max-h-[40vh] w-auto object-contain` so the thumbnail scales by height, preserves aspect ratio, and never exceeds ~35–40% of the viewport.
+   - On the empty-state placeholder (line 192), swap `aspect-[3/4] w-full` → a fixed compact size like `h-40 w-32` so the empty state matches the new compact preview.
 
-3. **Always serve OG HTML to crawlers, even on failure**
-   - Today, if `fetchFlyer` throws we still render OG, but the image branch depends on `flyer?.thumbnail_url` / `flyer?.owner_id` / `flyer?.id`. If any are missing, `cleanThumb` returns `null` and we fall back to `${appOrigin}/og.png` — which only works if that file actually exists at the published origin. It currently may not.
-   - Replace the fallback chain with the explicit `FALLBACK_IMAGE` constant so there is always a valid absolute URL.
-   - Order of preference for `og:image`:
-     1. `flyer.thumbnail_url` (stripped of query string)
-     2. Constructed Supabase public URL from `owner_id` + `id`
-     3. `FALLBACK_IMAGE`
-
-4. **Always return crawler HTML for `/f/:slug`**
-   - Even if slug shape doesn't match the regex or Supabase is down, return OG HTML with the fallback image and title "Flyer" rather than 404, so the link never unfurls blank in WhatsApp.
-
-5. **Add a debug header**
-   - Include `x-flyer-found: true|false` and `x-image-source: thumbnail|constructed|fallback` so you can `curl -I` and see exactly which path ran without redeploying.
-
-6. **Tighten the crawler regex for WhatsApp**
-   - WhatsApp's UA is literally `WhatsApp/2.x` — the current regex matches `whatsapp` case-insensitively, which is fine. Keep as-is but add `;facebookexternalhit` examples to a top-of-file comment for clarity.
+3. **Tighten the QR block on small screens (small touch-up)**
+   - Optional: reduce QR `size={200}` → `size={160}` so the dialog fits more of the controls above the fold on a 375px-wide phone. Keep `size={200}` if you'd rather not change QR scan quality.
 
 ## Out of scope
-- No app-side code changes.
-- No DB changes.
-- No new env vars (uses the existing `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `APP_ORIGIN`).
+- No changes to the share URL logic, social buttons, worker, or Supabase.
+- No layout changes to the unpublished-state dialog (already short).
 
-## How to verify after deploy
-1. `curl -A "WhatsApp/2.0" https://<worker>/f/<slug> -i` — should return HTML with `og:image` and an `x-image-source` header.
-2. Paste link into WhatsApp — preview should appear within ~5s. If `x-image-source: fallback`, the Supabase lookup is failing and we'll know to dig there next.
-3. Use Facebook Sharing Debugger to confirm `og:image` is fetched successfully.
-
-## Optional follow-up (only if you want)
-- Upload a real branded fallback image to the `flyer-thumbnails` public bucket and point `FALLBACK_IMAGE` at that, so the generic preview is on-brand.
+## Verify
+- Open share dialog at 375×812 (iPhone) — link input, Copy, QR, and Share buttons should all be reachable by scrolling within the dialog.
+- Desktop preview should look essentially unchanged aside from a smaller thumbnail.
