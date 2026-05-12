@@ -1237,6 +1237,44 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   );
   const imagesReady = useImagesReady(pageImageSrcs);
 
+  // Parameter-first rendering: allow using this page as a dynamic template
+  // via URL query params (?title=...&image=...&description=...). When params
+  // are provided, we render them directly and bypass the DB lookup state.
+  const urlParams = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search)
+    : new URLSearchParams();
+  const paramTitle = urlParams.get("title");
+  const paramImage = urlParams.get("image");
+  const paramDescription = urlParams.get("description");
+  const hasParams = !!(paramTitle || paramImage || paramDescription);
+
+  if (hasParams && (!flyer || pages.length === 0)) {
+    if (typeof document !== "undefined" && paramTitle) {
+      document.title = paramTitle;
+    }
+    return (
+      <div className="flex min-h-screen flex-col items-center bg-background">
+        {paramTitle && (
+          <h1 className="font-display text-3xl font-bold text-foreground py-6 px-4 text-center">
+            {paramTitle}
+          </h1>
+        )}
+        {paramImage && (
+          <img
+            src={paramImage}
+            alt={paramTitle || "Flyer"}
+            className="w-full h-auto block"
+          />
+        )}
+        {paramDescription && (
+          <p className="text-muted-foreground py-6 px-4 text-center max-w-2xl">
+            {paramDescription}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
