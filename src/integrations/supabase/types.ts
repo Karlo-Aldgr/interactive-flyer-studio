@@ -104,6 +104,24 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           action_id: string | null
@@ -250,6 +268,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      jobs: {
+        Row: {
+          admin_notes: string | null
+          brief: string | null
+          created_at: string
+          customer_email: string | null
+          flyer_id: string | null
+          id: string
+          payment_link: string | null
+          preview_ready: boolean
+          price_cents: number | null
+          selected_actions: Json
+          status: Database["public"]["Enums"]["job_status"]
+          title: string
+          type: Database["public"]["Enums"]["job_type"]
+          updated_at: string
+          upload_url: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          brief?: string | null
+          created_at?: string
+          customer_email?: string | null
+          flyer_id?: string | null
+          id?: string
+          payment_link?: string | null
+          preview_ready?: boolean
+          price_cents?: number | null
+          selected_actions?: Json
+          status?: Database["public"]["Enums"]["job_status"]
+          title?: string
+          type: Database["public"]["Enums"]["job_type"]
+          updated_at?: string
+          upload_url?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          brief?: string | null
+          created_at?: string
+          customer_email?: string | null
+          flyer_id?: string | null
+          id?: string
+          payment_link?: string | null
+          preview_ready?: boolean
+          price_cents?: number | null
+          selected_actions?: Json
+          status?: Database["public"]["Enums"]["job_status"]
+          title?: string
+          type?: Database["public"]["Enums"]["job_type"]
+          updated_at?: string
+          upload_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       layers: {
         Row: {
@@ -468,6 +543,16 @@ export type Database = {
       event_type: "view" | "click" | "submit" | "reveal"
       flyer_category: "business" | "event"
       flyer_status: "draft" | "published"
+      job_status:
+        | "new"
+        | "reviewing"
+        | "quoted"
+        | "paid"
+        | "in_progress"
+        | "preview_ready"
+        | "delivered"
+        | "cancelled"
+      job_type: "upload" | "design"
       layer_type: "text" | "image" | "icon" | "shape" | "button" | "hotspot"
     }
     CompositeTypes: {
@@ -624,6 +709,17 @@ export const Constants = {
       event_type: ["view", "click", "submit", "reveal"],
       flyer_category: ["business", "event"],
       flyer_status: ["draft", "published"],
+      job_status: [
+        "new",
+        "reviewing",
+        "quoted",
+        "paid",
+        "in_progress",
+        "preview_ready",
+        "delivered",
+        "cancelled",
+      ],
+      job_type: ["upload", "design"],
       layer_type: ["text", "image", "icon", "shape", "button", "hotspot"],
     },
   },

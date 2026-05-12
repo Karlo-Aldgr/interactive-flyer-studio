@@ -17,8 +17,11 @@ const PublicViewer = lazy(() => import("./pages/PublicViewer"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminContacts = lazy(() => import("./pages/AdminContacts"));
+const AdminJobs = lazy(() => import("./pages/AdminJobs"));
 const FlyerPortal = lazy(() => import("./pages/FlyerPortal"));
 const PublicFlyerPortal = lazy(() => import("./pages/PublicFlyerPortal"));
+const SubmitJob = lazy(() => import("./pages/SubmitJob"));
+const MyJobs = lazy(() => import("./pages/MyJobs"));
 
 const queryClient = new QueryClient();
 
@@ -45,6 +48,9 @@ const App = () => (
               <Route path="/preview/:flyerId" element={<ProtectedRoute><PublicViewer previewMode /></ProtectedRoute>} />
               <Route path="/f/:slug" element={<PublicViewer />} />
               <Route path="/admin/contacts" element={<ProtectedRoute><AdminContacts /></ProtectedRoute>} />
+              <Route path="/admin/jobs" element={<ProtectedRoute><AdminJobs /></ProtectedRoute>} />
+              <Route path="/submit-job" element={<ProtectedRoute><SubmitJob /></ProtectedRoute>} />
+              <Route path="/my-jobs" element={<ProtectedRoute><MyJobs /></ProtectedRoute>} />
               <Route path="/flyer/:flyerId/portal" element={<ProtectedRoute><FlyerPortal /></ProtectedRoute>} />
               <Route path="/p/:token" element={<PublicFlyerPortal />} />
               <Route path="*" element={<NotFound />} />

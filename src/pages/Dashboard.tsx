@@ -25,6 +25,13 @@ export default function Dashboard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newCategory, setNewCategory] = useState<FlyerCategory>("business");
   const [newEventDate, setNewEventDate] = useState<Date | undefined>(undefined);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role","admin").maybeSingle()
+      .then(({ data }) => setIsAdmin(!!data));
+  }, [user]);
 
   const load = async () => {
     setLoading(true);
@@ -158,7 +165,10 @@ export default function Dashboard() {
           <Link to="/" className="flex items-center gap-2">
             <img src={logo} alt="TapThatFlyer logo" className="h-9 w-auto" />
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm"><Link to="/my-jobs">My jobs</Link></Button>
+            <Button asChild size="sm" className="shadow-glow"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit job</Link></Button>
+            {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/jobs">Admin</Link></Button>}
             <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="mr-1 h-4 w-4" />Sign out</Button>
           </div>
