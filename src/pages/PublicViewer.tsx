@@ -672,6 +672,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showHitboxes, setShowHitboxes] = useState(false);
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
+  const [gallery, setGallery] = useState<LayerAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
@@ -1013,6 +1014,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         break;
       case "coupon":
         setCoupon(a);
+        break;
+      case "gallery":
+        setGallery(a);
         break;
       case "air_messages":
         setAirMessages((prev) => (prev.some((p) => p.action.id === a.id) ? prev : [...prev, { action: a, layer: layer ?? null }]));
@@ -1900,6 +1904,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       {/* Coupon */}
       <CouponDialog action={coupon} onClose={() => setCoupon(null)} onRedeem={(url) => { logClick(null, "coupon_redeem"); window.open(url, "_blank", "noopener,noreferrer"); }} />
 
+      {/* Photo gallery */}
+      <GalleryDialog action={gallery} onClose={() => setGallery(null)} onZoom={(url) => setZoomImage(url)} />
+
       {/* Air messages render inline inside the stage wrapper above (no floating overlay). */}
 
       <PollDialog
@@ -2292,6 +2299,47 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function GalleryDialog({
+  action, onClose, onZoom,
+}: { action: LayerAction | null; onClose: () => void; onZoom: (url: string) => void }) {
+  const open = !!action;
+  const images = action?.payload.galleryImages || [];
+  const title = action?.payload.galleryTitle || "Photo gallery";
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {images.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No photos in this gallery.</p>
+        ) : (
+          <div className="grid max-h-[70vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+            {images.map((im) => (
+              <button
+                key={im.id}
+                type="button"
+                onClick={() => onZoom(im.url)}
+                className="group overflow-hidden rounded border border-border bg-muted/30 text-left"
+              >
+                <img
+                  src={im.url}
+                  alt={im.caption || ""}
+                  loading="lazy"
+                  className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
+                />
+                {im.caption && (
+                  <div className="px-2 py-1 text-xs text-muted-foreground">{im.caption}</div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

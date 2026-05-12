@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ActionType, LayerAction, PopupButton, PopupHotspot, AirMessageBubble, PollOption } from "@/types/flyer";
+import { ActionType, LayerAction, PopupButton, PopupHotspot, AirMessageBubble, PollOption, GalleryImage } from "@/types/flyer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
@@ -46,9 +46,10 @@ const ACTION_LABELS: Record<ActionType, string> = {
   poll: "Poll",
   subscribe: "Subscribe (email signup)",
   book_appointment: "Book appointment",
+  gallery: "Photo gallery",
 };
 
-const PRESET_TYPES: ActionType[] = ["book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map"];
+const PRESET_TYPES: ActionType[] = ["book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map", "gallery"];
 const BASIC_TYPES: ActionType[] = [
   "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
@@ -100,6 +101,8 @@ function isValid(draft: LayerAction | null): boolean {
       return true;
     case "book_appointment":
       return !!(p.apptTitle && p.apptDurationMin);
+    case "gallery":
+      return !!(p.galleryImages && p.galleryImages.length > 0);
     default: return true;
   }
 }
@@ -154,6 +157,140 @@ function AssetUpload({
           </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+const MAX_GALLERY_IMAGES = 12;
+
+function GalleryEditor({
+  title, images, onTitleChange, onImagesChange,
+}: {
+  title: string;
+  images: GalleryImage[];
+  onTitleChange: (v: string) => void;
+  onImagesChange: (imgs: GalleryImage[]) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+  const { flyerId } = useParams();
+  const [busy, setBusy] = useState(false);
+
+  async function uploadFiles(files: FileList) {
+    if (!user || !flyerId) return toast.error("Sign in required");
+    const remaining = MAX_GALLERY_IMAGES - images.length;
+    if (remaining <= 0) {
+      toast.error(`Maximum ${MAX_GALLERY_IMAGES} photos`);
+      return;
+    }
+    const list = Array.from(files).slice(0, remaining);
+    if (files.length > remaining) {
+      toast.warning(`Only added the first ${remaining} (max ${MAX_GALLERY_IMAGES} photos)`);
+    }
+    setBusy(true);
+    const uploaded: GalleryImage[] = [];
+    for (const file of list) {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${flyerId}/gallery/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("flyer-assets").upload(path, file, {
+        contentType: file.type || undefined,
+      });
+      if (error) {
+        toast.error(error.message);
+        continue;
+      }
+      const { data } = supabase.storage.from("flyer-assets").getPublicUrl(path);
+      uploaded.push({ id: crypto.randomUUID(), url: data.publicUrl });
+    }
+    setBusy(false);
+    if (uploaded.length) {
+      onImagesChange([...images, ...uploaded]);
+      toast.success(`Uploaded ${uploaded.length} photo${uploaded.length === 1 ? "" : "s"}`);
+    }
+  }
+
+  function update(id: string, patch: Partial<GalleryImage>) {
+    onImagesChange(images.map((im) => (im.id === id ? { ...im, ...patch } : im)));
+  }
+  function remove(id: string) {
+    onImagesChange(images.filter((im) => im.id !== id));
+  }
+  function move(id: string, dir: -1 | 1) {
+    const i = images.findIndex((im) => im.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= images.length) return;
+    const next = [...images];
+    [next[i], next[j]] = [next[j], next[i]];
+    onImagesChange(next);
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] text-muted-foreground">
+        Show a popup gallery of up to {MAX_GALLERY_IMAGES} photos. Tap an image to view it full-size.
+      </p>
+      <div>
+        <Label className="text-xs">Gallery title (optional)</Label>
+        <Input
+          className="mt-1"
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          placeholder="e.g. Event photos"
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Photos ({images.length}/{MAX_GALLERY_IMAGES})</Label>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => e.target.files && uploadFiles(e.target.files)}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => fileRef.current?.click()}
+          disabled={busy || images.length >= MAX_GALLERY_IMAGES}
+        >
+          <Upload className="mr-1 h-3.5 w-3.5" />
+          {busy ? "Uploading..." : "Upload photos"}
+        </Button>
+      </div>
+      {images.length === 0 ? (
+        <div className="rounded border border-dashed border-border p-6 text-center text-[11px] text-muted-foreground">
+          No photos yet. Upload up to {MAX_GALLERY_IMAGES} images.
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {images.map((im, i) => (
+            <div key={im.id} className="group relative rounded border border-border bg-muted/30 p-1">
+              <img src={im.url} alt={im.caption || ""} className="h-20 w-full rounded object-cover" />
+              <Input
+                className="mt-1 h-6 text-[11px]"
+                value={im.caption || ""}
+                onChange={(e) => update(im.id, { caption: e.target.value })}
+                placeholder="Caption"
+              />
+              <div className="mt-1 flex items-center justify-between">
+                <div className="flex">
+                  <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(im.id, -1)} disabled={i === 0}>
+                    <ChevronUp className="h-3 w-3" />
+                  </Button>
+                  <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(im.id, 1)} disabled={i === images.length - 1}>
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </div>
+                <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => remove(im.id)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1866,6 +2003,15 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
               </Select>
             </div>
           </>
+        )}
+
+        {type === "gallery" && (
+          <GalleryEditor
+            title={p.galleryTitle || ""}
+            images={p.galleryImages || []}
+            onTitleChange={(v) => update({ galleryTitle: v })}
+            onImagesChange={(imgs) => update({ galleryImages: imgs })}
+          />
         )}
 
         {draft && !embedded && (
