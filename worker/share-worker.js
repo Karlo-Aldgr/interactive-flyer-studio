@@ -134,6 +134,10 @@ export default {
     }
     const slug = match[1];
     const viewerUrl = `${appOrigin}/f/${slug}`;
+    // Canonical = the worker URL itself. If we point canonical at the live app,
+    // Facebook re-scrapes the app's index.html and uses its static og.png,
+    // overriding our per-flyer image.
+    const shareUrl = `${url.origin}/f/${slug}`;
 
     // Humans → straight to the interactive viewer.
     if (!isCrawler) {
@@ -146,7 +150,7 @@ export default {
     const title = flyer?.title || "Flyer";
     const description = `View "${title}" — interactive flyer.`;
 
-    return new Response(ogHtml({ title, description, image, canonical: viewerUrl }), {
+    return new Response(ogHtml({ title, description, image, canonical: shareUrl }), {
       status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
