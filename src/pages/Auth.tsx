@@ -25,8 +25,10 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const next = params.get("next") || "/dashboard";
+
   if (loading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) return <Navigate to={next} replace />;
 
   const handle = async (mode: "signin" | "signup") => {
     const parsed = schema.safeParse({ email, password });
@@ -40,18 +42,18 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email: parsed.data.email,
           password: parsed.data.password,
-          options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+          options: { emailRedirectTo: `${window.location.origin}${next}` },
         });
         if (error) throw error;
         toast.success("Account created! You're in.");
-        navigate("/dashboard");
+        navigate(next);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsed.data.email,
           password: parsed.data.password,
         });
         if (error) throw error;
-        navigate("/dashboard");
+        navigate(next);
       }
     } catch (e: any) {
       toast.error(e.message ?? "Something went wrong");
