@@ -190,8 +190,16 @@ export function TopBar({ saving }: Props) {
     if (!flyer) return;
     const newStatus = flyer.status === "published" ? "draft" : "published";
     let slug = flyer.public_slug;
-    if (newStatus === "published" && !slug) {
-      slug = slugify(flyer.title || "flyer");
+    const titleNow = (flyer.title || "").trim();
+    const titleIsReal = titleNow && titleNow.toLowerCase() !== "untitled flyer";
+    // Slug looks stale if missing OR derived from the default "Untitled flyer"
+    // title while the flyer now has a real title. Preserve the original 5-char
+    // suffix when present so the new slug stays unique without a collision check.
+    const looksStale = !slug || (/^untitled-flyer(-[a-z0-9]{4,6})?$/i.test(slug) && titleIsReal);
+    if (newStatus === "published" && looksStale) {
+      const suffixMatch = slug?.match(/-([a-z0-9]{4,6})$/i);
+      const base = slugify(titleIsReal ? titleNow : "flyer");
+      slug = suffixMatch ? base.replace(/-[a-z0-9]{4,6}$/, "-" + suffixMatch[1]) : base;
     }
     setFlyer({ status: newStatus, public_slug: slug });
     const { error } = await supabase.from("flyers").update({ status: newStatus, public_slug: slug }).eq("id", flyer.id);
