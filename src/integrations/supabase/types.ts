@@ -452,6 +452,7 @@ export type Database = {
         | "poll"
         | "subscribe"
         | "book_appointment"
+        | "gallery"
       app_role: "admin" | "user"
       appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
@@ -605,6 +606,7 @@ export const Constants = {
         "poll",
         "subscribe",
         "book_appointment",
+        "gallery",
       ],
       app_role: ["admin", "user"],
       appointment_status: ["confirmed", "cancelled"],
