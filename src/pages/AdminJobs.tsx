@@ -95,7 +95,7 @@ export default function AdminJobs() {
     const priceNum = ePrice ? Math.round(parseFloat(ePrice) * 100) : null;
     if (ePrice && (priceNum === null || isNaN(priceNum))) { toast.error("Invalid price"); return; }
     const { error } = await supabase.from("jobs").update({
-      status: eStatus,
+      status: eStatus as any,
       price_cents: priceNum,
       payment_link: ePayLink || null,
       flyer_id: eFlyerId || null,
