@@ -22,7 +22,14 @@ export type ActionType =
   | "air_messages"
   | "poll"
   | "subscribe"
-  | "book_appointment";
+  | "book_appointment"
+  | "gallery";
+
+export interface GalleryImage {
+  id: string;
+  url: string;
+  caption?: string;
+}
 
 /** Weekly availability for slot-mode appointments. Day index 0 = Sunday. */
 export interface AppointmentDayAvailability {
@@ -160,6 +167,10 @@ export interface ActionPayload {
   apptConfirmSubject?: string;           // email subject override
   apptConfirmIntro?: string;             // optional custom intro paragraph in email
   apptSuccessMessage?: string;           // shown after booking
+
+  // gallery — photo gallery popup (up to 12 images)
+  galleryTitle?: string;
+  galleryImages?: GalleryImage[];
 }
 
 export type BubbleTextCase = "as-is" | "upper" | "lower";
