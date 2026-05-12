@@ -1,32 +1,23 @@
 /**
  * Cloudflare Worker — Social share unfurler for FlyerFlow
  * ---------------------------------------------------------
- * Why this exists:
- *   Lovable's static hosting can't render per-flyer OG tags (no SSR), and
- *   Supabase Edge Functions inject `Content-Security-Policy: sandbox`, which
- *   makes Facebook/Messenger ignore any OG tags they return. This Worker is
- *   a real server in front of the app: clean HTML, no sandbox, full OG tags.
+ * Crawler UAs we care about: facebookexternalhit, WhatsApp/2.x, Twitterbot,
+ * LinkedInBot, Slackbot, Discordbot, TelegramBot, etc.
  *
  * Routes:
- *   GET /f/:slug   -> If crawler: serve OG HTML for that flyer.
- *                     If human:   302 redirect to the live Lovable viewer.
- *   GET /         -> 302 redirect to the app homepage.
- *   GET anything  -> 404.
+ *   GET /f/:slug   -> Crawler: OG HTML. Human: 302 to live viewer.
+ *   GET /         -> 302 to app homepage.
  *
- * Required environment variables (set in Cloudflare dashboard → Worker → Settings → Variables):
- *   SUPABASE_URL          e.g. https://iwmykqilqywbzxpcgaop.supabase.co
- *   SUPABASE_ANON_KEY     the project's anon/publishable key (safe to expose)
- *   APP_ORIGIN            e.g. https://interactive-flyer-studio.lovable.app
- *
- * Deploy:
- *   1. Create a Worker in the Cloudflare dashboard.
- *   2. Paste this file's contents as the Worker code.
- *   3. Add the three env vars above (as plain text — anon key is publishable).
- *   4. Deploy. Use the *.workers.dev URL or bind a custom subdomain.
+ * Required env vars:
+ *   SUPABASE_URL, SUPABASE_ANON_KEY, APP_ORIGIN
  */
 
 const CRAWLER_RE =
   /(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|skypeuripreview|pinterest|redditbot|applebot|bingbot|googlebot|embedly|quora|vkshare|w3c_validator|bot|crawler|spider|preview)/i;
+
+// Guaranteed absolute https URL — WhatsApp requires this for og:image.
+// Replace with a branded image in flyer-thumbnails bucket if you want.
+const FALLBACK_IMAGE = "https://interactive-flyer-studio.lovable.app/og.png";
 
 function escapeHtml(s) {
   return String(s ?? "")
@@ -37,30 +28,54 @@ function escapeHtml(s) {
     .replace(/'/g, "&#039;");
 }
 
-function cleanThumb(value, supabaseUrl, ownerId, flyerId) {
-  if (value) return String(value).split("?")[0];
-  if (supabaseUrl && ownerId && flyerId) {
-    return `${supabaseUrl}/storage/v1/object/public/flyer-thumbnails/${ownerId}/${flyerId}.jpg`;
-  }
-  return null;
-}
-
+/** Try to fetch flyer metadata. Returns null on any failure. */
 async function fetchFlyer(env, slug) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    console.log("[share-worker] missing SUPABASE_URL or SUPABASE_ANON_KEY");
+    return null;
+  }
   const url = `${env.SUPABASE_URL}/rest/v1/flyers?public_slug=eq.${encodeURIComponent(
     slug
   )}&status=eq.published&select=id,owner_id,title,public_slug,thumbnail_url&limit=1`;
 
-  const res = await fetch(url, {
-    headers: {
-      apikey: env.SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
-      Accept: "application/json",
-    },
-    cf: { cacheTtl: 60, cacheEverything: true },
-  });
-  if (!res.ok) return null;
-  const rows = await res.json();
-  return Array.isArray(rows) && rows.length ? rows[0] : null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 3000);
+  try {
+    const res = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+        Accept: "application/json",
+      },
+      signal: ctrl.signal,
+      cf: { cacheTtl: 60, cacheEverything: true },
+    });
+    if (!res.ok) {
+      console.log(`[share-worker] supabase ${res.status} for slug=${slug}`);
+      return null;
+    }
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length ? rows[0] : null;
+  } catch (e) {
+    console.log(`[share-worker] fetchFlyer error for slug=${slug}: ${e?.message || e}`);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Pick the best og:image URL and report which source we used. */
+function pickImage(flyer, env) {
+  if (flyer?.thumbnail_url) {
+    return { url: String(flyer.thumbnail_url).split("?")[0], source: "thumbnail" };
+  }
+  if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
+    return {
+      url: `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}.jpg`,
+      source: "constructed",
+    };
+  }
+  return { url: FALLBACK_IMAGE, source: "fallback" };
 }
 
 function ogHtml({ title, description, image, canonical }) {
@@ -83,6 +98,8 @@ function ogHtml({ title, description, image, canonical }) {
 <meta property="og:description" content="${d}" />
 <meta property="og:image" content="${i}" />
 <meta property="og:image:secure_url" content="${i}" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="${t}" />
@@ -103,10 +120,11 @@ export default {
     const url = new URL(request.url);
     const ua = request.headers.get("user-agent") || "";
     const isCrawler = CRAWLER_RE.test(ua);
+    const appOrigin = env.APP_ORIGIN || "https://interactive-flyer-studio.lovable.app";
 
     // Root → app homepage
     if (url.pathname === "/" || url.pathname === "") {
-      return Response.redirect(env.APP_ORIGIN || "https://interactive-flyer-studio.lovable.app", 302);
+      return Response.redirect(appOrigin, 302);
     }
 
     // /f/:slug
@@ -115,7 +133,6 @@ export default {
       return new Response("Not found", { status: 404 });
     }
     const slug = match[1];
-    const appOrigin = env.APP_ORIGIN || "https://interactive-flyer-studio.lovable.app";
     const viewerUrl = `${appOrigin}/f/${slug}`;
 
     // Humans → straight to the interactive viewer.
@@ -123,26 +140,20 @@ export default {
       return Response.redirect(viewerUrl, 302);
     }
 
-    // Crawlers → look up flyer, serve OG HTML.
-    let flyer = null;
-    try {
-      flyer = await fetchFlyer(env, slug);
-    } catch (_) {
-      flyer = null;
-    }
-
+    // Crawlers → always serve OG HTML, even if Supabase is down.
+    const flyer = await fetchFlyer(env, slug);
+    const { url: image, source: imageSource } = pickImage(flyer, env);
     const title = flyer?.title || "Flyer";
     const description = `View "${title}" — interactive flyer.`;
-    const image =
-      cleanThumb(flyer?.thumbnail_url, env.SUPABASE_URL, flyer?.owner_id, flyer?.id) ||
-      `${appOrigin}/og.png`;
 
     return new Response(ogHtml({ title, description, image, canonical: viewerUrl }), {
       status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "public, max-age=300",
-        "x-share-worker": "v1",
+        "x-share-worker": "v2",
+        "x-flyer-found": flyer ? "true" : "false",
+        "x-image-source": imageSource,
       },
     });
   },
