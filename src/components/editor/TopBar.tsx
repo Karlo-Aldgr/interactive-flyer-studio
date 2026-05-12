@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useEditorStore, ResizeMode } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
@@ -92,10 +92,25 @@ export function TopBar({ saving }: Props) {
   );
   const [savingCategory, setSavingCategory] = useState(false);
 
+  useEffect(() => {
+    if (!flyer || flyer.status !== "published" || !isRealFlyerTitle(flyer.title) || !flyerSlugLooksUntitled(flyer.public_slug)) return;
+    const slug = slugFromFlyerTitle(flyer.title, flyer.public_slug);
+    setFlyer({ public_slug: slug });
+    void supabase.from("flyers").update({ public_slug: slug }).eq("id", flyer.id);
+  }, [flyer, setFlyer]);
+
   function openCategory() {
     setEditCategory(((flyer as any)?.category as FlyerCategory) || "business");
     setEditEventDate((flyer as any)?.event_date ? new Date(((flyer as any).event_date as string) + "T00:00:00") : undefined);
     setCategoryOpen(true);
+  }
+
+  function updateTitle(title: string) {
+    if (flyer.status === "published" && isRealFlyerTitle(title) && flyerSlugLooksUntitled(flyer.public_slug)) {
+      setFlyer({ title, public_slug: slugFromFlyerTitle(title, flyer.public_slug) });
+      return;
+    }
+    setFlyer({ title });
   }
 
   async function saveCategory() {
@@ -264,7 +279,7 @@ export function TopBar({ saving }: Props) {
       <Input
         className="h-8 max-w-xs border-transparent bg-transparent font-semibold focus-visible:border-input"
         value={flyer.title}
-        onChange={(e) => setFlyer({ title: e.target.value })}
+        onChange={(e) => updateTitle(e.target.value)}
       />
       <div className="ml-2 flex items-center gap-1">
         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={undo} disabled={!past}>
