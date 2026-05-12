@@ -265,7 +265,7 @@ export function TopBar({ saving }: Props) {
   const shareOrigin =
     (typeof window !== "undefined" && localStorage.getItem("flyerflow.shareOrigin")) ||
     (import.meta as any).env?.VITE_SHARE_ORIGIN ||
-    "";
+    "https://tapthatflyer-share.showoffgrafixs.workers.dev";
   const socialUrl =
     shareOrigin && flyer.public_slug
       ? `${shareOrigin.replace(/\/$/, "")}/f/${flyer.public_slug}`
