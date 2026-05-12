@@ -160,7 +160,10 @@ export type Database = {
       }
       flyers: {
         Row: {
+          auto_unpublish_at: string | null
+          category: Database["public"]["Enums"]["flyer_category"]
           created_at: string
+          event_date: string | null
           id: string
           owner_id: string
           portal_access_code: string
@@ -173,7 +176,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_unpublish_at?: string | null
+          category?: Database["public"]["Enums"]["flyer_category"]
           created_at?: string
+          event_date?: string | null
           id?: string
           owner_id: string
           portal_access_code?: string
@@ -186,7 +192,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_unpublish_at?: string | null
+          category?: Database["public"]["Enums"]["flyer_category"]
           created_at?: string
+          event_date?: string | null
           id?: string
           owner_id?: string
           portal_access_code?: string
@@ -429,6 +438,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      unpublish_expired_events: { Args: never; Returns: number }
     }
     Enums: {
       action_type:
@@ -456,6 +466,7 @@ export type Database = {
       app_role: "admin" | "user"
       appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
+      flyer_category: "business" | "event"
       flyer_status: "draft" | "published"
       layer_type: "text" | "image" | "icon" | "shape" | "button" | "hotspot"
     }
@@ -611,6 +622,7 @@ export const Constants = {
       app_role: ["admin", "user"],
       appointment_status: ["confirmed", "cancelled"],
       event_type: ["view", "click", "submit", "reveal"],
+      flyer_category: ["business", "event"],
       flyer_status: ["draft", "published"],
       layer_type: ["text", "image", "icon", "shape", "button", "hotspot"],
     },

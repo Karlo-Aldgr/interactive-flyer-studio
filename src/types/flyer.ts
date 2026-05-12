@@ -309,6 +309,8 @@ export interface FlyerSettings {
   payApplePayContact?: string;   // Phone number or email registered with Apple Cash (used via iMessage)
 }
 
+export type FlyerCategory = "business" | "event";
+
 export interface Flyer {
   id: string;
   owner_id: string;
@@ -317,6 +319,9 @@ export interface Flyer {
   public_slug: string | null;
   settings: FlyerSettings;
   thumbnail_url: string | null;
+  category: FlyerCategory;
+  event_date: string | null;        // YYYY-MM-DD
+  auto_unpublish_at: string | null; // ISO timestamp
   created_at: string;
   updated_at: string;
   pages?: FlyerPage[];

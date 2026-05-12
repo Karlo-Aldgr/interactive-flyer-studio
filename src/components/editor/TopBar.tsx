@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
   Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3, Users, Wallet, Inbox, Link as LinkIcon,
+  Briefcase, PartyPopper, CalendarIcon,
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { generateAndUploadThumbnail, uploadManualThumbnail } from "@/lib/thumbnail";
@@ -83,6 +89,37 @@ export function TopBar({ saving }: Props) {
   const [subscribersOpen, setSubscribersOpen] = useState(false);
   const [paySettingsOpen, setPaySettingsOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [editCategory, setEditCategory] = useState<FlyerCategory>(((flyer as any)?.category as FlyerCategory) || "business");
+  const [editEventDate, setEditEventDate] = useState<Date | undefined>(
+    (flyer as any)?.event_date ? new Date(((flyer as any).event_date as string) + "T00:00:00") : undefined
+  );
+  const [savingCategory, setSavingCategory] = useState(false);
+
+  function openCategory() {
+    setEditCategory(((flyer as any)?.category as FlyerCategory) || "business");
+    setEditEventDate((flyer as any)?.event_date ? new Date(((flyer as any).event_date as string) + "T00:00:00") : undefined);
+    setCategoryOpen(true);
+  }
+
+  async function saveCategory() {
+    if (!flyer) return;
+    if (editCategory === "event" && !editEventDate) {
+      toast.error("Please pick the event date");
+      return;
+    }
+    setSavingCategory(true);
+    const eventDateStr = editCategory === "event" && editEventDate ? format(editEventDate, "yyyy-MM-dd") : null;
+    const { error } = await supabase
+      .from("flyers")
+      .update({ category: editCategory, event_date: eventDateStr } as any)
+      .eq("id", flyer.id);
+    setSavingCategory(false);
+    if (error) { toast.error(error.message); return; }
+    setFlyer({ ...(flyer as any), category: editCategory, event_date: eventDateStr } as any);
+    setCategoryOpen(false);
+    toast.success("Category updated");
+  }
 
   if (!flyer) return null;
 
@@ -329,6 +366,25 @@ export function TopBar({ saving }: Props) {
         </span>
         <Tooltip>
           <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant={(flyer as any).category === "event" ? "default" : "outline"}
+              onClick={openCategory}
+            >
+              {(flyer as any).category === "event" ? <PartyPopper className="mr-1 h-4 w-4" /> : <Briefcase className="mr-1 h-4 w-4" />}
+              {(flyer as any).category === "event"
+                ? ((flyer as any).event_date ? format(new Date(((flyer as any).event_date as string) + "T00:00:00"), "MMM d") : "Event")
+                : "Business"}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {(flyer as any).category === "event"
+              ? "Event flyer — auto-unpublishes the day after the event"
+              : "Business flyer — stays published until you unpublish"}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button size="sm" variant="outline" onClick={() => setSubscribersOpen(true)}>
               <Users className="mr-1 h-4 w-4" /> Subscribers
             </Button>
@@ -475,6 +531,72 @@ export function TopBar({ saving }: Props) {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setResizeOpen(false)}>Cancel</Button>
             <Button onClick={applyResize}>Apply</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={categoryOpen} onOpenChange={setCategoryOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Flyer category</DialogTitle>
+            <DialogDescription>Events automatically unpublish the day after the event.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setEditCategory("business")}
+                className={cn(
+                  "flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition",
+                  editCategory === "business" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+                )}
+              >
+                <Briefcase className="h-5 w-5 text-primary" />
+                <div className="font-semibold">Business</div>
+                <div className="text-xs text-muted-foreground">Stays published until you unpublish.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditCategory("event")}
+                className={cn(
+                  "flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition",
+                  editCategory === "event" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+                )}
+              >
+                <PartyPopper className="h-5 w-5 text-primary" />
+                <div className="font-semibold">Event</div>
+                <div className="text-xs text-muted-foreground">Auto-unpublishes the day after.</div>
+              </button>
+            </div>
+            {editCategory === "event" && (
+              <div className="space-y-2">
+                <Label>Event date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editEventDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editEventDate ? format(editEventDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={editEventDate}
+                      onSelect={setEditEventDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCategoryOpen(false)}>Cancel</Button>
+            <Button onClick={saveCategory} disabled={savingCategory}>
+              {savingCategory && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

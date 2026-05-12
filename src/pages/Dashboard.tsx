@@ -6,9 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Sparkles, Plus, BarChart3, ExternalLink, MoreVertical, Trash2, Copy, Pencil, Loader2, FileText, LogOut } from "lucide-react";
+import { Sparkles, Plus, BarChart3, ExternalLink, MoreVertical, Trash2, Copy, Pencil, Loader2, FileText, LogOut, CalendarIcon, Briefcase, PartyPopper } from "lucide-react";
 import logo from "@/assets/logo.png";
-import { Flyer } from "@/types/flyer";
+import { Flyer, FlyerCategory } from "@/types/flyer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -16,12 +22,15 @@ export default function Dashboard() {
   const [flyers, setFlyers] = useState<Flyer[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newCategory, setNewCategory] = useState<FlyerCategory>("business");
+  const [newEventDate, setNewEventDate] = useState<Date | undefined>(undefined);
 
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("flyers")
-      .select("id, owner_id, title, status, public_slug, thumbnail_url, settings, created_at, updated_at")
+      .select("id, owner_id, title, status, public_slug, thumbnail_url, settings, category, event_date, auto_unpublish_at, created_at, updated_at")
       .order("updated_at", { ascending: false });
     if (error) {
       toast.error(error.message);
@@ -59,11 +68,21 @@ export default function Dashboard() {
 
   const create = async () => {
     if (!user) return;
+    if (newCategory === "event" && !newEventDate) {
+      toast.error("Please pick the event date");
+      return;
+    }
     setCreating(true);
     try {
+      const payload: any = {
+        owner_id: user.id,
+        title: newCategory === "event" ? "Untitled event flyer" : "Untitled flyer",
+        category: newCategory,
+        event_date: newCategory === "event" && newEventDate ? format(newEventDate, "yyyy-MM-dd") : null,
+      };
       const { data: flyer, error } = await supabase
         .from("flyers")
-        .insert([{ owner_id: user.id, title: "Untitled flyer" }])
+        .insert([payload])
         .select()
         .single();
       if (error) throw error;
@@ -71,12 +90,19 @@ export default function Dashboard() {
         .from("pages")
         .insert([{ flyer_id: flyer.id, index: 0, name: "Page 1" }]);
       if (pErr) throw pErr;
+      setCreateOpen(false);
       navigate(`/editor/${flyer.id}`);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
       setCreating(false);
     }
+  };
+
+  const openCreate = () => {
+    setNewCategory("business");
+    setNewEventDate(undefined);
+    setCreateOpen(true);
   };
 
   const remove = async (id: string) => {
@@ -90,7 +116,7 @@ export default function Dashboard() {
     if (!user) return;
     const { data: copy, error } = await supabase
       .from("flyers")
-      .insert([{ owner_id: user.id, title: flyer.title + " (copy)", settings: flyer.settings as any }])
+      .insert([{ owner_id: user.id, title: flyer.title + " (copy)", settings: flyer.settings as any, category: flyer.category, event_date: flyer.event_date }])
       .select()
       .single();
     if (error) return toast.error(error.message);
@@ -145,7 +171,7 @@ export default function Dashboard() {
             <h1 className="font-display text-3xl font-bold">Your flyers</h1>
             <p className="mt-1 text-muted-foreground">Design, publish, and track engagement.</p>
           </div>
-          <Button onClick={create} disabled={creating} className="shadow-glow">
+          <Button onClick={openCreate} disabled={creating} className="shadow-glow">
             {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-1 h-4 w-4" />}
             New flyer
           </Button>
@@ -161,7 +187,7 @@ export default function Dashboard() {
               </div>
               <h3 className="font-display text-lg font-semibold">No flyers yet</h3>
               <p className="max-w-xs text-sm text-muted-foreground">Create your first interactive flyer and publish it in minutes.</p>
-              <Button onClick={create} disabled={creating} className="mt-2"><Plus className="mr-1 h-4 w-4" />Create flyer</Button>
+              <Button onClick={openCreate} disabled={creating} className="mt-2"><Plus className="mr-1 h-4 w-4" />Create flyer</Button>
             </Card>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -179,12 +205,20 @@ export default function Dashboard() {
                       <span className={`absolute left-3 top-3 rounded-full px-2 py-0.5 text-xs font-medium ${f.status === "published" ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>
                         {f.status}
                       </span>
+                      <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-0.5 text-xs font-medium text-foreground backdrop-blur">
+                        {f.category === "event" ? <PartyPopper className="h-3 w-3" /> : <Briefcase className="h-3 w-3" />}
+                        {f.category === "event" ? "Event" : "Business"}
+                      </span>
                     </div>
                   </Link>
                   <div className="flex items-center justify-between gap-2 p-4">
                     <div className="min-w-0">
                       <div className="truncate font-semibold">{f.title}</div>
-                      <div className="text-xs text-muted-foreground">Updated {new Date(f.updated_at).toLocaleDateString()}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {f.category === "event" && f.event_date
+                          ? <>Event {format(new Date(f.event_date + "T00:00:00"), "MMM d, yyyy")}</>
+                          : <>Updated {new Date(f.updated_at).toLocaleDateString()}</>}
+                      </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -210,6 +244,77 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New flyer</DialogTitle>
+            <DialogDescription>Pick a category to get started.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setNewCategory("business")}
+                className={cn(
+                  "flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition",
+                  newCategory === "business" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+                )}
+              >
+                <Briefcase className="h-5 w-5 text-primary" />
+                <div className="font-semibold">Business</div>
+                <div className="text-xs text-muted-foreground">Stays published until you unpublish.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewCategory("event")}
+                className={cn(
+                  "flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition",
+                  newCategory === "event" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+                )}
+              >
+                <PartyPopper className="h-5 w-5 text-primary" />
+                <div className="font-semibold">Event</div>
+                <div className="text-xs text-muted-foreground">Auto-unpublishes the day after.</div>
+              </button>
+            </div>
+
+            {newCategory === "event" && (
+              <div className="space-y-2">
+                <Label>Event date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newEventDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newEventDate ? format(newEventDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newEventDate}
+                      onSelect={setNewEventDate}
+                      disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">Flyer will auto-unpublish the day after this date.</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button onClick={create} disabled={creating}>
+              {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-1 h-4 w-4" />}
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
