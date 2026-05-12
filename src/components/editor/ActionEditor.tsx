@@ -285,10 +285,42 @@ function GalleryEditor({
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </div>
-                <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => remove(im.id)}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={im.action ? "default" : "ghost"}
+                    className="h-6 px-2 text-[10px]"
+                    onClick={() => setOpenActionId(openActionId === im.id ? null : im.id)}
+                  >
+                    {im.action ? ACTION_LABELS[im.action.type] : "+ Action"}
+                  </Button>
+                  <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => remove(im.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
+              {openActionId === im.id && (
+                <div className="col-span-3 mt-2 border-t border-border pt-2">
+                  <ActionEditor
+                    embedded
+                    depth={depth + 1}
+                    action={im.action || null}
+                    onChange={(a) => update(im.id, { action: a })}
+                  />
+                  {im.action && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="mt-2 h-6 text-[10px] text-destructive"
+                      onClick={() => update(im.id, { action: null })}
+                    >
+                      Remove tap action
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
