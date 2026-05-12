@@ -40,6 +40,11 @@ export default function Landing() {
         </div>
       </header>
 
+      {/* Big logo banner */}
+      <div className="container flex justify-center pt-10 pb-4 md:pt-16">
+        <img src={logo} alt="TapThatFlyer logo" className="w-full max-w-3xl h-auto" />
+      </div>
+
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 gradient-canvas opacity-60" />
