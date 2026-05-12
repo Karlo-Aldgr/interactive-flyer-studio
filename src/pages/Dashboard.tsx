@@ -205,12 +205,20 @@ export default function Dashboard() {
                       <span className={`absolute left-3 top-3 rounded-full px-2 py-0.5 text-xs font-medium ${f.status === "published" ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>
                         {f.status}
                       </span>
+                      <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-0.5 text-xs font-medium text-foreground backdrop-blur">
+                        {f.category === "event" ? <PartyPopper className="h-3 w-3" /> : <Briefcase className="h-3 w-3" />}
+                        {f.category === "event" ? "Event" : "Business"}
+                      </span>
                     </div>
                   </Link>
                   <div className="flex items-center justify-between gap-2 p-4">
                     <div className="min-w-0">
                       <div className="truncate font-semibold">{f.title}</div>
-                      <div className="text-xs text-muted-foreground">Updated {new Date(f.updated_at).toLocaleDateString()}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {f.category === "event" && f.event_date
+                          ? <>Event {format(new Date(f.event_date + "T00:00:00"), "MMM d, yyyy")}</>
+                          : <>Updated {new Date(f.updated_at).toLocaleDateString()}</>}
+                      </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
