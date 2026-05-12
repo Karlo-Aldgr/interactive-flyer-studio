@@ -46,9 +46,10 @@ const ACTION_LABELS: Record<ActionType, string> = {
   poll: "Poll",
   subscribe: "Subscribe (email signup)",
   book_appointment: "Book appointment",
+  gallery: "Photo gallery",
 };
 
-const PRESET_TYPES: ActionType[] = ["book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map"];
+const PRESET_TYPES: ActionType[] = ["book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map", "gallery"];
 const BASIC_TYPES: ActionType[] = [
   "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
@@ -100,6 +101,8 @@ function isValid(draft: LayerAction | null): boolean {
       return true;
     case "book_appointment":
       return !!(p.apptTitle && p.apptDurationMin);
+    case "gallery":
+      return !!(p.galleryImages && p.galleryImages.length > 0);
     default: return true;
   }
 }
