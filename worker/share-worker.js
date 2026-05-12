@@ -152,7 +152,7 @@ export default {
       headers: {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "public, max-age=300",
-        "x-share-worker": "v2",
+        ""x-share-worker": "v3",
         "x-flyer-found": flyer ? "true" : "false",
         "x-image-source": imageSource,
       },
