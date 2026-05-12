@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sparkles, MousePointerClick, BarChart3, QrCode, Layers, Smartphone, ArrowRight, Wand2 } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const features = [
   { icon: Layers, title: "Drag-and-drop canvas", body: "Text, images, icons, shapes, buttons. Multi-page flyers with snap-to-grid alignment." },
@@ -20,10 +21,7 @@ export default function Landing() {
       <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-hero shadow-glow">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-bold">TapThatFlyer</span>
+            <img src={logo} alt="TapThatFlyer logo" className="h-10 w-auto" />
           </Link>
           <nav className="hidden gap-8 text-sm font-medium text-muted-foreground md:flex">
             <a href="#features" className="hover:text-foreground transition">Features</a>

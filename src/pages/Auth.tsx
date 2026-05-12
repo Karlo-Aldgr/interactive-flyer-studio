@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Sparkles, Loader2 } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const schema = z.object({
   email: z.string().trim().email("Enter a valid email").max(255),
@@ -71,10 +72,7 @@ export default function Auth() {
     <div className="relative flex min-h-screen items-center justify-center px-4 gradient-canvas">
       <div className="absolute inset-x-0 top-0 p-6">
         <Link to="/" className="inline-flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-hero">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="font-bold">TapThatFlyer</span>
+          <img src={logo} alt="TapThatFlyer logo" className="h-9 w-auto" />
         </Link>
       </div>
 
