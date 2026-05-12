@@ -58,7 +58,7 @@ export function buildIcs(payload: ActionPayload): string {
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//FlyerFlow//EN",
+    "PRODID:-//TapThatFlyer//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

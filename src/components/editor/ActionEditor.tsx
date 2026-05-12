@@ -164,13 +164,15 @@ function AssetUpload({
 const MAX_GALLERY_IMAGES = 12;
 
 function GalleryEditor({
-  title, images, onTitleChange, onImagesChange,
+  title, images, onTitleChange, onImagesChange, depth,
 }: {
   title: string;
   images: GalleryImage[];
   onTitleChange: (v: string) => void;
   onImagesChange: (imgs: GalleryImage[]) => void;
+  depth: number;
 }) {
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { flyerId } = useParams();
@@ -283,12 +285,50 @@ function GalleryEditor({
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </div>
-                <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => remove(im.id)}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={im.action ? "default" : "ghost"}
+                    className="h-6 px-2 text-[10px]"
+                    onClick={() => setOpenActionId(openActionId === im.id ? null : im.id)}
+                  >
+                    {im.action ? ACTION_LABELS[im.action.type] : "+ Action"}
+                  </Button>
+                  <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => remove(im.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {openActionId && images.find((im) => im.id === openActionId) && (
+        <div className="rounded border border-border bg-muted/30 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <Label className="text-xs font-semibold">Tap action for selected photo</Label>
+            <Button type="button" size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => setOpenActionId(null)}>
+              Close
+            </Button>
+          </div>
+          <ActionEditor
+            embedded
+            depth={depth + 1}
+            action={images.find((im) => im.id === openActionId)?.action || null}
+            onChange={(a) => update(openActionId, { action: a })}
+          />
+          {images.find((im) => im.id === openActionId)?.action && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="mt-2 h-6 text-[11px] text-destructive"
+              onClick={() => update(openActionId, { action: null })}
+            >
+              Remove tap action
+            </Button>
+          )}
         </div>
       )}
     </div>
@@ -2011,6 +2051,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
             images={p.galleryImages || []}
             onTitleChange={(v) => update({ galleryTitle: v })}
             onImagesChange={(imgs) => update({ galleryImages: imgs })}
+            depth={depth}
           />
         )}
 

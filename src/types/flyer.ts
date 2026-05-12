@@ -1,4 +1,4 @@
-// FlyerFlow shared domain types
+// TapThatFlyer shared domain types
 
 export type LayerType = "text" | "image" | "icon" | "shape" | "button" | "hotspot";
 
@@ -29,6 +29,7 @@ export interface GalleryImage {
   id: string;
   url: string;
   caption?: string;
+  action?: LayerAction | null;
 }
 
 /** Weekly availability for slot-mode appointments. Day index 0 = Sunday. */

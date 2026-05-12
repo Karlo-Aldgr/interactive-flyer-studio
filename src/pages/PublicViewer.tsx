@@ -1905,7 +1905,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       <CouponDialog action={coupon} onClose={() => setCoupon(null)} onRedeem={(url) => { logClick(null, "coupon_redeem"); window.open(url, "_blank", "noopener,noreferrer"); }} />
 
       {/* Photo gallery */}
-      <GalleryDialog action={gallery} onClose={() => setGallery(null)} onZoom={(url) => setZoomImage(url)} />
+      <GalleryDialog
+        action={gallery}
+        onClose={() => setGallery(null)}
+        onZoom={(url) => setZoomImage(url)}
+        onRunAction={(a) => { setGallery(null); executeAction(a, null); }}
+      />
 
       {/* Air messages render inline inside the stage wrapper above (no floating overlay). */}
 
@@ -2303,8 +2308,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 }
 
 function GalleryDialog({
-  action, onClose, onZoom,
-}: { action: LayerAction | null; onClose: () => void; onZoom: (url: string) => void }) {
+  action, onClose, onZoom, onRunAction,
+}: { action: LayerAction | null; onClose: () => void; onZoom: (url: string) => void; onRunAction: (a: LayerAction) => void }) {
   const open = !!action;
   const images = action?.payload.galleryImages || [];
   const title = action?.payload.galleryTitle || "Photo gallery";
@@ -2322,7 +2327,7 @@ function GalleryDialog({
               <button
                 key={im.id}
                 type="button"
-                onClick={() => onZoom(im.url)}
+                onClick={() => (im.action ? onRunAction(im.action) : onZoom(im.url))}
                 className="group overflow-hidden rounded border border-border bg-muted/30 text-left"
               >
                 <img
