@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, buildSocialShareUrl } from "@/lib/utils";
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -154,8 +154,10 @@ export default function Dashboard() {
 
   const copyLink = (slug: string | null) => {
     if (!slug) return;
-    navigator.clipboard.writeText(`${window.location.origin}/f/${slug}`);
-    toast.success("Public link copied");
+    // Use the share-worker URL so platforms (Facebook, WhatsApp, iMessage)
+    // see per-flyer OG previews — same link the editor's Share dialog copies.
+    navigator.clipboard.writeText(buildSocialShareUrl(slug));
+    toast.success("Share link copied — paste it anywhere for a rich preview");
   };
 
   return (
