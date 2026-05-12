@@ -1273,10 +1273,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     })
   );
 
-  // Fit-to-screen scale: fill the viewport edge-to-edge (no padding around the flyer).
+  // Fill the viewport WIDTH edge-to-edge — preserves aspect ratio, allows
+  // vertical scrolling if the flyer is taller than the screen.
   const vw = typeof window !== "undefined" ? window.innerWidth : W;
   const vh = typeof window !== "undefined" ? window.innerHeight : H;
-  const fitScale = Math.min(vw / W, vh / H);
+  const fitScale = vw / W;
   // Enlarged: fill the longer viewport edge so user can scroll/pan to inspect details.
   // Multiplier gives extra zoom on top of fit-to-screen.
   const enlargedScale = Math.max(vw / W, vh / H) * 1.6;
