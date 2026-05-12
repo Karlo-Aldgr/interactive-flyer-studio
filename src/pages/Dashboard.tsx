@@ -68,11 +68,21 @@ export default function Dashboard() {
 
   const create = async () => {
     if (!user) return;
+    if (newCategory === "event" && !newEventDate) {
+      toast.error("Please pick the event date");
+      return;
+    }
     setCreating(true);
     try {
+      const payload: any = {
+        owner_id: user.id,
+        title: newCategory === "event" ? "Untitled event flyer" : "Untitled flyer",
+        category: newCategory,
+        event_date: newCategory === "event" && newEventDate ? format(newEventDate, "yyyy-MM-dd") : null,
+      };
       const { data: flyer, error } = await supabase
         .from("flyers")
-        .insert([{ owner_id: user.id, title: "Untitled flyer" }])
+        .insert([payload])
         .select()
         .single();
       if (error) throw error;
@@ -80,12 +90,19 @@ export default function Dashboard() {
         .from("pages")
         .insert([{ flyer_id: flyer.id, index: 0, name: "Page 1" }]);
       if (pErr) throw pErr;
+      setCreateOpen(false);
       navigate(`/editor/${flyer.id}`);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
       setCreating(false);
     }
+  };
+
+  const openCreate = () => {
+    setNewCategory("business");
+    setNewEventDate(undefined);
+    setCreateOpen(true);
   };
 
   const remove = async (id: string) => {
