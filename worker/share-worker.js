@@ -105,12 +105,9 @@ function ogHtml({ title, description, image, canonical }) {
 <meta name="twitter:title" content="${t}" />
 <meta name="twitter:description" content="${d}" />
 <meta name="twitter:image" content="${i}" />
-
-<meta http-equiv="refresh" content="0;url=${c}" />
 </head>
 <body>
-<p>Redirecting to <a href="${c}">${t}</a>…</p>
-<script>window.location.replace(${JSON.stringify(canonical)});</script>
+<p><a href="${escapeHtml(c)}">${t}</a></p>
 </body>
 </html>`;
 }
@@ -134,6 +131,10 @@ export default {
     }
     const slug = match[1];
     const viewerUrl = `${appOrigin}/f/${slug}`;
+    // Canonical = the worker URL itself. If we point canonical at the live app,
+    // Facebook re-scrapes the app's index.html and uses its static og.png,
+    // overriding our per-flyer image.
+    const shareUrl = `${url.origin}/f/${slug}`;
 
     // Humans → straight to the interactive viewer.
     if (!isCrawler) {
@@ -146,12 +147,12 @@ export default {
     const title = flyer?.title || "Flyer";
     const description = `View "${title}" — interactive flyer.`;
 
-    return new Response(ogHtml({ title, description, image, canonical: viewerUrl }), {
+    return new Response(ogHtml({ title, description, image, canonical: shareUrl }), {
       status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "public, max-age=300",
-        "x-share-worker": "v2",
+        "x-share-worker": "v3",
         "x-flyer-found": flyer ? "true" : "false",
         "x-image-source": imageSource,
       },
