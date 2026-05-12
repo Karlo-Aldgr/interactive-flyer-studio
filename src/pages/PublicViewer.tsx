@@ -1905,7 +1905,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       <CouponDialog action={coupon} onClose={() => setCoupon(null)} onRedeem={(url) => { logClick(null, "coupon_redeem"); window.open(url, "_blank", "noopener,noreferrer"); }} />
 
       {/* Photo gallery */}
-      <GalleryDialog action={gallery} onClose={() => setGallery(null)} onZoom={(url) => setZoomImage(url)} />
+      <GalleryDialog
+        action={gallery}
+        onClose={() => setGallery(null)}
+        onZoom={(url) => setZoomImage(url)}
+        onRunAction={(a) => { setGallery(null); executeAction(a, null); }}
+      />
 
       {/* Air messages render inline inside the stage wrapper above (no floating overlay). */}
 
