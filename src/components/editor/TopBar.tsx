@@ -89,6 +89,37 @@ export function TopBar({ saving }: Props) {
   const [subscribersOpen, setSubscribersOpen] = useState(false);
   const [paySettingsOpen, setPaySettingsOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [editCategory, setEditCategory] = useState<FlyerCategory>(((flyer as any)?.category as FlyerCategory) || "business");
+  const [editEventDate, setEditEventDate] = useState<Date | undefined>(
+    (flyer as any)?.event_date ? new Date(((flyer as any).event_date as string) + "T00:00:00") : undefined
+  );
+  const [savingCategory, setSavingCategory] = useState(false);
+
+  function openCategory() {
+    setEditCategory(((flyer as any)?.category as FlyerCategory) || "business");
+    setEditEventDate((flyer as any)?.event_date ? new Date(((flyer as any).event_date as string) + "T00:00:00") : undefined);
+    setCategoryOpen(true);
+  }
+
+  async function saveCategory() {
+    if (!flyer) return;
+    if (editCategory === "event" && !editEventDate) {
+      toast.error("Please pick the event date");
+      return;
+    }
+    setSavingCategory(true);
+    const eventDateStr = editCategory === "event" && editEventDate ? format(editEventDate, "yyyy-MM-dd") : null;
+    const { error } = await supabase
+      .from("flyers")
+      .update({ category: editCategory, event_date: eventDateStr } as any)
+      .eq("id", flyer.id);
+    setSavingCategory(false);
+    if (error) { toast.error(error.message); return; }
+    setFlyer({ ...(flyer as any), category: editCategory, event_date: eventDateStr } as any);
+    setCategoryOpen(false);
+    toast.success("Category updated");
+  }
 
   if (!flyer) return null;
 
