@@ -294,6 +294,8 @@ function GalleryEditor({
     </div>
   );
 }
+
+function PopupButtonsEditor({
   buttons, onChange, depth,
 }: { buttons: PopupButton[]; onChange: (b: PopupButton[]) => void; depth: number }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
