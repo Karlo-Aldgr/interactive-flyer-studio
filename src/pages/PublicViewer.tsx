@@ -1692,15 +1692,15 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         }}
       >
         <DialogContent
-          className="max-w-[95vw] w-fit p-2 bg-transparent border-none shadow-none"
+          className="max-w-none w-screen h-screen sm:rounded-none p-0 bg-black/95 border-none shadow-none flex items-center justify-center top-0 left-0 translate-x-0 translate-y-0"
           onInteractOutside={(e) => e.preventDefault()}
         >
           {zoomImage && (
-            <div className="relative max-h-[90vh] max-w-[95vw]">
+            <div className="relative w-screen h-screen flex items-center justify-center">
               <img
                 src={zoomImage}
                 alt="Zoomed"
-                className="block max-h-[90vh] max-w-[95vw] w-auto h-auto rounded object-contain"
+                className="block max-h-screen max-w-screen w-auto h-auto object-contain"
                 draggable={false}
                 onLoad={() => setZoomImageReady(true)}
                 onError={() => setZoomImageReady(true)}
