@@ -116,7 +116,7 @@ export default function Dashboard() {
     if (!user) return;
     const { data: copy, error } = await supabase
       .from("flyers")
-      .insert([{ owner_id: user.id, title: flyer.title + " (copy)", settings: flyer.settings as any }])
+      .insert([{ owner_id: user.id, title: flyer.title + " (copy)", settings: flyer.settings as any, category: flyer.category, event_date: flyer.event_date }])
       .select()
       .single();
     if (error) return toast.error(error.message);
