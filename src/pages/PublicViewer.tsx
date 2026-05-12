@@ -672,6 +672,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showHitboxes, setShowHitboxes] = useState(false);
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
+  const [gallery, setGallery] = useState<LayerAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
@@ -1013,6 +1014,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         break;
       case "coupon":
         setCoupon(a);
+        break;
+      case "gallery":
+        setGallery(a);
         break;
       case "air_messages":
         setAirMessages((prev) => (prev.some((p) => p.action.id === a.id) ? prev : [...prev, { action: a, layer: layer ?? null }]));
@@ -1899,6 +1903,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
       {/* Coupon */}
       <CouponDialog action={coupon} onClose={() => setCoupon(null)} onRedeem={(url) => { logClick(null, "coupon_redeem"); window.open(url, "_blank", "noopener,noreferrer"); }} />
+
+      {/* Photo gallery */}
+      <GalleryDialog action={gallery} onClose={() => setGallery(null)} onZoom={(url) => setZoomImage(url)} />
 
       {/* Air messages render inline inside the stage wrapper above (no floating overlay). */}
 
