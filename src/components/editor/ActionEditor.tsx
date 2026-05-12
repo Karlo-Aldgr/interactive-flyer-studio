@@ -164,13 +164,15 @@ function AssetUpload({
 const MAX_GALLERY_IMAGES = 12;
 
 function GalleryEditor({
-  title, images, onTitleChange, onImagesChange,
+  title, images, onTitleChange, onImagesChange, depth,
 }: {
   title: string;
   images: GalleryImage[];
   onTitleChange: (v: string) => void;
   onImagesChange: (imgs: GalleryImage[]) => void;
+  depth: number;
 }) {
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { flyerId } = useParams();
