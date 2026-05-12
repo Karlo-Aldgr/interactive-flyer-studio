@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Sparkles, Plus, BarChart3, ExternalLink, MoreVertical, Trash2, Copy, Pencil, Loader2, FileText, LogOut } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { Flyer } from "@/types/flyer";
 
 export default function Dashboard() {
@@ -129,10 +130,7 @@ export default function Dashboard() {
       <header className="border-b border-border bg-card">
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-hero">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-bold">TapThatFlyer</span>
+            <img src={logo} alt="TapThatFlyer logo" className="h-9 w-auto" />
           </Link>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>
