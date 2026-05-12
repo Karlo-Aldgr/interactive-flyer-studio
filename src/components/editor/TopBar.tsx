@@ -535,6 +535,72 @@ export function TopBar({ saving }: Props) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={categoryOpen} onOpenChange={setCategoryOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Flyer category</DialogTitle>
+            <DialogDescription>Events automatically unpublish the day after the event.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setEditCategory("business")}
+                className={cn(
+                  "flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition",
+                  editCategory === "business" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+                )}
+              >
+                <Briefcase className="h-5 w-5 text-primary" />
+                <div className="font-semibold">Business</div>
+                <div className="text-xs text-muted-foreground">Stays published until you unpublish.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditCategory("event")}
+                className={cn(
+                  "flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition",
+                  editCategory === "event" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+                )}
+              >
+                <PartyPopper className="h-5 w-5 text-primary" />
+                <div className="font-semibold">Event</div>
+                <div className="text-xs text-muted-foreground">Auto-unpublishes the day after.</div>
+              </button>
+            </div>
+            {editCategory === "event" && (
+              <div className="space-y-2">
+                <Label>Event date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editEventDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editEventDate ? format(editEventDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={editEventDate}
+                      onSelect={setEditEventDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCategoryOpen(false)}>Cancel</Button>
+            <Button onClick={saveCategory} disabled={savingCategory}>
+              {savingCategory && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ShareDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
