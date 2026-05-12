@@ -105,12 +105,9 @@ function ogHtml({ title, description, image, canonical }) {
 <meta name="twitter:title" content="${t}" />
 <meta name="twitter:description" content="${d}" />
 <meta name="twitter:image" content="${i}" />
-
-<meta http-equiv="refresh" content="0;url=${c}" />
 </head>
 <body>
-<p>Redirecting to <a href="${c}">${t}</a>…</p>
-<script>window.location.replace(${JSON.stringify(canonical)});</script>
+<p><a href="${escapeHtml(c)}">${t}</a></p>
 </body>
 </html>`;
 }
