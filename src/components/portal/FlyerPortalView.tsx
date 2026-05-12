@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, ChevronLeft, Download, RefreshCw, Share2, Link as LinkIcon } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Download, RefreshCw, Share2, Link as LinkIcon, Package } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
@@ -808,7 +808,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
                               <img src={img} alt={it.name || it.title || `Item ${i + 1}`} className="h-12 w-12 shrink-0 rounded object-cover border border-border" />
                             ) : (
                               <div className="h-12 w-12 shrink-0 rounded border border-border bg-muted flex items-center justify-center text-muted-foreground">
-                                <LucideIcons.Package className="h-4 w-4" />
+                                <Package className="h-4 w-4" />
                               </div>
                             )}
                             <div className="min-w-0 flex-1">
