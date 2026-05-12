@@ -30,7 +30,7 @@ export default function Dashboard() {
     setLoading(true);
     const { data, error } = await supabase
       .from("flyers")
-      .select("id, owner_id, title, status, public_slug, thumbnail_url, settings, created_at, updated_at")
+      .select("id, owner_id, title, status, public_slug, thumbnail_url, settings, category, event_date, auto_unpublish_at, created_at, updated_at")
       .order("updated_at", { ascending: false });
     if (error) {
       toast.error(error.message);
