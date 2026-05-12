@@ -300,29 +300,35 @@ function GalleryEditor({
                   </Button>
                 </div>
               </div>
-              {openActionId === im.id && (
-                <div className="col-span-3 mt-2 border-t border-border pt-2">
-                  <ActionEditor
-                    embedded
-                    depth={depth + 1}
-                    action={im.action || null}
-                    onChange={(a) => update(im.id, { action: a })}
-                  />
-                  {im.action && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="mt-2 h-6 text-[10px] text-destructive"
-                      onClick={() => update(im.id, { action: null })}
-                    >
-                      Remove tap action
-                    </Button>
-                  )}
-                </div>
-              )}
             </div>
           ))}
+        </div>
+      )}
+      {openActionId && images.find((im) => im.id === openActionId) && (
+        <div className="rounded border border-border bg-muted/30 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <Label className="text-xs font-semibold">Tap action for selected photo</Label>
+            <Button type="button" size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => setOpenActionId(null)}>
+              Close
+            </Button>
+          </div>
+          <ActionEditor
+            embedded
+            depth={depth + 1}
+            action={images.find((im) => im.id === openActionId)?.action || null}
+            onChange={(a) => update(openActionId, { action: a })}
+          />
+          {images.find((im) => im.id === openActionId)?.action && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="mt-2 h-6 text-[11px] text-destructive"
+              onClick={() => update(openActionId, { action: null })}
+            >
+              Remove tap action
+            </Button>
+          )}
         </div>
       )}
     </div>
