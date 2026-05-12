@@ -800,15 +800,25 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
                     <div className="p-2 text-xs text-muted-foreground">No items.</div>
                   ) : (
                     <div className="divide-y divide-border">
-                      {items.map((it: any, i: number) => (
-                        <div key={i} className="flex items-center justify-between p-2 text-xs">
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium">{it.name || it.title || `Item ${i + 1}`}</div>
-                            {it.qty != null && <div className="text-muted-foreground">Qty: {it.qty}</div>}
+                      {items.map((it: any, i: number) => {
+                        const img = it.image || it.img || it.thumbnail || it.src;
+                        return (
+                          <div key={i} className="flex items-center gap-3 p-2 text-xs">
+                            {img ? (
+                              <img src={img} alt={it.name || it.title || `Item ${i + 1}`} className="h-12 w-12 shrink-0 rounded object-cover border border-border" />
+                            ) : (
+                              <div className="h-12 w-12 shrink-0 rounded border border-border bg-muted flex items-center justify-center text-muted-foreground">
+                                <LucideIcons.Package className="h-4 w-4" />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-medium">{it.name || it.title || `Item ${i + 1}`}</div>
+                              {it.qty != null && <div className="text-muted-foreground">Qty: {it.qty}</div>}
+                            </div>
+                            <div className="font-mono">{d.currency || ""} {it.price ?? ""}</div>
                           </div>
-                          <div className="font-mono">{d.currency || ""} {it.price ?? ""}</div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                   <div className="flex items-center justify-between border-t border-border px-2 py-1 text-xs">
