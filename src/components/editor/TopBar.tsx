@@ -366,6 +366,25 @@ export function TopBar({ saving }: Props) {
         </span>
         <Tooltip>
           <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant={(flyer as any).category === "event" ? "default" : "outline"}
+              onClick={openCategory}
+            >
+              {(flyer as any).category === "event" ? <PartyPopper className="mr-1 h-4 w-4" /> : <Briefcase className="mr-1 h-4 w-4" />}
+              {(flyer as any).category === "event"
+                ? ((flyer as any).event_date ? format(new Date(((flyer as any).event_date as string) + "T00:00:00"), "MMM d") : "Event")
+                : "Business"}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {(flyer as any).category === "event"
+              ? "Event flyer — auto-unpublishes the day after the event"
+              : "Business flyer — stays published until you unpublish"}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button size="sm" variant="outline" onClick={() => setSubscribersOpen(true)}>
               <Users className="mr-1 h-4 w-4" /> Subscribers
             </Button>
