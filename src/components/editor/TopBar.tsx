@@ -11,7 +11,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -30,10 +30,6 @@ import { SubscribersPanel } from "./SubscribersPanel";
 import { PortalLinkDialog } from "./PortalLinkDialog";
 
 interface Props { saving: boolean }
-
-function slugify(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40) + "-" + Math.random().toString(36).slice(2, 7);
-}
 
 // Public origin where the flyer is published. We must NEVER hand out a URL
 // pointing at the Lovable preview sandbox (lovableproject.com / id-preview--*),
@@ -191,15 +187,10 @@ export function TopBar({ saving }: Props) {
     const newStatus = flyer.status === "published" ? "draft" : "published";
     let slug = flyer.public_slug;
     const titleNow = (flyer.title || "").trim();
-    const titleIsReal = titleNow && titleNow.toLowerCase() !== "untitled flyer";
-    // Slug looks stale if missing OR derived from the default "Untitled flyer"
-    // title while the flyer now has a real title. Preserve the original 5-char
-    // suffix when present so the new slug stays unique without a collision check.
-    const looksStale = !slug || (/^untitled-flyer(-[a-z0-9]{4,6})?$/i.test(slug) && titleIsReal);
+    const titleIsReal = isRealFlyerTitle(titleNow);
+    const looksStale = !slug || (flyerSlugLooksUntitled(slug) && titleIsReal);
     if (newStatus === "published" && looksStale) {
-      const suffixMatch = slug?.match(/-([a-z0-9]{4,6})$/i);
-      const base = slugify(titleIsReal ? titleNow : "flyer");
-      slug = suffixMatch ? base.replace(/-[a-z0-9]{4,6}$/, "-" + suffixMatch[1]) : base;
+      slug = slugFromFlyerTitle(titleIsReal ? titleNow : "flyer", slug);
     }
     setFlyer({ status: newStatus, public_slug: slug });
     const { error } = await supabase.from("flyers").update({ status: newStatus, public_slug: slug }).eq("id", flyer.id);
