@@ -22,6 +22,9 @@ export default function Dashboard() {
   const [flyers, setFlyers] = useState<Flyer[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newCategory, setNewCategory] = useState<FlyerCategory>("business");
+  const [newEventDate, setNewEventDate] = useState<Date | undefined>(undefined);
 
   const load = async () => {
     setLoading(true);
