@@ -2302,6 +2302,47 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   );
 }
 
+function GalleryDialog({
+  action, onClose, onZoom,
+}: { action: LayerAction | null; onClose: () => void; onZoom: (url: string) => void }) {
+  const open = !!action;
+  const images = action?.payload.galleryImages || [];
+  const title = action?.payload.galleryTitle || "Photo gallery";
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {images.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No photos in this gallery.</p>
+        ) : (
+          <div className="grid max-h-[70vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+            {images.map((im) => (
+              <button
+                key={im.id}
+                type="button"
+                onClick={() => onZoom(im.url)}
+                className="group overflow-hidden rounded border border-border bg-muted/30 text-left"
+              >
+                <img
+                  src={im.url}
+                  alt={im.caption || ""}
+                  loading="lazy"
+                  className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
+                />
+                {im.caption && (
+                  <div className="px-2 py-1 text-xs text-muted-foreground">{im.caption}</div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CouponDialog({
   action, onClose, onRedeem,
 }: { action: LayerAction | null; onClose: () => void; onRedeem: (url: string) => void }) {
