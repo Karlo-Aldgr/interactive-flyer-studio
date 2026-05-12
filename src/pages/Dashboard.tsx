@@ -132,7 +132,7 @@ export default function Dashboard() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-hero">
               <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-bold">FlyerFlow</span>
+            <span className="font-bold">TapThatFlyer</span>
           </Link>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>

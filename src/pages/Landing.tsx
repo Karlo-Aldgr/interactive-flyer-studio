@@ -23,7 +23,7 @@ export default function Landing() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-hero shadow-glow">
               <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold">FlyerFlow</span>
+            <span className="text-lg font-bold">TapThatFlyer</span>
           </Link>
           <nav className="hidden gap-8 text-sm font-medium text-muted-foreground md:flex">
             <a href="#features" className="hover:text-foreground transition">Features</a>
@@ -56,7 +56,7 @@ export default function Landing() {
               <span className="text-gradient">actually taps</span>.
             </h1>
             <p className="mt-6 max-w-lg text-lg text-muted-foreground">
-              FlyerFlow turns static designs into interactive experiences. Add a button, attach an action — open URLs, capture leads, play videos, call you. Publish in one click with a link and QR.
+              TapThatFlyer turns static designs into interactive experiences. Add a button, attach an action — open URLs, capture leads, play videos, call you. Publish in one click with a link and QR.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="shadow-glow">
@@ -155,7 +155,7 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} FlyerFlow
+        © {new Date().getFullYear()} TapThatFlyer
       </footer>
     </div>
   );

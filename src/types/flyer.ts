@@ -1,4 +1,4 @@
-// FlyerFlow shared domain types
+// TapThatFlyer shared domain types
 
 export type LayerType = "text" | "image" | "icon" | "shape" | "button" | "hotspot";
 

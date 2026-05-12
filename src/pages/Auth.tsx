@@ -74,12 +74,12 @@ export default function Auth() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-hero">
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-bold">FlyerFlow</span>
+          <span className="font-bold">TapThatFlyer</span>
         </Link>
       </div>
 
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-elegant animate-scale-in">
-        <h1 className="font-display text-2xl font-bold">Welcome to FlyerFlow</h1>
+        <h1 className="font-display text-2xl font-bold">Welcome to TapThatFlyer</h1>
         <p className="mt-1 text-sm text-muted-foreground">Sign in or create an account to start designing.</p>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="mt-6">
