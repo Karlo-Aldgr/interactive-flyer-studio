@@ -6,6 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Copy, Download, Share2, RefreshCw, Loader2, ImagePlus, Clipboard } from "lucide-react";
 import { toast } from "sonner";
 
+interface ExtraLink {
+  label: string;
+  url: string;
+  description?: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -20,6 +26,8 @@ interface Props {
   regenerating?: boolean;
   /** When false, hide the share controls and prompt the user to publish first. */
   isPublished?: boolean;
+  /** Optional additional links shown below the primary share link (e.g. a direct-to-flyer link that skips a landing page). */
+  extraLinks?: ExtraLink[];
 }
 
 const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
