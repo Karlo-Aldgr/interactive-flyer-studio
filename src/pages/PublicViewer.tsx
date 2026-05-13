@@ -1322,7 +1322,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   // vertical scrolling if the flyer is taller than the screen.
   const vw = typeof window !== "undefined" ? window.innerWidth : W;
   const vh = typeof window !== "undefined" ? window.innerHeight : H;
-  const fitScale = Math.min(vw / W, vh / H);
+  // Pages configured as full-page links (e.g. landing → flyer) should fill the
+  // entire viewport edge-to-edge rather than letterbox, so the recipient sees
+  // the same framing as the editor canvas.
+  const isLinkedPage = !!page.background?.linkPageId;
+  const fitScale = isLinkedPage
+    ? Math.max(vw / W, vh / H)
+    : Math.min(vw / W, vh / H);
   // Enlarged: fill the longer viewport edge so user can scroll/pan to inspect details.
   // Multiplier gives extra zoom on top of fit-to-screen.
   const enlargedScale = Math.max(vw / W, vh / H) * 1.6;
@@ -1330,7 +1336,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
   return (
     <div
-      className={`flex min-h-screen ${enlarged ? "items-start justify-start" : "items-center justify-center"} overflow-auto`}
+      className={`flex min-h-screen ${enlarged ? "items-start justify-start" : "items-center justify-center"} ${isLinkedPage ? "overflow-hidden" : "overflow-auto"}`}
       style={{ background: page.background.color || "#fff", touchAction: "pinch-zoom" }}
     >
       {previewMode && (
