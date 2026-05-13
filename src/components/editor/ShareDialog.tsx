@@ -242,36 +242,50 @@ export function ShareDialog({
             This link unfurls with your flyer preview in Messenger, WhatsApp, iMessage, etc.
           </div>
           {safeExtraLinks.length > 0 && (
-            <div className="w-full space-y-2 rounded-md border border-border bg-muted/30 p-3">
+            <div className="w-full space-y-3 rounded-md border border-border bg-muted/30 p-3">
               <div className="text-[11px] font-semibold uppercase text-muted-foreground">
                 Other share links
               </div>
-              {safeExtraLinks.map((l) => (
-                <div key={l.label} className="space-y-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-medium">{l.label}</span>
-                    {l.description && (
-                      <span className="text-muted-foreground">{l.description}</span>
-                    )}
+              {safeExtraLinks.map((l, i) => {
+                const canvasId = `share-qr-extra-${i}`;
+                const slug = l.label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+                return (
+                  <div key={l.label} className="space-y-2 border-t border-border/60 pt-3 first:border-t-0 first:pt-0">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-medium">{l.label}</span>
+                      {l.description && (
+                        <span className="text-muted-foreground">{l.description}</span>
+                      )}
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-lg bg-white p-2 shadow-sm shrink-0">
+                        <QRCodeCanvas id={canvasId} value={l.url} size={96} level="M" includeMargin={false} />
+                      </div>
+                      <div className="flex flex-1 flex-col gap-2">
+                        <Input
+                          readOnly
+                          value={l.url}
+                          className="text-xs"
+                          onFocus={(e) => e.target.select()}
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="flex-1" onClick={() => copyExtra(l.label, l.url)}>
+                            <Copy className="mr-1 h-3.5 w-3.5" />
+                            {copiedExtra === l.label ? "Copied" : "Copy"}
+                          </Button>
+                          <Button size="sm" variant="outline" className="flex-1" onClick={() => downloadQR(canvasId, slug)}>
+                            <Download className="mr-1 h-3.5 w-3.5" /> QR
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Input
-                      readOnly
-                      value={l.url}
-                      className="flex-1 text-xs"
-                      onFocus={(e) => e.target.select()}
-                    />
-                    <Button size="sm" variant="outline" onClick={() => copyExtra(l.label, l.url)}>
-                      <Copy className="mr-1 h-3.5 w-3.5" />
-                      {copiedExtra === l.label ? "Copied" : "Copy"}
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           <div className="flex w-full gap-2">
-            <Button size="sm" variant="outline" className="flex-1" onClick={downloadQR}>
+            <Button size="sm" variant="outline" className="flex-1" onClick={() => downloadQR()}>
               <Download className="mr-1 h-3.5 w-3.5" /> Download QR
             </Button>
             <Button size="sm" className="flex-1" onClick={nativeShare}>
