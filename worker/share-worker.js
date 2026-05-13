@@ -155,10 +155,6 @@ export default {
     // Canonical MUST include the query string, otherwise Facebook re-scrapes
     // the bare slug and overrides our per-page image.
     const shareUrl = `${url.origin}/f/${slug}${qs}`;
-    // Canonical = the worker URL itself (with query). If we point canonical at
-    // the live app, Facebook re-scrapes the app's index.html and uses its
-    // static og.png, overriding our per-flyer image.
-    const shareUrl = `${url.origin}/f/${slug}${qs}`;
 
     // Humans → straight to the interactive viewer (with original query).
     if (!isCrawler) {
