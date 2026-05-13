@@ -40,9 +40,7 @@ export function PagesPanel() {
   const setPageBackground = useEditorStore((s) => s.setPageBackground);
   const applyIntroToAllPages = useEditorStore((s) => s.applyIntroToAllPages);
   const replayIntro = useEditorStore((s) => s.replayIntro);
-  const addLayer = useEditorStore((s) => s.addLayer);
-  const updateLayer = useEditorStore((s) => s.updateLayer);
-  const setLayerAction = useEditorStore((s) => s.setLayerAction);
+  const setPageLink = useEditorStore((s) => s.setPageLink);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
