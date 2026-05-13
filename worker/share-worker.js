@@ -35,7 +35,7 @@ async function fetchFlyer(env, slug) {
   }
   const url = `${env.SUPABASE_URL}/rest/v1/flyers?public_slug=eq.${encodeURIComponent(
     slug,
-  )}&status=eq.published&select=id,owner_id,title,public_slug,thumbnail_url&limit=1`;
+  )}&status=eq.published&select=id,owner_id,title,public_slug,thumbnail_url,updated_at&limit=1`;
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 3000);
@@ -63,7 +63,14 @@ async function fetchFlyer(env, slug) {
   }
 }
 
-/** HEAD-probe a URL through the CF edge cache. True only if 2xx + image/* content-type. */
+/** Append a stable cache-buster so Facebook re-fetches regenerated storage images. */
+function versionedImageUrl(url, flyer, pageId, source) {
+  const stamp = encodeURIComponent(String(flyer?.updated_at || flyer?.id || Date.now()));
+  const variant = encodeURIComponent(`${source || "image"}${pageId ? `-${pageId}` : ""}`);
+  return `${url}${url.includes("?") ? "&" : "?"}v=${stamp}&variant=${variant}`;
+}
+
+/** HEAD-probe a URL through the CF edge cache. True for any 2xx; false for 404. */
 async function imageExists(url) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 1500);
@@ -73,9 +80,10 @@ async function imageExists(url) {
       signal: ctrl.signal,
       cf: { cacheTtl: 60, cacheEverything: true },
     });
+    if (res.status === 404) return false;
     if (!res.ok) return false;
     const ct = res.headers.get("content-type") || "";
-    return ct.toLowerCase().startsWith("image/");
+    return !ct || ct.toLowerCase().startsWith("image/");
   } catch {
     return false;
   } finally {
@@ -98,19 +106,21 @@ async function pickImage(flyer, env, pageId) {
     const filename = isLanding ? `${flyer.id}-${pageId}-flyer.jpg` : `${flyer.id}-flyer.jpg`;
     const candidate = `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${filename}`;
     if (await imageExists(candidate)) {
+      const source = isLanding ? "landing-page-variant" : "flyer-variant";
       return {
-        url: candidate,
-        source: isLanding ? "landing-page-variant" : "flyer-variant",
+        url: versionedImageUrl(candidate, flyer, pageId, source),
+        source,
       };
     }
     if (cleanThumb) {
+      const source = isLanding ? "landing-thumbnail-fallback" : "flyer-thumbnail-fallback";
       return {
-        url: cleanThumb,
-        source: isLanding ? "landing-thumbnail-fallback" : "flyer-thumbnail-fallback",
+        url: versionedImageUrl(cleanThumb, flyer, pageId, source),
+        source,
       };
     }
   } else if (cleanThumb) {
-    return { url: cleanThumb, source: "thumbnail-only" };
+    return { url: versionedImageUrl(cleanThumb, flyer, pageId, "thumbnail-only"), source: "thumbnail-only" };
   }
 
   return { url: FALLBACK_IMAGE, source: "fallback" };
@@ -194,7 +204,7 @@ export default {
       headers: {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "public, max-age=300",
-        "x-share-worker": "v5",
+        "x-share-worker": "v6",
         "x-flyer-found": flyer ? "true" : "false",
         "x-image-source": imageSource,
         "x-link-kind": isLanding ? "landing" : "flyer",
