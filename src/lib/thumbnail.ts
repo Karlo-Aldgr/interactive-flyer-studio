@@ -137,6 +137,30 @@ export async function uploadFlyerVariantFromDataUrl(dataUrl: string, flyerId: st
   return data.publicUrl;
 }
 
+/**
+ * Upload a per-page landing variant to `${owner}/${flyerId}-${pageId}-flyer.jpg`.
+ * The Cloudflare share Worker serves this image when the share URL has
+ * `?page=<pageId>`. Does NOT touch the flyers table.
+ */
+export async function uploadLandingVariantFromDataUrl(
+  dataUrl: string,
+  flyerId: string,
+  pageId: string,
+  flyerW: number,
+  flyerH: number
+): Promise<string> {
+  const blob = await composeSocialImage(dataUrl, flyerW, flyerH, "#ffffff");
+  const { data: authData, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !authData.user) throw new Error("Sign in required to upload the preview image.");
+  const path = `${authData.user.id}/${flyerId}-${pageId}-flyer.jpg`;
+  const { error: uploadErr } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, blob, { contentType: "image/jpeg", upsert: true, cacheControl: "3600" });
+  if (uploadErr) throw new Error("Upload failed: " + uploadErr.message);
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function uploadManualThumbnail(file: File, flyerId: string): Promise<string> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Please choose an image file.");
