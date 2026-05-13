@@ -1533,14 +1533,6 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         })()}
       </div>
 
-      {/* Pagination */}
-      {pages.length > 1 && (
-        <div className="fixed bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 shadow-elegant backdrop-blur">
-          <Button variant="ghost" size="sm" disabled={pageIndex === 0} onClick={() => setPageIndex((i) => i - 1)}>Prev</Button>
-          <span className="text-xs">{pageIndex + 1} / {pages.length}</span>
-          <Button variant="ghost" size="sm" disabled={pageIndex === pages.length - 1} onClick={() => setPageIndex((i) => i + 1)}>Next</Button>
-        </div>
-      )}
 
       {/* Popup (also used for buy_ticket) */}
       <Dialog open={!!popup} onOpenChange={(v) => !v && setPopup(null)}>
