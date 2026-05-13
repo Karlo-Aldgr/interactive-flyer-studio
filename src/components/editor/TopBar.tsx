@@ -138,7 +138,7 @@ export function TopBar({ saving }: Props) {
 
   async function ensureThumbnail(force = false) {
     if (!flyer) return;
-    if (!force && flyer.thumbnail_url) return;
+    if (!force && flyer.thumbnail_url && flyerPreviewThumb) return;
     setRegenerating(true);
     try {
       const store = useEditorStore.getState();
@@ -147,13 +147,14 @@ export function TopBar({ saving }: Props) {
       const landingPage = store.pages.find((p) => p.background?.linkPageId);
       const sourcePage = landingPage ?? store.pages[0];
       if (!sourcePage) return;
+      // Capture the LANDING page first (this also uploads → social thumbnail).
       if (store.selectedPageId !== sourcePage.id) {
         store.selectPage(sourcePage.id);
         await new Promise((r) => setTimeout(r, 300));
       } else {
         await new Promise((r) => setTimeout(r, 80));
       }
-      const stage = useEditorStore.getState().stageRef;
+      let stage = useEditorStore.getState().stageRef;
       if (!stage) {
         toast.error("Couldn't capture the page. Try again.");
         return;
@@ -175,6 +176,37 @@ export function TopBar({ saving }: Props) {
       } catch (e: any) {
         console.error("[ensureThumbnail]", e);
         toast.error(e?.message || "Could not generate preview");
+      }
+
+      // Capture the FLYER target page locally (no upload — preview only).
+      const linkedId = sourcePage.background?.linkPageId;
+      const flyerPage = linkedId
+        ? store.pages.find((p) => p.id === linkedId)
+        : store.pages.find((p) => p.id !== sourcePage.id);
+      if (flyerPage) {
+        store.selectPage(flyerPage.id);
+        await new Promise((r) => setTimeout(r, 300));
+        stage = useEditorStore.getState().stageRef;
+        if (stage) {
+          try {
+            const fW = flyerPage.background?.size?.width ?? flyer.settings.width;
+            const fH = flyerPage.background?.size?.height ?? flyer.settings.height;
+            const data = stageToSocialDataURL(
+              stage,
+              fW,
+              fH,
+              flyerPage.background?.color || flyer.settings.background || "#ffffff"
+            );
+            if (data) setFlyerPreviewThumb(data);
+          } catch (e) {
+            console.warn("[flyer preview capture] failed", e);
+          }
+        }
+        // Restore landing as the active page so the editor view doesn't jump.
+        store.selectPage(sourcePage.id);
+      } else {
+        // No separate flyer page → show the same image in both slots.
+        setFlyerPreviewThumb(undefined);
       }
     } finally {
       setRegenerating(false);
