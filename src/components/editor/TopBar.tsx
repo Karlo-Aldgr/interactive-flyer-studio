@@ -271,6 +271,22 @@ export function TopBar({ saving }: Props) {
       ? `${shareOrigin.replace(/\/$/, "")}/f/${flyer.public_slug}`
       : viewerUrl;
 
+  // If any page is configured as a "tap-anywhere" link (typically a landing
+  // page that points into the flyer), expose a second share link that opens
+  // the linked target page directly via ?page=<id>.
+  const pagesForLinks = useEditorStore.getState().pages;
+  const landingPage = pagesForLinks.find((p) => p.background?.linkPageId);
+  const directExtraLinks =
+    landingPage && socialUrl
+      ? [
+          {
+            label: "Direct to flyer (skips landing)",
+            url: `${socialUrl}${socialUrl.includes("?") ? "&" : "?"}page=${landingPage.background!.linkPageId}`,
+            description: "No landing page intro",
+          },
+        ]
+      : undefined;
+
   return (
     <header className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
       <Button asChild variant="ghost" size="sm">
