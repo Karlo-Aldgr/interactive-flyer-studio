@@ -64,16 +64,30 @@ async function fetchFlyer(env, slug) {
   }
 }
 
-/** Pick the best og:image URL and report which source we used. */
-function pickImage(flyer, env) {
-  if (flyer?.thumbnail_url) {
-    return { url: String(flyer.thumbnail_url).split("?")[0], source: "thumbnail" };
-  }
-  if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
-    return {
-      url: `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}.jpg`,
-      source: "constructed",
-    };
+/**
+ * Pick the best og:image URL and report which source we used.
+ * If `isLanding` is true (share URL has ?page=...), use the landing-page
+ * thumbnail (flyers.thumbnail_url). Otherwise (direct flyer link) use the
+ * sibling "-flyer.jpg" variant uploaded by the editor.
+ */
+function pickImage(flyer, env, isLanding) {
+  if (isLanding) {
+    if (flyer?.thumbnail_url) {
+      return { url: String(flyer.thumbnail_url).split("?")[0], source: "landing-thumbnail" };
+    }
+    if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
+      return {
+        url: `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}.jpg`,
+        source: "landing-constructed",
+      };
+    }
+  } else {
+    if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
+      return {
+        url: `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}-flyer.jpg`,
+        source: "flyer-variant",
+      };
+    }
   }
   return { url: FALLBACK_IMAGE, source: "fallback" };
 }
@@ -130,31 +144,38 @@ export default {
       return new Response("Not found", { status: 404 });
     }
     const slug = match[1];
-    const viewerUrl = `${appOrigin}/f/${slug}`;
-    // Canonical = the worker URL itself. If we point canonical at the live app,
-    // Facebook re-scrapes the app's index.html and uses its static og.png,
-    // overriding our per-flyer image.
-    const shareUrl = `${url.origin}/f/${slug}`;
+    // Preserve incoming query string so ?page=<id> survives the redirect /
+    // OG fetch round-trip.
+    const qs = url.search || "";
+    const isLanding = url.searchParams.has("page");
+    const viewerUrl = `${appOrigin}/f/${slug}${qs}`;
+    // Canonical = the worker URL itself (with query). If we point canonical at
+    // the live app, Facebook re-scrapes the app's index.html and uses its
+    // static og.png, overriding our per-flyer image.
+    const shareUrl = `${url.origin}/f/${slug}${qs}`;
 
-    // Humans → straight to the interactive viewer.
+    // Humans → straight to the interactive viewer (with original query).
     if (!isCrawler) {
       return Response.redirect(viewerUrl, 302);
     }
 
     // Crawlers → always serve OG HTML, even if Supabase is down.
     const flyer = await fetchFlyer(env, slug);
-    const { url: image, source: imageSource } = pickImage(flyer, env);
+    const { url: image, source: imageSource } = pickImage(flyer, env, isLanding);
     const title = flyer?.title || "Flyer";
-    const description = `View "${title}" — interactive flyer.`;
+    const description = isLanding
+      ? `View "${title}" — interactive flyer.`
+      : `Open "${title}" — tap to interact.`;
 
     return new Response(ogHtml({ title, description, image, canonical: shareUrl }), {
       status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "public, max-age=300",
-        "x-share-worker": "v3",
+        "x-share-worker": "v4",
         "x-flyer-found": flyer ? "true" : "false",
         "x-image-source": imageSource,
+        "x-link-kind": isLanding ? "landing" : "flyer",
       },
     });
   },
