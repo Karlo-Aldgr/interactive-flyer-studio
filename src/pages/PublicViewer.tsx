@@ -50,7 +50,7 @@ function getViewerSessionId(): string {
   }
 }
 
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Stage, Layer as KLayer, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage, Group } from "react-konva";
 import Konva from "konva";
 import useImage from "use-image";
