@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play } from "lucide-react";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
 
@@ -23,10 +24,13 @@ const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
 ];
 
 export function PagesPanel() {
+  const flyer = useEditorStore((s) => s.flyer);
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectPage = useEditorStore((s) => s.selectPage);
   const addPage = useEditorStore((s) => s.addPage);
+  const addLandingPage = useEditorStore((s) => s.addLandingPage);
+  const setPageSize = useEditorStore((s) => s.setPageSize);
   const deletePage = useEditorStore((s) => s.deletePage);
   const duplicatePage = useEditorStore((s) => s.duplicatePage);
   const renamePage = useEditorStore((s) => s.renamePage);
