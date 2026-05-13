@@ -298,13 +298,20 @@ export function TopBar({ saving }: Props) {
           try {
             const captureW = sourcePage.background?.size?.width ?? flyer.settings.width;
             const captureH = sourcePage.background?.size?.height ?? flyer.settings.height;
-            await generateAndUploadThumbnail(
-              stage,
-              flyer.id,
-              captureW,
-              captureH,
-              sourcePage.background?.color || flyer.settings.background || "#ffffff"
-            );
+            const bg = sourcePage.background?.color || flyer.settings.background || "#ffffff";
+            await generateAndUploadThumbnail(stage, flyer.id, captureW, captureH, bg);
+            if (landingPage) {
+              try {
+                const landingData = stageToSocialDataURL(stage, captureW, captureH, bg);
+                if (landingData) {
+                  await uploadLandingVariantFromDataUrl(
+                    landingData, flyer.id, sourcePage.id, captureW, captureH
+                  );
+                }
+              } catch (e) {
+                console.warn("[publish] landing variant upload failed", e);
+              }
+            }
           } catch (e) {
             console.warn("[publish] thumbnail capture failed", e);
           }
