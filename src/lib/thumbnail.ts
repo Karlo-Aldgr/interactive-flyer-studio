@@ -17,22 +17,10 @@ export function thumbnailPublicUrl(ownerId: string, flyerId: string) {
   return data.publicUrl;
 }
 
-function drawContainedImage(img: HTMLImageElement, _background = "#ffffff"): Blob | PromiseLike<Blob> {
-  // Preserve the source image's own aspect ratio — no padding.
-  const { w, h } = fitDims(img.naturalWidth, img.naturalHeight);
-  const out = document.createElement("canvas");
-  out.width = w;
-  out.height = h;
-  const ctx = out.getContext("2d")!;
-  ctx.drawImage(img, 0, 0, w, h);
-
-  return new Promise<Blob>((resolve, reject) => {
-    out.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error("canvas toBlob failed"))),
-      "image/jpeg",
-      0.9
-    );
-  });
+function drawContainedImage(img: HTMLImageElement, background = "#000000"): Blob | PromiseLike<Blob> {
+  // Manual share uploads must also be Facebook-safe, so store them as a
+  // 1200×630 card instead of preserving a portrait aspect ratio.
+  return composeSocialCard(img.src, img.naturalWidth, img.naturalHeight, background);
 }
 
 /**
@@ -271,7 +259,10 @@ export async function generateAndUploadThumbnail(
   }
   if (!raw) throw new Error("Canvas returned an empty image.");
 
-  const blob = await composeSocialImage(raw, flyerW, flyerH, background);
+  // Store the canonical `thumbnail_url` as the same 1200×630 social card that
+  // Facebook requires. This makes the Worker fallback safe even when a newer
+  // per-page/direct variant has not been generated yet.
+  const blob = await composeSocialCard(raw, flyerW, flyerH, background);
   return uploadThumbnailBlob(blob, flyerId);
 }
 
