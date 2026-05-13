@@ -659,6 +659,8 @@ interface PublicViewerProps {
 
 export default function PublicViewer({ previewMode = false }: PublicViewerProps) {
   const params = useParams();
+  const [searchParams] = useSearchParams();
+  const startPageParam = searchParams.get("page");
   const slug = params.slug;
   const flyerId = params.flyerId;
   const [loading, setLoading] = useState(true);
