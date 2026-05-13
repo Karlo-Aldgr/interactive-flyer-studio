@@ -52,6 +52,7 @@ interface EditorState {
   duplicatePage: (id: string) => void;
   reorderPages: (orderedIds: string[]) => void;
   setPageBackground: (id: string, color: string) => void;
+  setPageLink: (id: string, linkPageId: string | null) => void;
   setPageIntro: (id: string, intro: PageIntro | null) => void;
   applyIntroToAllPages: (intro: PageIntro | null) => void;
   introReplayKey: number;
