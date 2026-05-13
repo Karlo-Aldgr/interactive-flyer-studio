@@ -99,11 +99,12 @@ export function ShareDialog({
     setTimeout(() => setCopied(false), 1500);
   }
 
-  function downloadQR() {
-    const canvas = document.getElementById("share-qr-canvas") as HTMLCanvasElement | null;
+  function downloadQR(canvasId = "share-qr-canvas", suffix = "") {
+    const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
     if (!canvas) return;
     const link = document.createElement("a");
-    link.download = `${(title || "flyer").replace(/[^a-z0-9]+/gi, "-")}-qr.png`;
+    const base = (title || "flyer").replace(/[^a-z0-9]+/gi, "-");
+    link.download = `${base}${suffix ? `-${suffix}` : ""}-qr.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
   }
