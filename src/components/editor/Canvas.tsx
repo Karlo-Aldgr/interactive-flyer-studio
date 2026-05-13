@@ -147,8 +147,8 @@ export function Canvas() {
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
 
   const page = pages.find((p) => p.id === selectedPageId);
-  const W = flyer?.settings.width ?? 900;
-  const H = flyer?.settings.height ?? 1200;
+  const W = page?.background?.size?.width ?? flyer?.settings.width ?? 900;
+  const H = page?.background?.size?.height ?? flyer?.settings.height ?? 1200;
 
   // Crop rect state (in canvas coords)
   const [cropRect, setCropRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
