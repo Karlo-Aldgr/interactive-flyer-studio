@@ -310,24 +310,6 @@ export function TopBar({ saving }: Props) {
         }
       }
     }
-            if (landingPage) {
-              try {
-                const landingData = stageToSocialDataURL(stage, captureW, captureH, bg);
-                if (landingData) {
-                  await uploadLandingVariantFromDataUrl(
-                    landingData, flyer.id, sourcePage.id, captureW, captureH
-                  );
-                }
-              } catch (e) {
-                console.warn("[publish] landing variant upload failed", e);
-              }
-            }
-          } catch (e) {
-            console.warn("[publish] thumbnail capture failed", e);
-          }
-        }
-      }
-    }
   }
 
   function applyResize() {
