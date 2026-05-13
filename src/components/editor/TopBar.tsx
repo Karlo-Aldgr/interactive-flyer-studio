@@ -676,7 +676,7 @@ export function TopBar({ saving }: Props) {
       <ShareDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
-        displayUrl={viewerUrl}
+        displayUrl={landingShareUrl || viewerUrl}
         socialUrl={socialUrl}
         title={flyer.title}
         thumbnailUrl={localThumbnail ?? flyer.thumbnail_url ?? undefined}
@@ -684,7 +684,11 @@ export function TopBar({ saving }: Props) {
         onUploadThumbnail={uploadSocialPreview}
         regenerating={regenerating}
         isPublished={flyer.status === "published" && !!flyer.public_slug}
-        extraLinks={directExtraLinks}
+        flyerPreview={flyerPreviewSection}
+        landingPreviewMeta={{
+          label: "Landing page link",
+          description: "Opens the landing page first.",
+        }}
       />
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
