@@ -224,7 +224,7 @@ export function TopBar({ saving }: Props) {
               // it for direct-flyer links (no ?page= param) instead of the
               // landing-page thumbnail.
               try {
-                await uploadFlyerVariantFromDataUrl(data, flyer.id, fW, fH);
+                await uploadFlyerVariantFromDataUrl(data, flyer.id, fW, fH, flyerPage.background?.color || flyer.settings.background || "#000000");
               } catch (e) {
                 console.warn("[flyer variant upload] failed", e);
               }
