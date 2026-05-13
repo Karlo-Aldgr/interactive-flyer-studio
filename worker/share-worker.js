@@ -16,7 +16,6 @@ const CRAWLER_RE =
   /(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|skypeuripreview|pinterest|redditbot|applebot|bingbot|googlebot|embedly|quora|vkshare|w3c_validator|bot|crawler|spider|preview)/i;
 
 // Guaranteed absolute https URL — WhatsApp requires this for og:image.
-// Replace with a branded image in flyer-thumbnails bucket if you want.
 const FALLBACK_IMAGE = "https://interactive-flyer-studio.lovable.app/og.png";
 
 function escapeHtml(s) {
@@ -35,7 +34,7 @@ async function fetchFlyer(env, slug) {
     return null;
   }
   const url = `${env.SUPABASE_URL}/rest/v1/flyers?public_slug=eq.${encodeURIComponent(
-    slug
+    slug,
   )}&status=eq.published&select=id,owner_id,title,public_slug,thumbnail_url&limit=1`;
 
   const ctrl = new AbortController();
@@ -93,14 +92,10 @@ async function imageExists(url) {
  */
 async function pickImage(flyer, env, pageId) {
   const isLanding = !!pageId;
-  const cleanThumb = flyer?.thumbnail_url
-    ? String(flyer.thumbnail_url).split("?")[0]
-    : null;
+  const cleanThumb = flyer?.thumbnail_url ? String(flyer.thumbnail_url).split("?")[0] : null;
 
   if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
-    const filename = isLanding
-      ? `${flyer.id}-${pageId}-flyer.jpg`
-      : `${flyer.id}-flyer.jpg`;
+    const filename = isLanding ? `${flyer.id}-${pageId}-flyer.jpg` : `${flyer.id}-flyer.jpg`;
     const candidate = `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${filename}`;
     if (await imageExists(candidate)) {
       return {
@@ -192,16 +187,14 @@ export default {
     const flyer = await fetchFlyer(env, slug);
     const { url: image, source: imageSource } = await pickImage(flyer, env, pageId);
     const title = flyer?.title || "Flyer";
-    const description = isLanding
-      ? `View "${title}" — interactive flyer.`
-      : `Open "${title}" — tap to interact.`;
+    const description = isLanding ? `View "${title}" — interactive flyer.` : `Open "${title}" — tap to interact.`;
 
     return new Response(ogHtml({ title, description, image, canonical: shareUrl }), {
       status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "public, max-age=300",
-        "x-share-worker": "v4",
+        "x-share-worker": "v5",
         "x-flyer-found": flyer ? "true" : "false",
         "x-image-source": imageSource,
         "x-link-kind": isLanding ? "landing" : "flyer",
