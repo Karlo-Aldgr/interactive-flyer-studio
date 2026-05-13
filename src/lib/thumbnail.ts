@@ -70,6 +70,7 @@ export async function composeSocialImage(
   const img = await loadImage(rawDataUrl);
 
   // Output the flyer at its own aspect ratio — no letterbox padding.
+  // Used for the in-app `thumbnail_url` (gallery / dashboard previews).
   const { w, h } = fitDims(flyerW, flyerH);
   const out = document.createElement("canvas");
   out.width = w;
@@ -82,6 +83,52 @@ export async function composeSocialImage(
       (b) => (b ? resolve(b) : reject(new Error("canvas toBlob failed"))),
       "image/jpeg",
       0.85
+    );
+  });
+}
+
+/**
+ * Compose a Facebook/WhatsApp-friendly 1200x630 social card. The flyer is
+ * rendered "contained" (letterboxed) on a solid background so portrait flyers
+ * still trigger Facebook's large-image link preview (which requires the image
+ * to be at least 600x315 and roughly 1.91:1).
+ */
+export async function composeSocialCard(
+  rawDataUrl: string,
+  flyerW: number,
+  flyerH: number,
+  background: string
+): Promise<Blob> {
+  const CARD_W = 1200;
+  const CARD_H = 630;
+  const img = await loadImage(rawDataUrl);
+
+  const out = document.createElement("canvas");
+  out.width = CARD_W;
+  out.height = CARD_H;
+  const ctx = out.getContext("2d")!;
+
+  // Background fill — use the flyer's own background so letterbox bars blend in.
+  ctx.fillStyle = background || "#000000";
+  ctx.fillRect(0, 0, CARD_W, CARD_H);
+
+  // Contain-fit the flyer inside the card.
+  const srcW = img.naturalWidth || flyerW;
+  const srcH = img.naturalHeight || flyerH;
+  const scale = Math.min(CARD_W / srcW, CARD_H / srcH);
+  const drawW = Math.round(srcW * scale);
+  const drawH = Math.round(srcH * scale);
+  const dx = Math.round((CARD_W - drawW) / 2);
+  const dy = Math.round((CARD_H - drawH) / 2);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, dx, dy, drawW, drawH);
+
+  return await new Promise<Blob>((resolve, reject) => {
+    out.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("canvas toBlob failed"))),
+      "image/jpeg",
+      0.88
     );
   });
 }
@@ -123,9 +170,19 @@ async function uploadThumbnailBlob(blob: Blob, flyerId: string): Promise<string>
  * (e.g. `${owner}/${flyerId}-flyer.jpg`). Does NOT touch the flyers table — the
  * landing-page image stays as the canonical `thumbnail_url`. The share Worker
  * picks this URL when the share link has no `?page=` parameter (direct flyer link).
+ *
+ * Output is a 1200x630 social card (flyer letterboxed on its background) so
+ * Facebook/Messenger/WhatsApp render the large hero preview instead of the
+ * tiny left-side thumbnail card.
  */
-export async function uploadFlyerVariantFromDataUrl(dataUrl: string, flyerId: string, flyerW: number, flyerH: number): Promise<string> {
-  const blob = await composeSocialImage(dataUrl, flyerW, flyerH, "#ffffff");
+export async function uploadFlyerVariantFromDataUrl(
+  dataUrl: string,
+  flyerId: string,
+  flyerW: number,
+  flyerH: number,
+  background: string = "#000000"
+): Promise<string> {
+  const blob = await composeSocialCard(dataUrl, flyerW, flyerH, background);
   const { data: authData, error: authErr } = await supabase.auth.getUser();
   if (authErr || !authData.user) throw new Error("Sign in required to upload the preview image.");
   const path = `${authData.user.id}/${flyerId}-flyer.jpg`;
@@ -141,15 +198,18 @@ export async function uploadFlyerVariantFromDataUrl(dataUrl: string, flyerId: st
  * Upload a per-page landing variant to `${owner}/${flyerId}-${pageId}-flyer.jpg`.
  * The Cloudflare share Worker serves this image when the share URL has
  * `?page=<pageId>`. Does NOT touch the flyers table.
+ *
+ * Output is a 1200x630 social card (see `uploadFlyerVariantFromDataUrl`).
  */
 export async function uploadLandingVariantFromDataUrl(
   dataUrl: string,
   flyerId: string,
   pageId: string,
   flyerW: number,
-  flyerH: number
+  flyerH: number,
+  background: string = "#000000"
 ): Promise<string> {
-  const blob = await composeSocialImage(dataUrl, flyerW, flyerH, "#ffffff");
+  const blob = await composeSocialCard(dataUrl, flyerW, flyerH, background);
   const { data: authData, error: authErr } = await supabase.auth.getUser();
   if (authErr || !authData.user) throw new Error("Sign in required to upload the preview image.");
   const path = `${authData.user.id}/${flyerId}-${pageId}-flyer.jpg`;
@@ -160,7 +220,6 @@ export async function uploadLandingVariantFromDataUrl(
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }
-
 export async function uploadManualThumbnail(file: File, flyerId: string): Promise<string> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Please choose an image file.");
