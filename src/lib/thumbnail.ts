@@ -170,9 +170,19 @@ async function uploadThumbnailBlob(blob: Blob, flyerId: string): Promise<string>
  * (e.g. `${owner}/${flyerId}-flyer.jpg`). Does NOT touch the flyers table — the
  * landing-page image stays as the canonical `thumbnail_url`. The share Worker
  * picks this URL when the share link has no `?page=` parameter (direct flyer link).
+ *
+ * Output is a 1200x630 social card (flyer letterboxed on its background) so
+ * Facebook/Messenger/WhatsApp render the large hero preview instead of the
+ * tiny left-side thumbnail card.
  */
-export async function uploadFlyerVariantFromDataUrl(dataUrl: string, flyerId: string, flyerW: number, flyerH: number): Promise<string> {
-  const blob = await composeSocialImage(dataUrl, flyerW, flyerH, "#ffffff");
+export async function uploadFlyerVariantFromDataUrl(
+  dataUrl: string,
+  flyerId: string,
+  flyerW: number,
+  flyerH: number,
+  background: string = "#000000"
+): Promise<string> {
+  const blob = await composeSocialCard(dataUrl, flyerW, flyerH, background);
   const { data: authData, error: authErr } = await supabase.auth.getUser();
   if (authErr || !authData.user) throw new Error("Sign in required to upload the preview image.");
   const path = `${authData.user.id}/${flyerId}-flyer.jpg`;
@@ -188,15 +198,18 @@ export async function uploadFlyerVariantFromDataUrl(dataUrl: string, flyerId: st
  * Upload a per-page landing variant to `${owner}/${flyerId}-${pageId}-flyer.jpg`.
  * The Cloudflare share Worker serves this image when the share URL has
  * `?page=<pageId>`. Does NOT touch the flyers table.
+ *
+ * Output is a 1200x630 social card (see `uploadFlyerVariantFromDataUrl`).
  */
 export async function uploadLandingVariantFromDataUrl(
   dataUrl: string,
   flyerId: string,
   pageId: string,
   flyerW: number,
-  flyerH: number
+  flyerH: number,
+  background: string = "#000000"
 ): Promise<string> {
-  const blob = await composeSocialImage(dataUrl, flyerW, flyerH, "#ffffff");
+  const blob = await composeSocialCard(dataUrl, flyerW, flyerH, background);
   const { data: authData, error: authErr } = await supabase.auth.getUser();
   if (authErr || !authData.user) throw new Error("Sign in required to upload the preview image.");
   const path = `${authData.user.id}/${flyerId}-${pageId}-flyer.jpg`;
@@ -207,7 +220,6 @@ export async function uploadLandingVariantFromDataUrl(
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }
-
 export async function uploadManualThumbnail(file: File, flyerId: string): Promise<string> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Please choose an image file.");
