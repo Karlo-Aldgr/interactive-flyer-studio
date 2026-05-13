@@ -81,6 +81,7 @@ export function TopBar({ saving }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
+  const [flyerPreviewThumb, setFlyerPreviewThumb] = useState<string | undefined>(undefined);
   const [payOpen, setPayOpen] = useState(false);
   const [introAudioOpen, setIntroAudioOpen] = useState(false);
   const [subscribersOpen, setSubscribersOpen] = useState(false);
