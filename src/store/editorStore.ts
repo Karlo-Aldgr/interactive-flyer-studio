@@ -311,6 +311,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  setPageLink: (id, linkPageId) => {
+    const s = get();
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) =>
+        p.id === id
+          ? { ...p, background: { ...p.background, linkPageId: linkPageId || undefined } }
+          : p
+      ),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
   setPageIntro: (id, intro) => {
     const s = get();
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
