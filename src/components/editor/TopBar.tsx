@@ -15,7 +15,7 @@ import { cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { generateAndUploadThumbnail, uploadManualThumbnail, stageToSocialDataURL, uploadFlyerVariantFromDataUrl } from "@/lib/thumbnail";
+import { generateAndUploadThumbnail, uploadManualThumbnail, stageToSocialDataURL, uploadFlyerVariantFromDataUrl, uploadLandingVariantFromDataUrl } from "@/lib/thumbnail";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -172,6 +172,26 @@ export function TopBar({ saving }: Props) {
         setLocalThumbnail(url);
         const cleanUrl = url.split("?")[0];
         setFlyer({ thumbnail_url: cleanUrl });
+        // If this source page is a landing page, also upload it under the
+        // per-page variant path so the share Worker can serve it for
+        // ?page=<id> share links.
+        if (landingPage) {
+          try {
+            const landingData = stageToSocialDataURL(
+              stage,
+              captureW,
+              captureH,
+              sourcePage.background?.color || flyer.settings.background || "#ffffff"
+            );
+            if (landingData) {
+              await uploadLandingVariantFromDataUrl(
+                landingData, flyer.id, sourcePage.id, captureW, captureH
+              );
+            }
+          } catch (e) {
+            console.warn("[landing variant upload] failed", e);
+          }
+        }
         if (force) toast.success("Social preview updated");
       } catch (e: any) {
         console.error("[ensureThumbnail]", e);
@@ -278,13 +298,20 @@ export function TopBar({ saving }: Props) {
           try {
             const captureW = sourcePage.background?.size?.width ?? flyer.settings.width;
             const captureH = sourcePage.background?.size?.height ?? flyer.settings.height;
-            await generateAndUploadThumbnail(
-              stage,
-              flyer.id,
-              captureW,
-              captureH,
-              sourcePage.background?.color || flyer.settings.background || "#ffffff"
-            );
+            const bg = sourcePage.background?.color || flyer.settings.background || "#ffffff";
+            await generateAndUploadThumbnail(stage, flyer.id, captureW, captureH, bg);
+            if (landingPage) {
+              try {
+                const landingData = stageToSocialDataURL(stage, captureW, captureH, bg);
+                if (landingData) {
+                  await uploadLandingVariantFromDataUrl(
+                    landingData, flyer.id, sourcePage.id, captureW, captureH
+                  );
+                }
+              } catch (e) {
+                console.warn("[publish] landing variant upload failed", e);
+              }
+            }
           } catch (e) {
             console.warn("[publish] thumbnail capture failed", e);
           }
