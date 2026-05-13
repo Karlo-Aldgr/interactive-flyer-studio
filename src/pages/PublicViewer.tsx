@@ -805,10 +805,19 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       }));
       setFlyer(f as unknown as Flyer);
       setPages(mapped);
-      // Honor ?page=<id> to deep-link past a landing page (or any page).
+      // Honor ?page=<id> to deep-link to a specific page. Otherwise, if any
+      // page is configured as a tap-anywhere landing (linkPageId set), skip
+      // it on initial load and open the linked target directly — the landing
+      // exists only to drive the social share preview.
       if (startPageParam) {
         const idx = mapped.findIndex((p) => p.id === startPageParam);
         if (idx >= 0) setPageIndex(idx);
+      } else {
+        const landing = mapped.find((p) => p.background?.linkPageId);
+        if (landing?.background?.linkPageId) {
+          const idx = mapped.findIndex((p) => p.id === landing.background!.linkPageId);
+          if (idx >= 0) setPageIndex(idx);
+        }
       }
       setLoading(false);
 
