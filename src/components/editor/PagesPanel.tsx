@@ -313,11 +313,6 @@ function PageSizeSection({
   const [h, setH] = useState(currentH);
   const [mode, setMode] = useState<"resize" | "scale" | "crop">("scale");
 
-  // Sync when active page changes
-  if (w !== currentW && pageId) {
-    // noop — local edits allowed
-  }
-
   return (
     <div className="space-y-3 border-t border-border bg-muted/20 p-3">
       <div className="flex items-center justify-between">
