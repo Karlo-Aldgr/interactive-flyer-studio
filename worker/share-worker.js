@@ -149,8 +149,12 @@ export default {
     // Preserve incoming query string so ?page=<id> survives the redirect /
     // OG fetch round-trip.
     const qs = url.search || "";
-    const isLanding = url.searchParams.has("page");
+    const pageId = url.searchParams.get("page");
+    const isLanding = !!pageId;
     const viewerUrl = `${appOrigin}/f/${slug}${qs}`;
+    // Canonical MUST include the query string, otherwise Facebook re-scrapes
+    // the bare slug and overrides our per-page image.
+    const shareUrl = `${url.origin}/f/${slug}${qs}`;
     // Canonical = the worker URL itself (with query). If we point canonical at
     // the live app, Facebook re-scrapes the app's index.html and uses its
     // static og.png, overriding our per-flyer image.
