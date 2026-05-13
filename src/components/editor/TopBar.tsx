@@ -15,7 +15,7 @@ import { cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { generateAndUploadThumbnail, uploadManualThumbnail } from "@/lib/thumbnail";
+import { generateAndUploadThumbnail, uploadManualThumbnail, stageToSocialDataURL } from "@/lib/thumbnail";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
