@@ -312,20 +312,22 @@ export function TopBar({ saving }: Props) {
       ? `${shareOrigin.replace(/\/$/, "")}/f/${flyer.public_slug}`
       : viewerUrl;
 
-  // If any page is configured as a tap-anywhere landing page, the default
-  // share URL auto-skips it. Expose a second link that actually opens the
-  // landing for preview/QA via ?page=<landingId>.
+  // If any page is configured as a tap-anywhere landing page, build a second
+  // share link that opens the landing itself (?page=<landingId>). The primary
+  // socialUrl auto-skips landing → opens the flyer directly.
   const landingPage = pagesForLinks.find((p) => p.background?.linkPageId);
-  const directExtraLinks =
+  const landingShareUrl =
     landingPage && socialUrl
-      ? [
-          {
-            label: "Open landing page",
-            url: `${socialUrl}${socialUrl.includes("?") ? "&" : "?"}page=${landingPage.id}`,
-            description: "Preview the landing itself",
-          },
-        ]
-      : undefined;
+      ? `${socialUrl}${socialUrl.includes("?") ? "&" : "?"}page=${landingPage.id}`
+      : "";
+  const flyerPreviewSection = landingPage
+    ? {
+        label: "Direct flyer link",
+        description: "Skips the landing — opens the flyer.",
+        thumbnailUrl: flyerPreviewThumb,
+        url: socialUrl,
+      }
+    : undefined;
 
   return (
     <header className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
