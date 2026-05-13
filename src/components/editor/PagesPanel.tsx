@@ -219,6 +219,44 @@ export function PagesPanel() {
         />
       )}
 
+      {activePage?.background?.size && pages.length > 1 && (
+        <div className="space-y-2 border-t border-border bg-muted/20 p-3">
+          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
+            <MousePointerClick className="h-3.5 w-3.5" />
+            Quick setup
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Add a CTA button on this landing page that links to one of your flyer pages.
+          </p>
+          {pages.filter((p) => p.id !== activePage.id).length === 1 ? (
+            <Button
+              size="sm"
+              className="h-8 w-full text-xs"
+              onClick={() => quickAddCtaToFlyer(pages.find((p) => p.id !== activePage.id)!.id)}
+            >
+              Add CTA → {pages.find((p) => p.id !== activePage.id)!.name}
+            </Button>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="h-8 w-full text-xs">
+                  Add CTA to flyer page…
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {pages
+                  .filter((p) => p.id !== activePage.id)
+                  .map((p) => (
+                    <DropdownMenuItem key={p.id} onClick={() => quickAddCtaToFlyer(p.id)}>
+                      {p.name}
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      )}
+
       {activePage && (
         <div className="space-y-3 border-t border-border bg-muted/20 p-3">
           <div className="flex items-center justify-between">
