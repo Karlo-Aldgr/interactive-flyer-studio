@@ -306,7 +306,7 @@ export function TopBar({ saving }: Props) {
                 const landingData = stageToSocialDataURL(stage, captureW, captureH, bg);
                 if (landingData) {
                   await uploadLandingVariantFromDataUrl(
-                    landingData, flyer.id, sourcePage.id, captureW, captureH
+                    landingData, flyer.id, sourcePage.id, captureW, captureH, bg
                   );
                 }
               } catch (e) {
