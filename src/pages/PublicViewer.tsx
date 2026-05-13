@@ -1494,6 +1494,30 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </Stage>
         {/* Air-message bubbles are rendered inside the Konva Stage so they
             respect per-layer z_index ordering. */}
+        {/* When a page is configured to act as a link (e.g. landing → flyer),
+            an absolutely positioned overlay above the stage captures any tap
+            and navigates to the linked page. */}
+        {(() => {
+          const linkId = page.background?.linkPageId;
+          if (!linkId) return null;
+          const targetIdx = pages.findIndex((p) => p.id === linkId);
+          if (targetIdx < 0) return null;
+          return (
+            <button
+              type="button"
+              aria-label={`Open ${pages[targetIdx].name}`}
+              onClick={() => setPageIndex(targetIdx)}
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                zIndex: 5,
+              }}
+            />
+          );
+        })()}
       </div>
 
       {/* Pagination */}
