@@ -1335,9 +1335,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   // entire viewport edge-to-edge rather than letterbox, so the recipient sees
   // the same framing as the editor canvas.
   const isLinkedPage = !!page.background?.linkPageId;
-  const fitScale = isLinkedPage
-    ? Math.max(vw / W, vh / H)
-    : Math.min(vw / W, vh / H);
+  const fitScale = Math.min(vw / W, vh / H);
   // Enlarged: fill the longer viewport edge so user can scroll/pan to inspect details.
   // Multiplier gives extra zoom on top of fit-to-screen.
   const enlargedScale = Math.max(vw / W, vh / H) * 1.6;
