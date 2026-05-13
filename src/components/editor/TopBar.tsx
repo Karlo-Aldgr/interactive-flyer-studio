@@ -185,7 +185,8 @@ export function TopBar({ saving }: Props) {
             );
             if (landingData) {
               await uploadLandingVariantFromDataUrl(
-                landingData, flyer.id, sourcePage.id, captureW, captureH
+                landingData, flyer.id, sourcePage.id, captureW, captureH,
+                sourcePage.background?.color || flyer.settings.background || "#000000"
               );
             }
           } catch (e) {
