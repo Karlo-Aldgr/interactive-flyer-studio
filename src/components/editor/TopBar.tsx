@@ -172,6 +172,26 @@ export function TopBar({ saving }: Props) {
         setLocalThumbnail(url);
         const cleanUrl = url.split("?")[0];
         setFlyer({ thumbnail_url: cleanUrl });
+        // If this source page is a landing page, also upload it under the
+        // per-page variant path so the share Worker can serve it for
+        // ?page=<id> share links.
+        if (landingPage) {
+          try {
+            const landingData = stageToSocialDataURL(
+              stage,
+              captureW,
+              captureH,
+              sourcePage.background?.color || flyer.settings.background || "#ffffff"
+            );
+            if (landingData) {
+              await uploadLandingVariantFromDataUrl(
+                landingData, flyer.id, sourcePage.id, captureW, captureH
+              );
+            }
+          } catch (e) {
+            console.warn("[landing variant upload] failed", e);
+          }
+        }
         if (force) toast.success("Social preview updated");
       } catch (e: any) {
         console.error("[ensureThumbnail]", e);
