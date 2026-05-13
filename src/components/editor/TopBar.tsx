@@ -279,17 +279,17 @@ export function TopBar({ saving }: Props) {
       ? `${shareOrigin.replace(/\/$/, "")}/f/${flyer.public_slug}`
       : viewerUrl;
 
-  // If any page is configured as a "tap-anywhere" link (typically a landing
-  // page that points into the flyer), expose a second share link that opens
-  // the linked target page directly via ?page=<id>.
+  // If any page is configured as a tap-anywhere landing page, the default
+  // share URL auto-skips it. Expose a second link that actually opens the
+  // landing for preview/QA via ?page=<landingId>.
   const landingPage = pagesForLinks.find((p) => p.background?.linkPageId);
   const directExtraLinks =
     landingPage && socialUrl
       ? [
           {
-            label: "Direct to flyer (skips landing)",
-            url: `${socialUrl}${socialUrl.includes("?") ? "&" : "?"}page=${landingPage.background!.linkPageId}`,
-            description: "No landing page intro",
+            label: "Open landing page",
+            url: `${socialUrl}${socialUrl.includes("?") ? "&" : "?"}page=${landingPage.id}`,
+            description: "Preview the landing itself",
           },
         ]
       : undefined;
