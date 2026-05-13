@@ -141,10 +141,13 @@ export function TopBar({ saving }: Props) {
     setRegenerating(true);
     try {
       const store = useEditorStore.getState();
-      const firstPage = store.pages[0];
-      if (!firstPage) return;
-      if (store.selectedPageId !== firstPage.id) {
-        store.selectPage(firstPage.id);
+      // Prefer a landing page (one with a tap-anywhere link) so the share
+      // preview matches the link recipients open first. Fall back to page 1.
+      const landingPage = store.pages.find((p) => p.background?.linkPageId);
+      const sourcePage = landingPage ?? store.pages[0];
+      if (!sourcePage) return;
+      if (store.selectedPageId !== sourcePage.id) {
+        store.selectPage(sourcePage.id);
         await new Promise((r) => setTimeout(r, 300));
       } else {
         await new Promise((r) => setTimeout(r, 80));
@@ -154,13 +157,15 @@ export function TopBar({ saving }: Props) {
         toast.error("Couldn't capture the page. Try again.");
         return;
       }
+      const captureW = sourcePage.background?.size?.width ?? flyer.settings.width;
+      const captureH = sourcePage.background?.size?.height ?? flyer.settings.height;
       try {
         const url = await generateAndUploadThumbnail(
           stage,
           flyer.id,
-          flyer.settings.width,
-          flyer.settings.height,
-          firstPage.background?.color || flyer.settings.background || "#ffffff"
+          captureW,
+          captureH,
+          sourcePage.background?.color || flyer.settings.background || "#ffffff"
         );
         setLocalThumbnail(url);
         const cleanUrl = url.split("?")[0];
