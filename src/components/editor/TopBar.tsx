@@ -70,6 +70,7 @@ export function TopBar({ saving }: Props) {
   const setDeviceFrame = useEditorStore((s) => s.setDeviceFrame);
   const setCanvasSize = useEditorStore((s) => s.setCanvasSize);
   const startCrop = useEditorStore((s) => s.startCrop);
+  const pagesForLinks = useEditorStore((s) => s.pages);
 
   const [resizeOpen, setResizeOpen] = useState(false);
   const [presetIdx, setPresetIdx] = useState<string>("0");
