@@ -71,14 +71,24 @@ export function ShareDialog({
   onUploadThumbnail,
   regenerating,
   isPublished = true,
+  extraLinks,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  const [copiedExtra, setCopiedExtra] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Always sanitize before exposing to clipboard / QR / social buttons so a
   // private preview URL can never be shared by accident.
   const safeSocialUrl = sanitizeShareUrl(socialUrl);
   const safeDisplayUrl = sanitizeShareUrl(displayUrl);
+  const safeExtraLinks = (extraLinks ?? []).map((l) => ({ ...l, url: sanitizeShareUrl(l.url) }));
+
+  function copyExtra(label: string, url: string) {
+    navigator.clipboard.writeText(url);
+    setCopiedExtra(label);
+    toast.success("Link copied");
+    setTimeout(() => setCopiedExtra((c) => (c === label ? null : c)), 1500);
+  }
 
   function copy() {
     // Copy the og-meta share URL so messaging apps (Messenger, iMessage, WhatsApp, etc.)
