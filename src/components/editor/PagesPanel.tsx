@@ -71,9 +71,25 @@ export function PagesPanel() {
     <div className="flex flex-col border-b border-border">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-xs font-semibold uppercase text-muted-foreground">Pages</span>
-        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={addPage} title="Add page">
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="ghost" className="h-6 w-6" title="Add page">
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={addPage}>Add flyer page</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addLandingPage(1200, 630)}>
+              Add landing page (1200×630)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addLandingPage(1080, 1080)}>
+              Add square page (1080×1080)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addLandingPage(1080, 1920)}>
+              Add story page (1080×1920)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="max-h-64 overflow-y-auto">
         {pages.map((p, i) => {
