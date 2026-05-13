@@ -805,6 +805,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       }));
       setFlyer(f as unknown as Flyer);
       setPages(mapped);
+      // Honor ?page=<id> to deep-link past a landing page (or any page).
+      if (startPageParam) {
+        const idx = mapped.findIndex((p) => p.id === startPageParam);
+        if (idx >= 0) setPageIndex(idx);
+      }
       setLoading(false);
 
       // analytics: view (skip in preview mode)
