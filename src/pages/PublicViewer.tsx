@@ -1297,8 +1297,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   }
 
   const page = currentPage;
-  const W = flyer.settings.width;
-  const H = flyer.settings.height;
+  const W = page.background?.size?.width ?? flyer.settings.width;
+  const H = page.background?.size?.height ?? flyer.settings.height;
   // Hide layers initially that are referenced by any reveal action and not yet revealed
   const hiddenIds = new Set<string>();
   pages.forEach((p) =>

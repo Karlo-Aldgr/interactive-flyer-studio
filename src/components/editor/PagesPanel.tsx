@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play } from "lucide-react";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
 
@@ -23,10 +24,13 @@ const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
 ];
 
 export function PagesPanel() {
+  const flyer = useEditorStore((s) => s.flyer);
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectPage = useEditorStore((s) => s.selectPage);
   const addPage = useEditorStore((s) => s.addPage);
+  const addLandingPage = useEditorStore((s) => s.addLandingPage);
+  const setPageSize = useEditorStore((s) => s.setPageSize);
   const deletePage = useEditorStore((s) => s.deletePage);
   const duplicatePage = useEditorStore((s) => s.duplicatePage);
   const renamePage = useEditorStore((s) => s.renamePage);
@@ -67,9 +71,25 @@ export function PagesPanel() {
     <div className="flex flex-col border-b border-border">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-xs font-semibold uppercase text-muted-foreground">Pages</span>
-        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={addPage} title="Add page">
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="ghost" className="h-6 w-6" title="Add page">
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={addPage}>Add flyer page</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addLandingPage(1200, 630)}>
+              Add landing page (1200×630)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addLandingPage(1080, 1080)}>
+              Add square page (1080×1080)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addLandingPage(1080, 1920)}>
+              Add story page (1080×1920)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="max-h-64 overflow-y-auto">
         {pages.map((p, i) => {
@@ -149,6 +169,18 @@ export function PagesPanel() {
             />
           </div>
         </div>
+      )}
+
+      {activePage && flyer && (
+        <PageSizeSection
+          pageId={activePage.id}
+          currentW={activePage.background?.size?.width ?? flyer.settings.width}
+          currentH={activePage.background?.size?.height ?? flyer.settings.height}
+          isOverride={!!activePage.background?.size}
+          flyerW={flyer.settings.width}
+          flyerH={flyer.settings.height}
+          setPageSize={setPageSize}
+        />
       )}
 
       {activePage && (
@@ -255,6 +287,110 @@ export function PagesPanel() {
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+const SIZE_PRESETS: { label: string; w: number; h: number }[] = [
+  { label: "Landing 1200×630", w: 1200, h: 630 },
+  { label: "Square 1080×1080", w: 1080, h: 1080 },
+  { label: "Story 1080×1920", w: 1080, h: 1920 },
+  { label: "Flyer 900×1200", w: 900, h: 1200 },
+];
+
+function PageSizeSection({
+  pageId, currentW, currentH, isOverride, flyerW, flyerH, setPageSize,
+}: {
+  pageId: string;
+  currentW: number;
+  currentH: number;
+  isOverride: boolean;
+  flyerW: number;
+  flyerH: number;
+  setPageSize: (id: string, w: number, h: number, mode: "resize" | "scale" | "crop") => void;
+}) {
+  const [w, setW] = useState(currentW);
+  const [h, setH] = useState(currentH);
+  const [mode, setMode] = useState<"resize" | "scale" | "crop">("scale");
+
+  return (
+    <div className="space-y-3 border-t border-border bg-muted/20 p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase text-muted-foreground">Page size</span>
+        {isOverride ? (
+          <span className="text-[10px] uppercase tracking-wide text-primary">Custom</span>
+        ) : (
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Flyer default</span>
+        )}
+      </div>
+
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <Label className="text-[11px]">W</Label>
+          <Input
+            type="number"
+            className="h-8 text-xs"
+            value={w}
+            onChange={(e) => setW(Math.max(50, Number(e.target.value) || 0))}
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-[11px]">H</Label>
+          <Input
+            type="number"
+            className="h-8 text-xs"
+            value={h}
+            onChange={(e) => setH(Math.max(50, Number(e.target.value) || 0))}
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-[11px]">When resizing</Label>
+        <Select value={mode} onValueChange={(v) => setMode(v as any)}>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="resize" className="text-xs">Resize canvas only</SelectItem>
+            <SelectItem value="scale" className="text-xs">Scale layers</SelectItem>
+            <SelectItem value="crop" className="text-xs">Crop to size</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Button
+        size="sm"
+        className="h-8 w-full text-xs"
+        onClick={() => setPageSize(pageId, w, h, mode)}
+        disabled={w === currentW && h === currentH}
+      >
+        Apply size
+      </Button>
+
+      <div className="flex flex-wrap gap-1">
+        {SIZE_PRESETS.map((p) => (
+          <Button
+            key={p.label}
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-[10px]"
+            onClick={() => { setW(p.w); setH(p.h); setPageSize(pageId, p.w, p.h, mode); }}
+          >
+            {p.label}
+          </Button>
+        ))}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-[10px]"
+          onClick={() => setPageSize(pageId, flyerW, flyerH, mode)}
+          disabled={!isOverride}
+          title="Use the flyer's default size"
+        >
+          Use flyer default
+        </Button>
+      </div>
     </div>
   );
 }

@@ -290,7 +290,12 @@ export interface FlyerPage {
   flyer_id: string;
   index: number;
   name: string;
-  background: { color?: string; image?: string };
+  background: {
+    color?: string;
+    image?: string;
+    /** Optional per-page canvas size override. When set, this page renders at this size instead of the flyer's default. */
+    size?: { width: number; height: number };
+  };
   layers: Layer[];
   intro?: PageIntro | null;
 }
