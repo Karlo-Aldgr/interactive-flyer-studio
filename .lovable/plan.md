@@ -1,63 +1,50 @@
-# Fix: blank OG image on landing-page share link
+# Worker fallback when per-page landing image is missing
 
-## Cause
+## Goal
 
-The Cloudflare Worker now looks for the landing-page OG image at:
+When the share URL has `?page=<pageId>` and the per-page object `${flyerId}-${pageId}-flyer.jpg` does not exist (404 / not an image), the Worker should fall back to `flyers.thumbnail_url` (and finally `FALLBACK_IMAGE`) so Facebook never receives a broken `og:image`.
 
-```
-flyer-thumbnails/{ownerId}/{flyerId}-{pageId}-flyer.jpg
-```
+## Change (worker/share-worker.js only)
 
-But the editor never uploads that file. It only uploads:
+1. Make `pickImage` `async` and pass `request` context so it can do a `HEAD` probe through Cloudflare's edge cache.
 
-- `{flyerId}.jpg` — canonical landing thumbnail (written to `flyers.thumbnail_url`)
-- `{flyerId}-flyer.jpg` — direct-flyer variant
+2. New helper `imageExists(url)`:
+   - `fetch(url, { method: "HEAD", cf: { cacheTtl: 60, cacheEverything: true } })`
+   - Returns `true` only when `res.ok` AND `content-type` starts with `image/`.
+   - Wrapped in a 1.5s `AbortController` timeout; any error → `false`.
 
-So when Facebook crawls `?page=<landingId>`, the Worker points `og:image` at a non-existent object → blank preview.
+3. New `pickImage` logic:
 
-## Fix
+   ```text
+   if (isLanding):
+     candidate = `${SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${owner}/${flyerId}-${pageId}-flyer.jpg`
+     if await imageExists(candidate)  -> { url: candidate, source: "landing-page-variant" }
+     else if flyer.thumbnail_url      -> { url: thumb, source: "landing-thumbnail-fallback" }
+     else                             -> { url: FALLBACK_IMAGE, source: "fallback" }
+   else:
+     candidate = `${...}/${flyerId}-flyer.jpg`
+     if await imageExists(candidate)  -> { url: candidate, source: "flyer-variant" }
+     else if flyer.thumbnail_url      -> { url: thumb, source: "flyer-thumbnail-fallback" }
+     else                             -> { url: FALLBACK_IMAGE, source: "fallback" }
+   ```
 
-Upload the landing-page capture a second time under the per-page variant path the Worker expects.
+   Strip any `?...` from `flyer.thumbnail_url` before using it (already done today).
 
-### 1. `src/lib/thumbnail.ts`
+4. Update the call site in `fetch()` to `await pickImage(flyer, env, pageId)`. The existing `x-image-source` response header will now reveal which branch was used, which makes future debugging easy from `curl -I`.
 
-Add a sibling to `uploadFlyerVariantFromDataUrl`:
+5. No changes to redirect logic, canonical URL, OG HTML template, or human-vs-crawler handling.
 
-```ts
-export async function uploadLandingVariantFromDataUrl(
-  dataUrl: string,
-  flyerId: string,
-  pageId: string,
-  flyerW: number,
-  flyerH: number
-): Promise<string>
-```
+## Why a HEAD probe is safe here
 
-Uploads the composed JPEG to `${userId}/${flyerId}-${pageId}-flyer.jpg` in the `flyer-thumbnails` bucket, `upsert: true`. Does not touch the `flyers` table.
+- Only runs for crawler requests (humans are 302'd before `pickImage`).
+- One extra sub-request per crawl, cached at the Cloudflare edge for 60s via `cf.cacheTtl`, so repeat scrapes are effectively free.
+- 1.5s timeout guarantees the Worker still responds well within Facebook's crawler budget even if storage is slow.
 
-### 2. `src/components/editor/TopBar.tsx`
+## No changes needed
 
-In `ensureThumbnail`, right after the successful landing-page `generateAndUploadThumbnail` call (around line 171), also upload the same capture as the per-page variant when a landing page exists:
-
-```ts
-if (landingPage) {
-  const landingData = stageToSocialDataURL(stage, captureW, captureH, bg);
-  if (landingData) {
-    try {
-      await uploadLandingVariantFromDataUrl(
-        landingData, flyer.id, landingPage.id, captureW, captureH
-      );
-    } catch (e) { console.warn("[landing variant upload] failed", e); }
-  }
-}
-```
-
-Same on publish (`togglePublish`, around line 287) so a freshly published flyer immediately has the per-page variant available for crawlers.
-
-### 3. No Worker changes
-
-Worker logic is already correct — it just needs the file to exist.
+- `src/lib/thumbnail.ts` and `src/components/editor/TopBar.tsx` are already correct — they upload the per-page variant with `contentType: "image/jpeg"` to the right path. The fallback only matters for flyers published before that upload code shipped, or pages whose Share dialog has never been opened.
 
 ## After deploy
 
-User must open the Share dialog (or re-publish) once so the new variant uploads, then re-share the landing link. Facebook may cache the old empty preview; using the FB Sharing Debugger to "Scrape Again" will refresh it.
+- Re-scrape the affected landing link in Facebook's Sharing Debugger. It should now show the canonical landing thumbnail instead of the broken-image / black area.
+- Inspect `x-image-source` on the Worker response to confirm which image was served (`landing-page-variant` once the editor uploads it, `landing-thumbnail-fallback` until then).

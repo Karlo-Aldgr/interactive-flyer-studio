@@ -64,33 +64,60 @@ async function fetchFlyer(env, slug) {
   }
 }
 
+/** HEAD-probe a URL through the CF edge cache. True only if 2xx + image/* content-type. */
+async function imageExists(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 1500);
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      signal: ctrl.signal,
+      cf: { cacheTtl: 60, cacheEverything: true },
+    });
+    if (!res.ok) return false;
+    const ct = res.headers.get("content-type") || "";
+    return ct.toLowerCase().startsWith("image/");
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Pick the best og:image URL and report which source we used.
- * If `isLanding` is true (share URL has ?page=...), use the landing-page
- * thumbnail (flyers.thumbnail_url). Otherwise (direct flyer link) use the
- * sibling "-flyer.jpg" variant uploaded by the editor.
+ * If `isLanding` is true (share URL has ?page=...), prefer the per-page variant;
+ * otherwise prefer the direct-flyer variant. In either case, if the preferred
+ * object does not exist (404 or non-image), fall back to flyers.thumbnail_url
+ * and finally to FALLBACK_IMAGE so Facebook never receives a broken og:image.
  */
-function pickImage(flyer, env, pageId) {
+async function pickImage(flyer, env, pageId) {
   const isLanding = !!pageId;
-  if (isLanding) {
-    // Per-page landing variant uploaded by editor as `${flyerId}-${pageId}-flyer.jpg`.
-    if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
+  const cleanThumb = flyer?.thumbnail_url
+    ? String(flyer.thumbnail_url).split("?")[0]
+    : null;
+
+  if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
+    const filename = isLanding
+      ? `${flyer.id}-${pageId}-flyer.jpg`
+      : `${flyer.id}-flyer.jpg`;
+    const candidate = `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${filename}`;
+    if (await imageExists(candidate)) {
       return {
-        url: `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}-${pageId}-flyer.jpg`,
-        source: "landing-page-variant",
+        url: candidate,
+        source: isLanding ? "landing-page-variant" : "flyer-variant",
       };
     }
-    if (flyer?.thumbnail_url) {
-      return { url: String(flyer.thumbnail_url).split("?")[0], source: "landing-thumbnail" };
-    }
-  } else {
-    if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
+    if (cleanThumb) {
       return {
-        url: `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}-flyer.jpg`,
-        source: "flyer-variant",
+        url: cleanThumb,
+        source: isLanding ? "landing-thumbnail-fallback" : "flyer-thumbnail-fallback",
       };
     }
+  } else if (cleanThumb) {
+    return { url: cleanThumb, source: "thumbnail-only" };
   }
+
   return { url: FALLBACK_IMAGE, source: "fallback" };
 }
 
@@ -163,7 +190,7 @@ export default {
 
     // Crawlers → always serve OG HTML, even if Supabase is down.
     const flyer = await fetchFlyer(env, slug);
-    const { url: image, source: imageSource } = pickImage(flyer, env, pageId);
+    const { url: image, source: imageSource } = await pickImage(flyer, env, pageId);
     const title = flyer?.title || "Flyer";
     const description = isLanding
       ? `View "${title}" — interactive flyer.`
