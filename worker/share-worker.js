@@ -70,16 +70,18 @@ async function fetchFlyer(env, slug) {
  * thumbnail (flyers.thumbnail_url). Otherwise (direct flyer link) use the
  * sibling "-flyer.jpg" variant uploaded by the editor.
  */
-function pickImage(flyer, env, isLanding) {
+function pickImage(flyer, env, pageId) {
+  const isLanding = !!pageId;
   if (isLanding) {
-    if (flyer?.thumbnail_url) {
-      return { url: String(flyer.thumbnail_url).split("?")[0], source: "landing-thumbnail" };
-    }
+    // Per-page landing variant uploaded by editor as `${flyerId}-${pageId}-flyer.jpg`.
     if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
       return {
-        url: `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}.jpg`,
-        source: "landing-constructed",
+        url: `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}-${pageId}-flyer.jpg`,
+        source: "landing-page-variant",
       };
+    }
+    if (flyer?.thumbnail_url) {
+      return { url: String(flyer.thumbnail_url).split("?")[0], source: "landing-thumbnail" };
     }
   } else {
     if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
