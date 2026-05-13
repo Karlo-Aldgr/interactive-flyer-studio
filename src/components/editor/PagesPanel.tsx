@@ -290,3 +290,112 @@ export function PagesPanel() {
     </div>
   );
 }
+
+const SIZE_PRESETS: { label: string; w: number; h: number }[] = [
+  { label: "Landing 1200×630", w: 1200, h: 630 },
+  { label: "Square 1080×1080", w: 1080, h: 1080 },
+  { label: "Story 1080×1920", w: 1080, h: 1920 },
+  { label: "Flyer 900×1200", w: 900, h: 1200 },
+];
+
+function PageSizeSection({
+  pageId, currentW, currentH, isOverride, flyerW, flyerH, setPageSize,
+}: {
+  pageId: string;
+  currentW: number;
+  currentH: number;
+  isOverride: boolean;
+  flyerW: number;
+  flyerH: number;
+  setPageSize: (id: string, w: number, h: number, mode: "resize" | "scale" | "crop") => void;
+}) {
+  const [w, setW] = useState(currentW);
+  const [h, setH] = useState(currentH);
+  const [mode, setMode] = useState<"resize" | "scale" | "crop">("scale");
+
+  // Sync when active page changes
+  if (w !== currentW && pageId) {
+    // noop — local edits allowed
+  }
+
+  return (
+    <div className="space-y-3 border-t border-border bg-muted/20 p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase text-muted-foreground">Page size</span>
+        {isOverride ? (
+          <span className="text-[10px] uppercase tracking-wide text-primary">Custom</span>
+        ) : (
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Flyer default</span>
+        )}
+      </div>
+
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <Label className="text-[11px]">W</Label>
+          <Input
+            type="number"
+            className="h-8 text-xs"
+            value={w}
+            onChange={(e) => setW(Math.max(50, Number(e.target.value) || 0))}
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-[11px]">H</Label>
+          <Input
+            type="number"
+            className="h-8 text-xs"
+            value={h}
+            onChange={(e) => setH(Math.max(50, Number(e.target.value) || 0))}
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-[11px]">When resizing</Label>
+        <Select value={mode} onValueChange={(v) => setMode(v as any)}>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="resize" className="text-xs">Resize canvas only</SelectItem>
+            <SelectItem value="scale" className="text-xs">Scale layers</SelectItem>
+            <SelectItem value="crop" className="text-xs">Crop to size</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Button
+        size="sm"
+        className="h-8 w-full text-xs"
+        onClick={() => setPageSize(pageId, w, h, mode)}
+        disabled={w === currentW && h === currentH}
+      >
+        Apply size
+      </Button>
+
+      <div className="flex flex-wrap gap-1">
+        {SIZE_PRESETS.map((p) => (
+          <Button
+            key={p.label}
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-[10px]"
+            onClick={() => { setW(p.w); setH(p.h); setPageSize(pageId, p.w, p.h, mode); }}
+          >
+            {p.label}
+          </Button>
+        ))}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-[10px]"
+          onClick={() => setPageSize(pageId, flyerW, flyerH, mode)}
+          disabled={!isOverride}
+          title="Use the flyer's default size"
+        >
+          Use flyer default
+        </Button>
+      </div>
+    </div>
+  );
+}
