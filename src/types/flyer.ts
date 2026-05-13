@@ -295,6 +295,8 @@ export interface FlyerPage {
     image?: string;
     /** Optional per-page canvas size override. When set, this page renders at this size instead of the flyer's default. */
     size?: { width: number; height: number };
+    /** When set, tapping anywhere on this page navigates to the page with this id (used for landing → flyer). */
+    linkPageId?: string;
   };
   layers: Layer[];
   intro?: PageIntro | null;
