@@ -171,6 +171,18 @@ export function PagesPanel() {
         </div>
       )}
 
+      {activePage && flyer && (
+        <PageSizeSection
+          pageId={activePage.id}
+          currentW={activePage.background?.size?.width ?? flyer.settings.width}
+          currentH={activePage.background?.size?.height ?? flyer.settings.height}
+          isOverride={!!activePage.background?.size}
+          flyerW={flyer.settings.width}
+          flyerH={flyer.settings.height}
+          setPageSize={setPageSize}
+        />
+      )}
+
       {activePage && (
         <div className="space-y-3 border-t border-border bg-muted/20 p-3">
           <div className="flex items-center justify-between">
