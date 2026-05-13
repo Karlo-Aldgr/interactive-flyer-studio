@@ -274,7 +274,7 @@ export function TopBar({ saving }: Props) {
   // If any page is configured as a "tap-anywhere" link (typically a landing
   // page that points into the flyer), expose a second share link that opens
   // the linked target page directly via ?page=<id>.
-  const pagesForLinks = useEditorStore.getState().pages;
+  const pagesForLinks = useEditorStore((s) => s.pages);
   const landingPage = pagesForLinks.find((p) => p.background?.linkPageId);
   const directExtraLinks =
     landingPage && socialUrl
