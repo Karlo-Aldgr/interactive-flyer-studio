@@ -196,6 +196,52 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ pages: [...s.pages, newPage], selectedPageId: newPage.id, past, future: [], dirty: true });
   },
 
+  addLandingPage: (width = 1200, height = 630) => {
+    const s = get();
+    if (!s.flyer) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const base = emptyPage(s.flyer.id, s.pages.length);
+    const newPage: FlyerPage = {
+      ...base,
+      name: "Landing",
+      background: { ...base.background, size: { width, height } },
+    };
+    set({ pages: [...s.pages, newPage], selectedPageId: newPage.id, past, future: [], dirty: true });
+  },
+
+  setPageSize: (id, w, h, mode) => {
+    const s = get();
+    const page = s.pages.find((p) => p.id === id);
+    if (!page || !s.flyer) return;
+    const oldW = page.background?.size?.width ?? s.flyer.settings.width;
+    const oldH = page.background?.size?.height ?? s.flyer.settings.height;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+
+    let newLayers = page.layers;
+    if (mode === "scale") {
+      const sx = w / oldW;
+      const sy = h / oldH;
+      newLayers = page.layers.map((l) => ({
+        ...l,
+        position: { x: l.position.x * sx, y: l.position.y * sy },
+        size: { width: l.size.width * sx, height: l.size.height * sy },
+      }));
+    } else if (mode === "crop") {
+      newLayers = page.layers.filter((l) => l.position.x < w && l.position.y < h);
+    }
+
+    set({
+      pages: s.pages.map((p) =>
+        p.id === id
+          ? { ...p, layers: newLayers, background: { ...p.background, size: { width: w, height: h } } }
+          : p
+      ),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
   deletePage: (id) => {
     const s = get();
     if (s.pages.length <= 1) return;
