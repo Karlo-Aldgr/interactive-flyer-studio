@@ -45,6 +45,8 @@ interface EditorState {
   cropCanvas: (rect: { x: number; y: number; width: number; height: number }) => void;
   // pages
   addPage: () => void;
+  addLandingPage: (width?: number, height?: number) => void;
+  setPageSize: (id: string, w: number, h: number, mode: ResizeMode) => void;
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
   duplicatePage: (id: string) => void;
