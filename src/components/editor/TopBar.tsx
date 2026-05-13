@@ -15,7 +15,7 @@ import { cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { generateAndUploadThumbnail, uploadManualThumbnail } from "@/lib/thumbnail";
+import { generateAndUploadThumbnail, uploadManualThumbnail, stageToSocialDataURL } from "@/lib/thumbnail";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -81,6 +81,7 @@ export function TopBar({ saving }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
+  const [flyerPreviewThumb, setFlyerPreviewThumb] = useState<string | undefined>(undefined);
   const [payOpen, setPayOpen] = useState(false);
   const [introAudioOpen, setIntroAudioOpen] = useState(false);
   const [subscribersOpen, setSubscribersOpen] = useState(false);
@@ -137,7 +138,7 @@ export function TopBar({ saving }: Props) {
 
   async function ensureThumbnail(force = false) {
     if (!flyer) return;
-    if (!force && flyer.thumbnail_url) return;
+    if (!force && flyer.thumbnail_url && flyerPreviewThumb) return;
     setRegenerating(true);
     try {
       const store = useEditorStore.getState();
@@ -146,13 +147,14 @@ export function TopBar({ saving }: Props) {
       const landingPage = store.pages.find((p) => p.background?.linkPageId);
       const sourcePage = landingPage ?? store.pages[0];
       if (!sourcePage) return;
+      // Capture the LANDING page first (this also uploads → social thumbnail).
       if (store.selectedPageId !== sourcePage.id) {
         store.selectPage(sourcePage.id);
         await new Promise((r) => setTimeout(r, 300));
       } else {
         await new Promise((r) => setTimeout(r, 80));
       }
-      const stage = useEditorStore.getState().stageRef;
+      let stage = useEditorStore.getState().stageRef;
       if (!stage) {
         toast.error("Couldn't capture the page. Try again.");
         return;
@@ -174,6 +176,37 @@ export function TopBar({ saving }: Props) {
       } catch (e: any) {
         console.error("[ensureThumbnail]", e);
         toast.error(e?.message || "Could not generate preview");
+      }
+
+      // Capture the FLYER target page locally (no upload — preview only).
+      const linkedId = sourcePage.background?.linkPageId;
+      const flyerPage = linkedId
+        ? store.pages.find((p) => p.id === linkedId)
+        : store.pages.find((p) => p.id !== sourcePage.id);
+      if (flyerPage) {
+        store.selectPage(flyerPage.id);
+        await new Promise((r) => setTimeout(r, 300));
+        stage = useEditorStore.getState().stageRef;
+        if (stage) {
+          try {
+            const fW = flyerPage.background?.size?.width ?? flyer.settings.width;
+            const fH = flyerPage.background?.size?.height ?? flyer.settings.height;
+            const data = stageToSocialDataURL(
+              stage,
+              fW,
+              fH,
+              flyerPage.background?.color || flyer.settings.background || "#ffffff"
+            );
+            if (data) setFlyerPreviewThumb(data);
+          } catch (e) {
+            console.warn("[flyer preview capture] failed", e);
+          }
+        }
+        // Restore landing as the active page so the editor view doesn't jump.
+        store.selectPage(sourcePage.id);
+      } else {
+        // No separate flyer page → show the same image in both slots.
+        setFlyerPreviewThumb(undefined);
       }
     } finally {
       setRegenerating(false);
@@ -279,20 +312,22 @@ export function TopBar({ saving }: Props) {
       ? `${shareOrigin.replace(/\/$/, "")}/f/${flyer.public_slug}`
       : viewerUrl;
 
-  // If any page is configured as a tap-anywhere landing page, the default
-  // share URL auto-skips it. Expose a second link that actually opens the
-  // landing for preview/QA via ?page=<landingId>.
+  // If any page is configured as a tap-anywhere landing page, build a second
+  // share link that opens the landing itself (?page=<landingId>). The primary
+  // socialUrl auto-skips landing → opens the flyer directly.
   const landingPage = pagesForLinks.find((p) => p.background?.linkPageId);
-  const directExtraLinks =
+  const landingShareUrl =
     landingPage && socialUrl
-      ? [
-          {
-            label: "Open landing page",
-            url: `${socialUrl}${socialUrl.includes("?") ? "&" : "?"}page=${landingPage.id}`,
-            description: "Preview the landing itself",
-          },
-        ]
-      : undefined;
+      ? `${socialUrl}${socialUrl.includes("?") ? "&" : "?"}page=${landingPage.id}`
+      : "";
+  const flyerPreviewSection = landingPage
+    ? {
+        label: "Direct flyer link",
+        description: "Skips the landing — opens the flyer.",
+        thumbnailUrl: flyerPreviewThumb,
+        url: socialUrl,
+      }
+    : undefined;
 
   return (
     <header className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
@@ -641,7 +676,7 @@ export function TopBar({ saving }: Props) {
       <ShareDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
-        displayUrl={viewerUrl}
+        displayUrl={landingShareUrl || viewerUrl}
         socialUrl={socialUrl}
         title={flyer.title}
         thumbnailUrl={localThumbnail ?? flyer.thumbnail_url ?? undefined}
@@ -649,7 +684,11 @@ export function TopBar({ saving }: Props) {
         onUploadThumbnail={uploadSocialPreview}
         regenerating={regenerating}
         isPublished={flyer.status === "published" && !!flyer.public_slug}
-        extraLinks={directExtraLinks}
+        flyerPreview={flyerPreviewSection}
+        landingPreviewMeta={{
+          label: "Landing page link",
+          description: "Opens the landing page first.",
+        }}
       />
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />

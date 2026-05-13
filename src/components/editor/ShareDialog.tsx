@@ -12,6 +12,13 @@ interface ExtraLink {
   description?: string;
 }
 
+interface PreviewSection {
+  label: string;
+  description?: string;
+  thumbnailUrl?: string;
+  url: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -26,8 +33,12 @@ interface Props {
   regenerating?: boolean;
   /** When false, hide the share controls and prompt the user to publish first. */
   isPublished?: boolean;
-  /** Optional additional links shown below the primary share link (e.g. a direct-to-flyer link that skips a landing page). */
+  /** Optional additional links shown below the primary share link (legacy single-column mode). */
   extraLinks?: ExtraLink[];
+  /** When provided, switches the dialog into a two-column layout: landing on the left, flyer on the right. */
+  flyerPreview?: PreviewSection;
+  /** Override the label/description for the primary (left) preview when in two-column mode. Defaults to "Landing page". */
+  landingPreviewMeta?: { label?: string; description?: string };
 }
 
 const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
@@ -42,13 +53,9 @@ function sanitizeShareUrl(url: string): string {
       host.endsWith("lovableproject.com") ||
       host.startsWith("id-preview--") ||
       (host.endsWith("lovable.app") && host.includes("preview"));
-    // The /preview/:flyerId route is auth-gated — never share it.
     const isPrivatePath = u.pathname.startsWith("/preview/");
     if (isPreviewHost || isPrivatePath) {
       const pub = new URL(PUBLISHED_ORIGIN);
-      // If the path is /preview/<id>, we can't recover a public slug — return
-      // the published origin root so the recipient at least lands on the app
-      // homepage instead of a login screen.
       u.protocol = pub.protocol;
       u.host = pub.host;
       if (isPrivatePath) u.pathname = "/";
@@ -72,31 +79,26 @@ export function ShareDialog({
   regenerating,
   isPublished = true,
   extraLinks,
+  flyerPreview,
+  landingPreviewMeta,
 }: Props) {
-  const [copied, setCopied] = useState(false);
-  const [copiedExtra, setCopiedExtra] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Always sanitize before exposing to clipboard / QR / social buttons so a
-  // private preview URL can never be shared by accident.
   const safeSocialUrl = sanitizeShareUrl(socialUrl);
   const safeDisplayUrl = sanitizeShareUrl(displayUrl);
   const safeExtraLinks = (extraLinks ?? []).map((l) => ({ ...l, url: sanitizeShareUrl(l.url) }));
+  const safeFlyerPreview = flyerPreview
+    ? { ...flyerPreview, url: sanitizeShareUrl(flyerPreview.url) }
+    : undefined;
 
-  function copyExtra(label: string, url: string) {
+  const twoColumn = !!safeFlyerPreview;
+
+  function copyText(key: string, url: string, msg = "Link copied") {
     navigator.clipboard.writeText(url);
-    setCopiedExtra(label);
-    toast.success("Link copied");
-    setTimeout(() => setCopiedExtra((c) => (c === label ? null : c)), 1500);
-  }
-
-  function copy() {
-    // Copy the og-meta share URL so messaging apps (Messenger, iMessage, WhatsApp, etc.)
-    // see the per-flyer preview image when the link is pasted.
-    navigator.clipboard.writeText(safeSocialUrl);
-    setCopied(true);
-    toast.success("Share link copied — paste it anywhere for a rich preview");
-    setTimeout(() => setCopied(false), 1500);
+    setCopiedKey(key);
+    toast.success(msg);
+    setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1500);
   }
 
   function downloadQR(canvasId = "share-qr-canvas", suffix = "") {
@@ -115,7 +117,7 @@ export function ShareDialog({
         await (navigator as any).share({ title: title || "Flyer", url: safeSocialUrl });
       } catch {}
     } else {
-      copy();
+      copyText("primary", safeSocialUrl, "Share link copied");
     }
   }
 
@@ -136,7 +138,6 @@ export function ShareDialog({
     }
   }
 
-  // Social-share buttons use the og-meta URL so platforms see the per-flyer preview.
   const shareLinks = [
     { label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(safeSocialUrl)}` },
     { label: "X / Twitter", href: `https://twitter.com/intent/tweet?url=${encodeURIComponent(safeSocialUrl)}` },
@@ -170,136 +171,288 @@ export function ShareDialog({
     );
   }
 
+  const landingMeta = {
+    label: landingPreviewMeta?.label ?? "Landing page",
+    description:
+      landingPreviewMeta?.description ?? "Opens the landing page first.",
+  };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Share your flyer</DialogTitle>
-          <DialogDescription>Anyone with the link can view it. Social previews show your flyer.</DialogDescription>
-        </DialogHeader>
+  function PreviewCard({
+    section,
+    qrId,
+    fileSlug,
+    keyName,
+    accent,
+  }: {
+    section: { label: string; description?: string; thumbnailUrl?: string; url: string };
+    qrId: string;
+    fileSlug: string;
+    keyName: string;
+    accent?: string;
+  }) {
+    return (
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+        <div>
+          <div className="flex items-center justify-between">
+            <div className={`text-sm font-semibold ${accent ?? ""}`}>{section.label}</div>
+          </div>
+          {section.description && (
+            <div className="mt-0.5 text-[11px] text-muted-foreground">{section.description}</div>
+          )}
+        </div>
 
-        <div className="mx-auto w-fit max-h-[55vh] overflow-hidden rounded-lg border border-border bg-muted/30">
-          {thumbnailUrl ? (
+        <div className="mx-auto w-full max-h-[40vh] overflow-hidden rounded-md border border-border bg-muted/30">
+          {section.thumbnailUrl ? (
             <img
-              src={thumbnailUrl}
-              alt={`${title || "Flyer"} social preview`}
-              className="block h-auto max-h-[55vh] w-auto max-w-full object-contain"
+              src={section.thumbnailUrl}
+              alt={`${section.label} preview`}
+              className="block h-auto max-h-[40vh] w-full object-contain"
               loading="lazy"
             />
           ) : (
-            <div className="flex h-56 w-44 items-center justify-center text-xs text-muted-foreground">
+            <div className="flex h-40 w-full items-center justify-center text-xs text-muted-foreground">
               {regenerating ? (
                 <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Generating preview…</span>
               ) : (
-                <span>No social preview yet</span>
+                <span>No preview yet</span>
               )}
             </div>
           )}
         </div>
 
-        {onRegenerateThumbnail && (
-          <div className="grid gap-2 sm:grid-cols-3">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void onUploadThumbnail?.(file);
-                e.currentTarget.value = "";
-              }}
+        <div className="flex items-start gap-3">
+          <div className="rounded-md bg-white p-2 shadow-sm shrink-0">
+            <QRCodeCanvas id={qrId} value={section.url} size={104} level="M" includeMargin={false} />
+          </div>
+          <div className="flex flex-1 flex-col gap-2">
+            <Input
+              readOnly
+              value={section.url}
+              className="text-xs"
+              onFocus={(e) => e.target.select()}
             />
-            <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={regenerating}>
-              <ImagePlus className="mr-1 h-3.5 w-3.5" /> Upload image
-            </Button>
-            <Button size="sm" variant="outline" onClick={pasteImage} disabled={regenerating || !onUploadThumbnail}>
-              <Clipboard className="mr-1 h-3.5 w-3.5" /> Paste image
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => onRegenerateThumbnail()} disabled={regenerating}>
-              {regenerating ? (
-                <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Updating…</>
-              ) : (
-                <><RefreshCw className="mr-1 h-3.5 w-3.5" /> Auto capture</>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => copyText(keyName, section.url)}>
+                <Copy className="mr-1 h-3.5 w-3.5" />
+                {copiedKey === keyName ? "Copied" : "Copy"}
+              </Button>
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => downloadQR(qrId, fileSlug)}>
+                <Download className="mr-1 h-3.5 w-3.5" /> QR
+              </Button>
+            </div>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        <div className="flex flex-col items-center gap-4">
-          <div className="rounded-lg bg-white p-4 shadow-sm">
-            <QRCodeCanvas id="share-qr-canvas" value={safeSocialUrl} size={160} level="M" includeMargin={false} />
-          </div>
-          <div className="flex w-full gap-2">
-            <Input readOnly value={safeSocialUrl} className="flex-1 text-xs" onFocus={(e) => e.target.select()} />
-            <Button size="sm" variant="outline" onClick={copy}>
-              <Copy className="mr-1 h-3.5 w-3.5" />
-              {copied ? "Copied" : "Copy"}
-            </Button>
-          </div>
-          <div className="-mt-2 w-full text-[11px] text-muted-foreground">
-            This link unfurls with your flyer preview in Messenger, WhatsApp, iMessage, etc.
-          </div>
-          {safeExtraLinks.length > 0 && (
-            <div className="w-full space-y-3 rounded-md border border-border bg-muted/30 p-3">
-              <div className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Other share links
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={`max-h-[92vh] overflow-y-auto ${twoColumn ? "sm:max-w-5xl" : ""}`}
+      >
+        <DialogHeader>
+          <DialogTitle>Share your flyer</DialogTitle>
+          <DialogDescription>
+            {twoColumn
+              ? "Two share links are active. Use the landing page link if you want viewers to see the landing first, or the direct flyer link to skip straight to the flyer."
+              : "Anyone with the link can view it. Social previews show your flyer."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {twoColumn ? (
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <PreviewCard
+                section={{
+                  label: landingMeta.label,
+                  description: landingMeta.description,
+                  thumbnailUrl,
+                  url: safeDisplayUrl, // landing url passed via displayUrl
+                }}
+                qrId="share-qr-landing"
+                fileSlug="landing"
+                keyName="landing"
+                accent="text-primary"
+              />
+              <PreviewCard
+                section={safeFlyerPreview!}
+                qrId="share-qr-flyer"
+                fileSlug="flyer"
+                keyName="flyer"
+                accent="text-primary"
+              />
+            </div>
+
+            {onRegenerateThumbnail && (
+              <div className="grid gap-2 sm:grid-cols-3">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void onUploadThumbnail?.(file);
+                    e.currentTarget.value = "";
+                  }}
+                />
+                <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={regenerating}>
+                  <ImagePlus className="mr-1 h-3.5 w-3.5" /> Upload landing image
+                </Button>
+                <Button size="sm" variant="outline" onClick={pasteImage} disabled={regenerating || !onUploadThumbnail}>
+                  <Clipboard className="mr-1 h-3.5 w-3.5" /> Paste landing image
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => onRegenerateThumbnail()} disabled={regenerating}>
+                  {regenerating ? (
+                    <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Updating…</>
+                  ) : (
+                    <><RefreshCw className="mr-1 h-3.5 w-3.5" /> Auto-capture previews</>
+                  )}
+                </Button>
               </div>
-              {safeExtraLinks.map((l, i) => {
-                const canvasId = `share-qr-extra-${i}`;
-                const slug = l.label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-                return (
-                  <div key={l.label} className="space-y-2 border-t border-border/60 pt-3 first:border-t-0 first:pt-0">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-medium">{l.label}</span>
-                      {l.description && (
-                        <span className="text-muted-foreground">{l.description}</span>
-                      )}
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="rounded-lg bg-white p-2 shadow-sm shrink-0">
-                        <QRCodeCanvas id={canvasId} value={l.url} size={96} level="M" includeMargin={false} />
-                      </div>
-                      <div className="flex flex-1 flex-col gap-2">
-                        <Input
-                          readOnly
-                          value={l.url}
-                          className="text-xs"
-                          onFocus={(e) => e.target.select()}
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="flex-1" onClick={() => copyExtra(l.label, l.url)}>
-                            <Copy className="mr-1 h-3.5 w-3.5" />
-                            {copiedExtra === l.label ? "Copied" : "Copy"}
-                          </Button>
-                          <Button size="sm" variant="outline" className="flex-1" onClick={() => downloadQR(canvasId, slug)}>
-                            <Download className="mr-1 h-3.5 w-3.5" /> QR
-                          </Button>
+            )}
+
+            <div className="flex w-full items-center justify-end gap-2">
+              <Button size="sm" onClick={nativeShare}>
+                <Share2 className="mr-1 h-3.5 w-3.5" /> Share
+              </Button>
+            </div>
+
+            <div className="flex w-full flex-wrap gap-2 border-t border-border pt-3">
+              <span className="text-[11px] text-muted-foreground">Quick share (uses direct flyer link):</span>
+              {shareLinks.map((s) => (
+                <Button key={s.label} asChild size="sm" variant="ghost" className="text-xs">
+                  <a href={s.href} target="_blank" rel="noreferrer">{s.label}</a>
+                </Button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mx-auto w-fit max-h-[55vh] overflow-hidden rounded-lg border border-border bg-muted/30">
+              {thumbnailUrl ? (
+                <img
+                  src={thumbnailUrl}
+                  alt={`${title || "Flyer"} social preview`}
+                  className="block h-auto max-h-[55vh] w-auto max-w-full object-contain"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex h-56 w-44 items-center justify-center text-xs text-muted-foreground">
+                  {regenerating ? (
+                    <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Generating preview…</span>
+                  ) : (
+                    <span>No social preview yet</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {onRegenerateThumbnail && (
+              <div className="grid gap-2 sm:grid-cols-3">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void onUploadThumbnail?.(file);
+                    e.currentTarget.value = "";
+                  }}
+                />
+                <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={regenerating}>
+                  <ImagePlus className="mr-1 h-3.5 w-3.5" /> Upload image
+                </Button>
+                <Button size="sm" variant="outline" onClick={pasteImage} disabled={regenerating || !onUploadThumbnail}>
+                  <Clipboard className="mr-1 h-3.5 w-3.5" /> Paste image
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => onRegenerateThumbnail()} disabled={regenerating}>
+                  {regenerating ? (
+                    <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Updating…</>
+                  ) : (
+                    <><RefreshCw className="mr-1 h-3.5 w-3.5" /> Auto capture</>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            <div className="flex flex-col items-center gap-4">
+              <div className="rounded-lg bg-white p-4 shadow-sm">
+                <QRCodeCanvas id="share-qr-canvas" value={safeSocialUrl} size={160} level="M" includeMargin={false} />
+              </div>
+              <div className="flex w-full gap-2">
+                <Input readOnly value={safeSocialUrl} className="flex-1 text-xs" onFocus={(e) => e.target.select()} />
+                <Button size="sm" variant="outline" onClick={() => copyText("primary", safeSocialUrl, "Share link copied")}>
+                  <Copy className="mr-1 h-3.5 w-3.5" />
+                  {copiedKey === "primary" ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              <div className="-mt-2 w-full text-[11px] text-muted-foreground">
+                This link unfurls with your flyer preview in Messenger, WhatsApp, iMessage, etc.
+              </div>
+              {safeExtraLinks.length > 0 && (
+                <div className="w-full space-y-3 rounded-md border border-border bg-muted/30 p-3">
+                  <div className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Other share links
+                  </div>
+                  {safeExtraLinks.map((l, i) => {
+                    const canvasId = `share-qr-extra-${i}`;
+                    const slug = l.label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+                    return (
+                      <div key={l.label} className="space-y-2 border-t border-border/60 pt-3 first:border-t-0 first:pt-0">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-medium">{l.label}</span>
+                          {l.description && (
+                            <span className="text-muted-foreground">{l.description}</span>
+                          )}
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-lg bg-white p-2 shadow-sm shrink-0">
+                            <QRCodeCanvas id={canvasId} value={l.url} size={96} level="M" includeMargin={false} />
+                          </div>
+                          <div className="flex flex-1 flex-col gap-2">
+                            <Input
+                              readOnly
+                              value={l.url}
+                              className="text-xs"
+                              onFocus={(e) => e.target.select()}
+                            />
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" className="flex-1" onClick={() => copyText(`extra-${i}`, l.url)}>
+                                <Copy className="mr-1 h-3.5 w-3.5" />
+                                {copiedKey === `extra-${i}` ? "Copied" : "Copy"}
+                              </Button>
+                              <Button size="sm" variant="outline" className="flex-1" onClick={() => downloadQR(canvasId, slug)}>
+                                <Download className="mr-1 h-3.5 w-3.5" /> QR
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
+              <div className="flex w-full gap-2">
+                <Button size="sm" variant="outline" className="flex-1" onClick={() => downloadQR()}>
+                  <Download className="mr-1 h-3.5 w-3.5" /> Download QR
+                </Button>
+                <Button size="sm" className="flex-1" onClick={nativeShare}>
+                  <Share2 className="mr-1 h-3.5 w-3.5" /> Share
+                </Button>
+              </div>
+              <div className="flex w-full flex-wrap gap-2">
+                {shareLinks.map((s) => (
+                  <Button key={s.label} asChild size="sm" variant="ghost" className="text-xs">
+                    <a href={s.href} target="_blank" rel="noreferrer">{s.label}</a>
+                  </Button>
+                ))}
+              </div>
             </div>
-          )}
-          <div className="flex w-full gap-2">
-            <Button size="sm" variant="outline" className="flex-1" onClick={() => downloadQR()}>
-              <Download className="mr-1 h-3.5 w-3.5" /> Download QR
-            </Button>
-            <Button size="sm" className="flex-1" onClick={nativeShare}>
-              <Share2 className="mr-1 h-3.5 w-3.5" /> Share
-            </Button>
-          </div>
-          <div className="flex w-full flex-wrap gap-2">
-            {shareLinks.map((s) => (
-              <Button key={s.label} asChild size="sm" variant="ghost" className="text-xs">
-                <a href={s.href} target="_blank" rel="noreferrer">{s.label}</a>
-              </Button>
-            ))}
-          </div>
-        </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
