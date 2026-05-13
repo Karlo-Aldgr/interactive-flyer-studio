@@ -642,6 +642,7 @@ export function TopBar({ saving }: Props) {
         onUploadThumbnail={uploadSocialPreview}
         regenerating={regenerating}
         isPublished={flyer.status === "published" && !!flyer.public_slug}
+        extraLinks={directExtraLinks}
       />
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
