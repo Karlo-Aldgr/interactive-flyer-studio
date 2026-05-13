@@ -259,14 +259,20 @@ export function TopBar({ saving }: Props) {
     if (error) { toast.error(error.message); return; }
     toast.success(newStatus === "published" ? "Published!" : "Unpublished");
 
-    // On publish, capture a fresh social thumbnail (prefer landing page).
+    // On publish, capture a fresh social thumbnail from the FLYER page so the
+    // unfurl card never includes the landing canvas's empty/black space.
     if (newStatus === "published") {
       const store = useEditorStore.getState();
       const landingPage = store.pages.find((p) => p.background?.linkPageId);
-      const sourcePage = landingPage ?? store.pages[0];
-      if (sourcePage) {
-        if (store.selectedPageId !== sourcePage.id) {
-          store.selectPage(sourcePage.id);
+      const linkedId = landingPage?.background?.linkPageId;
+      const flyerPage =
+        (linkedId ? store.pages.find((p) => p.id === linkedId) : undefined) ??
+        store.pages.find((p) => p.id !== landingPage?.id) ??
+        store.pages[0];
+      if (flyerPage) {
+        const originalSelected = store.selectedPageId;
+        if (store.selectedPageId !== flyerPage.id) {
+          store.selectPage(flyerPage.id);
           await new Promise((r) => setTimeout(r, 250));
         } else {
           await new Promise((r) => setTimeout(r, 50));
@@ -274,10 +280,36 @@ export function TopBar({ saving }: Props) {
         const stage = useEditorStore.getState().stageRef;
         if (stage) {
           try {
-            const captureW = sourcePage.background?.size?.width ?? flyer.settings.width;
-            const captureH = sourcePage.background?.size?.height ?? flyer.settings.height;
-            const bg = sourcePage.background?.color || flyer.settings.background || "#ffffff";
-            await generateAndUploadThumbnail(stage, flyer.id, captureW, captureH, bg);
+            const fW = flyerPage.background?.size?.width ?? flyer.settings.width;
+            const fH = flyerPage.background?.size?.height ?? flyer.settings.height;
+            const fBg = flyerPage.background?.color || flyer.settings.background || "#ffffff";
+            await generateAndUploadThumbnail(stage, flyer.id, fW, fH, fBg);
+            const flyerData = stageToSocialDataURL(stage, fW, fH, fBg);
+            if (flyerData) {
+              try {
+                await uploadFlyerVariantFromDataUrl(flyerData, flyer.id, fW, fH);
+              } catch (e) {
+                console.warn("[publish] flyer variant upload failed", e);
+              }
+              if (landingPage) {
+                try {
+                  await uploadLandingVariantFromDataUrl(
+                    flyerData, flyer.id, landingPage.id, fW, fH
+                  );
+                } catch (e) {
+                  console.warn("[publish] landing variant upload failed", e);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn("[publish] thumbnail capture failed", e);
+          }
+        }
+        if (originalSelected && originalSelected !== flyerPage.id) {
+          store.selectPage(originalSelected);
+        }
+      }
+    }
             if (landingPage) {
               try {
                 const landingData = stageToSocialDataURL(stage, captureW, captureH, bg);
