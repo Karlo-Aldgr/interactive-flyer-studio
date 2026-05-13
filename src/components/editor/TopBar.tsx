@@ -141,10 +141,13 @@ export function TopBar({ saving }: Props) {
     setRegenerating(true);
     try {
       const store = useEditorStore.getState();
-      const firstPage = store.pages[0];
-      if (!firstPage) return;
-      if (store.selectedPageId !== firstPage.id) {
-        store.selectPage(firstPage.id);
+      // Prefer a landing page (one with a tap-anywhere link) so the share
+      // preview matches the link recipients open first. Fall back to page 1.
+      const landingPage = store.pages.find((p) => p.background?.linkPageId);
+      const sourcePage = landingPage ?? store.pages[0];
+      if (!sourcePage) return;
+      if (store.selectedPageId !== sourcePage.id) {
+        store.selectPage(sourcePage.id);
         await new Promise((r) => setTimeout(r, 300));
       } else {
         await new Promise((r) => setTimeout(r, 80));
@@ -154,13 +157,15 @@ export function TopBar({ saving }: Props) {
         toast.error("Couldn't capture the page. Try again.");
         return;
       }
+      const captureW = sourcePage.background?.size?.width ?? flyer.settings.width;
+      const captureH = sourcePage.background?.size?.height ?? flyer.settings.height;
       try {
         const url = await generateAndUploadThumbnail(
           stage,
           flyer.id,
-          flyer.settings.width,
-          flyer.settings.height,
-          firstPage.background?.color || flyer.settings.background || "#ffffff"
+          captureW,
+          captureH,
+          sourcePage.background?.color || flyer.settings.background || "#ffffff"
         );
         setLocalThumbnail(url);
         const cleanUrl = url.split("?")[0];
@@ -213,14 +218,14 @@ export function TopBar({ saving }: Props) {
     if (error) { toast.error(error.message); return; }
     toast.success(newStatus === "published" ? "Published!" : "Unpublished");
 
-    // On publish, capture a fresh social thumbnail of page 1.
+    // On publish, capture a fresh social thumbnail (prefer landing page).
     if (newStatus === "published") {
       const store = useEditorStore.getState();
-      const firstPage = store.pages[0];
-      if (firstPage) {
-        // Switch to page 1 if not already there, wait a tick for konva to render.
-        if (store.selectedPageId !== firstPage.id) {
-          store.selectPage(firstPage.id);
+      const landingPage = store.pages.find((p) => p.background?.linkPageId);
+      const sourcePage = landingPage ?? store.pages[0];
+      if (sourcePage) {
+        if (store.selectedPageId !== sourcePage.id) {
+          store.selectPage(sourcePage.id);
           await new Promise((r) => setTimeout(r, 250));
         } else {
           await new Promise((r) => setTimeout(r, 50));
@@ -228,12 +233,14 @@ export function TopBar({ saving }: Props) {
         const stage = useEditorStore.getState().stageRef;
         if (stage) {
           try {
+            const captureW = sourcePage.background?.size?.width ?? flyer.settings.width;
+            const captureH = sourcePage.background?.size?.height ?? flyer.settings.height;
             await generateAndUploadThumbnail(
               stage,
               flyer.id,
-              flyer.settings.width,
-              flyer.settings.height,
-              firstPage.background?.color || flyer.settings.background || "#ffffff"
+              captureW,
+              captureH,
+              sourcePage.background?.color || flyer.settings.background || "#ffffff"
             );
           } catch (e) {
             console.warn("[publish] thumbnail capture failed", e);
