@@ -71,6 +71,38 @@ export function PagesPanel() {
     setPageIntro(activePage.id, next.preset === "none" && !patch.preset ? next : next);
   }
 
+  function quickAddCtaToFlyer(targetPageId: string) {
+    if (!activePage || !flyer) return;
+    const target = pages.find((p) => p.id === targetPageId);
+    if (!target) return;
+    const W = activePage.background?.size?.width ?? flyer.settings.width;
+    const H = activePage.background?.size?.height ?? flyer.settings.height;
+    addLayer("button");
+    const newId = useEditorStore.getState().selectedLayerId;
+    if (!newId) return;
+    const width = Math.min(360, Math.round(W * 0.45));
+    const height = 64;
+    updateLayer(newId, {
+      position: { x: Math.round((W - width) / 2), y: Math.round(H * 0.7) },
+      size: { width, height },
+      content: { label: "View flyer" },
+      style: {
+        fill: "#7c3aed",
+        color: "#ffffff",
+        cornerRadius: 999,
+        fontSize: 18,
+        fontWeight: 700,
+        align: "center",
+      },
+    });
+    setLayerAction(newId, {
+      id: "",
+      type: "navigate",
+      payload: { pageId: target.id },
+    } as any);
+    toast.success(`Added CTA linking to "${target.name}"`);
+  }
+
   return (
     <div className="flex flex-col border-b border-border">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
