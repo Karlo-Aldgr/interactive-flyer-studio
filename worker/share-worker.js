@@ -163,7 +163,7 @@ export default {
 
     // Crawlers → always serve OG HTML, even if Supabase is down.
     const flyer = await fetchFlyer(env, slug);
-    const { url: image, source: imageSource } = pickImage(flyer, env, isLanding);
+    const { url: image, source: imageSource } = pickImage(flyer, env, pageId);
     const title = flyer?.title || "Flyer";
     const description = isLanding
       ? `View "${title}" — interactive flyer.`
