@@ -142,26 +142,14 @@ export function TopBar({ saving }: Props) {
     setRegenerating(true);
     try {
       const store = useEditorStore.getState();
-      // The landing page often sits on a larger canvas than the flyer artwork
-      // itself (leaves blank/black bars when exported). Social previews look
-      // far cleaner if we always use the FLYER page as the unfurl card —
-      // for both the direct-flyer link AND the landing link. Viewers still
-      // open the landing page when they tap the landing link; only the
-      // preview thumbnail differs.
+      // Prefer a landing page (one with a tap-anywhere link) so the share
+      // preview matches the link recipients open first. Fall back to page 1.
       const landingPage = store.pages.find((p) => p.background?.linkPageId);
-      const linkedId = landingPage?.background?.linkPageId;
-      const flyerPage =
-        (linkedId ? store.pages.find((p) => p.id === linkedId) : undefined) ??
-        store.pages.find((p) => p.id !== landingPage?.id) ??
-        store.pages[0];
-      if (!flyerPage) return;
-
-      const originalSelected = store.selectedPageId;
-
-      // Capture the FLYER page first — this image becomes the canonical
-      // thumbnail (used by both the landing and direct flyer share links).
-      if (store.selectedPageId !== flyerPage.id) {
-        store.selectPage(flyerPage.id);
+      const sourcePage = landingPage ?? store.pages[0];
+      if (!sourcePage) return;
+      // Capture the LANDING page first (this also uploads → social thumbnail).
+      if (store.selectedPageId !== sourcePage.id) {
+        store.selectPage(sourcePage.id);
         await new Promise((r) => setTimeout(r, 300));
       } else {
         await new Promise((r) => setTimeout(r, 80));
@@ -171,37 +159,37 @@ export function TopBar({ saving }: Props) {
         toast.error("Couldn't capture the page. Try again.");
         return;
       }
-      const fW = flyerPage.background?.size?.width ?? flyer.settings.width;
-      const fH = flyerPage.background?.size?.height ?? flyer.settings.height;
-      const fBg = flyerPage.background?.color || flyer.settings.background || "#ffffff";
-
-      let flyerDataUrl: string | null = null;
+      const captureW = sourcePage.background?.size?.width ?? flyer.settings.width;
+      const captureH = sourcePage.background?.size?.height ?? flyer.settings.height;
       try {
-        // 1. Upload as the canonical thumbnail (flyers.thumbnail_url).
-        const url = await generateAndUploadThumbnail(stage, flyer.id, fW, fH, fBg);
+        const url = await generateAndUploadThumbnail(
+          stage,
+          flyer.id,
+          captureW,
+          captureH,
+          sourcePage.background?.color || flyer.settings.background || "#ffffff"
+        );
         setLocalThumbnail(url);
         const cleanUrl = url.split("?")[0];
         setFlyer({ thumbnail_url: cleanUrl });
-
-        // 2. Capture the same frame once and reuse it for both variants
-        //    (direct flyer + per-landing-page) so neither preview includes
-        //    the empty landing-canvas area.
-        flyerDataUrl = stageToSocialDataURL(stage, fW, fH, fBg);
-        if (flyerDataUrl) {
-          setFlyerPreviewThumb(flyerDataUrl);
+        // If this source page is a landing page, also upload it under the
+        // per-page variant path so the share Worker can serve it for
+        // ?page=<id> share links.
+        if (landingPage) {
           try {
-            await uploadFlyerVariantFromDataUrl(flyerDataUrl, flyer.id, fW, fH);
-          } catch (e) {
-            console.warn("[flyer variant upload] failed", e);
-          }
-          if (landingPage) {
-            try {
+            const landingData = stageToSocialDataURL(
+              stage,
+              captureW,
+              captureH,
+              sourcePage.background?.color || flyer.settings.background || "#ffffff"
+            );
+            if (landingData) {
               await uploadLandingVariantFromDataUrl(
-                flyerDataUrl, flyer.id, landingPage.id, fW, fH
+                landingData, flyer.id, sourcePage.id, captureW, captureH
               );
-            } catch (e) {
-              console.warn("[landing variant upload] failed", e);
             }
+          } catch (e) {
+            console.warn("[landing variant upload] failed", e);
           }
         }
         if (force) toast.success("Social preview updated");
@@ -210,11 +198,45 @@ export function TopBar({ saving }: Props) {
         toast.error(e?.message || "Could not generate preview");
       }
 
-      // Restore whichever page the user was editing before we ran capture.
-      if (originalSelected && originalSelected !== flyerPage.id) {
-        store.selectPage(originalSelected);
-      } else if (landingPage && landingPage.id !== flyerPage.id) {
-        store.selectPage(landingPage.id);
+      // Capture the FLYER target page locally (no upload — preview only).
+      const linkedId = sourcePage.background?.linkPageId;
+      const flyerPage = linkedId
+        ? store.pages.find((p) => p.id === linkedId)
+        : store.pages.find((p) => p.id !== sourcePage.id);
+      if (flyerPage) {
+        store.selectPage(flyerPage.id);
+        await new Promise((r) => setTimeout(r, 300));
+        stage = useEditorStore.getState().stageRef;
+        if (stage) {
+          try {
+            const fW = flyerPage.background?.size?.width ?? flyer.settings.width;
+            const fH = flyerPage.background?.size?.height ?? flyer.settings.height;
+            const data = stageToSocialDataURL(
+              stage,
+              fW,
+              fH,
+              flyerPage.background?.color || flyer.settings.background || "#ffffff"
+            );
+            if (data) {
+              setFlyerPreviewThumb(data);
+              // Upload as the "flyer-only" variant so the share Worker can serve
+              // it for direct-flyer links (no ?page= param) instead of the
+              // landing-page thumbnail.
+              try {
+                await uploadFlyerVariantFromDataUrl(data, flyer.id, fW, fH);
+              } catch (e) {
+                console.warn("[flyer variant upload] failed", e);
+              }
+            }
+          } catch (e) {
+            console.warn("[flyer preview capture] failed", e);
+          }
+        }
+        // Restore landing as the active page so the editor view doesn't jump.
+        store.selectPage(sourcePage.id);
+      } else {
+        // No separate flyer page → show the same image in both slots.
+        setFlyerPreviewThumb(undefined);
       }
     } finally {
       setRegenerating(false);
@@ -259,20 +281,14 @@ export function TopBar({ saving }: Props) {
     if (error) { toast.error(error.message); return; }
     toast.success(newStatus === "published" ? "Published!" : "Unpublished");
 
-    // On publish, capture a fresh social thumbnail from the FLYER page so the
-    // unfurl card never includes the landing canvas's empty/black space.
+    // On publish, capture a fresh social thumbnail (prefer landing page).
     if (newStatus === "published") {
       const store = useEditorStore.getState();
       const landingPage = store.pages.find((p) => p.background?.linkPageId);
-      const linkedId = landingPage?.background?.linkPageId;
-      const flyerPage =
-        (linkedId ? store.pages.find((p) => p.id === linkedId) : undefined) ??
-        store.pages.find((p) => p.id !== landingPage?.id) ??
-        store.pages[0];
-      if (flyerPage) {
-        const originalSelected = store.selectedPageId;
-        if (store.selectedPageId !== flyerPage.id) {
-          store.selectPage(flyerPage.id);
+      const sourcePage = landingPage ?? store.pages[0];
+      if (sourcePage) {
+        if (store.selectedPageId !== sourcePage.id) {
+          store.selectPage(sourcePage.id);
           await new Promise((r) => setTimeout(r, 250));
         } else {
           await new Promise((r) => setTimeout(r, 50));
@@ -280,33 +296,25 @@ export function TopBar({ saving }: Props) {
         const stage = useEditorStore.getState().stageRef;
         if (stage) {
           try {
-            const fW = flyerPage.background?.size?.width ?? flyer.settings.width;
-            const fH = flyerPage.background?.size?.height ?? flyer.settings.height;
-            const fBg = flyerPage.background?.color || flyer.settings.background || "#ffffff";
-            await generateAndUploadThumbnail(stage, flyer.id, fW, fH, fBg);
-            const flyerData = stageToSocialDataURL(stage, fW, fH, fBg);
-            if (flyerData) {
+            const captureW = sourcePage.background?.size?.width ?? flyer.settings.width;
+            const captureH = sourcePage.background?.size?.height ?? flyer.settings.height;
+            const bg = sourcePage.background?.color || flyer.settings.background || "#ffffff";
+            await generateAndUploadThumbnail(stage, flyer.id, captureW, captureH, bg);
+            if (landingPage) {
               try {
-                await uploadFlyerVariantFromDataUrl(flyerData, flyer.id, fW, fH);
-              } catch (e) {
-                console.warn("[publish] flyer variant upload failed", e);
-              }
-              if (landingPage) {
-                try {
+                const landingData = stageToSocialDataURL(stage, captureW, captureH, bg);
+                if (landingData) {
                   await uploadLandingVariantFromDataUrl(
-                    flyerData, flyer.id, landingPage.id, fW, fH
+                    landingData, flyer.id, sourcePage.id, captureW, captureH
                   );
-                } catch (e) {
-                  console.warn("[publish] landing variant upload failed", e);
                 }
+              } catch (e) {
+                console.warn("[publish] landing variant upload failed", e);
               }
             }
           } catch (e) {
             console.warn("[publish] thumbnail capture failed", e);
           }
-        }
-        if (originalSelected && originalSelected !== flyerPage.id) {
-          store.selectPage(originalSelected);
         }
       }
     }
