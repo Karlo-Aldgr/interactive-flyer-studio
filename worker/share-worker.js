@@ -70,16 +70,18 @@ async function fetchFlyer(env, slug) {
  * thumbnail (flyers.thumbnail_url). Otherwise (direct flyer link) use the
  * sibling "-flyer.jpg" variant uploaded by the editor.
  */
-function pickImage(flyer, env, isLanding) {
+function pickImage(flyer, env, pageId) {
+  const isLanding = !!pageId;
   if (isLanding) {
-    if (flyer?.thumbnail_url) {
-      return { url: String(flyer.thumbnail_url).split("?")[0], source: "landing-thumbnail" };
-    }
+    // Per-page landing variant uploaded by editor as `${flyerId}-${pageId}-flyer.jpg`.
     if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
       return {
-        url: `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}.jpg`,
-        source: "landing-constructed",
+        url: `${env.SUPABASE_URL}/storage/v1/object/public/flyer-thumbnails/${flyer.owner_id}/${flyer.id}-${pageId}-flyer.jpg`,
+        source: "landing-page-variant",
       };
+    }
+    if (flyer?.thumbnail_url) {
+      return { url: String(flyer.thumbnail_url).split("?")[0], source: "landing-thumbnail" };
     }
   } else {
     if (env.SUPABASE_URL && flyer?.owner_id && flyer?.id) {
@@ -147,11 +149,11 @@ export default {
     // Preserve incoming query string so ?page=<id> survives the redirect /
     // OG fetch round-trip.
     const qs = url.search || "";
-    const isLanding = url.searchParams.has("page");
+    const pageId = url.searchParams.get("page");
+    const isLanding = !!pageId;
     const viewerUrl = `${appOrigin}/f/${slug}${qs}`;
-    // Canonical = the worker URL itself (with query). If we point canonical at
-    // the live app, Facebook re-scrapes the app's index.html and uses its
-    // static og.png, overriding our per-flyer image.
+    // Canonical MUST include the query string, otherwise Facebook re-scrapes
+    // the bare slug and overrides our per-page image.
     const shareUrl = `${url.origin}/f/${slug}${qs}`;
 
     // Humans → straight to the interactive viewer (with original query).
@@ -161,7 +163,7 @@ export default {
 
     // Crawlers → always serve OG HTML, even if Supabase is down.
     const flyer = await fetchFlyer(env, slug);
-    const { url: image, source: imageSource } = pickImage(flyer, env, isLanding);
+    const { url: image, source: imageSource } = pickImage(flyer, env, pageId);
     const title = flyer?.title || "Flyer";
     const description = isLanding
       ? `View "${title}" — interactive flyer.`
