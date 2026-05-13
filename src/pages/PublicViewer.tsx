@@ -50,7 +50,7 @@ function getViewerSessionId(): string {
   }
 }
 
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Stage, Layer as KLayer, Rect, Circle, Ellipse, Line, Text, Image as KonvaImage, Group } from "react-konva";
 import Konva from "konva";
 import useImage from "use-image";
@@ -659,6 +659,8 @@ interface PublicViewerProps {
 
 export default function PublicViewer({ previewMode = false }: PublicViewerProps) {
   const params = useParams();
+  const [searchParams] = useSearchParams();
+  const startPageParam = searchParams.get("page");
   const slug = params.slug;
   const flyerId = params.flyerId;
   const [loading, setLoading] = useState(true);
@@ -803,6 +805,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       }));
       setFlyer(f as unknown as Flyer);
       setPages(mapped);
+      // Honor ?page=<id> to deep-link past a landing page (or any page).
+      if (startPageParam) {
+        const idx = mapped.findIndex((p) => p.id === startPageParam);
+        if (idx >= 0) setPageIndex(idx);
+      }
       setLoading(false);
 
       // analytics: view (skip in preview mode)
@@ -1487,6 +1494,30 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </Stage>
         {/* Air-message bubbles are rendered inside the Konva Stage so they
             respect per-layer z_index ordering. */}
+        {/* When a page is configured to act as a link (e.g. landing → flyer),
+            an absolutely positioned overlay above the stage captures any tap
+            and navigates to the linked page. */}
+        {(() => {
+          const linkId = page.background?.linkPageId;
+          if (!linkId) return null;
+          const targetIdx = pages.findIndex((p) => p.id === linkId);
+          if (targetIdx < 0) return null;
+          return (
+            <button
+              type="button"
+              aria-label={`Open ${pages[targetIdx].name}`}
+              onClick={() => setPageIndex(targetIdx)}
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                zIndex: 5,
+              }}
+            />
+          );
+        })()}
       </div>
 
       {/* Pagination */}

@@ -70,6 +70,7 @@ export function TopBar({ saving }: Props) {
   const setDeviceFrame = useEditorStore((s) => s.setDeviceFrame);
   const setCanvasSize = useEditorStore((s) => s.setCanvasSize);
   const startCrop = useEditorStore((s) => s.startCrop);
+  const pagesForLinks = useEditorStore((s) => s.pages);
 
   const [resizeOpen, setResizeOpen] = useState(false);
   const [presetIdx, setPresetIdx] = useState<string>("0");
@@ -270,6 +271,21 @@ export function TopBar({ saving }: Props) {
     shareOrigin && flyer.public_slug
       ? `${shareOrigin.replace(/\/$/, "")}/f/${flyer.public_slug}`
       : viewerUrl;
+
+  // If any page is configured as a "tap-anywhere" link (typically a landing
+  // page that points into the flyer), expose a second share link that opens
+  // the linked target page directly via ?page=<id>.
+  const landingPage = pagesForLinks.find((p) => p.background?.linkPageId);
+  const directExtraLinks =
+    landingPage && socialUrl
+      ? [
+          {
+            label: "Direct to flyer (skips landing)",
+            url: `${socialUrl}${socialUrl.includes("?") ? "&" : "?"}page=${landingPage.background!.linkPageId}`,
+            description: "No landing page intro",
+          },
+        ]
+      : undefined;
 
   return (
     <header className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
@@ -626,6 +642,7 @@ export function TopBar({ saving }: Props) {
         onUploadThumbnail={uploadSocialPreview}
         regenerating={regenerating}
         isPublished={flyer.status === "published" && !!flyer.public_slug}
+        extraLinks={directExtraLinks}
       />
 
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />

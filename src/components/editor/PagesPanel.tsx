@@ -8,8 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick } from "lucide-react";
-import type { IntroPreset, PageIntro, Layer } from "@/types/flyer";
-import { toast } from "sonner";
+import type { IntroPreset, PageIntro } from "@/types/flyer";
 
 const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
   { value: "none", label: "None" },
@@ -40,9 +39,7 @@ export function PagesPanel() {
   const setPageBackground = useEditorStore((s) => s.setPageBackground);
   const applyIntroToAllPages = useEditorStore((s) => s.applyIntroToAllPages);
   const replayIntro = useEditorStore((s) => s.replayIntro);
-  const addLayer = useEditorStore((s) => s.addLayer);
-  const updateLayer = useEditorStore((s) => s.updateLayer);
-  const setLayerAction = useEditorStore((s) => s.setLayerAction);
+  const setPageLink = useEditorStore((s) => s.setPageLink);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -71,37 +68,6 @@ export function PagesPanel() {
     setPageIntro(activePage.id, next.preset === "none" && !patch.preset ? next : next);
   }
 
-  function quickAddCtaToFlyer(targetPageId: string) {
-    if (!activePage || !flyer) return;
-    const target = pages.find((p) => p.id === targetPageId);
-    if (!target) return;
-    const W = activePage.background?.size?.width ?? flyer.settings.width;
-    const H = activePage.background?.size?.height ?? flyer.settings.height;
-    addLayer("button");
-    const newId = useEditorStore.getState().selectedLayerId;
-    if (!newId) return;
-    const width = Math.min(360, Math.round(W * 0.45));
-    const height = 64;
-    updateLayer(newId, {
-      position: { x: Math.round((W - width) / 2), y: Math.round(H * 0.7) },
-      size: { width, height },
-      content: { label: "View flyer" },
-      style: {
-        fill: "#7c3aed",
-        color: "#ffffff",
-        cornerRadius: 999,
-        fontSize: 18,
-        fontWeight: 700,
-        align: "center",
-      },
-    });
-    setLayerAction(newId, {
-      id: "",
-      type: "navigate",
-      payload: { pageId: target.id },
-    } as any);
-    toast.success(`Added CTA linking to "${target.name}"`);
-  }
 
   return (
     <div className="flex flex-col border-b border-border">
@@ -219,41 +185,34 @@ export function PagesPanel() {
         />
       )}
 
-      {activePage?.background?.size && pages.length > 1 && (
+      {activePage && pages.length > 1 && (
         <div className="space-y-2 border-t border-border bg-muted/20 p-3">
           <div className="flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
             <MousePointerClick className="h-3.5 w-3.5" />
-            Quick setup
+            Tap anywhere → go to page
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Add a CTA button on this landing page that links to one of your flyer pages.
+            When set, tapping anywhere on this page navigates to the chosen page.
+            Useful for landing pages that link straight into the flyer.
           </p>
-          {pages.filter((p) => p.id !== activePage.id).length === 1 ? (
-            <Button
-              size="sm"
-              className="h-8 w-full text-xs"
-              onClick={() => quickAddCtaToFlyer(pages.find((p) => p.id !== activePage.id)!.id)}
-            >
-              Add CTA → {pages.find((p) => p.id !== activePage.id)!.name}
-            </Button>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" className="h-8 w-full text-xs">
-                  Add CTA to flyer page…
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {pages
-                  .filter((p) => p.id !== activePage.id)
-                  .map((p) => (
-                    <DropdownMenuItem key={p.id} onClick={() => quickAddCtaToFlyer(p.id)}>
-                      {p.name}
-                    </DropdownMenuItem>
-                  ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <Select
+            value={activePage.background?.linkPageId ?? "__none__"}
+            onValueChange={(v) => setPageLink(activePage.id, v === "__none__" ? null : v)}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Don't link" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__" className="text-xs">Don't link (normal page)</SelectItem>
+              {pages
+                .filter((p) => p.id !== activePage.id)
+                .map((p, i) => (
+                  <SelectItem key={p.id} value={p.id} className="text-xs">
+                    {p.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
