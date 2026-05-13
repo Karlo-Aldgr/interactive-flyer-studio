@@ -15,7 +15,7 @@ import { cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { generateAndUploadThumbnail, uploadManualThumbnail, stageToSocialDataURL } from "@/lib/thumbnail";
+import { generateAndUploadThumbnail, uploadManualThumbnail, stageToSocialDataURL, uploadFlyerVariantFromDataUrl } from "@/lib/thumbnail";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -197,7 +197,17 @@ export function TopBar({ saving }: Props) {
               fH,
               flyerPage.background?.color || flyer.settings.background || "#ffffff"
             );
-            if (data) setFlyerPreviewThumb(data);
+            if (data) {
+              setFlyerPreviewThumb(data);
+              // Upload as the "flyer-only" variant so the share Worker can serve
+              // it for direct-flyer links (no ?page= param) instead of the
+              // landing-page thumbnail.
+              try {
+                await uploadFlyerVariantFromDataUrl(data, flyer.id, fW, fH);
+              } catch (e) {
+                console.warn("[flyer variant upload] failed", e);
+              }
+            }
           } catch (e) {
             console.warn("[flyer preview capture] failed", e);
           }
