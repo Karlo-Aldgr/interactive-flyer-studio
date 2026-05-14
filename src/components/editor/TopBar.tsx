@@ -208,9 +208,32 @@ export function TopBar({ saving }: Props) {
         : store.pages.find((p) => p.id !== sourcePage.id);
       if (flyerPage) {
         store.selectPage(flyerPage.id);
-        await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 500));
         stage = useEditorStore.getState().stageRef;
         if (stage) {
+          // Wait for all Konva.Image nodes on the stage to have loaded their
+          // underlying HTMLImageElements — otherwise the capture will be a
+          // blank/white frame on first open of the share dialog.
+          try {
+            const imgNodes: any[] = stage.find("Image") || [];
+            await Promise.all(
+              imgNodes.map((n: any) => {
+                const img = n.image && n.image();
+                if (!img) return Promise.resolve();
+                if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                return new Promise<void>((resolve) => {
+                  const done = () => resolve();
+                  img.addEventListener("load", done, { once: true });
+                  img.addEventListener("error", done, { once: true });
+                  setTimeout(done, 1500);
+                });
+              })
+            );
+            stage.batchDraw();
+            await new Promise((r) => setTimeout(r, 100));
+          } catch (e) {
+            console.warn("[flyer preview wait] failed", e);
+          }
           try {
             const fW = flyerPage.background?.size?.width ?? flyer.settings.width;
             const fH = flyerPage.background?.size?.height ?? flyer.settings.height;
