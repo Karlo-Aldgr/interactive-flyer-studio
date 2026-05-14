@@ -162,13 +162,15 @@ export function TopBar({ saving }: Props) {
       const captureW = sourcePage.background?.size?.width ?? flyer.settings.width;
       const captureH = sourcePage.background?.size?.height ?? flyer.settings.height;
       try {
-        const url = await generateAndUploadThumbnail(
-          stage,
-          flyer.id,
-          captureW,
-          captureH,
-          sourcePage.background?.color || flyer.settings.background || "#ffffff"
-        );
+        const bg = sourcePage.background?.color || flyer.settings.background || "#ffffff";
+        let url: string;
+        try {
+          url = await generateAndUploadThumbnail(stage, flyer.id, captureW, captureH, bg);
+        } catch (firstErr) {
+          console.warn("[ensureThumbnail] upload failed, retrying once…", firstErr);
+          await new Promise((r) => setTimeout(r, 500));
+          url = await generateAndUploadThumbnail(stage, flyer.id, captureW, captureH, bg);
+        }
         setLocalThumbnail(url);
         const cleanUrl = url.split("?")[0];
         setFlyer({ thumbnail_url: cleanUrl });
