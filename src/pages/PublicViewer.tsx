@@ -811,7 +811,14 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       // exists only to drive the social share preview.
       if (startPageParam) {
         const idx = mapped.findIndex((p) => p.id === startPageParam);
-        if (idx >= 0) setPageIndex(idx);
+        if (idx >= 0) {
+          // If the deep-linked page is a tap-anywhere landing (exists only
+          // to drive the social share preview), forward straight to its
+          // linked target so humans land on the actual flyer.
+          const linkedId = mapped[idx].background?.linkPageId;
+          const linkedIdx = linkedId ? mapped.findIndex((p) => p.id === linkedId) : -1;
+          setPageIndex(linkedIdx >= 0 ? linkedIdx : idx);
+        }
       } else {
         const landing = mapped.find((p) => p.background?.linkPageId);
         if (landing?.background?.linkPageId) {
