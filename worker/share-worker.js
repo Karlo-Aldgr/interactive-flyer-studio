@@ -73,7 +73,7 @@ function versionedImageUrl(url, flyer, pageId, source) {
 /** HEAD-probe a URL through the CF edge cache. True for any 2xx; false for 404. */
 async function imageExists(url) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 1500);
+  const timer = setTimeout(() => ctrl.abort(), 4000);
   try {
     const res = await fetch(url, {
       method: "HEAD",
@@ -203,7 +203,7 @@ export default {
       status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
-        "cache-control": "public, max-age=300",
+        "cache-control": "public, max-age=60",
         "x-share-worker": "v6",
         "x-flyer-found": flyer ? "true" : "false",
         "x-image-source": imageSource,
