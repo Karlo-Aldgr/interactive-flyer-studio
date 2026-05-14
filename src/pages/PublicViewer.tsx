@@ -1377,25 +1377,6 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </button>
         </div>
       )}
-      {/* Enlarge / fit toggle — keeps Konva hotspots fully interactive */}
-      <button
-        type="button"
-        aria-label={enlarged ? "Fit to screen" : "Enlarge flyer"}
-        onClick={() => setEnlarged((v) => !v)}
-        className="fixed top-3 right-3 z-50 inline-flex items-center gap-1 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs font-medium shadow-elegant backdrop-blur hover:bg-card"
-      >
-        {enlarged ? (
-          <>
-            <LucideIcons.Minimize2 className="h-3.5 w-3.5" />
-            Fit
-          </>
-        ) : (
-          <>
-            <LucideIcons.Maximize2 className="h-3.5 w-3.5" />
-            Enlarge
-          </>
-        )}
-      </button>
       <div ref={stageWrapRef} style={{ position: "relative", width: W * scale, height: H * scale, background: page.background.color || "#fff" }}>
         <Stage width={W * scale} height={H * scale} scaleX={scale} scaleY={scale}>
           <KLayer>
