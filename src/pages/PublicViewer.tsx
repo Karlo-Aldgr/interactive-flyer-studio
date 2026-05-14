@@ -661,6 +661,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const params = useParams();
   const [searchParams] = useSearchParams();
   const startPageParam = searchParams.get("page");
+  const openPageParam = searchParams.get("open");
   const slug = params.slug;
   const flyerId = params.flyerId;
   const [loading, setLoading] = useState(true);
@@ -809,7 +810,18 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       // page is configured as a tap-anywhere landing (linkPageId set), skip
       // it on initial load and open the linked target directly — the landing
       // exists only to drive the social share preview.
-      if (startPageParam) {
+      // Explicit ?open=<id> wins — used by share links so humans bypass the
+      // landing page even though the crawler-facing ?page=<landingId> is kept
+      // for the social preview image.
+      if (openPageParam) {
+        const openIdx = mapped.findIndex((p) => p.id === openPageParam);
+        if (openIdx >= 0) {
+          setPageIndex(openIdx);
+        } else if (startPageParam) {
+          const idx = mapped.findIndex((p) => p.id === startPageParam);
+          if (idx >= 0) setPageIndex(idx);
+        }
+      } else if (startPageParam) {
         const idx = mapped.findIndex((p) => p.id === startPageParam);
         if (idx >= 0) {
           // If the deep-linked page is a tap-anywhere landing (exists only
