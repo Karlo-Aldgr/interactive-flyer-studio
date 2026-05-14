@@ -1538,7 +1538,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             <button
               type="button"
               aria-label={`Open ${pages[targetIdx].name}`}
-              onClick={() => setPageIndex(targetIdx)}
+              onClick={() => { window.setTimeout(() => setPageIndex(targetIdx), 1); }}
               style={{
                 position: "absolute",
                 inset: 0,

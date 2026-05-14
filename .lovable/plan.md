@@ -1,17 +1,20 @@
-I’ll make the share link carry both pieces of intent:
+## Add 1ms forward to flyer after landing page click
 
-1. **Keep Facebook preview behavior unchanged**
-   - The URL will still include `?page=<landingPageId>` so Facebook/Meta crawlers keep using the landing-page preview image and metadata.
+In `src/pages/PublicViewer.tsx`, the landing-page tap overlay (around lines 1532–1552) currently calls `setPageIndex(targetIdx)` synchronously on click.
 
-2. **Add an explicit human-click bypass target**
-   - When a landing page has `background.linkPageId`, the generated landing share URL will also include the linked flyer page id, for example:
-     `?page=<landingPageId>&open=<flyerPageId>`
-   - This makes the bypass reliable even if the public viewer cannot infer the link quickly enough from the landing page.
+Change the overlay's `onClick` to defer navigation by 1ms:
 
-3. **Update `PublicViewer` initial page selection**
-   - On load, if `open=<pageId>` is present and matches a real page, open that flyer page immediately.
-   - Otherwise, keep the existing behavior: if `?page=` points to a landing page with `linkPageId`, jump to its linked page; if no query exists, skip any configured landing page.
+```ts
+onClick={() => {
+  window.setTimeout(() => setPageIndex(targetIdx), 1);
+}}
+```
 
-4. **Verification**
-   - Confirm the generated landing share URL includes both `page` and `open`.
-   - Confirm the viewer’s initial page-selection logic prioritizes `open` while preserving existing fallback behavior.
+This guarantees the click event fully completes before the viewer switches pages, then forwards to the linked flyer page on the next tick.
+
+No other files change. No backend or business logic changes.
+
+### Verification
+- Open a published flyer link whose landing page has `linkPageId` set.
+- Tap the landing page → flyer page should appear immediately (1ms later).
+- Confirm direct flyer link (no `?page=`) still opens the flyer with no landing in between.
