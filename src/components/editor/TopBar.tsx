@@ -354,10 +354,16 @@ export function TopBar({ saving }: Props) {
   // share link that opens the landing itself (?page=<landingId>). The primary
   // socialUrl auto-skips landing → opens the flyer directly.
   const landingPage = pagesForLinks.find((p) => p.background?.linkPageId);
-  const landingShareUrl =
-    landingPage && socialUrl
-      ? `${socialUrl}${socialUrl.includes("?") ? "&" : "?"}page=${landingPage.id}`
-      : "";
+  // Include &open=<flyerPageId> so when a human clicks the share link, the
+  // viewer jumps straight to the flyer page (bypassing the landing). Crawlers
+  // still see ?page=<landingPageId> and use the landing's social preview.
+  const landingShareUrl = (() => {
+    if (!landingPage || !socialUrl) return "";
+    const sep = socialUrl.includes("?") ? "&" : "?";
+    const openId = landingPage.background?.linkPageId;
+    const openParam = openId ? `&open=${openId}` : "";
+    return `${socialUrl}${sep}page=${landingPage.id}${openParam}`;
+  })();
   const flyerPreviewSection = landingPage
     ? {
         label: "Direct flyer link",
