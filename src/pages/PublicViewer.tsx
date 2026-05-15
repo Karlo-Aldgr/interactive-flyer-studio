@@ -1556,7 +1556,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         >
           <DialogHeader>
             <DialogTitle style={{ color: "inherit" }}>{popup?.payload.title || (popup?.type === "buy_ticket" ? "Get your ticket" : popup?.type === "buy_product" ? (popup.payload.productName || "Buy product") : "Info")}</DialogTitle>
-            {popup?.payload.body && <DialogDescription style={{ color: "inherit", opacity: 0.9 }}>{popup.payload.body}</DialogDescription>}
+            {popup?.payload.body && <DialogDescription className="whitespace-pre-wrap" style={{ color: "inherit", opacity: 0.9 }}>{popup.payload.body}</DialogDescription>}
           </DialogHeader>
           {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
             <div className="relative w-full">
@@ -1879,7 +1879,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             <DialogTitle>
               {formAction?.payload.title || (formAction?.type === "rsvp" ? "RSVP" : "Get in touch")}
             </DialogTitle>
-            {formAction?.payload.body && <DialogDescription>{formAction.payload.body}</DialogDescription>}
+            {formAction?.payload.body && <DialogDescription className="whitespace-pre-wrap">{formAction.payload.body}</DialogDescription>}
           </DialogHeader>
           <div className="space-y-3">
             {((formAction?.type === "rsvp" ? formAction?.payload.rsvpFields : formAction?.payload.fields) || []).map((f) => (
@@ -1916,7 +1916,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           <DialogHeader>
             <DialogTitle>{subscribeAction?.payload.subscribeTitle || "Join our list"}</DialogTitle>
             {subscribeAction?.payload.subscribeBody && (
-              <DialogDescription>{subscribeAction.payload.subscribeBody}</DialogDescription>
+              <DialogDescription className="whitespace-pre-wrap">{subscribeAction.payload.subscribeBody}</DialogDescription>
             )}
           </DialogHeader>
           <div className="space-y-3">
@@ -1963,7 +1963,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{confirmAction?.payload.title || "Continue?"}</DialogTitle>
-            {confirmAction?.payload.body && <DialogDescription>{confirmAction.payload.body}</DialogDescription>}
+            {confirmAction?.payload.body && <DialogDescription className="whitespace-pre-wrap">{confirmAction.payload.body}</DialogDescription>}
           </DialogHeader>
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setConfirmAction(null)}>Cancel</Button>
@@ -2474,7 +2474,7 @@ function CouponDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{p.title || "Your coupon"}</DialogTitle>
-          {p.body && <DialogDescription>{p.body}</DialogDescription>}
+          {p.body && <DialogDescription className="whitespace-pre-wrap">{p.body}</DialogDescription>}
         </DialogHeader>
         {!unlocked ? (
           <div className="space-y-3">
