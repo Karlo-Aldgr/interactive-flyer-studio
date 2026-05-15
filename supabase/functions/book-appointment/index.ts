@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       .select("id, status, title")
       .eq("id", body.flyerId)
       .maybeSingle();
-    if (flyerErr || !flyer || flyer.status !== "published") {
+    if (flyerErr || !flyer || (flyer.status !== "published" && flyer.status !== "draft")) {
       return new Response(JSON.stringify({ error: "Flyer not bookable" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
