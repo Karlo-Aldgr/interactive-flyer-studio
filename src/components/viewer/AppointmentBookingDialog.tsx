@@ -202,7 +202,7 @@ export default function AppointmentBookingDialog({
             </div>
             <div className="space-y-3">
               {p.apptDescription && (
-                <p className="text-sm text-muted-foreground">{p.apptDescription}</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{p.apptDescription}</p>
               )}
               {p.apptLocation && (
                 <p className="text-xs text-muted-foreground">📍 {p.apptLocation}</p>
