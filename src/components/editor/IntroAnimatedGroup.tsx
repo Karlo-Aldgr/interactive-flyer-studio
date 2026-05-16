@@ -177,5 +177,7 @@ export function resolveIntro(intro: PageIntro | null | undefined) {
     delayMs: intro?.delayMs ?? 0,
     stagger: intro?.stagger ?? false,
     staggerStepMs: intro?.staggerStepMs ?? 80,
+    loop: intro?.loop ?? false,
+    loopDelayMs: intro?.loopDelayMs ?? 1000,
   };
 }
