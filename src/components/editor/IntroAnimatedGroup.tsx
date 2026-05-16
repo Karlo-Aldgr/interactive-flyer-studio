@@ -7,6 +7,8 @@ interface Props {
   preset: IntroPreset;
   durationMs: number;
   delayMs: number;
+  loop?: boolean;
+  loopDelayMs?: number;
   // Center coordinates of the wrapped node (canvas space) — used as the
   // pivot for scale-based presets so they zoom around the layer center.
   cx: number;
