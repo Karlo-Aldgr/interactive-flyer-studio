@@ -293,6 +293,29 @@ export function Inspector() {
                       onValueChange={(v) => patch({ delayMs: v[0] })}
                     />
                   </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[11px]">Loop animation</Label>
+                    <Switch
+                      checked={!!cfg.loop}
+                      onCheckedChange={(v) => patch({ loop: v })}
+                    />
+                  </div>
+
+                  {cfg.loop && (
+                    <div>
+                      <div className="mb-1 flex items-center justify-between">
+                        <Label className="text-[11px]">Loop delay</Label>
+                        <span className="text-[11px] text-muted-foreground">{cfg.loopDelayMs ?? 1000}ms</span>
+                      </div>
+                      <Slider
+                        min={0}
+                        max={5000}
+                        step={100}
+                        value={[cfg.loopDelayMs ?? 1000]}
+                        onValueChange={(v) => patch({ loopDelayMs: v[0] })}
+                      />
+                    </div>
+                  )}
                 </>
               )}
 
