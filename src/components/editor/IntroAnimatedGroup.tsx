@@ -67,6 +67,8 @@ export function IntroAnimatedGroup({
   preset,
   durationMs,
   delayMs,
+  loop = false,
+  loopDelayMs = 1000,
   cx,
   cy,
   introKey,
@@ -75,6 +77,7 @@ export function IntroAnimatedGroup({
   const ref = useRef<Konva.Group | null>(null);
   const tweenRef = useRef<Konva.Tween | null>(null);
   const timerRef = useRef<number | null>(null);
+  const loopTimerRef = useRef<number | null>(null);
   // Capture cx/cy at animation start — we don't want re-animating when the
   // user drags the wrapped layer (which would change cx/cy on every frame).
   const cxRef = useRef(cx);
@@ -95,42 +98,56 @@ export function IntroAnimatedGroup({
       node.getLayer()?.batchDraw();
       return;
     }
-    node.x(cx + start.x);
-    node.y(cy + start.y);
-    node.scaleX(start.scaleX);
-    node.scaleY(start.scaleY);
-    node.opacity(start.opacity);
-    node.getLayer()?.batchDraw();
 
-    timerRef.current = window.setTimeout(() => {
-      safeDestroy(tweenRef.current);
-      tweenRef.current = null;
-      tweenRef.current = new Konva.Tween({
-        node,
-        duration: Math.max(0.05, durationMs / 1000),
-        x: cxRef.current,
-        y: cyRef.current,
-        scaleX: 1,
-        scaleY: 1,
-        opacity: 1,
-        easing:
-          preset === "pop"
-            ? Konva.Easings.BackEaseOut
-            : preset === "drop"
-              ? Konva.Easings.BounceEaseOut
-              : Konva.Easings.EaseOut,
-      });
-      tweenRef.current.play();
-    }, Math.max(0, delayMs));
+    const runOnce = (initialDelay: number) => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      node.x(cx + start.x);
+      node.y(cy + start.y);
+      node.scaleX(start.scaleX);
+      node.scaleY(start.scaleY);
+      node.opacity(start.opacity);
+      node.getLayer()?.batchDraw();
+
+      timerRef.current = window.setTimeout(() => {
+        safeDestroy(tweenRef.current);
+        tweenRef.current = null;
+        tweenRef.current = new Konva.Tween({
+          node,
+          duration: Math.max(0.05, durationMs / 1000),
+          x: cxRef.current,
+          y: cyRef.current,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 1,
+          easing:
+            preset === "pop"
+              ? Konva.Easings.BackEaseOut
+              : preset === "drop"
+                ? Konva.Easings.BounceEaseOut
+                : Konva.Easings.EaseOut,
+          onFinish: () => {
+            if (!loop) return;
+            if (loopTimerRef.current) window.clearTimeout(loopTimerRef.current);
+            loopTimerRef.current = window.setTimeout(() => {
+              runOnce(0);
+            }, Math.max(0, loopDelayMs));
+          },
+        });
+        tweenRef.current.play();
+      }, Math.max(0, initialDelay));
+    };
+
+    runOnce(delayMs);
 
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
+      if (loopTimerRef.current) window.clearTimeout(loopTimerRef.current);
       safeDestroy(tweenRef.current);
       tweenRef.current = null;
     };
     // Intentionally exclude cx/cy — only animate on preset/timing/replay changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preset, durationMs, delayMs, introKey]);
+  }, [preset, durationMs, delayMs, loop, loopDelayMs, introKey]);
 
   // When not animating (steady state), keep the wrapper anchored to the latest
   // cx/cy. This way layer drags update the pivot for the *next* animation but
