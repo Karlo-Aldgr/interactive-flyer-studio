@@ -384,6 +384,8 @@ export function Canvas() {
                     preset={cfg.preset}
                     durationMs={cfg.durationMs}
                     delayMs={delay}
+                    loop={cfg.loop}
+                    loopDelayMs={cfg.loopDelayMs}
                     cx={cx}
                     cy={cy}
                     introKey={`${page.id}:${l.id}:${cfg.preset}:${introReplayKey}`}
