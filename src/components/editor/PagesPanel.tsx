@@ -307,6 +307,30 @@ export function PagesPanel() {
                   />
                 </div>
               )}
+
+              <div className="flex items-center justify-between">
+                <Label className="text-[11px]">Loop animation</Label>
+                <Switch
+                  checked={!!intro.loop}
+                  onCheckedChange={(v) => patchIntro({ loop: v })}
+                />
+              </div>
+
+              {intro.loop && (
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <Label className="text-[11px]">Loop delay</Label>
+                    <span className="text-[11px] text-muted-foreground">{intro.loopDelayMs ?? 1000}ms</span>
+                  </div>
+                  <Slider
+                    min={0}
+                    max={5000}
+                    step={100}
+                    value={[intro.loopDelayMs ?? 1000]}
+                    onValueChange={(v) => patchIntro({ loopDelayMs: v[0] })}
+                  />
+                </div>
+              )}
             </>
           )}
 
