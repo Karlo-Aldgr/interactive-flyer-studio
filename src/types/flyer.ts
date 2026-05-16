@@ -283,6 +283,8 @@ export interface PageIntro {
   delayMs?: number;      // default 0
   stagger?: boolean;     // default false
   staggerStepMs?: number;// default 80
+  loop?: boolean;        // default false — replay animation continuously
+  loopDelayMs?: number;  // default 1000 — pause between loop iterations
 }
 
 export interface FlyerPage {
