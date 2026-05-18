@@ -10,7 +10,7 @@ const PLATFORMS: Array<{
   key: keyof SocialSlideoutSettings;
   label: string;
   prefix?: string;
-  icon: React.ComponentType<{ size?: number; color?: string; className?: string }>;
+  icon: React.ComponentType<any>;
 }> = [
   { key: "instagram", label: "Instagram", prefix: "https://instagram.com/", icon: Instagram },
   { key: "facebook", label: "Facebook", prefix: "https://facebook.com/", icon: Facebook },
