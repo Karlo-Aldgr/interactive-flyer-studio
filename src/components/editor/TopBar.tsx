@@ -28,6 +28,8 @@ import { FlyerPaymentSettingsDialog } from "./FlyerPaymentSettingsDialog";
 import { IntroAudioDialog } from "./IntroAudioDialog";
 import { SubscribersPanel } from "./SubscribersPanel";
 import { PortalLinkDialog } from "./PortalLinkDialog";
+import { SocialMediaDialog } from "./SocialMediaDialog";
+import { hasAnySocial } from "@/components/viewer/SocialSlideout";
 
 interface Props { saving: boolean }
 
@@ -87,6 +89,7 @@ export function TopBar({ saving }: Props) {
   const [subscribersOpen, setSubscribersOpen] = useState(false);
   const [paySettingsOpen, setPaySettingsOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<FlyerCategory>(((flyer as any)?.category as FlyerCategory) || "business");
   const [editEventDate, setEditEventDate] = useState<Date | undefined>(
