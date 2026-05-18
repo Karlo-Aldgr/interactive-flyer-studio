@@ -316,6 +316,27 @@ export interface FlyerSettings {
   payVenmo?: string;             // Venmo username, no leading @
   payCashapp?: string;           // Cash App $Cashtag, no leading $
   payApplePayContact?: string;   // Phone number or email registered with Apple Cash (used via iMessage)
+  // Social media slideout tab (only renders when at least one URL is filled in)
+  social?: SocialSlideoutSettings;
+}
+
+export interface SocialSlideoutSettings {
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  twitter?: string;     // X
+  youtube?: string;
+  linkedin?: string;
+  snapchat?: string;
+  threads?: string;
+  website?: string;
+  // styling
+  tabBgColor?: string;     // default "#1a1a1a"
+  tabTextColor?: string;   // default "#ffffff"
+  panelBgColor?: string;   // default "#1a1a1a"
+  iconColor?: string;      // default "#ffffff"
+  fontFamily?: string;     // default "Inter"
+  label?: string;          // default "SOCIAL MEDIA"
 }
 
 export type FlyerCategory = "business" | "event";

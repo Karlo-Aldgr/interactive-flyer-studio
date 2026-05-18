@@ -8,6 +8,7 @@ import { IntroAnimatedGroup, resolveIntro } from "./IntroAnimatedGroup";
 import { Button } from "@/components/ui/button";
 import { X, Check } from "lucide-react";
 import type { AirMessageBubble, Layer as FlyerLayer } from "@/types/flyer";
+import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 
 const ACTION_LABEL: Record<string, string> = {
   open_url: "URL", popup: "Popup", video: "Video", call: "Call",
@@ -516,6 +517,7 @@ export function Canvas() {
             )}
           </Stage>
 
+          <SocialSlideout settings={flyer.settings.social} />
         </div>
       </div>
     </div>

@@ -28,6 +28,8 @@ import { FlyerPaymentSettingsDialog } from "./FlyerPaymentSettingsDialog";
 import { IntroAudioDialog } from "./IntroAudioDialog";
 import { SubscribersPanel } from "./SubscribersPanel";
 import { PortalLinkDialog } from "./PortalLinkDialog";
+import { SocialMediaDialog } from "./SocialMediaDialog";
+import { hasAnySocial } from "@/components/viewer/SocialSlideout";
 
 interface Props { saving: boolean }
 
@@ -87,6 +89,7 @@ export function TopBar({ saving }: Props) {
   const [subscribersOpen, setSubscribersOpen] = useState(false);
   const [paySettingsOpen, setPaySettingsOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<FlyerCategory>(((flyer as any)?.category as FlyerCategory) || "business");
   const [editEventDate, setEditEventDate] = useState<Date | undefined>(
@@ -592,6 +595,20 @@ export function TopBar({ saving }: Props) {
           <TooltipTrigger asChild>
             <Button
               size="sm"
+              variant={hasAnySocial(flyer.settings.social) ? "default" : "outline"}
+              onClick={() => setSocialOpen(true)}
+            >
+              <Share2 className="mr-1 h-4 w-4" /> Social
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Add Instagram, TikTok, etc. — appears as a slide-out tab on the flyer
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
               variant={(flyer.settings.payVenmo || flyer.settings.payCashapp || flyer.settings.payApplePayContact) ? "default" : "outline"}
               onClick={() => setPaySettingsOpen(true)}
             >
@@ -764,6 +781,7 @@ export function TopBar({ saving }: Props) {
       <FlyerPaymentSettingsDialog open={paySettingsOpen} onOpenChange={setPaySettingsOpen} />
       <PortalLinkDialog flyerId={flyer.id} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />
       <IntroAudioDialog open={introAudioOpen} onOpenChange={setIntroAudioOpen} />
+      <SocialMediaDialog open={socialOpen} onOpenChange={setSocialOpen} />
       <SubscribersPanel
         open={subscribersOpen}
         onOpenChange={setSubscribersOpen}

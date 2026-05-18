@@ -67,6 +67,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
+import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { toast } from "sonner";
 
 // Highlight ring shown around tappable layers in the viewer.
@@ -1533,6 +1534,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             />
           );
         })()}
+        {!isLinkedPage && <SocialSlideout settings={flyer.settings.social} />}
       </div>
 
 
