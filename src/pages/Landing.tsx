@@ -64,6 +64,11 @@ export default function Landing() {
             <Button asChild size="lg" variant="outline">
               <a href="#interactions">Browse interactions</a>
             </Button>
+            <Button asChild size="lg" variant="outline">
+              <a href={`sms:+16625491457?&body=${encodeURIComponent("Hi, I'm interested in getting an interactive flyer created for me")}`}>
+                Text help
+              </a>
+            </Button>
           </div>
         </div>
       </section>
