@@ -237,6 +237,37 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  * write the CLEAN public URL (no cache-buster) to flyers.thumbnail_url,
  * and return a cache-busted URL for immediate UI display.
  */
+/**
+ * Wait for every Konva.Image node on the stage to have a fully-loaded
+ * HTMLImageElement so that `stage.toDataURL()` doesn't capture a blank
+ * frame while images are still streaming in. Resolves after each image
+ * either loads, errors, or hits a short safety timeout.
+ */
+export async function waitForStageImages(stage: any, perImageTimeoutMs = 2000): Promise<void> {
+  if (!stage || typeof stage.find !== "function") return;
+  try {
+    const imgNodes: any[] = stage.find("Image") || [];
+    await Promise.all(
+      imgNodes.map((n: any) => {
+        const img = n.image && n.image();
+        if (!img) return Promise.resolve();
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          const done = () => resolve();
+          img.addEventListener?.("load", done, { once: true });
+          img.addEventListener?.("error", done, { once: true });
+          setTimeout(done, perImageTimeoutMs);
+        });
+      })
+    );
+    stage.batchDraw?.();
+    // One extra paint tick so the newly-drawn pixels are committed.
+    await new Promise((r) => setTimeout(r, 80));
+  } catch (e) {
+    console.warn("[waitForStageImages] failed", e);
+  }
+}
+
 export async function generateAndUploadThumbnail(
   stage: any,
   flyerId: string,
@@ -247,6 +278,7 @@ export async function generateAndUploadThumbnail(
   if (!stage) {
     throw new Error("Canvas not ready (no stage). Please open the editor and try again.");
   }
+  await waitForStageImages(stage);
   let raw: string | null;
   try {
     raw = stageToSocialDataURL(stage, flyerW, flyerH, background);
