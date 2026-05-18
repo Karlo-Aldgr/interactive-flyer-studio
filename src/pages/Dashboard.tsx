@@ -48,11 +48,12 @@ export default function Dashboard() {
     setFlyers(flyersData as any);
     setLoading(false);
 
-    // Lazily backfill thumbnails for flyers without one (cap to avoid stalls)
-    const missing = flyersData.filter((f) => !f.thumbnail_url).slice(0, 12);
-    if (missing.length === 0) return;
+    // Lazily backfill a per-flyer "page image" fallback for every flyer, so
+    // we can swap it in when the saved thumbnail_url is missing or broken.
+    const toBackfill = flyersData.slice(0, 24);
+    if (toBackfill.length === 0) return;
     await Promise.all(
-      missing.map(async (f) => {
+      toBackfill.map(async (f) => {
         const { data: pages } = await supabase
           .from("pages")
           .select("id, index, layers(type, z_index, content)")
@@ -65,7 +66,7 @@ export default function Dashboard() {
           .sort((a: any, b: any) => (a.z_index ?? 0) - (b.z_index ?? 0))[0];
         const src = imageLayer?.content?.src;
         if (src) {
-          setFlyers((prev) => prev.map((x) => (x.id === f.id ? { ...x, thumbnail_url: src } : x)));
+          setFlyers((prev) => prev.map((x) => (x.id === f.id ? { ...x, _pageImageFallback: src } as any : x)));
         }
       })
     );
@@ -207,8 +208,18 @@ export default function Dashboard() {
                 <Card key={f.id} className="group overflow-hidden transition hover:shadow-elegant">
                   <Link to={`/editor/${f.id}`} className="block">
                     <div className="aspect-[3/4] gradient-canvas border-b border-border relative">
-                      {f.thumbnail_url ? (
-                        <img src={f.thumbnail_url} alt={f.title} className="h-full w-full object-cover" loading="lazy" />
+                      {(f.thumbnail_url || (f as any)._pageImageFallback) ? (
+                        <img
+                          src={f.thumbnail_url || (f as any)._pageImageFallback}
+                          alt={f.title}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            const fallback = (f as any)._pageImageFallback;
+                            const el = e.currentTarget as HTMLImageElement;
+                            if (fallback && el.src !== fallback) el.src = fallback;
+                          }}
+                        />
                       ) : (
                         <div className="flex h-full items-center justify-center text-muted-foreground">
                           <FileText className="h-10 w-10 opacity-40" />
