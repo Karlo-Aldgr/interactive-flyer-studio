@@ -1363,7 +1363,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
   return (
     <div
-      className={`flex min-h-screen ${enlarged ? "items-start justify-start" : "items-center justify-center"} ${isLinkedPage ? "overflow-hidden" : "overflow-auto"}`}
+      className={`flex min-h-screen justify-center ${enlarged ? "items-start" : "items-start"} ${isLinkedPage ? "overflow-hidden" : "overflow-auto"}`}
       style={{ background: page.background.color || "#fff", touchAction: "pinch-zoom" }}
     >
       {previewMode && (
