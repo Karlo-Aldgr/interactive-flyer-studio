@@ -196,6 +196,7 @@ export default function AdminJobs() {
             <Badge variant="outline" className="ml-2">Super admin</Badge>
           </div>
           <div className="flex gap-2">
+            <Button asChild variant="ghost" size="sm"><Link to="/admin/analytics">Analytics</Link></Button>
             <Button asChild variant="ghost" size="sm"><Link to="/admin/contacts">Contacts</Link></Button>
             <Button asChild variant="ghost" size="sm"><Link to="/dashboard"><ArrowLeft className="mr-1 h-4 w-4" />Dashboard</Link></Button>
           </div>
