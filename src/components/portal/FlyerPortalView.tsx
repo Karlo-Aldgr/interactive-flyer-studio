@@ -489,6 +489,37 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Traffic sources</CardTitle>
+              <p className="text-[11px] text-muted-foreground">
+                Where your views came from. Add <code>?utm_source=facebook</code> (or instagram, tiktok…) to shared links for exact attribution.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {trafficSources.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No views tracked yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {trafficSources.map(([src, n]) => {
+                    const pct = trafficTotal ? (n / trafficTotal) * 100 : 0;
+                    return (
+                      <div key={src}>
+                        <div className="mb-1 flex justify-between text-sm">
+                          <span>{src}</span>
+                          <span className="tabular-nums text-muted-foreground">{n} ({pct.toFixed(0)}%)</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="polls" className="space-y-4">
