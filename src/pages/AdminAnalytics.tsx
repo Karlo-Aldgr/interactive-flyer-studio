@@ -192,7 +192,7 @@ export default function AdminAnalytics() {
               )}
             </Card>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               <Card className="p-5">
                 <h2 className="mb-4 font-display text-lg font-semibold">Top flyers</h2>
                 {stats.topFlyers.length === 0 ? (
