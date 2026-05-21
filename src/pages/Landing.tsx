@@ -41,6 +41,24 @@ export default function Landing() {
         <img src={logo} alt="TapThatFlyer logo" className="w-full max-w-3xl h-auto" />
       </div>
 
+      {/* Manifesto */}
+      <section className="container pb-8 pt-2 md:pb-12">
+        <div className="mx-auto max-w-3xl text-center space-y-5">
+          <h2 className="font-display text-3xl font-extrabold tracking-tight md:text-4xl">
+            Are you creating flyers that do nothing but look good?
+          </h2>
+          <p className="text-lg font-semibold text-foreground">
+            Because looking good ain't enough anymore.
+          </p>
+          <p className="text-lg text-muted-foreground">
+            People don't just want information… they want <span className="text-gradient font-semibold">interaction</span>. They want <span className="text-gradient font-semibold">experience</span>.
+          </p>
+          <p className="text-base text-muted-foreground leading-relaxed">
+            Tap That Flyer transforms ordinary flyers into interactive marketing experiences that capture attention, increase engagement, and drive real results. Instead of handing people a flyer they glance at and throw away, give them something they can tap, scan, watch, explore, and interact with instantly. From videos and special offers to bookings, websites, social media, and direct shopping, Tap That Flyer turns every flyer into a powerful digital experience designed to connect businesses, brands, creators, and events with their audience in a smarter, more memorable way.
+          </p>
+        </div>
+      </section>
+
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 gradient-canvas opacity-60" />
