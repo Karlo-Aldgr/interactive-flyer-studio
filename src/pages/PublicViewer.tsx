@@ -846,9 +846,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       // analytics: view (skip in preview mode)
       if (!previewMode) {
         const sid = getViewerSessionId();
+        const ts = getCurrentTrafficSource();
         const { error: trackErr } = await supabase
           .from("analytics_events")
-          .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: document.referrer || null, device: getViewerDevice() } } as any]);
+          .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: ts.referrer, source: ts.source, utm: ts.utm, device: getViewerDevice() } } as any]);
         if (trackErr) console.warn("[analytics] view insert failed", trackErr);
       }
     })();
