@@ -195,6 +195,15 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
   const uniqueVisitors = Object.keys(sessionViews).length;
   const returnVisitors = Object.values(sessionViews).filter((n) => n > 1).length;
 
+  // Traffic sources (Facebook, Instagram, TikTok, Direct, etc.)
+  const sourceMap: Record<string, number> = {};
+  for (const e of viewEvents) {
+    const src = sourceFromEventMetadata(e.metadata) || "Direct";
+    sourceMap[src] = (sourceMap[src] || 0) + 1;
+  }
+  const trafficSources = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]);
+  const trafficTotal = trafficSources.reduce((s, [, n]) => s + n, 0);
+
   type LayerClickAgg = {
     label: string; type: string; actionTypes: string[]; clicks: number;
     devices: { mobile: number; tablet: number; desktop: number; unknown: number };
