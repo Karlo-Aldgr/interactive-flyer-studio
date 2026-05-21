@@ -982,11 +982,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       try {
         const url = `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/analytics_events`;
         const apikey = (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const ts = getCurrentTrafficSource();
         const body = JSON.stringify({
           flyer_id: flyer.id,
           event_type: "view",
           session_id: getViewerSessionId(),
-          metadata: { beacon: true, referrer: document.referrer || null, device: getViewerDevice() },
+          metadata: { beacon: true, referrer: ts.referrer, source: ts.source, utm: ts.utm, device: getViewerDevice() },
         });
         const blob = new Blob(
           [JSON.stringify({ apikey, authorization: `Bearer ${apikey}`, body })],
