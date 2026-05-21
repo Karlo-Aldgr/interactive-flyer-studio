@@ -69,6 +69,8 @@ import { runAddToCalendar } from "@/lib/calendarHelpers";
 import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { toast } from "sonner";
+import { getCurrentTrafficSource } from "@/lib/trafficSource";
+
 
 // Highlight ring shown around tappable layers in the viewer.
 function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" }) {
