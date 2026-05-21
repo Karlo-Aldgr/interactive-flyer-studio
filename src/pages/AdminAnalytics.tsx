@@ -89,6 +89,13 @@ export default function AdminAnalytics() {
       devices.set(d, (devices.get(d) || 0) + 1);
     });
 
+    // Traffic source breakdown (views only)
+    const sources = new Map<string, number>();
+    views.forEach((e) => {
+      const s = sourceFromEventMetadata(e.metadata) || "Direct";
+      sources.set(s, (sources.get(s) || 0) + 1);
+    });
+
     // Daily timeline (views per day)
     const daily = new Map<string, number>();
     views.forEach((v) => {
@@ -105,6 +112,7 @@ export default function AdminAnalytics() {
       activeFlyers: uniqueFlyers.size,
       topFlyers,
       devices: [...devices.entries()].sort((a, b) => b[1] - a[1]),
+      sources: [...sources.entries()].sort((a, b) => b[1] - a[1]),
       timeline,
       maxDaily,
     };
