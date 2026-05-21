@@ -18,6 +18,7 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminContacts = lazy(() => import("./pages/AdminContacts"));
 const AdminJobs = lazy(() => import("./pages/AdminJobs"));
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const FlyerPortal = lazy(() => import("./pages/FlyerPortal"));
 const PublicFlyerPortal = lazy(() => import("./pages/PublicFlyerPortal"));
 const SubmitJob = lazy(() => import("./pages/SubmitJob"));
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/f/:slug" element={<PublicViewer />} />
               <Route path="/admin/contacts" element={<ProtectedRoute><AdminContacts /></ProtectedRoute>} />
               <Route path="/admin/jobs" element={<ProtectedRoute><AdminJobs /></ProtectedRoute>} />
+              <Route path="/admin/analytics" element={<ProtectedRoute><AdminAnalytics /></ProtectedRoute>} />
               <Route path="/submit-job" element={<ProtectedRoute><SubmitJob /></ProtectedRoute>} />
               <Route path="/my-jobs" element={<ProtectedRoute><MyJobs /></ProtectedRoute>} />
               <Route path="/flyer/:flyerId/portal" element={<ProtectedRoute><FlyerPortal /></ProtectedRoute>} />

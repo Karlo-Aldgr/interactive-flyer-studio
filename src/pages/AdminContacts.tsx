@@ -129,7 +129,11 @@ export default function AdminContacts() {
           <h1 className="text-2xl font-bold">Super Admin · Contacts</h1>
           <p className="text-sm text-muted-foreground">All emails and phone numbers collected across every flyer.</p>
         </div>
-        <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="mr-1 h-4 w-4" /> Dashboard</Button></Link>
+        <div className="flex gap-2">
+          <Link to="/admin/analytics"><Button variant="ghost" size="sm">Analytics</Button></Link>
+          <Link to="/admin/jobs"><Button variant="ghost" size="sm">Jobs</Button></Link>
+          <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="mr-1 h-4 w-4" /> Dashboard</Button></Link>
+        </div>
       </div>
 
       <div className="mb-4 flex gap-2">
