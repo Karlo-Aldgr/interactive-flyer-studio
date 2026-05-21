@@ -69,6 +69,8 @@ import { runAddToCalendar } from "@/lib/calendarHelpers";
 import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { toast } from "sonner";
+import { getCurrentTrafficSource } from "@/lib/trafficSource";
+
 
 // Highlight ring shown around tappable layers in the viewer.
 function PulseHighlight({ layer, shape }: { layer: Layer; shape: "rect" | "ellipse" }) {
@@ -844,9 +846,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       // analytics: view (skip in preview mode)
       if (!previewMode) {
         const sid = getViewerSessionId();
+        const ts = getCurrentTrafficSource();
         const { error: trackErr } = await supabase
           .from("analytics_events")
-          .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: document.referrer || null, device: getViewerDevice() } } as any]);
+          .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: ts.referrer, source: ts.source, utm: ts.utm, device: getViewerDevice() } } as any]);
         if (trackErr) console.warn("[analytics] view insert failed", trackErr);
       }
     })();
@@ -979,11 +982,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       try {
         const url = `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/analytics_events`;
         const apikey = (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const ts = getCurrentTrafficSource();
         const body = JSON.stringify({
           flyer_id: flyer.id,
           event_type: "view",
           session_id: getViewerSessionId(),
-          metadata: { beacon: true, referrer: document.referrer || null, device: getViewerDevice() },
+          metadata: { beacon: true, referrer: ts.referrer, source: ts.source, utm: ts.utm, device: getViewerDevice() },
         });
         const blob = new Blob(
           [JSON.stringify({ apikey, authorization: `Bearer ${apikey}`, body })],

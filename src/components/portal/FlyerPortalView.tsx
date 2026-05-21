@@ -12,6 +12,7 @@ import { AlertTriangle, ChevronLeft, Download, RefreshCw, Share2, Link as LinkIc
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
+import { sourceFromEventMetadata } from "@/lib/trafficSource";
 
 const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
 function getShareOrigin() {
@@ -193,6 +194,15 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
   }
   const uniqueVisitors = Object.keys(sessionViews).length;
   const returnVisitors = Object.values(sessionViews).filter((n) => n > 1).length;
+
+  // Traffic sources (Facebook, Instagram, TikTok, Direct, etc.)
+  const sourceMap: Record<string, number> = {};
+  for (const e of viewEvents) {
+    const src = sourceFromEventMetadata(e.metadata) || "Direct";
+    sourceMap[src] = (sourceMap[src] || 0) + 1;
+  }
+  const trafficSources = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]);
+  const trafficTotal = trafficSources.reduce((s, [, n]) => s + n, 0);
 
   type LayerClickAgg = {
     label: string; type: string; actionTypes: string[]; clicks: number;
@@ -475,6 +485,37 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
                     </tbody>
                   </table>
                   <p className="mt-2 text-[11px] text-muted-foreground">Click any row to view its full activity log.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Traffic sources</CardTitle>
+              <p className="text-[11px] text-muted-foreground">
+                Where your views came from. Add <code>?utm_source=facebook</code> (or instagram, tiktok…) to shared links for exact attribution.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {trafficSources.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No views tracked yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {trafficSources.map(([src, n]) => {
+                    const pct = trafficTotal ? (n / trafficTotal) * 100 : 0;
+                    return (
+                      <div key={src}>
+                        <div className="mb-1 flex justify-between text-sm">
+                          <span>{src}</span>
+                          <span className="tabular-nums text-muted-foreground">{n} ({pct.toFixed(0)}%)</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

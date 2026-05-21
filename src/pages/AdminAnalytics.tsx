@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { sourceFromEventMetadata } from "@/lib/trafficSource";
 
 type Ev = {
   id: string;
@@ -89,6 +90,13 @@ export default function AdminAnalytics() {
       devices.set(d, (devices.get(d) || 0) + 1);
     });
 
+    // Traffic source breakdown (views only)
+    const sources = new Map<string, number>();
+    views.forEach((e) => {
+      const s = sourceFromEventMetadata(e.metadata) || "Direct";
+      sources.set(s, (sources.get(s) || 0) + 1);
+    });
+
     // Daily timeline (views per day)
     const daily = new Map<string, number>();
     views.forEach((v) => {
@@ -105,6 +113,7 @@ export default function AdminAnalytics() {
       activeFlyers: uniqueFlyers.size,
       topFlyers,
       devices: [...devices.entries()].sort((a, b) => b[1] - a[1]),
+      sources: [...sources.entries()].sort((a, b) => b[1] - a[1]),
       timeline,
       maxDaily,
     };
@@ -183,7 +192,7 @@ export default function AdminAnalytics() {
               )}
             </Card>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               <Card className="p-5">
                 <h2 className="mb-4 font-display text-lg font-semibold">Top flyers</h2>
                 {stats.topFlyers.length === 0 ? (
@@ -225,6 +234,34 @@ export default function AdminAnalytics() {
                         <div key={d}>
                           <div className="mb-1 flex justify-between text-sm">
                             <span className="capitalize">{d}</span>
+                            <span className="tabular-nums text-muted-foreground">{n} ({pct.toFixed(0)}%)</span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+
+              <Card className="p-5">
+                <h2 className="mb-1 font-display text-lg font-semibold">Traffic sources</h2>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Facebook, Instagram, TikTok, Direct, etc. Add <code>?utm_source=facebook</code> to shared links for exact attribution.
+                </p>
+                {stats.sources.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No data.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {stats.sources.map(([s, n]) => {
+                      const total = stats.sources.reduce((acc, [, x]) => acc + x, 0);
+                      const pct = (n / total) * 100;
+                      return (
+                        <div key={s}>
+                          <div className="mb-1 flex justify-between text-sm">
+                            <span>{s}</span>
                             <span className="tabular-nums text-muted-foreground">{n} ({pct.toFixed(0)}%)</span>
                           </div>
                           <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
