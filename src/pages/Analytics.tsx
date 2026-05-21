@@ -29,8 +29,15 @@ export default function Analytics() {
   const [polls, setPolls] = useState<PollMeta[]>([]);
   const [votes, setVotes] = useState<VoteRow[]>([]);
 
+  const isValidId = !!flyerId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(flyerId);
+
   useEffect(() => {
     if (!flyerId) return;
+    if (!isValidId) {
+      toast.error("Invalid flyer link");
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -46,6 +53,7 @@ export default function Analytics() {
         return;
       }
       setFlyerTitle(flyer.title);
+
 
       const found: PollMeta[] = [];
       for (const page of (flyer as any).pages || []) {
