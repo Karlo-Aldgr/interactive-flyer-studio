@@ -852,16 +852,25 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     })();
   }, [slug, flyerId, previewMode]);
 
-  // Dynamically set document title and OG meta tags so social previews
-  // (iMessage, etc. — anything that executes JS) match the actual flyer.
+  // Dynamically set document title, meta tags, canonical link, and JSON-LD
+  // structured data so each flyer has its own SEO footprint for Google and
+  // social previews (iMessage, etc. — anything that executes JS).
   useEffect(() => {
     if (!flyer) return;
-    const title = flyer.title || "Flyer";
-    const description = `View "${title}" — interactive flyer.`;
+    const baseTitle = flyer.title || "Flyer";
+    const title = `${baseTitle} — Interactive Flyer`;
+    const cat = (flyer as any).category;
+    const description =
+      cat === "event"
+        ? `${baseTitle} — tap, RSVP, and explore this interactive event flyer.`
+        : `${baseTitle} — interactive flyer with tappable links, polls, and bookings.`;
     const image =
       (flyer as any).thumbnail_url ||
       `${window.location.origin}/og.png`;
     const url = window.location.href;
+    const canonicalUrl = slug
+      ? `${window.location.origin}/f/${slug}`
+      : url.split("?")[0];
 
     const prevTitle = document.title;
     document.title = title;
@@ -879,16 +888,56 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     setMeta(`meta[property="og:title"]`, "property", "og:title", title);
     setMeta(`meta[property="og:description"]`, "property", "og:description", description);
     setMeta(`meta[property="og:image"]`, "property", "og:image", image);
-    setMeta(`meta[property="og:url"]`, "property", "og:url", url);
+    setMeta(`meta[property="og:url"]`, "property", "og:url", canonicalUrl);
+    setMeta(`meta[property="og:type"]`, "property", "og:type", cat === "event" ? "article" : "website");
     setMeta(`meta[name="description"]`, "name", "description", description);
+    setMeta(`meta[name="robots"]`, "name", "robots", "index,follow,max-image-preview:large");
+    setMeta(`meta[name="twitter:card"]`, "name", "twitter:card", "summary_large_image");
     setMeta(`meta[name="twitter:title"]`, "name", "twitter:title", title);
     setMeta(`meta[name="twitter:description"]`, "name", "twitter:description", description);
     setMeta(`meta[name="twitter:image"]`, "name", "twitter:image", image);
 
+    let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", canonicalUrl);
+
+    const ldId = "flyer-jsonld";
+    let ld = document.getElementById(ldId) as HTMLScriptElement | null;
+    if (!ld) {
+      ld = document.createElement("script");
+      ld.type = "application/ld+json";
+      ld.id = ldId;
+      document.head.appendChild(ld);
+    }
+    const ldData: Record<string, any> = cat === "event"
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Event",
+          name: baseTitle,
+          description,
+          image: [image],
+          url: canonicalUrl,
+          ...((flyer as any).event_date ? { startDate: (flyer as any).event_date } : {}),
+          eventStatus: "https://schema.org/EventScheduled",
+        }
+      : {
+          "@context": "https://schema.org",
+          "@type": "CreativeWork",
+          name: baseTitle,
+          description,
+          image: [image],
+          url: canonicalUrl,
+        };
+    ld.textContent = JSON.stringify(ldData);
+
     return () => {
       document.title = prevTitle;
     };
-  }, [flyer]);
+  }, [flyer, slug]);
 
   function logAnalyticsEvent(row: Record<string, any>) {
     if (!flyer || previewMode) return;
