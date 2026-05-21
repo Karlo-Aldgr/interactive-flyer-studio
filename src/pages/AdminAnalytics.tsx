@@ -245,6 +245,34 @@ export default function AdminAnalytics() {
                   </div>
                 )}
               </Card>
+
+              <Card className="p-5">
+                <h2 className="mb-1 font-display text-lg font-semibold">Traffic sources</h2>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Facebook, Instagram, TikTok, Direct, etc. Add <code>?utm_source=facebook</code> to shared links for exact attribution.
+                </p>
+                {stats.sources.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No data.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {stats.sources.map(([s, n]) => {
+                      const total = stats.sources.reduce((acc, [, x]) => acc + x, 0);
+                      const pct = (n / total) * 100;
+                      return (
+                        <div key={s}>
+                          <div className="mb-1 flex justify-between text-sm">
+                            <span>{s}</span>
+                            <span className="tabular-nums text-muted-foreground">{n} ({pct.toFixed(0)}%)</span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
             </div>
           </>
         )}
