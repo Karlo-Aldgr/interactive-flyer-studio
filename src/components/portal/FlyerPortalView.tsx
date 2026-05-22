@@ -378,6 +378,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
           <TabsTrigger value="subscribers">Subscribers ({subscribers.length})</TabsTrigger>
           <TabsTrigger value="forms">Forms ({submissions.length})</TabsTrigger>
           <TabsTrigger value="cart">Cart ({cartOrders.length})</TabsTrigger>
+          <TabsTrigger value="interactions">Interactions</TabsTrigger>
           {extraActionTypes.map((t) => {
             const count = clickEvents.filter((e) => e?.metadata?.action_type === t).length;
             const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
