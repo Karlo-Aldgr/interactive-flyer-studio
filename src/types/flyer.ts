@@ -23,7 +23,35 @@ export type ActionType =
   | "poll"
   | "subscribe"
   | "book_appointment"
-  | "gallery";
+  | "gallery"
+  | "survey"
+  | "testimonial"
+  | "reserve_table"
+  | "schedule_consultation"
+  | "show_menu"
+  | "join_challenge"
+  | "business_rating";
+
+export interface SurveyQuestion {
+  id: string;
+  label: string;
+  type: "text" | "choice" | "rating";
+  options?: string[];
+  required?: boolean;
+}
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price?: string;
+  imageUrl?: string;
+}
+export interface MenuSection {
+  id: string;
+  name: string;
+  items: MenuItem[];
+}
 
 export interface GalleryImage {
   id: string;
