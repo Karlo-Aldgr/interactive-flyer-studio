@@ -12,6 +12,7 @@ import { AlertTriangle, ChevronLeft, Download, RefreshCw, Share2, Link as LinkIc
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
+import { InteractionsModerationPanel } from "@/components/portal/InteractionsModerationPanel";
 import { sourceFromEventMetadata } from "@/lib/trafficSource";
 
 const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
@@ -377,6 +378,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
           <TabsTrigger value="subscribers">Subscribers ({subscribers.length})</TabsTrigger>
           <TabsTrigger value="forms">Forms ({submissions.length})</TabsTrigger>
           <TabsTrigger value="cart">Cart ({cartOrders.length})</TabsTrigger>
+          <TabsTrigger value="interactions">Interactions</TabsTrigger>
           {extraActionTypes.map((t) => {
             const count = clickEvents.filter((e) => e?.metadata?.action_type === t).length;
             const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
@@ -728,6 +730,10 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="interactions">
+          <InteractionsModerationPanel flyerId={flyer.id} isOwner={isOwner} />
         </TabsContent>
 
         {extraActionTypes.map((t) => {
