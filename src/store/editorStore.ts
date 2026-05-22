@@ -564,6 +564,46 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  bringToFront: (id) => {
+    const s = get();
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => {
+        if (!p.layers.some((l) => l.id === id)) return p;
+        const sorted = orderLayersByZ(p.layers);
+        const idx = sorted.findIndex((l) => l.id === id);
+        if (idx < 0 || idx === sorted.length - 1) return p;
+        const reordered = [...sorted];
+        const [item] = reordered.splice(idx, 1);
+        reordered.push(item);
+        return { ...p, layers: resequenceLayers(reordered) };
+      }),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  sendToBack: (id) => {
+    const s = get();
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => {
+        if (!p.layers.some((l) => l.id === id)) return p;
+        const sorted = orderLayersByZ(p.layers);
+        const idx = sorted.findIndex((l) => l.id === id);
+        if (idx <= 0) return p;
+        const reordered = [...sorted];
+        const [item] = reordered.splice(idx, 1);
+        reordered.unshift(item);
+        return { ...p, layers: resequenceLayers(reordered) };
+      }),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
   undo: () => {
     const s = get();
     if (!s.past.length) return;
