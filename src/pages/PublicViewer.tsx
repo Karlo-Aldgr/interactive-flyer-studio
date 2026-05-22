@@ -67,6 +67,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
+import NewInteractionDialogs from "@/components/viewer/NewInteractionDialogs";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { toast } from "sonner";
 import { getCurrentTrafficSource } from "@/lib/trafficSource";
