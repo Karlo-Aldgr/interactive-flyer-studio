@@ -1206,6 +1206,30 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Title size ({p.popupTitleSize ?? 18}px)</Label>
+                <Slider
+                  className="mt-2"
+                  min={12}
+                  max={48}
+                  step={1}
+                  value={[p.popupTitleSize ?? 18]}
+                  onValueChange={(v) => update({ popupTitleSize: v[0] })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Body size ({p.popupBodySize ?? 14}px)</Label>
+                <Slider
+                  className="mt-2"
+                  min={10}
+                  max={32}
+                  step={1}
+                  value={[p.popupBodySize ?? 14]}
+                  onValueChange={(v) => update({ popupBodySize: v[0] })}
+                />
+              </div>
+            </div>
             <p className="text-[11px] text-muted-foreground">Background color is used when no image is set.</p>
             {depth < 1 && (
               <PopupHotspotsEditor
