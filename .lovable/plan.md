@@ -1,36 +1,54 @@
-## Traffic source tracking in analytics
+## Per-flyer "Save to Home Screen"
 
-Add "where did this view come from?" to your analytics — Facebook, Instagram, TikTok, WhatsApp, iMessage, Google, Direct, etc.
+Each published flyer becomes individually installable. When a visitor adds it to their home screen, the icon opens **that specific flyer** in fullscreen — not the Tap That Flyer brand site.
 
-### How sources are detected
+### How it works
 
-For every flyer view we'll classify the source using two signals (in priority order):
+A web app manifest's `start_url`, `name`, and icons are locked in at install time, so a single static manifest can't do this. We generate the manifest **dynamically per flyer** at runtime.
 
-1. **UTM parameters** in the URL (`?utm_source=facebook`) — set by share buttons and ad campaigns.
-2. **`document.referrer`** — the page the visitor came from. Hostnames are mapped to friendly brand names (e.g. `l.facebook.com` → Facebook, `t.co` → X / Twitter, `m.me` → Messenger, `wa.me` → WhatsApp, `google.com` → Google).
+### Changes
 
-Anything we can't classify falls back to **Direct** (typed URL, iMessage/SMS taps, QR code scans, in-app browsers that strip the referrer).
+1. **Generic install icon** — generate one neutral "flyer" mark (square, dark background, simple tap/flyer glyph) and save as:
+   - `public/flyer-icon-192.png`
+   - `public/flyer-icon-512.png`
+   - `public/flyer-icon-maskable-512.png`
+   - `public/apple-touch-icon.png` (180×180, used by iOS Safari)
 
-No database schema changes needed — the `analytics_events.metadata` column is already JSON and stores `referrer` and `device`; we'll just add `source` and `utm` fields alongside them.
+   This icon is used for every flyer install. (Later we can swap in per-flyer thumbnails if you want — noted below.)
 
-### Where you'll see it
+2. **`src/pages/PublicViewer.tsx`** — on mount, build a manifest object in memory:
+   ```
+   {
+     name: flyer.title,
+     short_name: flyer.title.slice(0, 12),
+     start_url: "/v/<slug>",
+     scope: "/v/<slug>",
+     display: "standalone",
+     background_color: page background or "#000",
+     theme_color: page background or "#000",
+     icons: [ /* the four generic icons above */ ]
+   }
+   ```
+   Convert it to a `blob:` URL and inject `<link rel="manifest" href="<blob>">` into `document.head`. Also inject the apple-touch-icon link and the iOS standalone meta tags. Clean up on unmount.
 
-**1. Each flyer's portal (`/flyer/:id/portal` → Analytics tab)** — a new "Traffic sources" card with:
-- Bar list of sources ranked by view count (Facebook 42 · 38%, Direct 30 · 27%, Instagram 18 · 16%…)
-- Last-30-day filter matching the existing daily-views chart
+3. **iOS-specific meta** added dynamically on the flyer route:
+   - `apple-mobile-web-app-capable=yes`
+   - `apple-mobile-web-app-status-bar-style=black-translucent`
+   - `apple-mobile-web-app-title=<flyer title>`
 
-**2. Site-wide super-admin analytics (`/admin/analytics`)** — same "Traffic sources" card, aggregated across all flyers.
+4. **Landing/editor pages**: left alone. Only public flyer URLs are installable — that's the whole point.
 
-**3. Per-flyer Analytics page (`/analytics/:id`)** — same card.
+### Result
 
-### Files changed
+- **Android / Chrome on a flyer URL** → browser shows "Install app" → home-screen icon opens *that flyer* fullscreen.
+- **iOS / Safari on a flyer URL** → Share → Add to Home Screen → icon labeled with the flyer title, opens *that flyer* fullscreen.
+- The Tap That Flyer brand never appears on the user's home screen — they see the flyer's name and the generic icon.
 
-- `src/pages/PublicViewer.tsx` — add `getTrafficSource()` helper; include `source`, `referrer`, `utm` in the metadata of both view inserts (initial load + tab-close beacon) and click events.
-- `src/components/portal/FlyerPortalView.tsx` — new "Traffic sources" card in the Analytics tab.
-- `src/pages/AdminAnalytics.tsx` — new "Traffic sources" card next to "Devices".
-- `src/pages/Analytics.tsx` — same card (if the page already shows breakdowns).
+### Not included (deliberately)
 
-### Notes
+- **No service worker** — keeps the Lovable preview clean and avoids stale-cache problems. Offline support is not part of this.
+- **No "Install" button in the flyer UI** — relying on the browser's native prompt + iOS Share menu. Easy to add later if you want a custom prompt.
 
-- Historical events (before this change) will all show as "Direct" since they have no `source` field — only new views going forward will carry the brand.
-- To make Facebook/Instagram/TikTok attribution airtight, append `?utm_source=facebook` (etc.) to the link when posting. The share dialog can be updated next if you want — say the word.
+### Future option (ask if interested)
+
+Swap the generic icon for each flyer's own thumbnail so the home-screen icon visually matches the flyer. Requires the thumbnail to be square ≥192px PNG — we'd auto-pad/crop existing thumbnails. Say the word and I'll add it.
