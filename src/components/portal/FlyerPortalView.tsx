@@ -732,6 +732,10 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
           </Card>
         </TabsContent>
 
+        <TabsContent value="interactions">
+          <InteractionsModerationPanel flyerId={flyer.id} isOwner={isOwner} />
+        </TabsContent>
+
         {extraActionTypes.map((t) => {
           const rows = clickEvents.filter((e) => e?.metadata?.action_type === t);
           const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
