@@ -70,6 +70,8 @@ interface EditorState {
   deleteLayer: (id: string) => void;
   bringForward: (id: string) => void;
   sendBackward: (id: string) => void;
+  bringToFront: (id: string) => void;
+  sendToBack: (id: string) => void;
   // history
   undo: () => void;
   redo: () => void;
