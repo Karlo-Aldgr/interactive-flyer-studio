@@ -2100,6 +2100,218 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
           />
         )}
 
+        {type === "survey" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Collect multi-question feedback. Responses appear in your dashboard.</p>
+            <div>
+              <Label className="text-xs">Survey title</Label>
+              <Input className="mt-1" value={p.surveyTitle || ""} onChange={(e) => update({ surveyTitle: e.target.value })} placeholder="Quick survey" />
+            </div>
+            <div>
+              <Label className="text-xs">Description</Label>
+              <Textarea className="mt-1" rows={2} value={p.surveyDescription || ""} onChange={(e) => update({ surveyDescription: e.target.value })} />
+            </div>
+            <Label className="text-xs">Questions</Label>
+            {(p.surveyQuestions || []).map((q, idx) => (
+              <div key={q.id} className="rounded border border-border p-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input value={q.label} onChange={(e) => {
+                    const arr = [...(p.surveyQuestions || [])];
+                    arr[idx] = { ...q, label: e.target.value };
+                    update({ surveyQuestions: arr });
+                  }} placeholder="Question text" />
+                  <Button size="icon" variant="ghost" onClick={() => {
+                    const arr = [...(p.surveyQuestions || [])];
+                    arr.splice(idx, 1);
+                    update({ surveyQuestions: arr });
+                  }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                </div>
+                <Select value={q.type} onValueChange={(v) => {
+                  const arr = [...(p.surveyQuestions || [])];
+                  arr[idx] = { ...q, type: v as any };
+                  update({ surveyQuestions: arr });
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">Free text</SelectItem>
+                    <SelectItem value="choice">Multiple choice</SelectItem>
+                    <SelectItem value="rating">Star rating (1–5)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {q.type === "choice" && (
+                  <Textarea rows={2} placeholder="Option per line" value={(q.options || []).join("\n")} onChange={(e) => {
+                    const arr = [...(p.surveyQuestions || [])];
+                    arr[idx] = { ...q, options: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) };
+                    update({ surveyQuestions: arr });
+                  }} />
+                )}
+              </div>
+            ))}
+            <Button size="sm" variant="outline" onClick={() => update({ surveyQuestions: [...(p.surveyQuestions || []), { id: crypto.randomUUID(), label: "", type: "text" }] })}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add question
+            </Button>
+            <div>
+              <Label className="text-xs">Thank-you message</Label>
+              <Input className="mt-1" value={p.surveySuccessMessage || ""} onChange={(e) => update({ surveySuccessMessage: e.target.value })} placeholder="Thanks for your feedback!" />
+            </div>
+          </>
+        )}
+
+        {type === "testimonial" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Visitors leave a star rating + comment. Approve them in your dashboard before they appear publicly.</p>
+            <div>
+              <Label className="text-xs">Headline</Label>
+              <Input className="mt-1" value={p.testimonialTitle || ""} onChange={(e) => update({ testimonialTitle: e.target.value })} placeholder="What people are saying" />
+            </div>
+            <div>
+              <Label className="text-xs">"Leave a review" button label</Label>
+              <Input className="mt-1" value={p.testimonialCtaLabel || ""} onChange={(e) => update({ testimonialCtaLabel: e.target.value })} placeholder="Leave a review" />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Allow photo upload</Label>
+              <Switch checked={!!p.testimonialAllowPhoto} onCheckedChange={(v) => update({ testimonialAllowPhoto: v })} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Auto-approve (skip moderation)</Label>
+              <Switch checked={!!p.testimonialAutoApprove} onCheckedChange={(v) => update({ testimonialAutoApprove: v })} />
+            </div>
+            <div>
+              <Label className="text-xs">Thank-you message</Label>
+              <Input className="mt-1" value={p.testimonialSuccessMessage || ""} onChange={(e) => update({ testimonialSuccessMessage: e.target.value })} placeholder="Thanks for the kind words!" />
+            </div>
+          </>
+        )}
+
+        {type === "reserve_table" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Restaurant table reservations. Bookings appear in your dashboard.</p>
+            <div>
+              <Label className="text-xs">Title</Label>
+              <Input className="mt-1" value={p.reserveTitle || ""} onChange={(e) => update({ reserveTitle: e.target.value })} placeholder="Reserve a table" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Opens at</Label>
+                <Input type="time" className="mt-1" value={p.reserveOpenTime || "11:00"} onChange={(e) => update({ reserveOpenTime: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs">Closes at</Label>
+                <Input type="time" className="mt-1" value={p.reserveCloseTime || "22:00"} onChange={(e) => update({ reserveCloseTime: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs">Slot length (min)</Label>
+                <Input type="number" min={15} step={15} className="mt-1" value={p.reserveSlotMinutes ?? 30} onChange={(e) => update({ reserveSlotMinutes: parseInt(e.target.value) || 30 })} />
+              </div>
+              <div>
+                <Label className="text-xs">Max party size</Label>
+                <Input type="number" min={1} className="mt-1" value={p.reserveMaxParty ?? 8} onChange={(e) => update({ reserveMaxParty: parseInt(e.target.value) || 8 })} />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs">Days bookable ahead</Label>
+                <Input type="number" min={1} className="mt-1" value={p.reserveDateRangeDays ?? 30} onChange={(e) => update({ reserveDateRangeDays: parseInt(e.target.value) || 30 })} />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Confirmation message</Label>
+              <Input className="mt-1" value={p.reserveSuccessMessage || ""} onChange={(e) => update({ reserveSuccessMessage: e.target.value })} placeholder="Reservation confirmed — see you soon!" />
+            </div>
+          </>
+        )}
+
+        {type === "schedule_consultation" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Visitors pick a topic + duration and book a consultation. Bookings appear in your dashboard.</p>
+            <div>
+              <Label className="text-xs">Title</Label>
+              <Input className="mt-1" value={p.consultTitle || ""} onChange={(e) => update({ consultTitle: e.target.value })} placeholder="Schedule a consultation" />
+            </div>
+            <div>
+              <Label className="text-xs">Description</Label>
+              <Textarea className="mt-1" rows={2} value={p.consultDescription || ""} onChange={(e) => update({ consultDescription: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Topics (one per line, optional)</Label>
+              <Textarea className="mt-1" rows={3} value={(p.consultTopics || []).join("\n")} onChange={(e) => update({ consultTopics: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })} placeholder={"Initial consultation\nFollow-up\nStrategy session"} />
+            </div>
+            <div>
+              <Label className="text-xs">Durations (minutes, comma separated)</Label>
+              <Input className="mt-1" value={(p.consultDurations || [15, 30, 60]).join(", ")} onChange={(e) => {
+                const arr = e.target.value.split(",").map((s) => parseInt(s.trim())).filter((n) => !isNaN(n) && n > 0);
+                update({ consultDurations: arr });
+              }} placeholder="15, 30, 60" />
+            </div>
+            <div>
+              <Label className="text-xs">Days bookable ahead</Label>
+              <Input type="number" min={1} className="mt-1" value={p.consultDateRangeDays ?? 30} onChange={(e) => update({ consultDateRangeDays: parseInt(e.target.value) || 30 })} />
+            </div>
+            <div>
+              <Label className="text-xs">Confirmation message</Label>
+              <Input className="mt-1" value={p.consultSuccessMessage || ""} onChange={(e) => update({ consultSuccessMessage: e.target.value })} placeholder="Consultation booked — confirmation on its way." />
+            </div>
+          </>
+        )}
+
+        {type === "show_menu" && <MenuSectionsEditor action={draft} update={update} />}
+
+        {type === "join_challenge" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Visitors join your challenge with name + email. Participants appear in your dashboard.</p>
+            <div>
+              <Label className="text-xs">Challenge title</Label>
+              <Input className="mt-1" value={p.challengeTitle || ""} onChange={(e) => update({ challengeTitle: e.target.value })} placeholder="30-day fitness challenge" />
+            </div>
+            <div>
+              <Label className="text-xs">Description / goal</Label>
+              <Textarea className="mt-1" rows={3} value={p.challengeDescription || ""} onChange={(e) => update({ challengeDescription: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Starts</Label>
+                <Input type="datetime-local" className="mt-1" value={toLocalInputValue(p.challengeStartISO)} onChange={(e) => update({ challengeStartISO: fromLocalInputValue(e.target.value) })} />
+              </div>
+              <div>
+                <Label className="text-xs">Ends</Label>
+                <Input type="datetime-local" className="mt-1" value={toLocalInputValue(p.challengeEndISO)} onChange={(e) => update({ challengeEndISO: fromLocalInputValue(e.target.value) })} />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Rules (optional)</Label>
+              <Textarea className="mt-1" rows={3} value={p.challengeRules || ""} onChange={(e) => update({ challengeRules: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Button label</Label>
+              <Input className="mt-1" value={p.challengeCtaLabel || ""} onChange={(e) => update({ challengeCtaLabel: e.target.value })} placeholder="Join the challenge" />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Collect phone number</Label>
+              <Switch checked={!!p.challengeCollectPhone} onCheckedChange={(v) => update({ challengeCollectPhone: v })} />
+            </div>
+            <div>
+              <Label className="text-xs">Success message</Label>
+              <Input className="mt-1" value={p.challengeSuccessMessage || ""} onChange={(e) => update({ challengeSuccessMessage: e.target.value })} placeholder="You're in! Good luck." />
+            </div>
+          </>
+        )}
+
+        {type === "business_rating" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">Tap-to-rate widget. Shows the average + lets a visitor rate (1–5 stars).</p>
+            <div>
+              <Label className="text-xs">Prompt</Label>
+              <Input className="mt-1" value={p.ratingPrompt || ""} onChange={(e) => update({ ratingPrompt: e.target.value })} placeholder="How would you rate us?" />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Allow optional comment</Label>
+              <Switch checked={p.ratingAllowComment !== false} onCheckedChange={(v) => update({ ratingAllowComment: v })} />
+            </div>
+            <div>
+              <Label className="text-xs">Thank-you message</Label>
+              <Input className="mt-1" value={p.ratingThankYou || ""} onChange={(e) => update({ ratingThankYou: e.target.value })} placeholder="Thanks for your rating!" />
+            </div>
+          </>
+        )}
+
         {draft && !embedded && (
           <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 space-y-2">
             <div className="flex items-center justify-between">
