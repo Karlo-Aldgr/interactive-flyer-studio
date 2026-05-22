@@ -1,6 +1,6 @@
 import { useEditorStore } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
-import { ChevronUp, ChevronDown, Trash2, Type, Image, Square, MousePointerClick, Star, SquareDashed } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Trash2, Type, Image, Square, MousePointerClick, Star, SquareDashed } from "lucide-react";
 import { Layer } from "@/types/flyer";
 
 const ICON: Record<Layer["type"], any> = {
