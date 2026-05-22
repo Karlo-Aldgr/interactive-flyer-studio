@@ -39,13 +39,19 @@ export function LayersPanel() {
               <Icon className="h-4 w-4 text-muted-foreground" />
               <span className="flex-1 truncate">{label}</span>
               <div className="flex opacity-0 group-hover:opacity-100">
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); bringForward(l.id); }}>
+                <Button size="icon" variant="ghost" className="h-6 w-6" title="Bring to front" onClick={(e) => { e.stopPropagation(); bringToFront(l.id); }}>
+                  <ChevronsUp className="h-3 w-3" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6" title="Bring forward" onClick={(e) => { e.stopPropagation(); bringForward(l.id); }}>
                   <ChevronUp className="h-3 w-3" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); sendBackward(l.id); }}>
+                <Button size="icon" variant="ghost" className="h-6 w-6" title="Send backward" onClick={(e) => { e.stopPropagation(); sendBackward(l.id); }}>
                   <ChevronDown className="h-3 w-3" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); deleteLayer(l.id); }}>
+                <Button size="icon" variant="ghost" className="h-6 w-6" title="Send to back" onClick={(e) => { e.stopPropagation(); sendToBack(l.id); }}>
+                  <ChevronsDown className="h-3 w-3" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" title="Delete" onClick={(e) => { e.stopPropagation(); deleteLayer(l.id); }}>
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
