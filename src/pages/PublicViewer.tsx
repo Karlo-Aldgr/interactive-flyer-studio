@@ -1242,6 +1242,15 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "book_appointment":
         setAppointmentAction({ action: a, layer });
         break;
+      case "survey":
+      case "testimonial":
+      case "reserve_table":
+      case "schedule_consultation":
+      case "show_menu":
+      case "join_challenge":
+      case "business_rating":
+        setNewInteractionAction(a);
+        break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
         const isApple = (() => {
