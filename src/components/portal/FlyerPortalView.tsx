@@ -12,6 +12,7 @@ import { AlertTriangle, ChevronLeft, Download, RefreshCw, Share2, Link as LinkIc
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
+import { InteractionsModerationPanel } from "@/components/portal/InteractionsModerationPanel";
 import { sourceFromEventMetadata } from "@/lib/trafficSource";
 
 const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
