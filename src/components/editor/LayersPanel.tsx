@@ -15,6 +15,8 @@ export function LayersPanel() {
   const deleteLayer = useEditorStore((s) => s.deleteLayer);
   const bringForward = useEditorStore((s) => s.bringForward);
   const sendBackward = useEditorStore((s) => s.sendBackward);
+  const bringToFront = useEditorStore((s) => s.bringToFront);
+  const sendToBack = useEditorStore((s) => s.sendToBack);
 
   const page = pages.find((p) => p.id === selectedPageId);
   const layers = page ? [...page.layers].sort((a, b) => b.z_index - a.z_index) : [];
