@@ -110,6 +110,20 @@ function isValid(draft: LayerAction | null): boolean {
       return !!(p.apptTitle && p.apptDurationMin);
     case "gallery":
       return !!(p.galleryImages && p.galleryImages.length > 0);
+    case "survey":
+      return !!(p.surveyTitle && p.surveyQuestions && p.surveyQuestions.length > 0 && p.surveyQuestions.every((q) => q.label?.trim()));
+    case "testimonial":
+      return true;
+    case "reserve_table":
+      return true;
+    case "schedule_consultation":
+      return !!(p.consultDurations && p.consultDurations.length > 0);
+    case "show_menu":
+      return true;
+    case "join_challenge":
+      return !!(p.challengeTitle);
+    case "business_rating":
+      return true;
     default: return true;
   }
 }
