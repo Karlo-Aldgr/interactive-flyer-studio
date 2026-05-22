@@ -67,6 +67,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
+import NewInteractionDialogs from "@/components/viewer/NewInteractionDialogs";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { toast } from "sonner";
 import { getCurrentTrafficSource } from "@/lib/trafficSource";
@@ -693,6 +694,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [subscribeAction, setSubscribeAction] = useState<LayerAction | null>(null);
   const [subscribeData, setSubscribeData] = useState<{ name: string; email: string; phone: string }>({ name: "", email: "", phone: "" });
   const [appointmentAction, setAppointmentAction] = useState<{ action: LayerAction; layer: Layer | null } | null>(null);
+  const [newInteractionAction, setNewInteractionAction] = useState<LayerAction | null>(null);
+  const sessionId = useMemo(() => getPollSessionId(), []);
   const [subscribing, setSubscribing] = useState(false);
   // Shopping cart for buy_product actions with productCartEnabled
   type CartItem = {
@@ -1240,6 +1243,15 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         break;
       case "book_appointment":
         setAppointmentAction({ action: a, layer });
+        break;
+      case "survey":
+      case "testimonial":
+      case "reserve_table":
+      case "schedule_consultation":
+      case "show_menu":
+      case "join_challenge":
+      case "business_rating":
+        setNewInteractionAction(a);
         break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
@@ -2081,6 +2093,14 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           onClose={() => setAppointmentAction(null)}
         />
       )}
+
+      {/* New interaction dialogs (survey, testimonial, reserve, consult, menu, challenge, rating) */}
+      <NewInteractionDialogs
+        action={newInteractionAction}
+        flyerId={flyer?.id || null}
+        sessionId={sessionId}
+        onClose={() => setNewInteractionAction(null)}
+      />
 
       {/* Subscribe dialog */}
       <Dialog open={!!subscribeAction} onOpenChange={(v) => !v && setSubscribeAction(null)}>

@@ -23,7 +23,35 @@ export type ActionType =
   | "poll"
   | "subscribe"
   | "book_appointment"
-  | "gallery";
+  | "gallery"
+  | "survey"
+  | "testimonial"
+  | "reserve_table"
+  | "schedule_consultation"
+  | "show_menu"
+  | "join_challenge"
+  | "business_rating";
+
+export interface SurveyQuestion {
+  id: string;
+  label: string;
+  type: "text" | "choice" | "rating";
+  options?: string[];
+  required?: boolean;
+}
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price?: string;
+  imageUrl?: string;
+}
+export interface MenuSection {
+  id: string;
+  name: string;
+  items: MenuItem[];
+}
 
 export interface GalleryImage {
   id: string;
@@ -174,6 +202,55 @@ export interface ActionPayload {
   // gallery — photo gallery popup (up to 12 images)
   galleryTitle?: string;
   galleryImages?: GalleryImage[];
+
+  // survey
+  surveyTitle?: string;
+  surveyDescription?: string;
+  surveyQuestions?: SurveyQuestion[];
+  surveySuccessMessage?: string;
+
+  // testimonial
+  testimonialTitle?: string;
+  testimonialCtaLabel?: string;
+  testimonialAllowPhoto?: boolean;
+  testimonialAutoApprove?: boolean;
+  testimonialSuccessMessage?: string;
+
+  // reserve_table
+  reserveTitle?: string;
+  reserveMaxParty?: number;
+  reserveOpenTime?: string;  // "11:00"
+  reserveCloseTime?: string; // "22:00"
+  reserveSlotMinutes?: number; // 30
+  reserveDateRangeDays?: number; // 30
+  reserveSuccessMessage?: string;
+
+  // schedule_consultation
+  consultTitle?: string;
+  consultDescription?: string;
+  consultTopics?: string[];
+  consultDurations?: number[]; // [15, 30, 60]
+  consultDateRangeDays?: number;
+  consultSuccessMessage?: string;
+
+  // show_menu (data stored in `menus` table; payload holds display config)
+  menuTitle?: string;
+  menuCtaLabel?: string;
+
+  // join_challenge
+  challengeTitle?: string;
+  challengeDescription?: string;
+  challengeStartISO?: string;
+  challengeEndISO?: string;
+  challengeRules?: string;
+  challengeCtaLabel?: string;
+  challengeSuccessMessage?: string;
+  challengeCollectPhone?: boolean;
+
+  // business_rating
+  ratingPrompt?: string;
+  ratingAllowComment?: boolean;
+  ratingThankYou?: string;
 }
 
 export type BubbleTextCase = "as-is" | "upper" | "lower";
