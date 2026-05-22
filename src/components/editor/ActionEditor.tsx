@@ -47,9 +47,16 @@ const ACTION_LABELS: Record<ActionType, string> = {
   subscribe: "Subscribe (email signup)",
   book_appointment: "Book appointment",
   gallery: "Photo gallery",
+  survey: "Survey",
+  testimonial: "Testimonials",
+  reserve_table: "Reserve a table",
+  schedule_consultation: "Schedule consultation",
+  show_menu: "Show menu",
+  join_challenge: "Join challenge",
+  business_rating: "Business rating (5 stars)",
 };
 
-const PRESET_TYPES: ActionType[] = ["book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map", "gallery"];
+const PRESET_TYPES: ActionType[] = ["book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map", "gallery", "survey", "testimonial", "reserve_table", "schedule_consultation", "show_menu", "join_challenge", "business_rating"];
 const BASIC_TYPES: ActionType[] = [
   "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
