@@ -2,7 +2,7 @@ import {
   Link as LinkIcon, MessageSquare, Video, Music, Phone, MessageCircle,
   FormInput, Navigation, Eye, CalendarPlus, Ticket, CheckSquare, ShoppingCart,
   BadgePercent, MapPin, Package, MessagesSquare, BarChart3, Mail, CalendarCheck,
-  Images,
+  Images, ClipboardList, Quote, Utensils, BookOpen, Briefcase, Trophy, Star,
 } from "lucide-react";
 
 export type InteractionDef = {
