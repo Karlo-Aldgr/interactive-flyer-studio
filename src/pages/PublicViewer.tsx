@@ -2092,6 +2092,14 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         />
       )}
 
+      {/* New interaction dialogs (survey, testimonial, reserve, consult, menu, challenge, rating) */}
+      <NewInteractionDialogs
+        action={newInteractionAction}
+        flyerId={flyer?.id || null}
+        sessionId={sessionId}
+        onClose={() => setNewInteractionAction(null)}
+      />
+
       {/* Subscribe dialog */}
       <Dialog open={!!subscribeAction} onOpenChange={(v) => !v && setSubscribeAction(null)}>
         <DialogContent>
