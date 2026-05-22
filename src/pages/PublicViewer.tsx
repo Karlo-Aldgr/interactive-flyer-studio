@@ -942,6 +942,120 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     };
   }, [flyer, slug]);
 
+  // Per-flyer Web App Manifest + iOS home-screen meta. Each flyer becomes
+  // individually installable: "Add to Home Screen" creates an icon that
+  // opens THIS flyer fullscreen (not the Tap That Flyer brand).
+  useEffect(() => {
+    if (!flyer || previewMode) return;
+    const origin = window.location.origin;
+    const startPath = slug ? `/f/${slug}` : window.location.pathname;
+    const title = flyer.title || "Flyer";
+    const shortName = title.length > 12 ? title.slice(0, 12) : title;
+    const themeColor =
+      (flyer.settings as any)?.background ||
+      (flyer.pages?.[0]?.background?.color) ||
+      "#0a0a0a";
+
+    const manifest = {
+      name: title,
+      short_name: shortName,
+      start_url: startPath,
+      scope: startPath,
+      id: startPath,
+      display: "standalone",
+      orientation: "portrait",
+      background_color: themeColor,
+      theme_color: themeColor,
+      icons: [
+        { src: `${origin}/flyer-icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: `${origin}/flyer-icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: `${origin}/flyer-icon-maskable-512.png`, sizes: "512x512", type: "image/png", purpose: "maskable" },
+      ],
+    };
+
+    const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+    const manifestUrl = URL.createObjectURL(blob);
+
+    // Remove any pre-existing manifest link so ours wins.
+    const prevManifests = Array.from(document.head.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]'));
+    const prevManifestHrefs = prevManifests.map((l) => l.getAttribute("href"));
+    prevManifests.forEach((l) => l.remove());
+
+    const manifestLink = document.createElement("link");
+    manifestLink.rel = "manifest";
+    manifestLink.href = manifestUrl;
+    document.head.appendChild(manifestLink);
+
+    // Theme color
+    let themeMeta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const prevTheme = themeMeta?.getAttribute("content") ?? null;
+    if (!themeMeta) {
+      themeMeta = document.createElement("meta");
+      themeMeta.name = "theme-color";
+      document.head.appendChild(themeMeta);
+    }
+    themeMeta.setAttribute("content", themeColor);
+
+    // iOS standalone meta + apple-touch-icon
+    const setMetaNamed = (name: string, content: string) => {
+      let tag = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+      const prev = tag?.getAttribute("content") ?? null;
+      if (!tag) {
+        tag = document.createElement("meta");
+        tag.setAttribute("name", name);
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute("content", content);
+      return prev;
+    };
+    const prevCapable = setMetaNamed("apple-mobile-web-app-capable", "yes");
+    const prevMobileCap = setMetaNamed("mobile-web-app-capable", "yes");
+    const prevStatusBar = setMetaNamed("apple-mobile-web-app-status-bar-style", "black-translucent");
+    const prevAppTitle = setMetaNamed("apple-mobile-web-app-title", title);
+
+    const prevApple = Array.from(document.head.querySelectorAll<HTMLLinkElement>('link[rel="apple-touch-icon"]'));
+    const prevAppleHrefs = prevApple.map((l) => l.getAttribute("href"));
+    prevApple.forEach((l) => l.remove());
+    const appleLink = document.createElement("link");
+    appleLink.setAttribute("rel", "apple-touch-icon");
+    appleLink.setAttribute("href", `${origin}/apple-touch-icon.png`);
+    document.head.appendChild(appleLink);
+
+    return () => {
+      manifestLink.remove();
+      URL.revokeObjectURL(manifestUrl);
+      // Restore prior manifest link(s) so other routes are unaffected.
+      prevManifestHrefs.forEach((href) => {
+        if (!href) return;
+        const l = document.createElement("link");
+        l.rel = "manifest";
+        l.href = href;
+        document.head.appendChild(l);
+      });
+      appleLink.remove();
+      prevAppleHrefs.forEach((href) => {
+        if (!href) return;
+        const l = document.createElement("link");
+        l.setAttribute("rel", "apple-touch-icon");
+        l.setAttribute("href", href);
+        document.head.appendChild(l);
+      });
+      if (prevTheme !== null) themeMeta!.setAttribute("content", prevTheme);
+      else themeMeta?.remove();
+      const restoreOrRemove = (name: string, prev: string | null) => {
+        const tag = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+        if (!tag) return;
+        if (prev !== null) tag.setAttribute("content", prev);
+        else tag.remove();
+      };
+      restoreOrRemove("apple-mobile-web-app-capable", prevCapable);
+      restoreOrRemove("mobile-web-app-capable", prevMobileCap);
+      restoreOrRemove("apple-mobile-web-app-status-bar-style", prevStatusBar);
+      restoreOrRemove("apple-mobile-web-app-title", prevAppTitle);
+    };
+  }, [flyer, slug, previewMode]);
+
+
   function logAnalyticsEvent(row: Record<string, any>) {
     if (!flyer || previewMode) return;
     const payload: Record<string, any> = { flyer_id: flyer.id, session_id: getViewerSessionId(), ...row };
