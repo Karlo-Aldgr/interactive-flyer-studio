@@ -70,6 +70,8 @@ interface EditorState {
   deleteLayer: (id: string) => void;
   bringForward: (id: string) => void;
   sendBackward: (id: string) => void;
+  bringToFront: (id: string) => void;
+  sendToBack: (id: string) => void;
   // history
   undo: () => void;
   redo: () => void;
@@ -554,6 +556,46 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         if (idx <= 0) return p;
         const reordered = [...sorted];
         [reordered[idx - 1], reordered[idx]] = [reordered[idx], reordered[idx - 1]];
+        return { ...p, layers: resequenceLayers(reordered) };
+      }),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  bringToFront: (id) => {
+    const s = get();
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => {
+        if (!p.layers.some((l) => l.id === id)) return p;
+        const sorted = orderLayersByZ(p.layers);
+        const idx = sorted.findIndex((l) => l.id === id);
+        if (idx < 0 || idx === sorted.length - 1) return p;
+        const reordered = [...sorted];
+        const [item] = reordered.splice(idx, 1);
+        reordered.push(item);
+        return { ...p, layers: resequenceLayers(reordered) };
+      }),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  sendToBack: (id) => {
+    const s = get();
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => {
+        if (!p.layers.some((l) => l.id === id)) return p;
+        const sorted = orderLayersByZ(p.layers);
+        const idx = sorted.findIndex((l) => l.id === id);
+        if (idx <= 0) return p;
+        const reordered = [...sorted];
+        const [item] = reordered.splice(idx, 1);
+        reordered.unshift(item);
         return { ...p, layers: resequenceLayers(reordered) };
       }),
       past,
