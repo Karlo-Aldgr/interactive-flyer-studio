@@ -1594,6 +1594,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       {/* Popup (also used for buy_ticket) */}
       <Dialog open={!!popup} onOpenChange={(v) => !v && setPopup(null)}>
         <DialogContent
+          className="max-h-[90vh] overflow-y-auto overscroll-contain"
           style={{
             background:
               popup?.type === "buy_product" || popup?.type === "buy_ticket"
