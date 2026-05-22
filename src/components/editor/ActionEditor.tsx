@@ -2424,3 +2424,93 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
     </div>
   );
 }
+
+// ---- Menu sections editor (loads/saves rows in `menus` table) ----
+function MenuSectionsEditor({ action, update }: { action: LayerAction | null; update: (p: any) => void }) {
+  const p = action?.payload || {};
+  const { flyerId } = useParams();
+  const [sections, setSections] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const actionId = action?.id;
+
+  useEffect(() => {
+    if (!actionId || !flyerId) return;
+    (async () => {
+      const { data } = await supabase.from("menus").select("sections").eq("action_id", actionId).maybeSingle();
+      setSections((data?.sections as any[]) || []);
+      setLoaded(true);
+    })();
+  }, [actionId, flyerId]);
+
+  async function saveMenu(next: any[]) {
+    if (!actionId || !flyerId) return;
+    setSaving(true);
+    await supabase.from("menus").upsert({ flyer_id: flyerId, action_id: actionId, sections: next }, { onConflict: "action_id" });
+    setSaving(false);
+  }
+
+  function updateSections(next: any[]) {
+    setSections(next);
+    saveMenu(next);
+  }
+
+  return (
+    <>
+      <p className="text-[11px] text-muted-foreground">Build your menu. Visitors see it as a tap-to-open page right inside the flyer.</p>
+      <div>
+        <Label className="text-xs">Menu title</Label>
+        <Input className="mt-1" value={p.menuTitle || ""} onChange={(e) => update({ menuTitle: e.target.value })} placeholder="Our menu" />
+      </div>
+      <div>
+        <Label className="text-xs">Open button label</Label>
+        <Input className="mt-1" value={p.menuCtaLabel || ""} onChange={(e) => update({ menuCtaLabel: e.target.value })} placeholder="Show menu" />
+      </div>
+      {!loaded ? (
+        <p className="text-[11px] text-muted-foreground">Loading menu…</p>
+      ) : (
+        <>
+          <div className="space-y-3">
+            {sections.map((sec, sIdx) => (
+              <div key={sec.id} className="rounded border border-border p-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input value={sec.name} placeholder="Section name (e.g. Starters)" onChange={(e) => {
+                    const next = [...sections]; next[sIdx] = { ...sec, name: e.target.value }; updateSections(next);
+                  }} />
+                  <Button size="icon" variant="ghost" onClick={() => {
+                    const next = sections.filter((_, i) => i !== sIdx); updateSections(next);
+                  }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                </div>
+                {(sec.items || []).map((it: any, iIdx: number) => (
+                  <div key={it.id} className="rounded border border-border/60 p-2 space-y-1 bg-muted/20">
+                    <div className="flex items-center gap-2">
+                      <Input value={it.name} placeholder="Item name" onChange={(e) => {
+                        const next = [...sections]; next[sIdx] = { ...sec, items: sec.items.map((x: any, j: number) => j === iIdx ? { ...x, name: e.target.value } : x) }; updateSections(next);
+                      }} />
+                      <Input className="w-20" value={it.price || ""} placeholder="$0" onChange={(e) => {
+                        const next = [...sections]; next[sIdx] = { ...sec, items: sec.items.map((x: any, j: number) => j === iIdx ? { ...x, price: e.target.value } : x) }; updateSections(next);
+                      }} />
+                      <Button size="icon" variant="ghost" onClick={() => {
+                        const next = [...sections]; next[sIdx] = { ...sec, items: sec.items.filter((_: any, j: number) => j !== iIdx) }; updateSections(next);
+                      }}><X className="h-3.5 w-3.5" /></Button>
+                    </div>
+                    <Textarea rows={1} value={it.description || ""} placeholder="Description (optional)" onChange={(e) => {
+                      const next = [...sections]; next[sIdx] = { ...sec, items: sec.items.map((x: any, j: number) => j === iIdx ? { ...x, description: e.target.value } : x) }; updateSections(next);
+                    }} />
+                  </div>
+                ))}
+                <Button size="sm" variant="outline" onClick={() => {
+                  const next = [...sections]; next[sIdx] = { ...sec, items: [...(sec.items || []), { id: crypto.randomUUID(), name: "", price: "" }] }; updateSections(next);
+                }}><Plus className="mr-1 h-3.5 w-3.5" /> Add item</Button>
+              </div>
+            ))}
+          </div>
+          <Button size="sm" variant="outline" onClick={() => {
+            updateSections([...sections, { id: crypto.randomUUID(), name: "", items: [] }]);
+          }}><Plus className="mr-1 h-3.5 w-3.5" /> Add section</Button>
+          {saving && <p className="text-[11px] text-muted-foreground">Saving…</p>}
+        </>
+      )}
+    </>
+  );
+}
