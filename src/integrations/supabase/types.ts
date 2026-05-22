@@ -176,6 +176,69 @@ export type Database = {
         }
         Relationships: []
       }
+      business_ratings: {
+        Row: {
+          action_id: string | null
+          comment: string | null
+          created_at: string
+          flyer_id: string
+          id: string
+          session_id: string
+          stars: number
+          updated_at: string
+        }
+        Insert: {
+          action_id?: string | null
+          comment?: string | null
+          created_at?: string
+          flyer_id: string
+          id?: string
+          session_id: string
+          stars: number
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string | null
+          comment?: string | null
+          created_at?: string
+          flyer_id?: string
+          id?: string
+          session_id?: string
+          stars?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      challenge_participants: {
+        Row: {
+          action_id: string | null
+          created_at: string
+          email: string
+          flyer_id: string
+          id: string
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          created_at?: string
+          email: string
+          flyer_id: string
+          id?: string
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          created_at?: string
+          email?: string
+          flyer_id?: string
+          id?: string
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       flyers: {
         Row: {
           auto_unpublish_at: string | null
@@ -376,6 +439,33 @@ export type Database = {
           },
         ]
       }
+      menus: {
+        Row: {
+          action_id: string
+          created_at: string
+          flyer_id: string
+          id: string
+          sections: Json
+          updated_at: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string
+          flyer_id: string
+          id?: string
+          sections?: Json
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string
+          flyer_id?: string
+          id?: string
+          sections?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pages: {
         Row: {
           background: Json
@@ -483,6 +573,117 @@ export type Database = {
         }
         Relationships: []
       }
+      survey_responses: {
+        Row: {
+          action_id: string | null
+          answers: Json
+          created_at: string
+          flyer_id: string
+          id: string
+          session_id: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          answers?: Json
+          created_at?: string
+          flyer_id: string
+          id?: string
+          session_id?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          answers?: Json
+          created_at?: string
+          flyer_id?: string
+          id?: string
+          session_id?: string | null
+        }
+        Relationships: []
+      }
+      table_reservations: {
+        Row: {
+          action_id: string | null
+          created_at: string
+          email: string | null
+          flyer_id: string
+          id: string
+          name: string
+          notes: string | null
+          party_size: number
+          phone: string | null
+          reserve_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_id?: string | null
+          created_at?: string
+          email?: string | null
+          flyer_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          party_size?: number
+          phone?: string | null
+          reserve_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string | null
+          created_at?: string
+          email?: string | null
+          flyer_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          party_size?: number
+          phone?: string | null
+          reserve_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      testimonials: {
+        Row: {
+          action_id: string | null
+          body: string | null
+          created_at: string
+          flyer_id: string
+          id: string
+          name: string | null
+          photo_url: string | null
+          rating: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_id?: string | null
+          body?: string | null
+          created_at?: string
+          flyer_id: string
+          id?: string
+          name?: string | null
+          photo_url?: string | null
+          rating?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string | null
+          body?: string | null
+          created_at?: string
+          flyer_id?: string
+          id?: string
+          name?: string | null
+          photo_url?: string | null
+          rating?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -538,6 +739,13 @@ export type Database = {
         | "subscribe"
         | "book_appointment"
         | "gallery"
+        | "survey"
+        | "testimonial"
+        | "reserve_table"
+        | "schedule_consultation"
+        | "show_menu"
+        | "join_challenge"
+        | "business_rating"
       app_role: "admin" | "user"
       appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
@@ -703,6 +911,13 @@ export const Constants = {
         "subscribe",
         "book_appointment",
         "gallery",
+        "survey",
+        "testimonial",
+        "reserve_table",
+        "schedule_consultation",
+        "show_menu",
+        "join_challenge",
+        "business_rating",
       ],
       app_role: ["admin", "user"],
       appointment_status: ["confirmed", "cancelled"],
