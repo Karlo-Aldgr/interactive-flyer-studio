@@ -1612,8 +1612,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           }}
         >
           <DialogHeader>
-            <DialogTitle style={{ color: "inherit" }}>{popup?.payload.title || (popup?.type === "buy_ticket" ? "Get your ticket" : popup?.type === "buy_product" ? (popup.payload.productName || "Buy product") : "Info")}</DialogTitle>
-            {popup?.payload.body && <DialogDescription className="whitespace-pre-wrap" style={{ color: "inherit", opacity: 0.9 }}>{popup.payload.body}</DialogDescription>}
+            <DialogTitle style={{ color: "inherit", fontSize: popup?.type === "popup" && popup?.payload.popupTitleSize ? `${popup.payload.popupTitleSize}px` : undefined }}>{popup?.payload.title || (popup?.type === "buy_ticket" ? "Get your ticket" : popup?.type === "buy_product" ? (popup.payload.productName || "Buy product") : "Info")}</DialogTitle>
+            {popup?.payload.body && <DialogDescription className="whitespace-pre-wrap" style={{ color: "inherit", opacity: 0.9, fontSize: popup?.type === "popup" && popup?.payload.popupBodySize ? `${popup.payload.popupBodySize}px` : undefined }}>{popup.payload.body}</DialogDescription>}
           </DialogHeader>
           {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
             <div className="relative w-full">
