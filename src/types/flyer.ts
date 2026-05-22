@@ -74,6 +74,8 @@ export interface ActionPayload {
   hotspots?: PopupHotspot[];
   popupBgColor?: string;
   popupTextColor?: string;
+  popupTitleSize?: number;
+  popupBodySize?: number;
   // video
   videoUrl?: string;
   // audio
