@@ -750,6 +750,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
   const introPlayedRef = useRef(false);
   const [introNeedsTap, setIntroNeedsTap] = useState(false);
+  // Background audio (separate from intro audio)
+  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [bgPlaying, setBgPlaying] = useState(false);
+  const [bgVolume, setBgVolume] = useState<number>(0.5);
+  const [bgNeedsTap, setBgNeedsTap] = useState(false);
   const [, setResizeTick] = useState(0);
   useEffect(() => {
     const onResize = () => setResizeTick((n) => n + 1);
@@ -1419,6 +1424,79 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     tryPlay();
   }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop, flyer?.settings?.introAudioVolume]);
 
+  // Background audio — independent looping soundtrack.
+  useEffect(() => {
+    if (!flyer) return;
+    const url = flyer.settings?.bgAudioUrl;
+    if (!url) {
+      if (bgAudioRef.current) {
+        try { bgAudioRef.current.pause(); } catch { /* noop */ }
+        bgAudioRef.current = null;
+      }
+      setBgPlaying(false);
+      setBgNeedsTap(false);
+      return;
+    }
+    const loop = flyer.settings?.bgAudioLoop ?? true;
+    const vol = Math.max(0, Math.min(1, flyer.settings?.bgAudioVolume ?? 0.5));
+    const autoplay = flyer.settings?.bgAudioAutoplay ?? true;
+    setBgVolume(vol);
+
+    const el = new Audio(url);
+    el.loop = loop;
+    el.volume = vol;
+    el.onplay = () => setBgPlaying(true);
+    el.onpause = () => setBgPlaying(false);
+    el.onended = () => { if (!loop) setBgPlaying(false); };
+    bgAudioRef.current = el;
+
+    if (!autoplay) return () => { try { el.pause(); } catch { /* noop */ } };
+
+    (async () => {
+      try {
+        await el.play();
+        setBgNeedsTap(false);
+      } catch {
+        setBgNeedsTap(true);
+        const startFromTap = () => {
+          try {
+            const p = el.play();
+            if (p && typeof p.then === "function") {
+              p.then(() => setBgNeedsTap(false)).catch(() => { /* noop */ });
+            } else {
+              setBgNeedsTap(false);
+            }
+          } catch { /* noop */ }
+          cleanup();
+        };
+        const cleanup = () => {
+          window.removeEventListener("pointerdown", startFromTap, true);
+          window.removeEventListener("touchend", startFromTap, true);
+          window.removeEventListener("mousedown", startFromTap, true);
+          window.removeEventListener("keydown", startFromTap, true);
+        };
+        window.addEventListener("pointerdown", startFromTap, true);
+        window.addEventListener("touchend", startFromTap, true);
+        window.addEventListener("mousedown", startFromTap, true);
+        window.addEventListener("keydown", startFromTap, true);
+      }
+    })();
+
+    return () => {
+      try { el.pause(); } catch { /* noop */ }
+      bgAudioRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flyer?.id, flyer?.settings?.bgAudioUrl, flyer?.settings?.bgAudioLoop, flyer?.settings?.bgAudioAutoplay]);
+
+  // Apply default volume changes without re-creating the audio element.
+  useEffect(() => {
+    const v = Math.max(0, Math.min(1, flyer?.settings?.bgAudioVolume ?? 0.5));
+    setBgVolume(v);
+    if (bgAudioRef.current) bgAudioRef.current.volume = v;
+  }, [flyer?.settings?.bgAudioVolume]);
+
+
   // Auto-trigger any actions on the current page that have payload.autoTrigger === true.
   const autoFiredRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -2076,6 +2154,47 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </Button>
         </div>
       )}
+      {/* Background audio mini-player */}
+      {flyer?.settings?.bgAudioUrl && (flyer.settings.bgAudioShowControl ?? true) && (
+        <div
+          className="fixed left-3 z-50 flex items-center gap-2 rounded-full border border-border bg-card/95 px-2.5 py-1 shadow-elegant backdrop-blur"
+          style={{ top: audioInfo ? 44 : 12 }}
+        >
+          <button
+            type="button"
+            aria-label={bgPlaying ? "Pause background audio" : "Play background audio"}
+            className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-muted"
+            onClick={() => {
+              const el = bgAudioRef.current;
+              if (!el) return;
+              if (bgPlaying) {
+                el.pause();
+              } else {
+                el.play().then(() => setBgNeedsTap(false)).catch(() => { /* noop */ });
+              }
+            }}
+          >
+            <span className="text-[12px] leading-none">{bgPlaying ? "⏸" : "▶"}</span>
+          </button>
+          <span className="text-[11px] font-medium">BG</span>
+          <Slider
+            className="w-20"
+            value={[Math.round(bgVolume * 100)]}
+            min={0}
+            max={100}
+            step={1}
+            onValueChange={(v) => {
+              const nv = (v[0] ?? 50) / 100;
+              setBgVolume(nv);
+              if (bgAudioRef.current) bgAudioRef.current.volume = nv;
+            }}
+          />
+          {bgNeedsTap && !bgPlaying && (
+            <span className="text-[10px] text-muted-foreground">tap ▶</span>
+          )}
+        </div>
+      )}
+
       <Dialog open={!!formAction} onOpenChange={(v) => !v && setFormAction(null)}>
         <DialogContent>
           <DialogHeader>

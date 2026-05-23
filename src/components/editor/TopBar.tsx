@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
-  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, BarChart3, Users, Wallet, Inbox, Link as LinkIcon,
+  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, Music2, BarChart3, Users, Wallet, Inbox, Link as LinkIcon,
   Briefcase, PartyPopper, CalendarIcon,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -26,6 +26,7 @@ import { ShareDialog } from "./ShareDialog";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
 import { FlyerPaymentSettingsDialog } from "./FlyerPaymentSettingsDialog";
 import { IntroAudioDialog } from "./IntroAudioDialog";
+import { BackgroundAudioDialog } from "./BackgroundAudioDialog";
 import { SubscribersPanel } from "./SubscribersPanel";
 import { PortalLinkDialog } from "./PortalLinkDialog";
 import { SocialMediaDialog } from "./SocialMediaDialog";
@@ -86,6 +87,7 @@ export function TopBar({ saving }: Props) {
   const [flyerPreviewThumb, setFlyerPreviewThumb] = useState<string | undefined>(undefined);
   const [payOpen, setPayOpen] = useState(false);
   const [introAudioOpen, setIntroAudioOpen] = useState(false);
+  const [bgAudioOpen, setBgAudioOpen] = useState(false);
   const [subscribersOpen, setSubscribersOpen] = useState(false);
   const [paySettingsOpen, setPaySettingsOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
@@ -595,6 +597,22 @@ export function TopBar({ saving }: Props) {
           <TooltipTrigger asChild>
             <Button
               size="sm"
+              variant={flyer.settings.bgAudioUrl ? "default" : "outline"}
+              onClick={() => setBgAudioOpen(true)}
+            >
+              <Music2 className="mr-1 h-4 w-4" /> Background audio
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {flyer.settings.bgAudioUrl
+              ? "Background audio set — click to edit"
+              : "Loop a background soundtrack across all pages"}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
               variant={hasAnySocial(flyer.settings.social) ? "default" : "outline"}
               onClick={() => setSocialOpen(true)}
             >
@@ -781,6 +799,7 @@ export function TopBar({ saving }: Props) {
       <FlyerPaymentSettingsDialog open={paySettingsOpen} onOpenChange={setPaySettingsOpen} />
       <PortalLinkDialog flyerId={flyer.id} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />
       <IntroAudioDialog open={introAudioOpen} onOpenChange={setIntroAudioOpen} />
+      <BackgroundAudioDialog open={bgAudioOpen} onOpenChange={setBgAudioOpen} />
       <SocialMediaDialog open={socialOpen} onOpenChange={setSocialOpen} />
       <SubscribersPanel
         open={subscribersOpen}
