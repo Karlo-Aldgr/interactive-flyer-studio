@@ -28,6 +28,8 @@ export function IntroAudioDialog({ open, onOpenChange }: Props) {
   if (!flyer) return null;
   const url = flyer.settings.introAudioUrl || "";
   const loop = !!flyer.settings.introAudioLoop;
+  const volume = flyer.settings.introAudioVolume ?? 1;
+  const showControl = flyer.settings.introAudioShowControl ?? true;
 
   function patch(p: Partial<typeof flyer.settings>) {
     setFlyer({ settings: { ...flyer.settings, ...p } });
