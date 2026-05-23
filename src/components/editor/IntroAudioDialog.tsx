@@ -104,6 +104,30 @@ export function IntroAudioDialog({ open, onOpenChange }: Props) {
             </div>
             <Switch checked={loop} onCheckedChange={(v) => patch({ introAudioLoop: v })} />
           </div>
+
+          <div className="rounded-md border border-border p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <Volume2 className="h-4 w-4" /> Volume
+              </Label>
+              <span className="text-xs text-muted-foreground tabular-nums">{Math.round(volume * 100)}%</span>
+            </div>
+            <Slider
+              value={[Math.round(volume * 100)]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(v) => patch({ introAudioVolume: (v[0] ?? 100) / 100 })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-md border border-border p-3">
+            <div>
+              <div className="text-sm font-medium">Show volume control to viewers</div>
+              <div className="text-xs text-muted-foreground">Adds a slider on the audio pill so viewers can adjust loudness.</div>
+            </div>
+            <Switch checked={showControl} onCheckedChange={(v) => patch({ introAudioShowControl: v })} />
+          </div>
         </div>
 
         <DialogFooter>
