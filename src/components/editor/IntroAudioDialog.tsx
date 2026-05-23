@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Music } from "lucide-react";
+import { Upload, Music, Volume2 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEditorStore } from "@/store/editorStore";
@@ -27,6 +28,8 @@ export function IntroAudioDialog({ open, onOpenChange }: Props) {
   if (!flyer) return null;
   const url = flyer.settings.introAudioUrl || "";
   const loop = !!flyer.settings.introAudioLoop;
+  const volume = flyer.settings.introAudioVolume ?? 1;
+  const showControl = flyer.settings.introAudioShowControl ?? true;
 
   function patch(p: Partial<typeof flyer.settings>) {
     setFlyer({ settings: { ...flyer.settings, ...p } });
@@ -100,6 +103,30 @@ export function IntroAudioDialog({ open, onOpenChange }: Props) {
               <div className="text-xs text-muted-foreground">Keep playing until the viewer stops it.</div>
             </div>
             <Switch checked={loop} onCheckedChange={(v) => patch({ introAudioLoop: v })} />
+          </div>
+
+          <div className="rounded-md border border-border p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <Volume2 className="h-4 w-4" /> Volume
+              </Label>
+              <span className="text-xs text-muted-foreground tabular-nums">{Math.round(volume * 100)}%</span>
+            </div>
+            <Slider
+              value={[Math.round(volume * 100)]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(v) => patch({ introAudioVolume: (v[0] ?? 100) / 100 })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-md border border-border p-3">
+            <div>
+              <div className="text-sm font-medium">Show volume control to viewers</div>
+              <div className="text-xs text-muted-foreground">Adds a slider on the audio pill so viewers can adjust loudness.</div>
+            </div>
+            <Switch checked={showControl} onCheckedChange={(v) => patch({ introAudioShowControl: v })} />
           </div>
         </div>
 

@@ -63,6 +63,7 @@ import { AirBubble } from "@/components/AirBubble";
 import { Loader2, Copy, Check, MessageSquare } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
@@ -1355,8 +1356,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     const url = flyer.settings?.introAudioUrl;
     if (!url || introPlayedRef.current) return;
     const loop = !!flyer.settings?.introAudioLoop;
+    const vol = Math.max(0, Math.min(1, flyer.settings?.introAudioVolume ?? 1));
     const el = new Audio(url);
     el.loop = loop;
+    el.volume = vol;
     el.onended = () => setAudioInfo((s) => (s?.url === url ? null : s));
     audioRef.current = el;
 
@@ -1414,7 +1417,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     };
 
     tryPlay();
-  }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop]);
+  }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop, flyer?.settings?.introAudioVolume]);
 
   // Auto-trigger any actions on the current page that have payload.autoTrigger === true.
   const autoFiredRef = useRef<Set<string>>(new Set());
@@ -2043,6 +2046,22 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       {audioInfo && (
         <div className="fixed top-3 left-3 z-50 flex items-center gap-2 rounded-full border border-border bg-card/95 px-2.5 py-1 shadow-elegant backdrop-blur">
           <span className="text-[11px] font-medium">♪{audioInfo.loop ? " loop" : ""}</span>
+          {(flyer?.settings?.introAudioShowControl ?? true) && audioInfo.url === flyer?.settings?.introAudioUrl && (
+            <div className="flex items-center gap-1.5">
+              <Slider
+                className="w-20"
+                value={[Math.round(((audioRef.current?.volume ?? flyer?.settings?.introAudioVolume ?? 1)) * 100)]}
+                min={0}
+                max={100}
+                step={1}
+                onValueChange={(v) => {
+                  if (audioRef.current) audioRef.current.volume = (v[0] ?? 100) / 100;
+                  // force re-render
+                  setAudioInfo((s) => (s ? { ...s } : s));
+                }}
+              />
+            </div>
+          )}
           <Button
             size="sm"
             variant="ghost"
