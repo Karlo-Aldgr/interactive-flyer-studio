@@ -2154,6 +2154,47 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </Button>
         </div>
       )}
+      {/* Background audio mini-player */}
+      {flyer?.settings?.bgAudioUrl && (flyer.settings.bgAudioShowControl ?? true) && (
+        <div
+          className="fixed left-3 z-50 flex items-center gap-2 rounded-full border border-border bg-card/95 px-2.5 py-1 shadow-elegant backdrop-blur"
+          style={{ top: audioInfo ? 44 : 12 }}
+        >
+          <button
+            type="button"
+            aria-label={bgPlaying ? "Pause background audio" : "Play background audio"}
+            className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-muted"
+            onClick={() => {
+              const el = bgAudioRef.current;
+              if (!el) return;
+              if (bgPlaying) {
+                el.pause();
+              } else {
+                el.play().then(() => setBgNeedsTap(false)).catch(() => { /* noop */ });
+              }
+            }}
+          >
+            <span className="text-[12px] leading-none">{bgPlaying ? "⏸" : "▶"}</span>
+          </button>
+          <span className="text-[11px] font-medium">BG</span>
+          <Slider
+            className="w-20"
+            value={[Math.round(bgVolume * 100)]}
+            min={0}
+            max={100}
+            step={1}
+            onValueChange={(v) => {
+              const nv = (v[0] ?? 50) / 100;
+              setBgVolume(nv);
+              if (bgAudioRef.current) bgAudioRef.current.volume = nv;
+            }}
+          />
+          {bgNeedsTap && !bgPlaying && (
+            <span className="text-[10px] text-muted-foreground">tap ▶</span>
+          )}
+        </div>
+      )}
+
       <Dialog open={!!formAction} onOpenChange={(v) => !v && setFormAction(null)}>
         <DialogContent>
           <DialogHeader>
