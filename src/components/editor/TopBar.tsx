@@ -799,6 +799,7 @@ export function TopBar({ saving }: Props) {
       <FlyerPaymentSettingsDialog open={paySettingsOpen} onOpenChange={setPaySettingsOpen} />
       <PortalLinkDialog flyerId={flyer.id} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />
       <IntroAudioDialog open={introAudioOpen} onOpenChange={setIntroAudioOpen} />
+      <BackgroundAudioDialog open={bgAudioOpen} onOpenChange={setBgAudioOpen} />
       <SocialMediaDialog open={socialOpen} onOpenChange={setSocialOpen} />
       <SubscribersPanel
         open={subscribersOpen}
