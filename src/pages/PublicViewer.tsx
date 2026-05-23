@@ -750,6 +750,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
   const introPlayedRef = useRef(false);
   const [introNeedsTap, setIntroNeedsTap] = useState(false);
+  // Background audio (separate from intro audio)
+  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [bgPlaying, setBgPlaying] = useState(false);
+  const [bgVolume, setBgVolume] = useState<number>(0.5);
+  const [bgNeedsTap, setBgNeedsTap] = useState(false);
   const [, setResizeTick] = useState(0);
   useEffect(() => {
     const onResize = () => setResizeTick((n) => n + 1);
