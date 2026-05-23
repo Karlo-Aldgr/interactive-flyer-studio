@@ -2046,6 +2046,22 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       {audioInfo && (
         <div className="fixed top-3 left-3 z-50 flex items-center gap-2 rounded-full border border-border bg-card/95 px-2.5 py-1 shadow-elegant backdrop-blur">
           <span className="text-[11px] font-medium">♪{audioInfo.loop ? " loop" : ""}</span>
+          {(flyer?.settings?.introAudioShowControl ?? true) && audioInfo.url === flyer?.settings?.introAudioUrl && (
+            <div className="flex items-center gap-1.5">
+              <Slider
+                className="w-20"
+                value={[Math.round(((audioRef.current?.volume ?? flyer?.settings?.introAudioVolume ?? 1)) * 100)]}
+                min={0}
+                max={100}
+                step={1}
+                onValueChange={(v) => {
+                  if (audioRef.current) audioRef.current.volume = (v[0] ?? 100) / 100;
+                  // force re-render
+                  setAudioInfo((s) => (s ? { ...s } : s));
+                }}
+              />
+            </div>
+          )}
           <Button
             size="sm"
             variant="ghost"
