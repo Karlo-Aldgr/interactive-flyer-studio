@@ -1355,8 +1355,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     const url = flyer.settings?.introAudioUrl;
     if (!url || introPlayedRef.current) return;
     const loop = !!flyer.settings?.introAudioLoop;
+    const vol = Math.max(0, Math.min(1, flyer.settings?.introAudioVolume ?? 1));
     const el = new Audio(url);
     el.loop = loop;
+    el.volume = vol;
     el.onended = () => setAudioInfo((s) => (s?.url === url ? null : s));
     audioRef.current = el;
 
