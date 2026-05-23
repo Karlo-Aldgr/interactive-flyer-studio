@@ -597,6 +597,22 @@ export function TopBar({ saving }: Props) {
           <TooltipTrigger asChild>
             <Button
               size="sm"
+              variant={flyer.settings.bgAudioUrl ? "default" : "outline"}
+              onClick={() => setBgAudioOpen(true)}
+            >
+              <Music2 className="mr-1 h-4 w-4" /> Background audio
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {flyer.settings.bgAudioUrl
+              ? "Background audio set — click to edit"
+              : "Loop a background soundtrack across all pages"}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
               variant={hasAnySocial(flyer.settings.social) ? "default" : "outline"}
               onClick={() => setSocialOpen(true)}
             >
