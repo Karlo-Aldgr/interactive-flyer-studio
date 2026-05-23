@@ -393,6 +393,12 @@ export interface FlyerSettings {
   introAudioLoop?: boolean;
   introAudioVolume?: number; // 0..1, default 1
   introAudioShowControl?: boolean; // show viewer volume slider, default true
+  // Background audio: persistent soundtrack that plays across all pages of the flyer.
+  bgAudioUrl?: string;
+  bgAudioLoop?: boolean;            // default true
+  bgAudioVolume?: number;           // 0..1, default 0.5
+  bgAudioAutoplay?: boolean;        // default true
+  bgAudioShowControl?: boolean;     // viewer can adjust volume / pause, default true
   // Per-flyer payment handles for cart checkout (P2P money transfer apps)
   payVenmo?: string;             // Venmo username, no leading @
   payCashapp?: string;           // Cash App $Cashtag, no leading $
