@@ -1416,7 +1416,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     };
 
     tryPlay();
-  }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop]);
+  }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop, flyer?.settings?.introAudioVolume]);
 
   // Auto-trigger any actions on the current page that have payload.autoTrigger === true.
   const autoFiredRef = useRef<Set<string>>(new Set());
