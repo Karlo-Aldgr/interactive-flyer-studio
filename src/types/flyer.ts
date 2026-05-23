@@ -391,6 +391,8 @@ export interface FlyerSettings {
   // Intro audio: plays once on first view of the flyer
   introAudioUrl?: string;
   introAudioLoop?: boolean;
+  introAudioVolume?: number; // 0..1, default 1
+  introAudioShowControl?: boolean; // show viewer volume slider, default true
   // Per-flyer payment handles for cart checkout (P2P money transfer apps)
   payVenmo?: string;             // Venmo username, no leading @
   payCashapp?: string;           // Cash App $Cashtag, no leading $
