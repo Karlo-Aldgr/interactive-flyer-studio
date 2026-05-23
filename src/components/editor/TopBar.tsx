@@ -26,6 +26,7 @@ import { ShareDialog } from "./ShareDialog";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
 import { FlyerPaymentSettingsDialog } from "./FlyerPaymentSettingsDialog";
 import { IntroAudioDialog } from "./IntroAudioDialog";
+import { BackgroundAudioDialog } from "./BackgroundAudioDialog";
 import { SubscribersPanel } from "./SubscribersPanel";
 import { PortalLinkDialog } from "./PortalLinkDialog";
 import { SocialMediaDialog } from "./SocialMediaDialog";
