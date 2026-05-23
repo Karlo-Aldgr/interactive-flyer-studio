@@ -1424,6 +1424,79 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     tryPlay();
   }, [flyer?.id, flyer?.settings?.introAudioUrl, flyer?.settings?.introAudioLoop, flyer?.settings?.introAudioVolume]);
 
+  // Background audio — independent looping soundtrack.
+  useEffect(() => {
+    if (!flyer) return;
+    const url = flyer.settings?.bgAudioUrl;
+    if (!url) {
+      if (bgAudioRef.current) {
+        try { bgAudioRef.current.pause(); } catch { /* noop */ }
+        bgAudioRef.current = null;
+      }
+      setBgPlaying(false);
+      setBgNeedsTap(false);
+      return;
+    }
+    const loop = flyer.settings?.bgAudioLoop ?? true;
+    const vol = Math.max(0, Math.min(1, flyer.settings?.bgAudioVolume ?? 0.5));
+    const autoplay = flyer.settings?.bgAudioAutoplay ?? true;
+    setBgVolume(vol);
+
+    const el = new Audio(url);
+    el.loop = loop;
+    el.volume = vol;
+    el.onplay = () => setBgPlaying(true);
+    el.onpause = () => setBgPlaying(false);
+    el.onended = () => { if (!loop) setBgPlaying(false); };
+    bgAudioRef.current = el;
+
+    if (!autoplay) return () => { try { el.pause(); } catch { /* noop */ } };
+
+    (async () => {
+      try {
+        await el.play();
+        setBgNeedsTap(false);
+      } catch {
+        setBgNeedsTap(true);
+        const startFromTap = () => {
+          try {
+            const p = el.play();
+            if (p && typeof p.then === "function") {
+              p.then(() => setBgNeedsTap(false)).catch(() => { /* noop */ });
+            } else {
+              setBgNeedsTap(false);
+            }
+          } catch { /* noop */ }
+          cleanup();
+        };
+        const cleanup = () => {
+          window.removeEventListener("pointerdown", startFromTap, true);
+          window.removeEventListener("touchend", startFromTap, true);
+          window.removeEventListener("mousedown", startFromTap, true);
+          window.removeEventListener("keydown", startFromTap, true);
+        };
+        window.addEventListener("pointerdown", startFromTap, true);
+        window.addEventListener("touchend", startFromTap, true);
+        window.addEventListener("mousedown", startFromTap, true);
+        window.addEventListener("keydown", startFromTap, true);
+      }
+    })();
+
+    return () => {
+      try { el.pause(); } catch { /* noop */ }
+      bgAudioRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flyer?.id, flyer?.settings?.bgAudioUrl, flyer?.settings?.bgAudioLoop, flyer?.settings?.bgAudioAutoplay]);
+
+  // Apply default volume changes without re-creating the audio element.
+  useEffect(() => {
+    const v = Math.max(0, Math.min(1, flyer?.settings?.bgAudioVolume ?? 0.5));
+    setBgVolume(v);
+    if (bgAudioRef.current) bgAudioRef.current.volume = v;
+  }, [flyer?.settings?.bgAudioVolume]);
+
+
   // Auto-trigger any actions on the current page that have payload.autoTrigger === true.
   const autoFiredRef = useRef<Set<string>>(new Set());
   useEffect(() => {
