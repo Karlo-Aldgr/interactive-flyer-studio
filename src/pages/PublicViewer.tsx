@@ -1838,6 +1838,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               </div>
             )}
           </DialogHeader>
+          {popup?.payload.popupAudioUrl && (
+            <PopupAudioPlayer
+              key={popup.id}
+              url={popup.payload.popupAudioUrl}
+              autoplay={popup.payload.popupAudioAutoplay ?? true}
+              loop={popup.payload.popupAudioLoop ?? false}
+              defaultVolume={popup.payload.popupAudioVolume ?? 0.8}
+              showControl={popup.payload.popupAudioShowControl ?? true}
+            />
+          )}
           {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
             <div className="relative w-full">
               <img
