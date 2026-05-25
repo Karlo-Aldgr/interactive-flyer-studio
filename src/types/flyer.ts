@@ -104,6 +104,11 @@ export interface ActionPayload {
   popupTextColor?: string;
   popupTitleSize?: number;
   popupBodySize?: number;
+  popupAudioUrl?: string;
+  popupAudioAutoplay?: boolean;
+  popupAudioLoop?: boolean;
+  popupAudioVolume?: number; // 0..1
+  popupAudioShowControl?: boolean;
   // video
   videoUrl?: string;
   // audio
