@@ -1252,6 +1252,63 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
               </div>
             </div>
             <p className="text-[11px] text-muted-foreground">Background color is used when no image is set.</p>
+
+            <div className="rounded border border-border bg-muted/30 p-3 space-y-3">
+              <Label className="text-xs font-semibold">Popup audio (optional)</Label>
+              <p className="text-[11px] text-muted-foreground">Plays while the popup is open. Stops when closed.</p>
+              <div>
+                <Label className="text-xs">Audio URL</Label>
+                <Input
+                  className="mt-1"
+                  value={p.popupAudioUrl || ""}
+                  onChange={(e) => update({ popupAudioUrl: e.target.value })}
+                  placeholder="https://.../sound.mp3"
+                />
+              </div>
+              <AssetUpload
+                label="Or upload audio file"
+                value={p.popupAudioUrl}
+                onChange={(url) => update({ popupAudioUrl: url })}
+                accept="audio/*"
+                kind="audio"
+              />
+              {p.popupAudioUrl && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Autoplay</Label>
+                    <Switch
+                      checked={p.popupAudioAutoplay ?? true}
+                      onCheckedChange={(v) => update({ popupAudioAutoplay: v })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Loop</Label>
+                    <Switch
+                      checked={p.popupAudioLoop ?? false}
+                      onCheckedChange={(v) => update({ popupAudioLoop: v })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Show volume controls to viewers</Label>
+                    <Switch
+                      checked={p.popupAudioShowControl ?? true}
+                      onCheckedChange={(v) => update({ popupAudioShowControl: v })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Default volume ({Math.round((p.popupAudioVolume ?? 0.8) * 100)}%)</Label>
+                    <Slider
+                      className="mt-2"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={[Math.round((p.popupAudioVolume ?? 0.8) * 100)]}
+                      onValueChange={(v) => update({ popupAudioVolume: (v[0] ?? 80) / 100 })}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
             {depth < 1 && (
               <PopupHotspotsEditor
                 depth={depth}
