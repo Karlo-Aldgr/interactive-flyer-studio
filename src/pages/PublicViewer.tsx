@@ -25,6 +25,49 @@ function useImagesReady(srcs: string[], timeoutMs = 4000): boolean {
   return ready;
 }
 
+/** Inline audio player used inside popup dialogs. Plays while popup is open. */
+function PopupAudioPlayer({
+  url, autoplay, loop, defaultVolume, showControl,
+}: { url: string; autoplay: boolean; loop: boolean; defaultVolume: number; showControl: boolean }) {
+  const ref = useRef<HTMLAudioElement>(null);
+  const [volume, setVolume] = useState(Math.max(0, Math.min(1, defaultVolume)));
+  useEffect(() => {
+    const a = ref.current;
+    if (!a) return;
+    a.volume = volume;
+  }, [volume]);
+  useEffect(() => {
+    const a = ref.current;
+    if (!a || !autoplay) return;
+    a.play().catch(() => { /* autoplay blocked — controls will let user start */ });
+  }, [autoplay, url]);
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-2 py-1.5">
+      <audio
+        ref={ref}
+        src={url}
+        loop={loop}
+        controls={showControl}
+        autoPlay={autoplay}
+        className="h-8 flex-1 min-w-0"
+        style={{ maxWidth: "100%" }}
+      />
+      {showControl && (
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={Math.round(volume * 100)}
+          onChange={(e) => setVolume(Number(e.target.value) / 100)}
+          className="w-20 accent-primary"
+          aria-label="Volume"
+        />
+      )}
+    </div>
+  );
+}
+
 /** Coarse device classification for analytics breakdowns. */
 function getViewerDevice(): "mobile" | "tablet" | "desktop" {
   try {
@@ -1838,6 +1881,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
               </div>
             )}
           </DialogHeader>
+          {popup?.payload.popupAudioUrl && (
+            <PopupAudioPlayer
+              key={popup.id}
+              url={popup.payload.popupAudioUrl}
+              autoplay={popup.payload.popupAudioAutoplay ?? true}
+              loop={popup.payload.popupAudioLoop ?? false}
+              defaultVolume={popup.payload.popupAudioVolume ?? 0.8}
+              showControl={popup.payload.popupAudioShowControl ?? true}
+            />
+          )}
           {popup?.type === "buy_ticket" && popup.payload.ticketImageUrl && (
             <div className="relative w-full">
               <img
