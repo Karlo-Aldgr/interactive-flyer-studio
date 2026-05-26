@@ -95,7 +95,7 @@ export function BackgroundAudioDialog({ open, onOpenChange }: Props) {
                 <Upload className="mr-1 h-3.5 w-3.5" />
                 {busy ? "Uploading..." : url ? "Replace" : "Upload"}
               </Button>
-              {url && <audio src={url} controls className="h-8 max-w-[220px]" />}
+              {url && <audio ref={previewRef} src={url} controls className="h-8 max-w-[220px]" />}
               {url && (
                 <Button type="button" size="sm" variant="ghost" onClick={() => patch({ bgAudioUrl: "" })}>
                   Remove
