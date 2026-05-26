@@ -23,7 +23,14 @@ export function BackgroundAudioDialog({ open, onOpenChange }: Props) {
   const { user } = useAuth();
   const { flyerId } = useParams();
   const fileRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLAudioElement>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (previewRef.current) {
+      previewRef.current.volume = Math.max(0, Math.min(1, flyer?.settings.bgAudioVolume ?? 0.5));
+    }
+  }, [flyer?.settings.bgAudioVolume, flyer?.settings.bgAudioUrl]);
 
   if (!flyer) return null;
   const url = flyer.settings.bgAudioUrl || "";
