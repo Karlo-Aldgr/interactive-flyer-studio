@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,14 @@ export function BackgroundAudioDialog({ open, onOpenChange }: Props) {
   const { user } = useAuth();
   const { flyerId } = useParams();
   const fileRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLAudioElement>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (previewRef.current) {
+      previewRef.current.volume = Math.max(0, Math.min(1, flyer?.settings.bgAudioVolume ?? 0.5));
+    }
+  }, [flyer?.settings.bgAudioVolume, flyer?.settings.bgAudioUrl]);
 
   if (!flyer) return null;
   const url = flyer.settings.bgAudioUrl || "";
@@ -88,7 +95,7 @@ export function BackgroundAudioDialog({ open, onOpenChange }: Props) {
                 <Upload className="mr-1 h-3.5 w-3.5" />
                 {busy ? "Uploading..." : url ? "Replace" : "Upload"}
               </Button>
-              {url && <audio src={url} controls className="h-8 max-w-[220px]" />}
+              {url && <audio ref={previewRef} src={url} controls className="h-8 max-w-[220px]" />}
               {url && (
                 <Button type="button" size="sm" variant="ghost" onClick={() => patch({ bgAudioUrl: "" })}>
                   Remove
