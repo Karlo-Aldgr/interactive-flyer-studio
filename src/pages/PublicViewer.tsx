@@ -103,7 +103,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Flyer, FlyerPage, Layer, LayerAction, AirMessageBubble } from "@/types/flyer";
 import { IntroAnimatedGroup, resolveIntro } from "@/components/editor/IntroAnimatedGroup";
 import { AirBubble } from "@/components/AirBubble";
-import { Loader2, Copy, Check, MessageSquare } from "lucide-react";
+import { Loader2, Copy, Check, MessageSquare, Share2 } from "lucide-react";
+import { buildSocialShareUrl } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -1838,6 +1839,52 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           );
         })()}
         {!isLinkedPage && <SocialSlideout settings={flyer.settings.social} />}
+        {!isLinkedPage && !previewMode && (
+          <button
+            type="button"
+            aria-label="Share this flyer"
+            onClick={async () => {
+              const shareSlug = (flyer as any).public_slug || slug;
+              const url = shareSlug ? buildSocialShareUrl(shareSlug) : window.location.href;
+              const title = flyer.title || "Check this out";
+              try {
+                if (navigator.share) {
+                  await navigator.share({ title, url });
+                  return;
+                }
+              } catch (err: any) {
+                if (err?.name === "AbortError") return;
+              }
+              try {
+                await navigator.clipboard.writeText(url);
+                toast.success("Share link copied");
+              } catch {
+                toast.error("Could not copy link");
+              }
+            }}
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              zIndex: 31,
+              width: 40,
+              height: 40,
+              borderRadius: 9999,
+              border: "none",
+              background: "rgba(0,0,0,0.55)",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
+            }}
+          >
+            <Share2 size={18} />
+          </button>
+        )}
       </div>
 
 
