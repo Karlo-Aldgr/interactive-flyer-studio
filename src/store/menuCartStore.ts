@@ -5,7 +5,7 @@ export type MenuCartItem = {
   name: string;
   price?: number;
   description?: string;
-  category?: "main" | "side" | "drink" | "dessert" | "other";
+  category?: string;
   color?: string;
 };
 export type MenuCartLine = { item: MenuCartItem; qty: number };
