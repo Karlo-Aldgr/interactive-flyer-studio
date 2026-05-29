@@ -23,6 +23,7 @@ const FlyerPortal = lazy(() => import("./pages/FlyerPortal"));
 const PublicFlyerPortal = lazy(() => import("./pages/PublicFlyerPortal"));
 const SubmitJob = lazy(() => import("./pages/SubmitJob"));
 const MyJobs = lazy(() => import("./pages/MyJobs"));
+const WaiterPortal = lazy(() => import("./pages/WaiterPortal"));
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ const App = () => (
               <Route path="/my-jobs" element={<ProtectedRoute><MyJobs /></ProtectedRoute>} />
               <Route path="/flyer/:flyerId/portal" element={<ProtectedRoute><FlyerPortal /></ProtectedRoute>} />
               <Route path="/p/:token" element={<PublicFlyerPortal />} />
+              <Route path="/w/:token" element={<WaiterPortal />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
