@@ -61,11 +61,9 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
     if (!unlocked) return;
     load();
     loadAssignments();
-    const channel = supabase.channel(`live-orders-${flyerId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "menu_orders", filter: `flyer_id=eq.${flyerId}` }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "table_assignments", filter: `flyer_id=eq.${flyerId}` }, () => loadAssignments())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Poll instead of Realtime to avoid broadcasting customer PII to other subscribers
+    const iv = setInterval(() => { load(); loadAssignments(); }, 5000);
+    return () => { clearInterval(iv); };
   }, [unlocked, flyerId, load, loadAssignments]);
 
   async function handleUnlock() {
