@@ -22,6 +22,7 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
   const [pin, setPin] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const [tableWaiters, setTableWaiters] = useState<Record<string, { name: string; color: string }>>({});
 
   useEffect(() => {
     (async () => {
