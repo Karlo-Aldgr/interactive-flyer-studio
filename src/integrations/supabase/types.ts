@@ -239,6 +239,30 @@ export type Database = {
         }
         Relationships: []
       }
+      flyer_portal_credentials: {
+        Row: {
+          created_at: string
+          flyer_id: string
+          portal_access_code: string
+          portal_token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          flyer_id: string
+          portal_access_code?: string
+          portal_token?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          flyer_id?: string
+          portal_access_code?: string
+          portal_token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flyers: {
         Row: {
           auto_unpublish_at: string | null
@@ -247,8 +271,6 @@ export type Database = {
           event_date: string | null
           id: string
           owner_id: string
-          portal_access_code: string
-          portal_token: string
           public_slug: string | null
           settings: Json
           status: Database["public"]["Enums"]["flyer_status"]
@@ -263,8 +285,6 @@ export type Database = {
           event_date?: string | null
           id?: string
           owner_id: string
-          portal_access_code?: string
-          portal_token?: string
           public_slug?: string | null
           settings?: Json
           status?: Database["public"]["Enums"]["flyer_status"]
@@ -279,8 +299,6 @@ export type Database = {
           event_date?: string | null
           id?: string
           owner_id?: string
-          portal_access_code?: string
-          portal_token?: string
           public_slug?: string | null
           settings?: Json
           status?: Database["public"]["Enums"]["flyer_status"]
