@@ -354,47 +354,43 @@ function ConsultDialog({ action, flyerId, onClose }: { action: LayerAction; flye
   );
 }
 
-// ---- Menu viewer with ordering + upsell ----
+// ---- Menu viewer with ordering + upsell (uses shared cart store) ----
 type MenuItem = { id: string; name: string; description?: string; price: number; category?: string; color?: string; upsell?: boolean };
-type CartLine = { item: MenuItem; qty: number };
 
-function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId: string; onClose: () => void }) {
-  const p = action.payload;
-  const currency = p.menuCurrency || "$";
-  const checkoutMode = p.menuCheckoutMode || "order_only";
-  const [sections, setSections] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [view, setView] = useState<"menu" | "upsell" | "picker" | "checkout">("menu");
+import { useMenuCart } from "@/store/menuCartStore";
+
+export function MenuCartUI({
+  flyerId,
+  actionId,
+  sections,
+  currency = "$",
+  title = "Menu",
+  checkoutMode = "order_only",
+  paymentLink,
+  loading = false,
+}: {
+  flyerId: string;
+  actionId?: string | null;
+  sections: any[];
+  currency?: string;
+  title?: string;
+  checkoutMode?: "order_only" | "payment";
+  paymentLink?: string;
+  loading?: boolean;
+}) {
+  const { cart, open, view, add, removeAt, clear, setOpen, setView } = useMenuCart();
   const [pickerCategory, setPickerCategory] = useState<"side" | "drink">("side");
   const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.from("menus").select("sections").eq("action_id", action.id).maybeSingle();
-      setSections((data?.sections as any[]) || []);
-      setLoading(false);
-    })();
-  }, [action.id]);
-
   const allItems: MenuItem[] = useMemo(() => sections.flatMap((s: any) => (s.items || []) as MenuItem[]), [sections]);
-  const upsells = (cat: "side" | "drink") => allItems.filter(i => i.category === cat && (i.upsell ?? true));
+  const upsells = (cat: "side" | "drink") => allItems.filter((i) => i.category === cat && (i.upsell ?? true));
 
   const total = cart.reduce((sum, l) => sum + (l.item.price || 0) * l.qty, 0);
   const itemCount = cart.reduce((n, l) => n + l.qty, 0);
 
-  function addItem(item: MenuItem) {
-    setCart(prev => {
-      const found = prev.find(l => l.item.id === item.id);
-      if (found) return prev.map(l => l.item.id === item.id ? { ...l, qty: l.qty + 1 } : l);
-      return [...prev, { item, qty: 1 }];
-    });
-  }
-  function removeItem(id: string) { setCart(prev => prev.filter(l => l.item.id !== id)); }
-
   function handleItemTap(item: MenuItem) {
-    addItem(item);
+    add(item);
     setView("upsell");
   }
 
@@ -402,29 +398,29 @@ function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId
     if (!name.trim()) return toast.error("Please enter your name");
     if (cart.length === 0) return toast.error("Cart is empty");
     setSubmitting(true);
-    const items = cart.map(l => ({ id: l.item.id, name: l.item.name, price: l.item.price, qty: l.qty, category: l.item.category }));
+    const items = cart.map((l) => ({ id: l.item.id, name: l.item.name, price: l.item.price, qty: l.qty, category: l.item.category }));
     const subtotal_cents = Math.round(total * 100);
     const { error } = await supabase.from("menu_orders").insert([{
-      flyer_id: flyerId, action_id: action.id, customer_name: name.trim(), customer_phone: phone.trim() || null,
+      flyer_id: flyerId, action_id: actionId || null, customer_name: name.trim(), customer_phone: phone.trim() || null,
       items, subtotal_cents, notes: notes.trim() || null,
     }]);
     setSubmitting(false);
     if (error) return toast.error("Could not place order");
-    if (checkoutMode === "payment" && p.menuPaymentLink) {
+    if (checkoutMode === "payment" && paymentLink) {
       toast.success("Order placed — redirecting to payment.");
-      window.open(p.menuPaymentLink, "_blank");
+      window.open(paymentLink, "_blank");
     } else {
       toast.success("Order sent! We'll be in touch.");
     }
-    onClose();
+    clear();
   }
 
   const fmt = (n: number) => `${currency}${(n || 0).toFixed(2)}`;
 
   return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(v) => setOpen(v)}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{p.menuTitle || "Menu"}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
 
         {loading ? <Loader2 className="mx-auto h-6 w-6 animate-spin" /> : (
           <>
@@ -472,7 +468,7 @@ function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId
               <div className="space-y-2">
                 <h3 className="font-semibold text-sm">Pick a {pickerCategory}</h3>
                 {upsells(pickerCategory).map((it) => (
-                  <button key={it.id} onClick={() => { addItem(it); setView("upsell"); }}
+                  <button key={it.id} onClick={() => { add(it); setView("upsell"); }}
                     className="flex w-full items-start justify-between gap-3 rounded border border-border p-2 text-left hover:bg-accent">
                     <div className="flex-1">
                       <div className="font-medium text-sm">{it.name}</div>
@@ -488,12 +484,12 @@ function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId
             {view === "checkout" && (
               <div className="space-y-3">
                 <div className="rounded border border-border p-2 space-y-1">
-                  {cart.map(l => (
-                    <div key={l.item.id} className="flex items-center justify-between text-sm">
+                  {cart.map((l, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-sm">
                       <span>{l.qty}× {l.item.name}</span>
                       <span className="flex items-center gap-2">
-                        {fmt(l.item.price * l.qty)}
-                        <button onClick={() => removeItem(l.item.id)} className="text-muted-foreground hover:text-destructive text-xs">remove</button>
+                        {fmt((l.item.price || 0) * l.qty)}
+                        <button onClick={() => removeAt(idx)} className="text-muted-foreground hover:text-destructive text-xs">remove</button>
                       </span>
                     </div>
                   ))}
@@ -514,7 +510,7 @@ function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId
                   <Textarea className="mt-1" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Allergies, requests…" />
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setView("menu")} className="flex-1">Add more</Button>
+                  <Button variant="outline" onClick={() => setView(sections.length ? "menu" : "upsell")} className="flex-1">Add more</Button>
                   <Button disabled={submitting} onClick={submitOrder} className="flex-1">
                     {submitting ? "Sending…" : checkoutMode === "payment" ? "Order & pay" : "Place order"}
                   </Button>
@@ -534,6 +530,40 @@ function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId
     </Dialog>
   );
 }
+
+function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId: string; onClose: () => void }) {
+  const p = action.payload;
+  const [sections, setSections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const setOpen = useMenuCart((s) => s.setOpen);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("menus").select("sections").eq("action_id", action.id).maybeSingle();
+      setSections((data?.sections as any[]) || []);
+      setLoading(false);
+    })();
+    setOpen(true, "menu");
+  }, [action.id, setOpen]);
+
+  // Close handler bridges shared store ↔ parent
+  const open = useMenuCart((s) => s.open);
+  useEffect(() => { if (!open) onClose(); }, [open, onClose]);
+
+  return (
+    <MenuCartUI
+      flyerId={flyerId}
+      actionId={action.id}
+      sections={sections}
+      currency={p.menuCurrency || "$"}
+      title={p.menuTitle || "Menu"}
+      checkoutMode={p.menuCheckoutMode || "order_only"}
+      paymentLink={p.menuPaymentLink}
+      loading={loading}
+    />
+  );
+}
+
 
 
 // ---- Challenge ----
