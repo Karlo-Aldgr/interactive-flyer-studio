@@ -381,7 +381,25 @@ export function MenuCartUI({
   const { cart, open, view, add, removeAt, clear, setOpen, setView } = useMenuCart();
   const [pickerCategory, setPickerCategory] = useState<"side" | "drink">("side");
   const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [notes, setNotes] = useState("");
+  const [tableNumber, setTableNumber] = useState("");
+  const [orderType, setOrderType] = useState<"dine_in" | "order_ahead">("dine_in");
+  const [pickupAt, setPickupAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [waiterName, setWaiterName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!tableNumber.trim()) { setWaiterName(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: assign } = await supabase
+        .from("table_assignments").select("waiter_id")
+        .eq("flyer_id", flyerId).eq("table_number", tableNumber.trim()).maybeSingle();
+      if (cancelled || !assign?.waiter_id) { setWaiterName(null); return; }
+      const { data: w } = await (supabase as any).from("waiters_public").select("name").eq("id", assign.waiter_id).maybeSingle();
+      if (!cancelled) setWaiterName(w?.name || null);
+    })();
+    return () => { cancelled = true; };
+  }, [tableNumber, flyerId]);
 
   const allItems: MenuItem[] = useMemo(() => sections.flatMap((s: any) => (s.items || []) as MenuItem[]), [sections]);
   const upsells = (cat: "side" | "drink") => allItems.filter((i) => i.category === cat && (i.upsell ?? true));
@@ -389,52 +407,45 @@ export function MenuCartUI({
   const total = cart.reduce((sum, l) => sum + (l.item.price || 0) * l.qty, 0);
   const itemCount = cart.reduce((n, l) => n + l.qty, 0);
 
-  function handleItemTap(item: MenuItem) {
-    add(item);
-    setView("upsell");
-  }
+  function handleItemTap(item: MenuItem) { add(item); setView("upsell"); }
 
   async function submitOrder() {
     if (!name.trim()) return toast.error("Please enter your name");
+    if (!tableNumber.trim()) return toast.error("Table number is required");
+    if (orderType === "order_ahead" && !pickupAt) return toast.error("Pickup time required for order ahead");
     if (cart.length === 0) return toast.error("Cart is empty");
     setSubmitting(true);
     const items = cart.map((l) => ({ id: l.item.id, name: l.item.name, price: l.item.price, qty: l.qty, category: l.item.category }));
     const subtotal_cents = Math.round(total * 100);
-    // Insert into menu_orders for the dedicated orders table
+    const initialStatus = orderType === "order_ahead" ? "pending_approval" : "new";
     const { data: orderRow, error } = await supabase.from("menu_orders").insert([{
-      flyer_id: flyerId, action_id: actionId || null, customer_name: name.trim(), customer_phone: phone.trim() || null,
+      flyer_id: flyerId, action_id: actionId || null,
+      customer_name: name.trim(), customer_phone: phone.trim() || null,
       items, subtotal_cents, notes: notes.trim() || null,
-    }]).select("id").single();
-    // Also record in form_submissions so it shows up in the flyer portal "Cart orders" tab
+      table_number: tableNumber.trim(),
+      order_type: orderType,
+      pickup_at: orderType === "order_ahead" ? new Date(pickupAt).toISOString() : null,
+      status: initialStatus,
+    } as any]).select("id").single();
     const { error: subErr } = await supabase.from("form_submissions").insert([{
       flyer_id: flyerId,
       data: {
-        kind: "cart_order",
-        source: "menu_scan",
+        kind: "cart_order", source: "menu_scan",
         customer: { name: name.trim(), phone: phone.trim() || null },
-        items,
-        currency,
-        total: Number(total.toFixed(2)),
-        notes: notes.trim() || null,
-        menu_order_id: orderRow?.id,
+        items, currency, total: Number(total.toFixed(2)),
+        notes: notes.trim() || null, menu_order_id: orderRow?.id,
+        table_number: tableNumber.trim(), order_type: orderType,
+        pickup_at: orderType === "order_ahead" ? pickupAt : null,
+        waiter_name: waiterName,
       } as any,
-      status: "new",
+      status: initialStatus,
     }]);
     setSubmitting(false);
-    if (error) {
-      console.error("[submitOrder] menu_orders insert failed", error);
-      return toast.error("Could not place order");
-    }
-    if (subErr) {
-      // Order was placed in menu_orders but portal mirror failed — surface it but don't block UX
-      console.error("[submitOrder] form_submissions mirror failed", subErr);
-    }
-    if (checkoutMode === "payment" && paymentLink) {
-      toast.success("Order placed — redirecting to payment.");
-      window.open(paymentLink, "_blank");
-    } else {
-      toast.success("Order sent! We'll be in touch.");
-    }
+    if (error) { console.error("[submitOrder]", error); return toast.error("Could not place order"); }
+    if (subErr) console.error("[submitOrder] mirror failed", subErr);
+    if (orderType === "order_ahead") toast.success("Order submitted — awaiting manager approval.");
+    else if (checkoutMode === "payment" && paymentLink) { toast.success("Order placed — redirecting to payment."); window.open(paymentLink, "_blank"); }
+    else toast.success(`Order sent to table ${tableNumber.trim()}!`);
     clear();
   }
 
@@ -444,6 +455,20 @@ export function MenuCartUI({
     <Dialog open={open} onOpenChange={(v) => setOpen(v)}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+
+        {/* Top banner: table waiter greeting (or prompt) */}
+        {tableNumber.trim() ? (
+          <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+            {waiterName
+              ? <>👋 Your server tonight is <strong>{waiterName}</strong>. Table <strong>{tableNumber}</strong>.</>
+              : <>Table <strong>{tableNumber}</strong> — a server will be with you shortly.</>}
+          </div>
+        ) : (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs">
+            Enter your table number at checkout to see your server.
+          </div>
+        )}
+
 
         {loading ? <Loader2 className="mx-auto h-6 w-6 animate-spin" /> : (
           <>
@@ -520,6 +545,27 @@ export function MenuCartUI({
                     <span>Total</span><span>{fmt(total)}</span>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setOrderType("dine_in")}
+                    className={`rounded border px-3 py-2 text-xs font-medium ${orderType === "dine_in" ? "border-primary bg-primary/10" : "border-border"}`}>
+                    🍽 Dine in now
+                  </button>
+                  <button type="button" onClick={() => setOrderType("order_ahead")}
+                    className={`rounded border px-3 py-2 text-xs font-medium ${orderType === "order_ahead" ? "border-red-500 bg-red-500/10" : "border-border"}`}>
+                    ⏱ Order ahead (manager approval)
+                  </button>
+                </div>
+                <div>
+                  <Label className="text-xs">Table number *</Label>
+                  <Input className="mt-1" value={tableNumber} onChange={(e) => setTableNumber(e.target.value)} placeholder="e.g. 12" />
+                  {waiterName && <div className="mt-1 text-xs text-emerald-600">Server: {waiterName}</div>}
+                </div>
+                {orderType === "order_ahead" && (
+                  <div>
+                    <Label className="text-xs">Pickup time *</Label>
+                    <Input type="datetime-local" className="mt-1" value={pickupAt} onChange={(e) => setPickupAt(e.target.value)} />
+                  </div>
+                )}
                 <div>
                   <Label className="text-xs">Your name *</Label>
                   <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
@@ -535,9 +581,10 @@ export function MenuCartUI({
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setView(sections.length ? "menu" : "upsell")} className="flex-1">Add more</Button>
                   <Button disabled={submitting} onClick={submitOrder} className="flex-1">
-                    {submitting ? "Sending…" : checkoutMode === "payment" ? "Order & pay" : "Place order"}
+                    {submitting ? "Sending…" : orderType === "order_ahead" ? "Submit for approval" : checkoutMode === "payment" ? "Order & pay" : "Place order"}
                   </Button>
                 </div>
+
               </div>
             )}
 
