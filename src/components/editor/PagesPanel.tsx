@@ -48,6 +48,63 @@ export function PagesPanel() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const { user } = useAuth();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [scanning, setScanning] = useState(false);
+
+  async function handleScanMenu(file: File) {
+    if (!flyer) return;
+    if (!user) { toast.error("Sign in required"); return; }
+    setScanning(true);
+    try {
+      const safeName = file.name.replace(/[^a-z0-9.]/gi, "_");
+      const path = `${user.id}/${flyer.id}/menu-scan/${Date.now()}-${safeName}`;
+      const { error: upErr } = await supabase.storage.from("flyer-assets").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("flyer-assets").getPublicUrl(path);
+      const imageUrl = pub.publicUrl;
+
+      // Read intrinsic image dimensions
+      const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => reject(new Error("Could not load image"));
+        img.src = imageUrl;
+      });
+
+      const { data, error } = await supabase.functions.invoke("menu-scan", { body: { imageUrl } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const scanned = (data?.sections || []) as any[];
+      const flatItems = scanned.flatMap((s: any) => (s.items || []).filter((it: any) => it.bbox));
+      if (flatItems.length === 0) {
+        toast.warning("No items with positions detected. Try a clearer, straighter photo.");
+        return;
+      }
+      addScannedMenuPage({
+        imageUrl,
+        imgWidth: dims.w,
+        imgHeight: dims.h,
+        items: flatItems,
+      });
+
+      // Merge scanned sections into flyer.settings.menuCatalog so taps can show upsells.
+      const existing = (flyer.settings as any).menuCatalog || { sections: [], currency: "$", title: "Order", checkoutMode: "order_only" };
+      const merged = {
+        ...existing,
+        sections: [...(existing.sections || []), ...scanned],
+      };
+      setFlyer({ settings: { ...flyer.settings, menuCatalog: merged } as any });
+
+      toast.success(`Added menu page with ${flatItems.length} tappable item${flatItems.length > 1 ? "s" : ""}.`);
+    } catch (e: any) {
+      toast.error(e?.message || "Could not scan menu");
+    } finally {
+      setScanning(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   function move(id: string, dir: -1 | 1) {
     const idx = pages.findIndex((p) => p.id === id);
