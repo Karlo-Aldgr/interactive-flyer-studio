@@ -127,6 +127,8 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
         </div>
       </div>
 
+      <MasterAnalytics flyerId={flyerId} orders={orders} />
+
       {grouped.length === 0 && <p className="text-sm text-muted-foreground">No active orders.</p>}
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -173,6 +175,77 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
           </Card>
         ))}
       </div>
+    </div>
+  );
+}
+
+function MasterAnalytics({ flyerId, orders }: { flyerId: string; orders: Order[] }) {
+  const [traffic, setTraffic] = useState<{ views: number; clicks: number; sessions: number } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const since = new Date(); since.setHours(0, 0, 0, 0);
+      const { data } = await supabase.from("analytics_events")
+        .select("event_type, session_id")
+        .eq("flyer_id", flyerId)
+        .gte("created_at", since.toISOString())
+        .limit(5000);
+      const rows = (data || []) as { event_type: string; session_id: string | null }[];
+      const views = rows.filter(r => r.event_type === "view").length;
+      const clicks = rows.filter(r => r.event_type === "click").length;
+      const sessions = new Set(rows.map(r => r.session_id).filter(Boolean)).size;
+      setTraffic({ views, clicks, sessions });
+    })();
+  }, [flyerId, orders.length]);
+
+  const sales = useMemo(() => {
+    const billable = orders.filter(o => o.status !== "cancelled" && o.status !== "pending_approval");
+    const totalCents = billable.reduce((s, o) => s + (o.subtotal_cents || 0), 0);
+    const counts = new Map<string, { name: string; qty: number; revenue: number }>();
+    for (const o of billable) for (const it of (o.items || []) as any[]) {
+      const key = it.id || it.name;
+      const prev = counts.get(key) || { name: it.name, qty: 0, revenue: 0 };
+      prev.qty += it.qty || 0;
+      prev.revenue += (it.price || 0) * (it.qty || 0);
+      counts.set(key, prev);
+    }
+    const top = [...counts.values()].sort((a, b) => b.qty - a.qty).slice(0, 5);
+    return { totalCents, orderCount: billable.length, top };
+  }, [orders]);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2"><CardTitle className="text-sm">Today at a glance</CardTitle></CardHeader>
+      <CardContent className="grid gap-3 md:grid-cols-4 text-sm">
+        <Stat label="Sales" value={`$${(sales.totalCents / 100).toFixed(2)}`} />
+        <Stat label="Orders" value={String(sales.orderCount)} />
+        <Stat label="Visitors" value={traffic ? String(traffic.sessions) : "…"} sub={traffic ? `${traffic.views} views · ${traffic.clicks} clicks` : ""} />
+        <div>
+          <div className="text-[11px] uppercase text-muted-foreground">Most ordered</div>
+          {sales.top.length === 0 ? (
+            <div className="text-xs text-muted-foreground mt-1">No sales yet</div>
+          ) : (
+            <ol className="mt-1 space-y-0.5 text-xs">
+              {sales.top.map((t, i) => (
+                <li key={i} className="flex justify-between gap-2">
+                  <span className="truncate">{i + 1}. {t.name}</span>
+                  <span className="text-muted-foreground whitespace-nowrap">×{t.qty}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase text-muted-foreground">{label}</div>
+      <div className="text-xl font-semibold">{value}</div>
+      {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
     </div>
   );
 }
