@@ -27,19 +27,20 @@ Deno.serve(async (req) => {
 
     const { data: flyer, error: flyerErr } = await supabase
       .from("flyers")
-      .select("id, title, status, public_slug, settings, thumbnail_url, created_at, portal_access_code")
-      .eq("portal_token", token)
+    const { data: flyer, error: flyerErr } = await supabase
+      .from("flyers")
+      .select("id, title, status, public_slug, settings, thumbnail_url, created_at, flyer_portal_credentials(portal_access_code)")
+      .eq("flyer_portal_credentials.portal_token", token)
+      .not("flyer_portal_credentials", "is", null)
       .maybeSingle();
 
     if (flyerErr) return json({ error: flyerErr.message }, 500);
-    if (!flyer) return json({ error: "Invalid link" }, 404);
-    if (String(code).trim().toUpperCase() !== String(flyer.portal_access_code).toUpperCase()) {
+    if (!flyer || !(flyer as any).flyer_portal_credentials) return json({ error: "Invalid link" }, 404);
+    const expectedCode = (flyer as any).flyer_portal_credentials.portal_access_code as string;
+    if (String(code).trim().toUpperCase() !== String(expectedCode).toUpperCase()) {
       return json({ error: "Invalid access code" }, 401);
     }
 
-    const flyerId = flyer.id as string;
-
-    // Discover which action types & hotspots exist in this flyer so the portal
     // can render only the tabs that match what was actually built.
     const { data: pages } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);
     const pageIds = (pages || []).map((p: any) => p.id);

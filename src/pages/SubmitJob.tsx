@@ -44,9 +44,10 @@ export default function SubmitJob() {
         const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
         const { error: upErr } = await supabase.storage.from("job-uploads").upload(path, file, { upsert: false });
         if (upErr) throw upErr;
-        const { data } = supabase.storage.from("job-uploads").getPublicUrl(path);
-        uploadUrl = data.publicUrl;
+        // Store the storage path; the bucket is private, viewers fetch a signed URL on demand.
+        uploadUrl = path;
       }
+
       const { error } = await supabase.from("jobs").insert({
         user_id: user.id,
         customer_email: user.email ?? null,
