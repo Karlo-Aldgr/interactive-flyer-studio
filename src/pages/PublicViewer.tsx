@@ -2348,12 +2348,18 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       {/* Appointment booking dialog */}
       {appointmentAction && flyer && (
         <AppointmentBookingDialog
-          flyerId={flyer.id}
-          layerId={appointmentAction.layer?.id || null}
-          action={appointmentAction.action}
-          open={!!appointmentAction}
-          onClose={() => setAppointmentAction(null)}
-        />
+      {/* New interaction dialogs (survey, testimonial, reserve, consult, menu, challenge, rating) */}
+      <NewInteractionDialogs
+        action={newInteractionAction}
+        flyerId={flyer?.id || null}
+        sessionId={sessionId}
+        onClose={() => setNewInteractionAction(null)}
+      />
+
+      {/* Scanned-menu cart (shared across all pages of this flyer) */}
+      {flyer && (flyer.settings as any)?.menuCatalog && (
+        <ScannedMenuCart flyerId={flyer.id} catalog={(flyer.settings as any).menuCatalog} />
+      )}
       )}
 
       {/* New interaction dialogs (survey, testimonial, reserve, consult, menu, challenge, rating) */}
