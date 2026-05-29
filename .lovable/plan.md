@@ -1,38 +1,53 @@
 ## Problem
 
-After scanning a menu photo, the new page is created but hotspots either don't appear or only cover some items. Two root causes:
+Uploading a social preview image in the Share dialog fails with `new row violates row-level security policy`. The upload target is `flyer-thumbnails/${auth.uid()}/${flyerId}-flyer.jpg` via `upsert: true`.
 
-1. **AI silently drops items without `bbox`.** `PagesPanel.handleScanMenu` runs `flatItems = sections.flatMap(s => s.items.filter(it => it.bbox))`. Gemini often returns items without bounding boxes (especially on dense menus), so those items disappear entirely from the page — no hotspot is created for them.
-2. **Hotspots are invisible in the editor by default.** Hotspot layers only render an outline when `showHitboxes` is toggled on (see `Canvas.tsx:437`). Right after scanning, the user looks at the new page and sees just the photo with no visible overlays, even when hotspots exist.
+Two root causes:
+
+1. **Missing SELECT policy** on `storage.objects` for `flyer-thumbnails`. Even though the bucket is public, the storage SDK's `upsert` path performs a read/upsert sequence that needs SELECT for the owner's folder.
+2. **Missing `WITH CHECK` on the UPDATE policy** — when an object already exists, `upsert: true` becomes an UPDATE and Postgres requires `WITH CHECK` to validate the new row; with it NULL, the new row check fails for any non-default storage column write.
+3. **Silent session drop** — if the auth session expires between page load and Share click, `auth.uid()` is null and the folder check fails. The current error message doesn't make this clear.
 
 ## Fix
 
-### 1. Make the edge function return a bbox for every item
-`supabase/functions/menu-scan/index.ts`:
-- Make `bbox` **required** in the tool schema (move it into `required: ["name","price","category","bbox"]`).
-- Strengthen the system prompt: "Every item MUST include a bbox. If unsure, return your best estimate — never omit it."
-- In post-processing, if a `bbox` is still missing or zero-sized, synthesize a fallback box by stacking items vertically inside the image (split image height evenly across items in that section). This guarantees every detected item gets a tappable region, even if the model misses a few.
+### 1. Migration: tighten and complete `flyer-thumbnails` storage policies
 
-### 2. Stop dropping items in the client
-`src/components/editor/PagesPanel.tsx`:
-- Remove the `.filter(it => it.bbox)` step — pass all items through and let the store / fallback handle missing boxes.
-- Update toast to report total tappable items added.
+- Add a `SELECT` policy: owner can read their own folder; keep the bucket public for unfurled URLs (public reads still work via `getPublicUrl` since the bucket itself is public — RLS only governs SDK reads).
+- Recreate the `INSERT`/`UPDATE` policies with both `USING` and `WITH CHECK` so upsert works whether the object exists or not.
 
-### 3. Auto-reveal hotspots after a scan
-`src/store/editorStore.ts` + `src/components/editor/Canvas.tsx`:
-- After `addScannedMenuPage` runs, set `showHitboxes = true` so the new dashed-outline overlays are visible immediately on the canvas. The user can toggle off via the existing button.
+```sql
+DROP POLICY IF EXISTS "Owner can insert flyer thumbnail" ON storage.objects;
+DROP POLICY IF EXISTS "Owner can update flyer thumbnail" ON storage.objects;
+DROP POLICY IF EXISTS "Owner can delete flyer thumbnail" ON storage.objects;
 
-### 4. Tighten hotspot defaults so they're actually tappable in the viewer
-- Bump the min hotspot size in `addScannedMenuPage` from `Math.max(20, ...)` to `Math.max(40, ...)` so tiny boxes are easier to tap on mobile.
+CREATE POLICY "Owner can read flyer thumbnail" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (bucket_id = 'flyer-thumbnails'
+    AND (storage.foldername(name))[1] = auth.uid()::text);
 
-## Files
+CREATE POLICY "Owner can insert flyer thumbnail" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'flyer-thumbnails'
+    AND (storage.foldername(name))[1] = auth.uid()::text);
 
-- `supabase/functions/menu-scan/index.ts` — require bbox, fallback synthesis.
-- `src/components/editor/PagesPanel.tsx` — remove bbox filter, update toast.
-- `src/store/editorStore.ts` — bump min hotspot size; set `showHitboxes` after scan.
-- `src/components/editor/Canvas.tsx` — no behaviour change; verify `showHitboxes` toggle still works.
+CREATE POLICY "Owner can update flyer thumbnail" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (bucket_id = 'flyer-thumbnails'
+    AND (storage.foldername(name))[1] = auth.uid()::text)
+  WITH CHECK (bucket_id = 'flyer-thumbnails'
+    AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Owner can delete flyer thumbnail" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (bucket_id = 'flyer-thumbnails'
+    AND (storage.foldername(name))[1] = auth.uid()::text);
+```
+
+### 2. Client: friendlier error + session re-check in `src/lib/thumbnail.ts`
+
+In `uploadThumbnailBlob`, when the storage error matches `row-level security`, surface a clearer message: "Your session expired or you don't own this flyer. Please sign in again." Also call `supabase.auth.refreshSession()` before retrying once when no session is found.
 
 ## Out of scope
 
-- Editing hotspot positions after scan (already supported via drag/resize).
-- Re-running scan on an existing page.
+- No changes to bucket public-read behavior; share/unfurl links keep working.
+- No changes to ShareDialog UI.
