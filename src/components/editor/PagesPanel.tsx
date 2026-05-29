@@ -139,21 +139,40 @@ export function PagesPanel() {
           <DropdownMenuTrigger asChild>
             <Button size="icon" variant="ghost" className="h-6 w-6" title="Add page">
               <Plus className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={addPage}>Add flyer page</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLandingPage(1200, 630)}>
-              Add landing page (1200×630)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLandingPage(1080, 1080)}>
-              Add square page (1080×1080)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLandingPage(1080, 1920)}>
-              Add story page (1080×1920)
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <span className="text-xs font-semibold uppercase text-muted-foreground">Pages</span>
+        <div className="flex items-center gap-1">
+          <input ref={fileRef} type="file" accept="image/*" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleScanMenu(f); }} />
+          <Button size="icon" variant="ghost" className="h-6 w-6" title="Scan menu photo into new page"
+            disabled={scanning} onClick={() => fileRef.current?.click()}>
+            {scanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost" className="h-6 w-6" title="Add page">
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={addPage}>Add flyer page</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addLandingPage(1200, 630)}>
+                Add landing page (1200×630)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addLandingPage(1080, 1080)}>
+                Add square page (1080×1080)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addLandingPage(1080, 1920)}>
+                Add story page (1080×1920)
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={scanning} onClick={() => fileRef.current?.click()}>
+                <Camera className="mr-2 h-3.5 w-3.5" /> {scanning ? "Scanning…" : "Scan menu photo"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
       </div>
       <div className="max-h-64 overflow-y-auto">
         {pages.map((p, i) => {
