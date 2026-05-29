@@ -14,6 +14,9 @@ import { ShareDialog } from "@/components/editor/ShareDialog";
 import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
 import { InteractionsModerationPanel } from "@/components/portal/InteractionsModerationPanel";
 import { sourceFromEventMetadata } from "@/lib/trafficSource";
+import { StaffTablesPanel } from "@/components/portal/StaffTablesPanel";
+import { LiveOrdersBoard } from "@/components/portal/LiveOrdersBoard";
+import { OrdersArchivePanel } from "@/components/portal/OrdersArchivePanel";
 
 const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
 function getShareOrigin() {
@@ -785,6 +788,21 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
             </TabsContent>
           );
         })}
+        {isOwner && (
+          <TabsContent value="live" className="space-y-4">
+            <LiveOrdersBoard flyerId={flyer.id} />
+          </TabsContent>
+        )}
+        {isOwner && (
+          <TabsContent value="staff" className="space-y-4">
+            <StaffTablesPanel flyerId={flyer.id} />
+          </TabsContent>
+        )}
+        {isOwner && (
+          <TabsContent value="archive" className="space-y-4">
+            <OrdersArchivePanel flyerId={flyer.id} />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Order details */}
