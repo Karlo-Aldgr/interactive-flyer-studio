@@ -150,9 +150,23 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
       {grouped.length === 0 && <p className="text-sm text-muted-foreground">No active orders.</p>}
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {grouped.map(([table, list]) => (
+        {grouped.map(([table, list]) => {
+          const w = tableWaiters[table];
+          return (
           <Card key={table}>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Table {table} · {list.length}</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center justify-between gap-2">
+                <span>Table {table} · {list.length}</span>
+                {w ? (
+                  <span className="flex items-center gap-1 text-[11px] font-normal text-muted-foreground">
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: w.color }} />
+                    {w.name}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-normal text-muted-foreground">unassigned</span>
+                )}
+              </CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2">
               {list.map((o) => {
                 const isAhead = o.order_type === "order_ahead";
