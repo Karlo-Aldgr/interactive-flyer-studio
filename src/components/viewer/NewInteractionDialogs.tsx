@@ -401,10 +401,10 @@ export function MenuCartUI({
     const items = cart.map((l) => ({ id: l.item.id, name: l.item.name, price: l.item.price, qty: l.qty, category: l.item.category }));
     const subtotal_cents = Math.round(total * 100);
     // Insert into menu_orders for the dedicated orders table
-    const { error } = await supabase.from("menu_orders").insert([{
+    const { data: orderRow, error } = await supabase.from("menu_orders").insert([{
       flyer_id: flyerId, action_id: actionId || null, customer_name: name.trim(), customer_phone: phone.trim() || null,
       items, subtotal_cents, notes: notes.trim() || null,
-    }]);
+    }]).select("id").single();
     // Also record in form_submissions so it shows up in the flyer portal "Cart orders" tab
     const { error: subErr } = await supabase.from("form_submissions").insert([{
       flyer_id: flyerId,
@@ -416,11 +416,19 @@ export function MenuCartUI({
         currency,
         total: Number(total.toFixed(2)),
         notes: notes.trim() || null,
+        menu_order_id: orderRow?.id,
       } as any,
       status: "new",
     }]);
     setSubmitting(false);
-    if (error || subErr) return toast.error("Could not place order");
+    if (error) {
+      console.error("[submitOrder] menu_orders insert failed", error);
+      return toast.error("Could not place order");
+    }
+    if (subErr) {
+      // Order was placed in menu_orders but portal mirror failed — surface it but don't block UX
+      console.error("[submitOrder] form_submissions mirror failed", subErr);
+    }
     if (checkoutMode === "payment" && paymentLink) {
       toast.success("Order placed — redirecting to payment.");
       window.open(paymentLink, "_blank");
