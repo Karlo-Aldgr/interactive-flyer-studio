@@ -64,13 +64,11 @@ export default function WaiterPortal() {
     if (pinSaved && flyerId) fetchOrders(pinSaved);
   }, [pinSaved, flyerId, fetchOrders]);
 
-  // Realtime: any change to menu_orders for this flyer → re-fetch (server filters by waiter)
+  // Poll for new orders instead of Realtime to avoid broadcasting customer PII
   useEffect(() => {
     if (!waiter || !flyerId || !pinSaved) return;
-    const ch = supabase.channel(`waiter-${flyerId}-${waiter.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "menu_orders", filter: `flyer_id=eq.${flyerId}` }, () => fetchOrders(pinSaved))
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const iv = setInterval(() => fetchOrders(pinSaved), 5000);
+    return () => clearInterval(iv);
   }, [waiter, flyerId, pinSaved, fetchOrders]);
 
   async function login() {
