@@ -16,6 +16,8 @@ import { Loader2, ArrowLeft, ExternalLink, Trash2, Pencil, FileText, Database, X
 import { INTERACTIONS } from "@/lib/interactionsCatalog";
 import { format, formatDistanceToNow } from "date-fns";
 import logo from "@/assets/logo.png";
+import { getJobUploadSignedUrl, jobUploadFilename } from "@/lib/jobUploads";
+
 
 const STATUSES = ["new","reviewing","quoted","paid","in_progress","preview_ready","delivered","cancelled"] as const;
 const STATUS_LABEL: Record<string,string> = {
@@ -156,13 +158,16 @@ export default function AdminJobs() {
       const assets = zip.folder("uploads")!;
       await Promise.all(((jobsAll ?? []) as any[]).filter((j) => j.upload_url).map(async (j) => {
         try {
-          const res = await fetch(j.upload_url);
+          const signed = await getJobUploadSignedUrl(j.upload_url, 600);
+          if (!signed) return;
+          const res = await fetch(signed);
           if (!res.ok) return;
           const blob = await res.blob();
-          const filename = j.upload_url.split("/").pop() ?? `${j.id}.bin`;
+          const filename = jobUploadFilename(j.upload_url) || `${j.id}.bin`;
           assets.file(`${j.id}-${filename}`, blob);
         } catch {}
       }));
+
 
       const blob = await zip.generateAsync({ type: "blob" });
       const ts = format(new Date(), "yyyy-MM-dd-HHmm");
@@ -277,7 +282,14 @@ export default function AdminJobs() {
                         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
                           {typeof j.price_cents === "number" && <span className="font-semibold">${(j.price_cents / 100).toFixed(2)}</span>}
                           {j.payment_link && <a href={j.payment_link} target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover:underline inline-flex items-center">Pay link <ExternalLink className="ml-1 h-3 w-3" /></a>}
-                          {j.upload_url && <a href={j.upload_url} target="_blank" rel="noreferrer" className="inline-flex items-center text-muted-foreground hover:text-foreground"><FileText className="mr-1 h-3.5 w-3.5" />Upload</a>}
+                          {j.upload_url && (
+                            <button type="button" onClick={async () => {
+                              const url = await getJobUploadSignedUrl(j.upload_url);
+                              if (!url) return toast.error("Could not open upload");
+                              window.open(url, "_blank", "noreferrer");
+                            }} className="inline-flex items-center text-muted-foreground hover:text-foreground"><FileText className="mr-1 h-3.5 w-3.5" />Upload</button>
+                          )}
+
                           {linkedFlyer && <Link to={`/editor/${linkedFlyer.id}`} className="text-primary underline-offset-2 hover:underline">Open editor</Link>}
                         </div>
                       </div>
