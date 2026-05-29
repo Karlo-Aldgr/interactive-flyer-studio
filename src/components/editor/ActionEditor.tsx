@@ -2529,7 +2529,8 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
     const next = [...sections];
     next[sIdx] = { ...next[sIdx], items: next[sIdx].items.map((x: any, j: number) => j === iIdx ? { ...x, ...patch } : x) };
     updateSections(next);
-  }
+
+  async function handleScan(file: File) {
     if (!flyerId) return;
     if (!user) { toast.error("Sign in required"); return; }
     setScanning(true);
@@ -2538,8 +2539,6 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
       const path = `${user.id}/${flyerId}/menu-scan/${Date.now()}-${safeName}`;
       const { error: upErr } = await supabase.storage.from("flyer-assets").upload(path, file, { upsert: true });
 
-      const path = `${flyerId}/menu-scan-${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
-      const { error: upErr } = await supabase.storage.from("flyer-assets").upload(path, file, { upsert: true });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("flyer-assets").getPublicUrl(path);
       const { data, error } = await supabase.functions.invoke("menu-scan", { body: { imageUrl: pub.publicUrl } });
