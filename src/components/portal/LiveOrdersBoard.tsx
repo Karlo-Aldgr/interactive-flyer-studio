@@ -42,14 +42,31 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
     setLoading(false);
   }, [flyerId]);
 
+  const loadAssignments = useCallback(async () => {
+    const { data: assigns } = await supabase.from("table_assignments")
+      .select("table_number, waiter_id").eq("flyer_id", flyerId);
+    const { data: ws } = await supabase.from("waiters_public" as any)
+      .select("id, name, color").eq("flyer_id", flyerId);
+    const wmap = new Map<string, { name: string; color: string }>();
+    for (const w of (ws as any[]) || []) wmap.set(w.id, { name: w.name, color: w.color });
+    const map: Record<string, { name: string; color: string }> = {};
+    for (const a of (assigns as any[]) || []) {
+      const w = wmap.get(a.waiter_id);
+      if (w) map[a.table_number] = w;
+    }
+    setTableWaiters(map);
+  }, [flyerId]);
+
   useEffect(() => {
     if (!unlocked) return;
     load();
+    loadAssignments();
     const channel = supabase.channel(`live-orders-${flyerId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "menu_orders", filter: `flyer_id=eq.${flyerId}` }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "table_assignments", filter: `flyer_id=eq.${flyerId}` }, () => loadAssignments())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [unlocked, flyerId, load]);
+  }, [unlocked, flyerId, load, loadAssignments]);
 
   async function handleUnlock() {
     if (pinSet === false) {
