@@ -9,6 +9,9 @@ import { Loader2, Plus, ArrowLeft, ExternalLink, Eye } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { INTERACTIONS } from "@/lib/interactionsCatalog";
 import { format } from "date-fns";
+import { getJobUploadSignedUrl } from "@/lib/jobUploads";
+import { toast } from "sonner";
+
 
 const STATUS_VARIANT: Record<string, { label: string; className: string }> = {
   new:           { label: "New",            className: "bg-blue-500/15 text-blue-700 dark:text-blue-300" },
@@ -109,10 +112,13 @@ export default function MyJobs() {
                         </Button>
                       )}
                       {j.upload_url && (
-                        <Button asChild size="sm" variant="outline">
-                          <a href={j.upload_url} target="_blank" rel="noreferrer">View upload</a>
-                        </Button>
+                        <Button size="sm" variant="outline" onClick={async () => {
+                          const url = await getJobUploadSignedUrl(j.upload_url);
+                          if (!url) return toast.error("Could not open upload");
+                          window.open(url, "_blank", "noreferrer");
+                        }}>View upload</Button>
                       )}
+
                       {j.preview_ready && j.flyer?.public_slug && (
                         <Button asChild size="sm" variant="outline">
                           <a href={`/f/${j.flyer.public_slug}`} target="_blank" rel="noreferrer">
