@@ -135,12 +135,6 @@ export function PagesPanel() {
     <div className="flex flex-col border-b border-border">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-xs font-semibold uppercase text-muted-foreground">Pages</span>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="ghost" className="h-6 w-6" title="Add page">
-              <Plus className="h-3.5 w-3.5" />
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <span className="text-xs font-semibold uppercase text-muted-foreground">Pages</span>
         <div className="flex items-center gap-1">
           <input ref={fileRef} type="file" accept="image/*" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleScanMenu(f); }} />
@@ -172,7 +166,6 @@ export function PagesPanel() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
       </div>
       <div className="max-h-64 overflow-y-auto">
         {pages.map((p, i) => {
