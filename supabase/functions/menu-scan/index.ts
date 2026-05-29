@@ -5,9 +5,10 @@ const corsHeaders = {
 };
 
 const SYSTEM_PROMPT = `You are an OCR + classification assistant for restaurant/cafe menus.
+const SYSTEM_PROMPT = `You are an OCR + classification assistant for restaurant/cafe menus.
 You will be given a single menu photo. Extract every visible menu item.
 
-Group items into sections based on the headings/layout of the menu (e.g. "Appetizers", "Burgers", "Drinks"). If no clear sections exist, put everything in a single section called "Menu".
+Group items into sections based on the headings/layout of the menu. If no clear sections exist, put everything in a single section called "Menu".
 
 For each item, classify its category as one of:
 - "main": main dishes, entrees, mains, sandwiches, pizzas, pasta, burgers
@@ -16,6 +17,8 @@ For each item, classify its category as one of:
 - "dessert": desserts, sweets, ice cream, pastries
 - "other": anything else
 
+For EACH item also return a tight normalized bounding box \`bbox\` covering the row (name + price area) on the photo, where x/y is the top-left and w/h are width/height — all in 0..1 relative to image dimensions. Be tight: do not cover empty space.
+
 Return numeric price (no currency symbol). If the price is missing, use 0.
 Return STRICTLY via the tool. No prose.`;
 
@@ -23,10 +26,12 @@ const TOOL_DEF = {
   type: "function",
   function: {
     name: "report_menu",
-    description: "Report the parsed menu structure.",
+    description: "Report the parsed menu structure with bounding boxes.",
     parameters: {
       type: "object",
       properties: {
+        imageWidth: { type: "number", description: "Apparent pixel width of the menu image (optional, for reference)" },
+        imageHeight: { type: "number", description: "Apparent pixel height of the menu image (optional, for reference)" },
         sections: {
           type: "array",
           items: {
@@ -42,6 +47,15 @@ const TOOL_DEF = {
                     description: { type: "string" },
                     price: { type: "number" },
                     category: { type: "string", enum: ["main", "side", "drink", "dessert", "other"] },
+                    bbox: {
+                      type: "object",
+                      properties: {
+                        x: { type: "number" }, y: { type: "number" },
+                        w: { type: "number" }, h: { type: "number" },
+                      },
+                      required: ["x", "y", "w", "h"],
+                      additionalProperties: false,
+                    },
                   },
                   required: ["name", "price", "category"],
                   additionalProperties: false,
@@ -58,8 +72,6 @@ const TOOL_DEF = {
     },
   },
 };
-
-Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
