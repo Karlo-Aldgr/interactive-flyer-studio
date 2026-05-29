@@ -1294,7 +1294,6 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         break;
       case "book_appointment":
         setAppointmentAction({ action: a, layer });
-        break;
       case "survey":
       case "testimonial":
       case "reserve_table":
@@ -1303,6 +1302,15 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "join_challenge":
       case "business_rating":
         setNewInteractionAction(a);
+        break;
+      case "menu_add_item": {
+        const item = (a.payload as any).menuItem;
+        if (item) {
+          useMenuCart.getState().add(item);
+          useMenuCart.getState().setOpen(true, "upsell");
+        }
+        break;
+      }
         break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
