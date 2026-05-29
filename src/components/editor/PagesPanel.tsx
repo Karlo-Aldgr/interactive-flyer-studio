@@ -77,9 +77,9 @@ export function PagesPanel() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       const scanned = (data?.sections || []) as any[];
-      const flatItems = scanned.flatMap((s: any) => (s.items || []).filter((it: any) => it.bbox));
+      const flatItems = scanned.flatMap((s: any) => (s.items || []));
       if (flatItems.length === 0) {
-        toast.warning("No items with positions detected. Try a clearer, straighter photo.");
+        toast.warning("No items detected. Try a clearer, straighter photo.");
         return;
       }
       addScannedMenuPage({

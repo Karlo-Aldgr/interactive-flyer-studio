@@ -16,7 +16,7 @@ For each item, classify its category as one of:
 - "dessert": desserts, sweets, ice cream, pastries
 - "other": anything else
 
-For EACH item also return a tight normalized bounding box \`bbox\` covering the row (name + price area) on the photo, where x/y is the top-left and w/h are width/height — all in 0..1 relative to image dimensions. Be tight: do not cover empty space.
+CRITICAL: For EVERY item you MUST return a tight normalized bounding box \`bbox\` covering the row (item name + price area) on the photo, where x/y is the top-left and w/h are width/height — all in 0..1 relative to image dimensions. Be tight: do not cover empty space. If you are not 100% sure about the box, return your BEST ESTIMATE — NEVER omit bbox. An item without bbox is invalid output.
 
 Return numeric price (no currency symbol). If the price is missing, use 0.
 Return STRICTLY via the tool. No prose.`;
@@ -29,8 +29,8 @@ const TOOL_DEF = {
     parameters: {
       type: "object",
       properties: {
-        imageWidth: { type: "number", description: "Apparent pixel width of the menu image (optional, for reference)" },
-        imageHeight: { type: "number", description: "Apparent pixel height of the menu image (optional, for reference)" },
+        imageWidth: { type: "number", description: "Apparent pixel width of the menu image (optional)" },
+        imageHeight: { type: "number", description: "Apparent pixel height of the menu image (optional)" },
         sections: {
           type: "array",
           items: {
@@ -56,7 +56,7 @@ const TOOL_DEF = {
                       additionalProperties: false,
                     },
                   },
-                  required: ["name", "price", "category"],
+                  required: ["name", "price", "category", "bbox"],
                   additionalProperties: false,
                 },
               },
@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: [
-            { type: "text", text: "Parse this menu." },
+            { type: "text", text: "Parse this menu. Every item MUST include bbox." },
             { type: "image_url", image_url: { url: imageUrl } },
           ] },
         ],
@@ -116,24 +116,73 @@ Deno.serve(async (req) => {
     try { parsed = JSON.parse(toolCall?.function?.arguments ?? "{}"); } catch (e) { console.error("Parse fail", e); }
 
     const clamp01 = (n: any) => Math.max(0, Math.min(1, Number(n) || 0));
-    const sections = (parsed.sections ?? []).map((s: any) => ({
-      id: crypto.randomUUID(),
-      name: String(s.name || "Menu"),
-      items: (s.items ?? []).map((it: any) => {
-        const b = it.bbox || {};
-        const hasBbox = ["x", "y", "w", "h"].every(k => typeof b[k] === "number");
-        return {
-          id: crypto.randomUUID(),
-          name: String(it.name || ""),
-          description: it.description ? String(it.description) : "",
-          price: typeof it.price === "number" ? it.price : Number(it.price) || 0,
-          category: ["main", "side", "drink", "dessert", "other"].includes(it.category) ? it.category : "other",
-          color: "",
-          upsell: it.category === "side" || it.category === "drink",
-          bbox: hasBbox ? { x: clamp01(b.x), y: clamp01(b.y), w: clamp01(b.w), h: clamp01(b.h) } : null,
-        };
-      }),
-    }));
+    const validBbox = (b: any) =>
+      b && ["x", "y", "w", "h"].every(k => typeof b[k] === "number") &&
+      Number(b.w) > 0.005 && Number(b.h) > 0.005;
+
+    const sectionsRaw = (parsed.sections ?? []) as any[];
+
+    // Flatten then group per section so we can stack fallback boxes per section.
+    // Determine vertical bands per section based on items WITH bbox to keep fallbacks
+    // visually near where the model thought items were.
+    const sections = sectionsRaw.map((s: any, sIdx: number) => {
+      const items = (s.items ?? []) as any[];
+      const withBox = items.filter((it) => validBbox(it.bbox));
+      // Section vertical band
+      let bandTop = 0;
+      let bandBottom = 1;
+      if (withBox.length > 0) {
+        bandTop = Math.max(0, Math.min(...withBox.map((it) => clamp01(it.bbox.y))) - 0.02);
+        bandBottom = Math.min(1, Math.max(...withBox.map((it) => clamp01(it.bbox.y) + clamp01(it.bbox.h))) + 0.02);
+      } else {
+        // No boxes for this section → divide image vertically across sections.
+        const slice = 1 / Math.max(1, sectionsRaw.length);
+        bandTop = sIdx * slice;
+        bandBottom = (sIdx + 1) * slice;
+      }
+      const bandH = Math.max(0.05, bandBottom - bandTop);
+
+      // Stack fallback items only across those missing bbox
+      const missing = items.filter((it) => !validBbox(it.bbox));
+      const slotH = missing.length > 0 ? bandH / missing.length : 0;
+      let mi = 0;
+
+      return {
+        id: crypto.randomUUID(),
+        name: String(s.name || "Menu"),
+        items: items.map((it: any) => {
+          let bbox: { x: number; y: number; w: number; h: number };
+          if (validBbox(it.bbox)) {
+            bbox = {
+              x: clamp01(it.bbox.x),
+              y: clamp01(it.bbox.y),
+              w: clamp01(it.bbox.w),
+              h: clamp01(it.bbox.h),
+            };
+          } else {
+            // Synthesize fallback inside the section band.
+            const y = bandTop + mi * slotH;
+            mi += 1;
+            bbox = {
+              x: 0.05,
+              y: clamp01(y + slotH * 0.05),
+              w: 0.9,
+              h: clamp01(Math.max(0.04, slotH * 0.9)),
+            };
+          }
+          return {
+            id: crypto.randomUUID(),
+            name: String(it.name || ""),
+            description: it.description ? String(it.description) : "",
+            price: typeof it.price === "number" ? it.price : Number(it.price) || 0,
+            category: ["main", "side", "drink", "dessert", "other"].includes(it.category) ? it.category : "other",
+            color: "",
+            upsell: it.category === "side" || it.category === "drink",
+            bbox,
+          };
+        }),
+      };
+    });
 
     return new Response(JSON.stringify({ sections }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

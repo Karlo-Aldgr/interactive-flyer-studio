@@ -236,7 +236,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const hl: Layer = {
           ...defaultLayer("hotspot", pageId, idx + 1),
           position: { x: b.x * pageW, y: b.y * pageH },
-          size: { width: Math.max(20, b.w * pageW), height: Math.max(20, b.h * pageH) },
+          size: { width: Math.max(40, b.w * pageW), height: Math.max(40, b.h * pageH) },
           content: { hotspotShape: "rect" },
           action: {
             id: uid(),
@@ -267,6 +267,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       past,
       future: [],
       dirty: true,
+      showHitboxes: true,
     });
     return pageId;
   },
