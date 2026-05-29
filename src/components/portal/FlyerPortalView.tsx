@@ -781,7 +781,17 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium truncate">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <Badge variant="outline" className="text-[10px]">
+                                Table {(s.data?.table_number as string) || "—"}
+                              </Badge>
+                              {s.data?.waiter_name && (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  Waiter: {s.data.waiter_name}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="mt-1 font-medium truncate">
                               {s.data?.customer?.name || "—"} · {email || "—"} {phone && `· ${phone}`}
                             </div>
                             <div className="text-muted-foreground">
