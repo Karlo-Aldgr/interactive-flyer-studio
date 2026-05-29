@@ -1,75 +1,83 @@
-## New interactions to add
+## AI Menu Scan + Upsell Ordering
 
-1. **Survey** — multi-question form (text / multiple choice / rating per question). Submissions stored per response.
-2. **Testimonials** — visitors submit name + star rating + text + optional photo. Owner moderates; approved ones display in a swipeable carousel on the flyer.
-3. **Reserve table** — restaurant reservation: date, time slot, party size, name, phone, email, special requests.
-4. **Schedule consultation** — variant of book appointment tuned for consultations (topic, duration choice, optional video-call link auto-generated).
-5. **Show menu** — opens a built-in Menu page (sections → items with name, description, price, optional image). Acts like a sub-page overlay inside the flyer.
-6. **Join challenge** — challenge sign-up (challenge title, dates, goal, rules); visitor joins with name + email; owner sees participant list.
-7. **Business rating (5 stars)** — quick tap-a-star rating with optional comment. Aggregated average + count displayed.
+Add AI-powered menu extraction from an image and a 3-button upsell flow when a customer taps an item.
 
-Also: add all 7 to the **Landing page** interactions catalog so they show on the website.
+### 1. Editor — Menu builder (in `ActionEditor.tsx`'s `show_menu` panel)
 
-## Implementation
+- Add an **"Scan menu image with AI"** uploader: owner uploads photo → calls new edge function `menu-scan` → returns `{ sections: [{ name, items: [{ name, description, price, category }] }] }`.
+- AI auto-classifies each item with `category: "main" | "side" | "drink" | "dessert" | "other"` and groups into sections based on the photo's layout/headings.
+- After scan, items appear in an editable list. Owner can:
+  - Edit name/desc/price
+  - Change category (pill selector)
+  - **Color-code** each item (color swatch picker, stored as `color: "#hex"`)
+  - Reorder, delete, add manual items
+  - Toggle item as "available as upsell" (defaults: sides/drinks = true)
+- Add a per-action setting: `checkoutMode: "order_only" | "payment"` and `currency`.
 
-### 1. Database (one migration)
+### 2. New edge function — `supabase/functions/menu-scan/index.ts`
 
-Extend the enum and add tables. All tables get RLS mirroring existing patterns (anyone can insert on published flyers; owner reads/updates; admin reads all).
+- POST `{ imageUrl }` → calls Lovable AI Gateway with `google/gemini-2.5-pro` (vision) using tool-calling for structured output.
+- Returns sections + items with name, description, price (number), category. CORS + 402/429 handling like `smart-detect`.
+
+### 3. Viewer — `MenuDialog` (new) in `NewInteractionDialogs.tsx`
+
+- Loads `menus` row for the action, renders sections with color-coded item cards.
+- Tap item → **upsell modal** with 3 buttons:
+  - "Add another item" → back to menu
+  - "Add a side" → quick-pick sheet of side-category items
+  - "Add a drink" → quick-pick sheet of drink-category items
+  - Plus a "Go to checkout" button
+- Running cart shown as floating pill (item count + total).
+- **Checkout**:
+  - If `checkoutMode = "order_only"`: form (name, phone, optional notes) → insert into new `menu_orders` table.
+  - If `checkoutMode = "payment"`: same form, then redirect to existing payment flow (Stripe checkout link, mirroring `buy_ticket`).
+
+### 4. Database migration
 
 ```sql
-ALTER TYPE public.action_type ADD VALUE IF NOT EXISTS 'survey';
-ALTER TYPE public.action_type ADD VALUE IF NOT EXISTS 'testimonial';
-ALTER TYPE public.action_type ADD VALUE IF NOT EXISTS 'reserve_table';
-ALTER TYPE public.action_type ADD VALUE IF NOT EXISTS 'schedule_consultation';
-ALTER TYPE public.action_type ADD VALUE IF NOT EXISTS 'show_menu';
-ALTER TYPE public.action_type ADD VALUE IF NOT EXISTS 'join_challenge';
-ALTER TYPE public.action_type ADD VALUE IF NOT EXISTS 'business_rating';
+-- Extend menus.sections jsonb to support {name, description, price, category, color, upsell}
+-- (no schema change; jsonb already flexible)
+
+-- New table for orders
+CREATE TABLE public.menu_orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  flyer_id uuid NOT NULL,
+  action_id uuid,
+  customer_name text NOT NULL,
+  customer_phone text,
+  customer_email text,
+  items jsonb NOT NULL DEFAULT '[]',
+  subtotal_cents int NOT NULL DEFAULT 0,
+  notes text,
+  status text NOT NULL DEFAULT 'new',
+  payment_status text NOT NULL DEFAULT 'unpaid',
+  session_id text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.menu_orders TO authenticated;
+GRANT INSERT ON public.menu_orders TO anon;
+GRANT ALL ON public.menu_orders TO service_role;
+ALTER TABLE public.menu_orders ENABLE ROW LEVEL SECURITY;
+-- Policies: anon/auth INSERT on published flyer; owner SELECT/UPDATE/DELETE; admin SELECT.
 ```
 
-New tables:
-- `survey_responses` (flyer_id, action_id, session_id, answers jsonb)
-- `testimonials` (flyer_id, action_id, name, rating int 1-5, body, photo_url, status: pending/approved/rejected)
-- `table_reservations` (flyer_id, action_id, reserve_at, party_size, name, phone, email, notes, status)
-- `consultations` reuses `appointments` table with a `metadata.kind = 'consultation'` flag (no new table needed)
-- `menus` (flyer_id, action_id, sections jsonb) — single row per action
-- `challenge_participants` (flyer_id, action_id, name, email, joined_at)
-- `business_ratings` (flyer_id, action_id, session_id UNIQUE per session, stars 1-5, comment)
+### 5. Owner dashboard
 
-### 2. Editor — `src/components/editor/ActionEditor.tsx`
-- Add labels + preset entries for the 7 new types in `ACTION_LABELS` and `PRESET_TYPES`.
-- Add a config UI panel per new type:
-  - Survey: question builder (add/remove, type: text / choice / 1-5)
-  - Testimonial: toggle requires-approval, allow-photo, headline text
-  - Reserve table: available days + time slots, max party size
-  - Schedule consultation: duration options, business hours, topic field
-  - Show menu: section + item editor (name, desc, price, image upload to `flyer-assets`)
-  - Join challenge: title, start/end date, description, rules
-  - Business rating: prompt text, allow comment toggle
+- New tab in `InteractionsModerationPanel` or `SubscribersPanel` for **Orders** listing menu_orders for the flyer (name, items, total, status, mark fulfilled).
 
-### 3. Viewer — `src/pages/PublicViewer.tsx`
-- Add new cases to the action dispatch switch alongside `"rsvp"` / `"book_appointment"`.
-- Build dialogs/sheets that submit to the new tables via the supabase client.
-- `show_menu` renders an in-flyer overlay page with the menu sections (no real route change).
-- `testimonial` action: tapping shows a carousel of approved testimonials + a "Leave a testimonial" CTA at the bottom.
-- `business_rating` shows current average + 5 tap-able stars; persists per `session_id` so a user can update but not double-count.
+### Technical notes
 
-### 4. Owner dashboards
-- Add a tab to each flyer's `SubscribersPanel`/portal area for: Survey responses, Testimonials moderation (approve/reject), Reservations, Challenge participants, Ratings summary. Reuse existing list/export patterns.
+- Item shape stored in `menus.sections[i].items[j]`:
+  ```ts
+  { id, name, description?, price: number, category: "main"|"side"|"drink"|"dessert"|"other", color?: string, upsell?: boolean }
+  ```
+- `menu-scan` edge function is owner-only (verify JWT in code) to avoid public AI billing abuse.
+- Stripe path reuses existing `checkout`/payment infrastructure; if not configured for the flyer, fall back to order_only with a toast.
+- Color swatches use existing design tokens for default palette.
 
-### 5. Landing page + jobs catalog — `src/lib/interactionsCatalog.ts`
-- Append 7 new `InteractionDef` entries (icon, label, short, details). The landing page already maps over `INTERACTIONS`, so they appear automatically. `SubmitJob.tsx` and admin pages also pick them up.
+### Out of scope
 
-### 6. Types
-- `src/types/flyer.ts` (and any `ActionType` union) gets the 7 new strings. The Supabase `types.ts` regenerates after migration.
-
-## Technical notes
-- All new tables use the same RLS shape as `subscribers`/`appointments` — public insert when parent flyer is published; owner-scoped read/update; admin read-all.
-- `show_menu` stores menu data in its own `menus` table (rather than `actions.payload`) so menu images and many items don't bloat the action row.
-- `business_rating` uses a unique `(flyer_id, action_id, session_id)` index so a viewer can revise their star rating; aggregation done client-side with a single select.
-- No new edge functions needed — all direct supabase client writes, identical to existing `rsvp`/`subscribe` flows.
-
-## Out of scope
-- Email notifications on new submissions (can be added later with the existing transactional email setup).
-- Payment-gated reservations / paid challenges (existing `checkout`/`buy_ticket` cover that).
-
-If approved I'll start with the migration, then types, editor panels, viewer dialogs, and finally the landing-page catalog entries.
+- Item images (can be added later; AI scan won't extract them)
+- Modifiers/options (size, add-ons beyond sides/drinks)
+- Tax/tip calculations
