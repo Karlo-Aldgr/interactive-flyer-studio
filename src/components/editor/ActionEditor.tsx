@@ -2483,12 +2483,23 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
 }
 
 // ---- Menu sections editor (loads/saves rows in `menus` table) ----
+const ITEM_COLORS = ["", "#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#a855f7", "#ec4899"];
+const CATEGORIES: { value: string; label: string }[] = [
+  { value: "main", label: "Main" },
+  { value: "side", label: "Side" },
+  { value: "drink", label: "Drink" },
+  { value: "dessert", label: "Dessert" },
+  { value: "other", label: "Other" },
+];
+
 function MenuSectionsEditor({ action, update }: { action: LayerAction | null; update: (p: any) => void }) {
   const p = action?.payload || {};
   const { flyerId } = useParams();
   const [sections, setSections] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const actionId = action?.id;
 
   useEffect(() => {
@@ -2512,9 +2523,52 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
     saveMenu(next);
   }
 
+  function updateItem(sIdx: number, iIdx: number, patch: any) {
+    const next = [...sections];
+    next[sIdx] = { ...next[sIdx], items: next[sIdx].items.map((x: any, j: number) => j === iIdx ? { ...x, ...patch } : x) };
+    updateSections(next);
+  }
+
+  async function handleScan(file: File) {
+    if (!flyerId) return;
+    setScanning(true);
+    try {
+      const path = `${flyerId}/menu-scan-${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
+      const { error: upErr } = await supabase.storage.from("flyer-assets").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("flyer-assets").getPublicUrl(path);
+      const { data, error } = await supabase.functions.invoke("menu-scan", { body: { imageUrl: pub.publicUrl } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const newSections = data?.sections || [];
+      if (newSections.length === 0) {
+        toast.warning("No items detected. Try a clearer photo.");
+      } else {
+        updateSections([...sections, ...newSections]);
+        const count = newSections.reduce((n: number, s: any) => n + (s.items?.length || 0), 0);
+        toast.success(`Added ${count} items from photo.`);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Could not scan menu");
+    } finally {
+      setScanning(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
   return (
     <>
-      <p className="text-[11px] text-muted-foreground">Build your menu. Visitors see it as a tap-to-open page right inside the flyer.</p>
+      <p className="text-[11px] text-muted-foreground">Build your menu. Customers can tap an item to order, plus add sides and drinks.</p>
+
+      <div className="rounded border border-dashed border-primary/40 bg-primary/5 p-2 space-y-2">
+        <Label className="text-xs font-medium">AI menu scan</Label>
+        <p className="text-[11px] text-muted-foreground">Upload a photo of your menu — items, prices, and categories are extracted automatically.</p>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleScan(f); }} />
+        <Button size="sm" variant="outline" disabled={scanning} onClick={() => fileRef.current?.click()}>
+          {scanning ? "Scanning…" : (<><Upload className="mr-1 h-3.5 w-3.5" /> Scan menu image</>)}
+        </Button>
+      </div>
+
       <div>
         <Label className="text-xs">Menu title</Label>
         <Input className="mt-1" value={p.menuTitle || ""} onChange={(e) => update({ menuTitle: e.target.value })} placeholder="Our menu" />
@@ -2523,6 +2577,27 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
         <Label className="text-xs">Open button label</Label>
         <Input className="mt-1" value={p.menuCtaLabel || ""} onChange={(e) => update({ menuCtaLabel: e.target.value })} placeholder="Show menu" />
       </div>
+      <div>
+        <Label className="text-xs">Currency symbol</Label>
+        <Input className="mt-1" value={p.menuCurrency || ""} onChange={(e) => update({ menuCurrency: e.target.value })} placeholder="$" />
+      </div>
+      <div>
+        <Label className="text-xs">Checkout mode</Label>
+        <Select value={p.menuCheckoutMode || "order_only"} onValueChange={(v) => update({ menuCheckoutMode: v })}>
+          <SelectTrigger className="mt-1 h-8"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="order_only">Send order to owner (no payment)</SelectItem>
+            <SelectItem value="payment">Redirect to payment link</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {p.menuCheckoutMode === "payment" && (
+        <div>
+          <Label className="text-xs">Payment link (Stripe/Square/etc.)</Label>
+          <Input className="mt-1" value={p.menuPaymentLink || ""} onChange={(e) => update({ menuPaymentLink: e.target.value })} placeholder="https://buy.stripe.com/..." />
+        </div>
+      )}
+
       {!loaded ? (
         <p className="text-[11px] text-muted-foreground">Loading menu…</p>
       ) : (
@@ -2531,43 +2606,57 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
             {sections.map((sec, sIdx) => (
               <div key={sec.id} className="rounded border border-border p-2 space-y-2">
                 <div className="flex items-center gap-2">
-                  <Input value={sec.name} placeholder="Section name (e.g. Starters)" onChange={(e) => {
+                  <Input value={sec.name} placeholder="Section name" onChange={(e) => {
                     const next = [...sections]; next[sIdx] = { ...sec, name: e.target.value }; updateSections(next);
                   }} />
-                  <Button size="icon" variant="ghost" onClick={() => {
-                    const next = sections.filter((_, i) => i !== sIdx); updateSections(next);
-                  }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => updateSections(sections.filter((_, i) => i !== sIdx))}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
                 {(sec.items || []).map((it: any, iIdx: number) => (
-                  <div key={it.id} className="rounded border border-border/60 p-2 space-y-1 bg-muted/20">
+                  <div key={it.id} className="rounded border border-border/60 p-2 space-y-1 bg-muted/20" style={it.color ? { borderLeft: `4px solid ${it.color}` } : undefined}>
                     <div className="flex items-center gap-2">
-                      <Input value={it.name} placeholder="Item name" onChange={(e) => {
-                        const next = [...sections]; next[sIdx] = { ...sec, items: sec.items.map((x: any, j: number) => j === iIdx ? { ...x, name: e.target.value } : x) }; updateSections(next);
-                      }} />
-                      <Input className="w-20" value={it.price || ""} placeholder="$0" onChange={(e) => {
-                        const next = [...sections]; next[sIdx] = { ...sec, items: sec.items.map((x: any, j: number) => j === iIdx ? { ...x, price: e.target.value } : x) }; updateSections(next);
-                      }} />
+                      <Input value={it.name} placeholder="Item name" onChange={(e) => updateItem(sIdx, iIdx, { name: e.target.value })} />
+                      <Input className="w-20" type="number" step="0.01" value={it.price ?? ""} placeholder="0.00" onChange={(e) => updateItem(sIdx, iIdx, { price: Number(e.target.value) || 0 })} />
                       <Button size="icon" variant="ghost" onClick={() => {
                         const next = [...sections]; next[sIdx] = { ...sec, items: sec.items.filter((_: any, j: number) => j !== iIdx) }; updateSections(next);
                       }}><X className="h-3.5 w-3.5" /></Button>
                     </div>
-                    <Textarea rows={1} value={it.description || ""} placeholder="Description (optional)" onChange={(e) => {
-                      const next = [...sections]; next[sIdx] = { ...sec, items: sec.items.map((x: any, j: number) => j === iIdx ? { ...x, description: e.target.value } : x) }; updateSections(next);
-                    }} />
+                    <Textarea rows={1} value={it.description || ""} placeholder="Description (optional)" onChange={(e) => updateItem(sIdx, iIdx, { description: e.target.value })} />
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Select value={it.category || "other"} onValueChange={(v) => updateItem(sIdx, iIdx, { category: v, upsell: it.upsell ?? (v === "side" || v === "drink") })}>
+                        <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-1">
+                        {ITEM_COLORS.map((c) => (
+                          <button key={c || "none"} type="button" onClick={() => updateItem(sIdx, iIdx, { color: c })}
+                            className={`h-5 w-5 rounded-full border ${it.color === c ? "ring-2 ring-foreground" : ""}`}
+                            style={{ backgroundColor: c || "transparent", borderColor: c ? c : "hsl(var(--border))" }}
+                            title={c || "no color"} />
+                        ))}
+                      </div>
+                      <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <Checkbox checked={!!it.upsell} onCheckedChange={(v) => updateItem(sIdx, iIdx, { upsell: !!v })} /> Upsell
+                      </label>
+                    </div>
                   </div>
                 ))}
                 <Button size="sm" variant="outline" onClick={() => {
-                  const next = [...sections]; next[sIdx] = { ...sec, items: [...(sec.items || []), { id: crypto.randomUUID(), name: "", price: "" }] }; updateSections(next);
+                  const next = [...sections]; next[sIdx] = { ...sec, items: [...(sec.items || []), { id: crypto.randomUUID(), name: "", price: 0, category: "main", color: "", upsell: false }] }; updateSections(next);
                 }}><Plus className="mr-1 h-3.5 w-3.5" /> Add item</Button>
               </div>
             ))}
           </div>
-          <Button size="sm" variant="outline" onClick={() => {
-            updateSections([...sections, { id: crypto.randomUUID(), name: "", items: [] }]);
-          }}><Plus className="mr-1 h-3.5 w-3.5" /> Add section</Button>
+          <Button size="sm" variant="outline" onClick={() => updateSections([...sections, { id: crypto.randomUUID(), name: "", items: [] }])}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> Add section
+          </Button>
           {saving && <p className="text-[11px] text-muted-foreground">Saving…</p>}
         </>
       )}
     </>
   );
 }
+

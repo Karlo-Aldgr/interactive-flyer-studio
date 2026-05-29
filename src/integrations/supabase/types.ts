@@ -457,6 +457,57 @@ export type Database = {
           },
         ]
       }
+      menu_orders: {
+        Row: {
+          action_id: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          flyer_id: string
+          id: string
+          items: Json
+          notes: string | null
+          payment_status: string
+          session_id: string | null
+          status: string
+          subtotal_cents: number
+          updated_at: string
+        }
+        Insert: {
+          action_id?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          flyer_id: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          payment_status?: string
+          session_id?: string | null
+          status?: string
+          subtotal_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          flyer_id?: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          payment_status?: string
+          session_id?: string | null
+          status?: string
+          subtotal_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       menus: {
         Row: {
           action_id: string

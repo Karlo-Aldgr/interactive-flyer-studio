@@ -241,6 +241,9 @@ export interface ActionPayload {
   // show_menu (data stored in `menus` table; payload holds display config)
   menuTitle?: string;
   menuCtaLabel?: string;
+  menuCurrency?: string;
+  menuCheckoutMode?: "order_only" | "payment";
+  menuPaymentLink?: string;
 
   // join_challenge
   challengeTitle?: string;
