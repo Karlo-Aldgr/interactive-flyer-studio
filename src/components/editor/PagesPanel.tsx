@@ -418,6 +418,125 @@ export function PagesPanel() {
           </Button>
         </div>
       )}
+
+      {flyer && (flyer.settings as any)?.menuCatalog && (
+        <MenuCatalogEditor
+          catalog={(flyer.settings as any).menuCatalog}
+          onChange={(next) => setFlyer({ settings: { ...flyer.settings, menuCatalog: next } as any })}
+        />
+      )}
+    </div>
+  );
+}
+
+function MenuCatalogEditor({ catalog, onChange }: { catalog: any; onChange: (next: any) => void }) {
+  const sections: any[] = catalog?.sections || [];
+  const currency = catalog?.currency || "$";
+
+  function update(next: Partial<any>) {
+    onChange({ ...catalog, ...next });
+  }
+  function updateSections(nextSections: any[]) {
+    update({ sections: nextSections });
+  }
+  function updateItem(si: number, ii: number, patch: any) {
+    const next = sections.map((s, i) => i !== si ? s : { ...s, items: s.items.map((it: any, j: number) => j !== ii ? it : { ...it, ...patch }) });
+    updateSections(next);
+  }
+  function removeItem(si: number, ii: number) {
+    const next = sections.map((s, i) => i !== si ? s : { ...s, items: s.items.filter((_: any, j: number) => j !== ii) });
+    updateSections(next);
+  }
+  function addItem(si: number) {
+    const next = sections.map((s, i) => i !== si ? s : { ...s, items: [...(s.items || []), { id: `it_${Date.now()}`, name: "New item", price: 0, category: "other" }] });
+    updateSections(next);
+  }
+  function renameSection(si: number, name: string) {
+    updateSections(sections.map((s, i) => i !== si ? s : { ...s, name }));
+  }
+  function removeSection(si: number) {
+    updateSections(sections.filter((_, i) => i !== si));
+  }
+  function addSection() {
+    updateSections([...sections, { id: `sec_${Date.now()}`, name: "New section", items: [] }]);
+  }
+
+  return (
+    <div className="space-y-3 border-t border-border bg-muted/20 p-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-semibold uppercase text-muted-foreground">Menu items</div>
+        <div className="flex items-center gap-1">
+          <Input
+            className="h-7 w-12 text-xs"
+            value={currency}
+            onChange={(e) => update({ currency: e.target.value })}
+            title="Currency symbol"
+          />
+          <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={addSection}>
+            <Plus className="mr-1 h-3 w-3" /> Section
+          </Button>
+        </div>
+      </div>
+
+      {sections.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">No items yet. Scan a menu photo or add a section.</p>
+      )}
+
+      <div className="space-y-3">
+        {sections.map((sec, si) => (
+          <div key={sec.id || si} className="rounded border border-border bg-background p-2 space-y-2">
+            <div className="flex items-center gap-1">
+              <Input
+                className="h-7 flex-1 text-xs font-medium"
+                value={sec.name || ""}
+                onChange={(e) => renameSection(si, e.target.value)}
+              />
+              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeSection(si)} title="Remove section">
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="space-y-1">
+              {(sec.items || []).map((it: any, ii: number) => (
+                <div key={it.id || ii} className="flex items-center gap-1">
+                  <Input
+                    className="h-7 flex-1 text-xs"
+                    value={it.name || ""}
+                    placeholder="Item name"
+                    onChange={(e) => updateItem(si, ii, { name: e.target.value })}
+                  />
+                  <Input
+                    className="h-7 w-16 text-xs"
+                    type="number"
+                    step="0.01"
+                    value={it.price ?? 0}
+                    onChange={(e) => updateItem(si, ii, { price: Number(e.target.value) || 0 })}
+                  />
+                  <Select value={it.category || "other"} onValueChange={(v) => updateItem(si, ii, { category: v })}>
+                    <SelectTrigger className="h-7 w-20 text-[11px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="main" className="text-xs">Main</SelectItem>
+                      <SelectItem value="side" className="text-xs">Side</SelectItem>
+                      <SelectItem value="drink" className="text-xs">Drink</SelectItem>
+                      <SelectItem value="dessert" className="text-xs">Dessert</SelectItem>
+                      <SelectItem value="other" className="text-xs">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeItem(si, ii)} title="Remove">
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+              <Button size="sm" variant="ghost" className="h-7 w-full justify-start text-[11px]" onClick={() => addItem(si)}>
+                <Plus className="mr-1 h-3 w-3" /> Add item
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-[10px] text-muted-foreground leading-tight">
+        Edits affect the cart & upsell list. Hotspots on scanned pages keep their original item — remove the hotspot layer to disable tapping.
+      </p>
     </div>
   );
 }
