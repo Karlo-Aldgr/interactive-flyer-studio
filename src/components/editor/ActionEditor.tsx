@@ -2529,6 +2529,8 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
     const next = [...sections];
     next[sIdx] = { ...next[sIdx], items: next[sIdx].items.map((x: any, j: number) => j === iIdx ? { ...x, ...patch } : x) };
     updateSections(next);
+  }
+
 
   async function handleScan(file: File) {
     if (!flyerId) return;
