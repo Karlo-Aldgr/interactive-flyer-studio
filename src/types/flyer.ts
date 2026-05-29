@@ -30,7 +30,8 @@ export type ActionType =
   | "schedule_consultation"
   | "show_menu"
   | "join_challenge"
-  | "business_rating";
+  | "business_rating"
+  | "menu_add_item";
 
 export interface SurveyQuestion {
   id: string;
