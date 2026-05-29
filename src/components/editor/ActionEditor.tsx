@@ -2494,7 +2494,9 @@ const CATEGORIES: { value: string; label: string }[] = [
 
 function MenuSectionsEditor({ action, update }: { action: LayerAction | null; update: (p: any) => void }) {
   const p = action?.payload || {};
+  const { user } = useAuth();
   const { flyerId } = useParams();
+
   const [sections, setSections] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -2529,12 +2531,16 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
     updateSections(next);
   }
 
+
   async function handleScan(file: File) {
     if (!flyerId) return;
+    if (!user) { toast.error("Sign in required"); return; }
     setScanning(true);
     try {
-      const path = `${flyerId}/menu-scan-${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
+      const safeName = file.name.replace(/[^a-z0-9.]/gi, "_");
+      const path = `${user.id}/${flyerId}/menu-scan/${Date.now()}-${safeName}`;
       const { error: upErr } = await supabase.storage.from("flyer-assets").upload(path, file, { upsert: true });
+
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("flyer-assets").getPublicUrl(path);
       const { data, error } = await supabase.functions.invoke("menu-scan", { body: { imageUrl: pub.publicUrl } });
