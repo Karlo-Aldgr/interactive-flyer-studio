@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Crown, UserCog, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,6 +110,35 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
   const [calDate, setCalDate] = useState<Date | undefined>();
   const [shareOpen, setShareOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
+  const navigate = useNavigate();
+  const ROLE_KEY = `portal_role_${flyer.id}`;
+  const [role, setRole] = useState<"master" | "analytics" | null>(() => {
+    const v = sessionStorage.getItem(ROLE_KEY);
+    return v === "master" || v === "analytics" ? v : null;
+  });
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const v = sessionStorage.getItem(ROLE_KEY);
+    return v === "master" ? "live" : "analytics";
+  });
+  const [goingToWaiter, setGoingToWaiter] = useState(false);
+
+  async function chooseRole(r: "master" | "analytics" | "waiter") {
+    if (r === "waiter") {
+      setGoingToWaiter(true);
+      const { data } = await supabase
+        .from("flyer_portal_credentials")
+        .select("portal_token")
+        .eq("flyer_id", flyer.id)
+        .maybeSingle();
+      const token = (data as any)?.portal_token;
+      if (token) navigate(`/w/${token}`);
+      else { setGoingToWaiter(false); }
+      return;
+    }
+    sessionStorage.setItem(ROLE_KEY, r);
+    setRole(r);
+    setActiveTab(r === "master" ? "live" : "analytics");
+  }
 
   const polls = useMemo(() => {
     const out: { actionId: string; question: string; options: { id: string; label: string }[] }[] = [];
@@ -343,6 +374,9 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
             </Button>
           )}
+          <Button variant="ghost" size="sm" onClick={() => { sessionStorage.removeItem(ROLE_KEY); setRole(null); }}>
+            Switch role
+          </Button>
         </div>
       </div>
 
@@ -356,6 +390,38 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
         isPublished={isPublished}
       />
       {isOwner && <PortalLinkDialog flyerId={flyer.id} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />}
+
+      <Dialog open={role === null} onOpenChange={() => { /* gated */ }}>
+        <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Who's signing in?</DialogTitle>
+            <DialogDescription>Choose how you want to use this portal.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Button variant="outline" className="h-auto justify-start gap-3 p-4" onClick={() => chooseRole("master")}>
+              <Crown className="h-5 w-5 text-amber-500" />
+              <div className="text-left">
+                <div className="font-medium">Master</div>
+                <div className="text-xs text-muted-foreground">Live orders across all tables · PIN required</div>
+              </div>
+            </Button>
+            <Button variant="outline" className="h-auto justify-start gap-3 p-4" disabled={goingToWaiter} onClick={() => chooseRole("waiter")}>
+              <UserCog className="h-5 w-5 text-blue-500" />
+              <div className="text-left">
+                <div className="font-medium">Waiter</div>
+                <div className="text-xs text-muted-foreground">Just my tables · PIN required</div>
+              </div>
+            </Button>
+            <Button variant="outline" className="h-auto justify-start gap-3 p-4" onClick={() => chooseRole("analytics")}>
+              <BarChart3 className="h-5 w-5 text-emerald-500" />
+              <div className="text-left">
+                <div className="font-medium">Analytics</div>
+                <div className="text-xs text-muted-foreground">Views, clicks, subscribers, polls, forms</div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
         {[
@@ -373,7 +439,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
         ))}
       </div>
 
-      <Tabs defaultValue="analytics">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="polls">Polls ({polls.length})</TabsTrigger>
