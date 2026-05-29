@@ -122,9 +122,14 @@ export async function composeSocialCard(
 }
 
 async function uploadThumbnailBlob(blob: Blob, flyerId: string): Promise<string> {
-  const { data: authData, error: authErr } = await supabase.auth.getUser();
+  let { data: authData, error: authErr } = await supabase.auth.getUser();
   if (authErr || !authData.user) {
-    throw new Error("Sign in required to upload the preview image.");
+    // Try refreshing once before giving up
+    await supabase.auth.refreshSession().catch(() => {});
+    ({ data: authData, error: authErr } = await supabase.auth.getUser());
+  }
+  if (authErr || !authData.user) {
+    throw new Error("Your session expired. Please sign in again to upload a preview image.");
   }
 
   const path = `${authData.user.id}/${thumbnailStoragePath(flyerId)}`;
@@ -137,7 +142,11 @@ async function uploadThumbnailBlob(blob: Blob, flyerId: string): Promise<string>
     });
   if (uploadErr) {
     console.warn("[thumbnail] upload failed", uploadErr);
-    throw new Error("Upload failed: " + uploadErr.message);
+    const msg = uploadErr.message || "";
+    if (/row-level security|rls|unauthor/i.test(msg)) {
+      throw new Error("Upload blocked: your session expired or you don't own this flyer. Please sign in again.");
+    }
+    throw new Error("Upload failed: " + msg);
   }
 
   const cleanUrl = thumbnailPublicUrl(authData.user.id, flyerId);
