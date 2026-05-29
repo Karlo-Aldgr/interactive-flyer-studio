@@ -126,9 +126,17 @@ export default function WaiterPortal() {
         <Button size="sm" variant="ghost" onClick={logout}><LogOut className="h-4 w-4 mr-1" />Logout</Button>
       </div>
 
-      <div className="flex flex-wrap gap-1 text-xs">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-muted-foreground">Your tables:</span>
         {tables.length === 0 ? <Badge variant="outline">none assigned</Badge> : tables.map((t) => <Badge key={t} variant="secondary">Table {t}</Badge>)}
+        <Button size="sm" variant="outline" className="ml-auto h-7" onClick={() => {
+          const billable = orders.filter(o => o.status !== "cancelled" && o.status !== "pending_approval");
+          const total = billable.reduce((s, o) => {
+            if (typeof o.subtotal_cents === "number") return s + o.subtotal_cents / 100;
+            return s + (o.items || []).reduce((a: number, it: any) => a + (it.price || 0) * (it.qty || 0), 0);
+          }, 0);
+          toast.success(`Tonight: ${billable.length} orders · $${total.toFixed(2)}`, { duration: 6000 });
+        }}>Total tonight</Button>
       </div>
 
       {loading && <Loader2 className="h-4 w-4 animate-spin" />}
