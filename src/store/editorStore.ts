@@ -46,6 +46,7 @@ interface EditorState {
   // pages
   addPage: () => void;
   addLandingPage: (width?: number, height?: number) => void;
+  addScannedMenuPage: (args: { imageUrl: string; imgWidth: number; imgHeight: number; items: Array<{ id?: string; name: string; price?: number; description?: string; category?: string; color?: string; bbox: { x: number; y: number; w: number; h: number } }>; }) => string;
   setPageSize: (id: string, w: number, h: number, mode: ResizeMode) => void;
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
