@@ -374,6 +374,9 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
             </Button>
           )}
+          <Button variant="ghost" size="sm" onClick={() => { sessionStorage.removeItem(ROLE_KEY); setRole(null); }}>
+            Switch role
+          </Button>
         </div>
       </div>
 
