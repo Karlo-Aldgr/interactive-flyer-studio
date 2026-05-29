@@ -110,6 +110,35 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
   const [calDate, setCalDate] = useState<Date | undefined>();
   const [shareOpen, setShareOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
+  const navigate = useNavigate();
+  const ROLE_KEY = `portal_role_${flyer.id}`;
+  const [role, setRole] = useState<"master" | "analytics" | null>(() => {
+    const v = sessionStorage.getItem(ROLE_KEY);
+    return v === "master" || v === "analytics" ? v : null;
+  });
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const v = sessionStorage.getItem(ROLE_KEY);
+    return v === "master" ? "live" : "analytics";
+  });
+  const [goingToWaiter, setGoingToWaiter] = useState(false);
+
+  async function chooseRole(r: "master" | "analytics" | "waiter") {
+    if (r === "waiter") {
+      setGoingToWaiter(true);
+      const { data } = await supabase
+        .from("flyer_portal_credentials")
+        .select("portal_token")
+        .eq("flyer_id", flyer.id)
+        .maybeSingle();
+      const token = (data as any)?.portal_token;
+      if (token) navigate(`/w/${token}`);
+      else { setGoingToWaiter(false); }
+      return;
+    }
+    sessionStorage.setItem(ROLE_KEY, r);
+    setRole(r);
+    setActiveTab(r === "master" ? "live" : "analytics");
+  }
 
   const polls = useMemo(() => {
     const out: { actionId: string; question: string; options: { id: string; label: string }[] }[] = [];
