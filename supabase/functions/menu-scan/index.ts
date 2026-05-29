@@ -5,7 +5,6 @@ const corsHeaders = {
 };
 
 const SYSTEM_PROMPT = `You are an OCR + classification assistant for restaurant/cafe menus.
-const SYSTEM_PROMPT = `You are an OCR + classification assistant for restaurant/cafe menus.
 You will be given a single menu photo. Extract every visible menu item.
 
 Group items into sections based on the headings/layout of the menu. If no clear sections exist, put everything in a single section called "Menu".
