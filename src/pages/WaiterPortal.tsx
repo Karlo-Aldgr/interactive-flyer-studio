@@ -11,7 +11,7 @@ import { Loader2, LogOut } from "lucide-react";
 type Order = {
   id: string; customer_name: string; items: any[]; status: string;
   table_number: string | null; notes: string | null; order_type: string;
-  pickup_at: string | null; created_at: string;
+  pickup_at: string | null; created_at: string; subtotal_cents?: number;
 };
 
 export default function WaiterPortal() {
