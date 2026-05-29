@@ -10,8 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, ChevronLeft, Download, RefreshCw, Share2, Link as LinkIcon, Package } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Download, RefreshCw, Share2, Link as LinkIcon, Package, RotateCcw } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
 import { InteractionsModerationPanel } from "@/components/portal/InteractionsModerationPanel";
@@ -121,6 +124,46 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
     return v === "master" ? "live" : "analytics";
   });
   const [goingToWaiter, setGoingToWaiter] = useState(false);
+  const [resetTarget, setResetTarget] = useState<null | "analytics" | "cart" | "polls" | "appointments" | "live_orders">(null);
+  const [resetting, setResetting] = useState(false);
+
+  const RESET_LABELS: Record<NonNullable<typeof resetTarget>, string> = {
+    analytics: "Analytics",
+    cart: "Cart orders",
+    polls: "Poll votes",
+    appointments: "Appointments",
+    live_orders: "Live orders",
+  };
+
+  async function performReset() {
+    if (!resetTarget) return;
+    setResetting(true);
+    try {
+      let error: any = null;
+      if (resetTarget === "analytics") {
+        ({ error } = await supabase.from("analytics_events").delete().eq("flyer_id", flyer.id));
+      } else if (resetTarget === "cart") {
+        const r1 = await supabase.from("form_submissions").delete().eq("flyer_id", flyer.id).eq("data->>kind", "cart_order");
+        const r2 = await supabase.from("form_submissions").delete().eq("flyer_id", flyer.id).eq("data->>kind", "cart_pay_later");
+        error = r1.error || r2.error;
+      } else if (resetTarget === "polls") {
+        ({ error } = await supabase.from("poll_votes").delete().eq("flyer_id", flyer.id));
+      } else if (resetTarget === "appointments") {
+        ({ error } = await supabase.from("appointments").delete().eq("flyer_id", flyer.id));
+      } else if (resetTarget === "live_orders") {
+        ({ error } = await supabase.from("menu_orders").delete().eq("flyer_id", flyer.id));
+      }
+      if (error) throw error;
+      toast.success(`${RESET_LABELS[resetTarget]} reset`);
+      setResetTarget(null);
+      onRefresh?.();
+    } catch (e: any) {
+      toast.error(e?.message || "Reset failed");
+    } finally {
+      setResetting(false);
+    }
+  }
+
 
   async function chooseRole(r: "master" | "analytics" | "waiter") {
     if (r === "waiter") {
@@ -374,11 +417,43 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
             </Button>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setResetTarget("analytics")}>Reset analytics</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setResetTarget("cart")}>Reset cart</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setResetTarget("polls")}>Reset polls</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setResetTarget("appointments")}>Reset appointments</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setResetTarget("live_orders")}>Reset live orders</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="ghost" size="sm" onClick={() => { sessionStorage.removeItem(ROLE_KEY); setRole(null); }}>
             Switch role
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={resetTarget !== null} onOpenChange={(o) => !o && setResetTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset {resetTarget ? RESET_LABELS[resetTarget].toLowerCase() : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes all {resetTarget ? RESET_LABELS[resetTarget].toLowerCase() : ""} data for this flyer. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={resetting} onClick={(e) => { e.preventDefault(); performReset(); }}>
+              {resetting ? "Resetting…" : "Reset"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <ShareDialog
         open={shareOpen}
