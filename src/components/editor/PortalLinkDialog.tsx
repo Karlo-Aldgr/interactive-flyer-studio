@@ -24,19 +24,30 @@ export function PortalLinkDialog({ flyerId, open, onOpenChange }: Props) {
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    supabase
-      .from("flyers")
-      .select("portal_token, portal_access_code")
-      .eq("id", flyerId)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) toast.error(error.message);
-        else if (data) {
-          setToken((data as any).portal_token);
-          setCode((data as any).portal_access_code);
-        }
-        setLoading(false);
-      });
+    (async () => {
+      // Ensure a credentials row exists (auto-created by trigger for new flyers,
+      // but be defensive for older ones).
+      let { data, error } = await supabase
+        .from("flyer_portal_credentials" as any)
+        .select("portal_token, portal_access_code")
+        .eq("flyer_id", flyerId)
+        .maybeSingle();
+      if (!data && !error) {
+        const inserted = await supabase
+          .from("flyer_portal_credentials" as any)
+          .insert({ flyer_id: flyerId })
+          .select("portal_token, portal_access_code")
+          .maybeSingle();
+        data = inserted.data as any;
+        error = inserted.error as any;
+      }
+      if (error) toast.error(error.message);
+      else if (data) {
+        setToken((data as any).portal_token);
+        setCode((data as any).portal_access_code);
+      }
+      setLoading(false);
+    })();
   }, [open, flyerId]);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -53,9 +64,9 @@ export function PortalLinkDialog({ flyerId, open, onOpenChange }: Props) {
       ).join("");
     }
     const { data, error } = await supabase
-      .from("flyers")
+      .from("flyer_portal_credentials" as any)
       .update(update)
-      .eq("id", flyerId)
+      .eq("flyer_id", flyerId)
       .select("portal_token, portal_access_code")
       .maybeSingle();
     setBusy(false);
