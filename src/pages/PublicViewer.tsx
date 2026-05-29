@@ -1498,15 +1498,17 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     const el = new Audio(url);
     el.loop = loop;
     el.volume = vol;
-    el.onplay = () => setBgPlaying(true);
+    el.onplay = () => { el.volume = vol; setBgPlaying(true); };
     el.onpause = () => setBgPlaying(false);
     el.onended = () => { if (!loop) setBgPlaying(false); };
+    el.onloadedmetadata = () => { el.volume = vol; };
     bgAudioRef.current = el;
 
     if (!autoplay) return () => { try { el.pause(); } catch { /* noop */ } };
 
     (async () => {
       try {
+        el.volume = vol;
         await el.play();
         setBgNeedsTap(false);
       } catch {
