@@ -22,6 +22,7 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
   const [pin, setPin] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const [tableWaiters, setTableWaiters] = useState<Record<string, { name: string; color: string }>>({});
 
   useEffect(() => {
     (async () => {
@@ -41,14 +42,31 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
     setLoading(false);
   }, [flyerId]);
 
+  const loadAssignments = useCallback(async () => {
+    const { data: assigns } = await supabase.from("table_assignments")
+      .select("table_number, waiter_id").eq("flyer_id", flyerId);
+    const { data: ws } = await supabase.from("waiters_public" as any)
+      .select("id, name, color").eq("flyer_id", flyerId);
+    const wmap = new Map<string, { name: string; color: string }>();
+    for (const w of (ws as any[]) || []) wmap.set(w.id, { name: w.name, color: w.color });
+    const map: Record<string, { name: string; color: string }> = {};
+    for (const a of (assigns as any[]) || []) {
+      const w = wmap.get(a.waiter_id);
+      if (w) map[a.table_number] = w;
+    }
+    setTableWaiters(map);
+  }, [flyerId]);
+
   useEffect(() => {
     if (!unlocked) return;
     load();
+    loadAssignments();
     const channel = supabase.channel(`live-orders-${flyerId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "menu_orders", filter: `flyer_id=eq.${flyerId}` }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "table_assignments", filter: `flyer_id=eq.${flyerId}` }, () => loadAssignments())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [unlocked, flyerId, load]);
+  }, [unlocked, flyerId, load, loadAssignments]);
 
   async function handleUnlock() {
     if (pinSet === false) {
@@ -132,9 +150,23 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
       {grouped.length === 0 && <p className="text-sm text-muted-foreground">No active orders.</p>}
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {grouped.map(([table, list]) => (
+        {grouped.map(([table, list]) => {
+          const w = tableWaiters[table];
+          return (
           <Card key={table}>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Table {table} · {list.length}</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center justify-between gap-2">
+                <span>Table {table} · {list.length}</span>
+                {w ? (
+                  <span className="flex items-center gap-1 text-[11px] font-normal text-muted-foreground">
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: w.color }} />
+                    {w.name}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-normal text-muted-foreground">unassigned</span>
+                )}
+              </CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2">
               {list.map((o) => {
                 const isAhead = o.order_type === "order_ahead";
@@ -173,7 +205,8 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
               })}
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
