@@ -3274,3 +3274,31 @@ function PollDialog({
     </Dialog>
   );
 }
+
+function ScannedMenuCart({ flyerId, catalog }: { flyerId: string; catalog: any }) {
+  const open = useMenuCart((s) => s.open);
+  const count = useMenuCart((s) => s.cart.reduce((n, l) => n + l.qty, 0));
+  const total = useMenuCart((s) => s.cart.reduce((n, l) => n + (l.item.price || 0) * l.qty, 0));
+  const setOpen = useMenuCart((s) => s.setOpen);
+  const currency = catalog?.currency || "$";
+  return (
+    <>
+      <MenuCartUI
+        flyerId={flyerId}
+        sections={catalog?.sections || []}
+        currency={currency}
+        title={catalog?.title || "Your order"}
+        checkoutMode={catalog?.checkoutMode || "order_only"}
+        paymentLink={catalog?.paymentLink}
+      />
+      {!open && count > 0 && (
+        <button
+          onClick={() => setOpen(true, "checkout")}
+          className="fixed bottom-4 right-4 z-50 rounded-full bg-primary text-primary-foreground px-4 py-3 text-sm font-semibold shadow-lg"
+        >
+          Cart · {count} · {currency}{total.toFixed(2)}
+        </button>
+      )}
+    </>
+  );
+}
