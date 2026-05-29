@@ -467,7 +467,7 @@ export function MenuCartUI({
               <div className="space-y-3">
                 <p className="text-sm">Added to your order. Anything else?</p>
                 <div className="grid gap-2">
-                  <Button variant="outline" onClick={() => setView("menu")}>+ Add another item</Button>
+                  <Button variant="outline" onClick={() => setView("menu")}>+ Add item to cart</Button>
                   <Button variant="outline" disabled={upsells("side").length === 0} onClick={() => { setPickerCategory("side"); setView("picker"); }}>
                     + Add a side {upsells("side").length === 0 && "(none available)"}
                   </Button>
