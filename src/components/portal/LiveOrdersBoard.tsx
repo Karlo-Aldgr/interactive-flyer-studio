@@ -127,6 +127,8 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
         </div>
       </div>
 
+      <MasterAnalytics flyerId={flyerId} orders={orders} />
+
       {grouped.length === 0 && <p className="text-sm text-muted-foreground">No active orders.</p>}
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
