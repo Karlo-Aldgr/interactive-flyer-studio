@@ -112,7 +112,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
-import NewInteractionDialogs from "@/components/viewer/NewInteractionDialogs";
+import NewInteractionDialogs, { MenuCartUI } from "@/components/viewer/NewInteractionDialogs";
+import { useMenuCart } from "@/store/menuCartStore";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { toast } from "sonner";
 import { getCurrentTrafficSource } from "@/lib/trafficSource";
@@ -1293,7 +1294,6 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         break;
       case "book_appointment":
         setAppointmentAction({ action: a, layer });
-        break;
       case "survey":
       case "testimonial":
       case "reserve_table":
@@ -1302,6 +1302,15 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "join_challenge":
       case "business_rating":
         setNewInteractionAction(a);
+        break;
+      case "menu_add_item": {
+        const item = (a.payload as any).menuItem;
+        if (item) {
+          useMenuCart.getState().add(item);
+          useMenuCart.getState().setOpen(true, "upsell");
+        }
+        break;
+      }
         break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
@@ -2355,6 +2364,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         onClose={() => setNewInteractionAction(null)}
       />
 
+      {/* Scanned-menu cart (shared across all pages of this flyer) */}
+      {flyer && (flyer.settings as any)?.menuCatalog && (
+        <ScannedMenuCart flyerId={flyer.id} catalog={(flyer.settings as any).menuCatalog} />
+      )}
+
       {/* Subscribe dialog */}
       <Dialog open={!!subscribeAction} onOpenChange={(v) => !v && setSubscribeAction(null)}>
         <DialogContent>
@@ -3258,5 +3272,33 @@ function PollDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ScannedMenuCart({ flyerId, catalog }: { flyerId: string; catalog: any }) {
+  const open = useMenuCart((s) => s.open);
+  const count = useMenuCart((s) => s.cart.reduce((n, l) => n + l.qty, 0));
+  const total = useMenuCart((s) => s.cart.reduce((n, l) => n + (l.item.price || 0) * l.qty, 0));
+  const setOpen = useMenuCart((s) => s.setOpen);
+  const currency = catalog?.currency || "$";
+  return (
+    <>
+      <MenuCartUI
+        flyerId={flyerId}
+        sections={catalog?.sections || []}
+        currency={currency}
+        title={catalog?.title || "Your order"}
+        checkoutMode={catalog?.checkoutMode || "order_only"}
+        paymentLink={catalog?.paymentLink}
+      />
+      {!open && count > 0 && (
+        <button
+          onClick={() => setOpen(true, "checkout")}
+          className="fixed bottom-4 right-4 z-50 rounded-full bg-primary text-primary-foreground px-4 py-3 text-sm font-semibold shadow-lg"
+        >
+          Cart · {count} · {currency}{total.toFixed(2)}
+        </button>
+      )}
+    </>
   );
 }

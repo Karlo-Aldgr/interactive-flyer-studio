@@ -7,7 +7,7 @@ const corsHeaders = {
 const SYSTEM_PROMPT = `You are an OCR + classification assistant for restaurant/cafe menus.
 You will be given a single menu photo. Extract every visible menu item.
 
-Group items into sections based on the headings/layout of the menu (e.g. "Appetizers", "Burgers", "Drinks"). If no clear sections exist, put everything in a single section called "Menu".
+Group items into sections based on the headings/layout of the menu. If no clear sections exist, put everything in a single section called "Menu".
 
 For each item, classify its category as one of:
 - "main": main dishes, entrees, mains, sandwiches, pizzas, pasta, burgers
@@ -16,6 +16,8 @@ For each item, classify its category as one of:
 - "dessert": desserts, sweets, ice cream, pastries
 - "other": anything else
 
+For EACH item also return a tight normalized bounding box \`bbox\` covering the row (name + price area) on the photo, where x/y is the top-left and w/h are width/height — all in 0..1 relative to image dimensions. Be tight: do not cover empty space.
+
 Return numeric price (no currency symbol). If the price is missing, use 0.
 Return STRICTLY via the tool. No prose.`;
 
@@ -23,10 +25,12 @@ const TOOL_DEF = {
   type: "function",
   function: {
     name: "report_menu",
-    description: "Report the parsed menu structure.",
+    description: "Report the parsed menu structure with bounding boxes.",
     parameters: {
       type: "object",
       properties: {
+        imageWidth: { type: "number", description: "Apparent pixel width of the menu image (optional, for reference)" },
+        imageHeight: { type: "number", description: "Apparent pixel height of the menu image (optional, for reference)" },
         sections: {
           type: "array",
           items: {
@@ -42,6 +46,15 @@ const TOOL_DEF = {
                     description: { type: "string" },
                     price: { type: "number" },
                     category: { type: "string", enum: ["main", "side", "drink", "dessert", "other"] },
+                    bbox: {
+                      type: "object",
+                      properties: {
+                        x: { type: "number" }, y: { type: "number" },
+                        w: { type: "number" }, h: { type: "number" },
+                      },
+                      required: ["x", "y", "w", "h"],
+                      additionalProperties: false,
+                    },
                   },
                   required: ["name", "price", "category"],
                   additionalProperties: false,
@@ -102,18 +115,24 @@ Deno.serve(async (req) => {
     let parsed: any = {};
     try { parsed = JSON.parse(toolCall?.function?.arguments ?? "{}"); } catch (e) { console.error("Parse fail", e); }
 
+    const clamp01 = (n: any) => Math.max(0, Math.min(1, Number(n) || 0));
     const sections = (parsed.sections ?? []).map((s: any) => ({
       id: crypto.randomUUID(),
       name: String(s.name || "Menu"),
-      items: (s.items ?? []).map((it: any) => ({
-        id: crypto.randomUUID(),
-        name: String(it.name || ""),
-        description: it.description ? String(it.description) : "",
-        price: typeof it.price === "number" ? it.price : Number(it.price) || 0,
-        category: ["main", "side", "drink", "dessert", "other"].includes(it.category) ? it.category : "other",
-        color: "",
-        upsell: it.category === "side" || it.category === "drink",
-      })),
+      items: (s.items ?? []).map((it: any) => {
+        const b = it.bbox || {};
+        const hasBbox = ["x", "y", "w", "h"].every(k => typeof b[k] === "number");
+        return {
+          id: crypto.randomUUID(),
+          name: String(it.name || ""),
+          description: it.description ? String(it.description) : "",
+          price: typeof it.price === "number" ? it.price : Number(it.price) || 0,
+          category: ["main", "side", "drink", "dessert", "other"].includes(it.category) ? it.category : "other",
+          color: "",
+          upsell: it.category === "side" || it.category === "drink",
+          bbox: hasBbox ? { x: clamp01(b.x), y: clamp01(b.y), w: clamp01(b.w), h: clamp01(b.h) } : null,
+        };
+      }),
     }));
 
     return new Response(JSON.stringify({ sections }), {

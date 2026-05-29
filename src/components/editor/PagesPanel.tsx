@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useEditorStore } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,9 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2 } from "lucide-react";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
   { value: "none", label: "None" },
@@ -25,11 +28,13 @@ const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
 
 export function PagesPanel() {
   const flyer = useEditorStore((s) => s.flyer);
+  const setFlyer = useEditorStore((s) => s.setFlyer);
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectPage = useEditorStore((s) => s.selectPage);
   const addPage = useEditorStore((s) => s.addPage);
   const addLandingPage = useEditorStore((s) => s.addLandingPage);
+  const addScannedMenuPage = useEditorStore((s) => s.addScannedMenuPage);
   const setPageSize = useEditorStore((s) => s.setPageSize);
   const deletePage = useEditorStore((s) => s.deletePage);
   const duplicatePage = useEditorStore((s) => s.duplicatePage);
@@ -43,6 +48,63 @@ export function PagesPanel() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const { user } = useAuth();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [scanning, setScanning] = useState(false);
+
+  async function handleScanMenu(file: File) {
+    if (!flyer) return;
+    if (!user) { toast.error("Sign in required"); return; }
+    setScanning(true);
+    try {
+      const safeName = file.name.replace(/[^a-z0-9.]/gi, "_");
+      const path = `${user.id}/${flyer.id}/menu-scan/${Date.now()}-${safeName}`;
+      const { error: upErr } = await supabase.storage.from("flyer-assets").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("flyer-assets").getPublicUrl(path);
+      const imageUrl = pub.publicUrl;
+
+      // Read intrinsic image dimensions
+      const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => reject(new Error("Could not load image"));
+        img.src = imageUrl;
+      });
+
+      const { data, error } = await supabase.functions.invoke("menu-scan", { body: { imageUrl } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const scanned = (data?.sections || []) as any[];
+      const flatItems = scanned.flatMap((s: any) => (s.items || []).filter((it: any) => it.bbox));
+      if (flatItems.length === 0) {
+        toast.warning("No items with positions detected. Try a clearer, straighter photo.");
+        return;
+      }
+      addScannedMenuPage({
+        imageUrl,
+        imgWidth: dims.w,
+        imgHeight: dims.h,
+        items: flatItems,
+      });
+
+      // Merge scanned sections into flyer.settings.menuCatalog so taps can show upsells.
+      const existing = (flyer.settings as any).menuCatalog || { sections: [], currency: "$", title: "Order", checkoutMode: "order_only" };
+      const merged = {
+        ...existing,
+        sections: [...(existing.sections || []), ...scanned],
+      };
+      setFlyer({ settings: { ...flyer.settings, menuCatalog: merged } as any });
+
+      toast.success(`Added menu page with ${flatItems.length} tappable item${flatItems.length > 1 ? "s" : ""}.`);
+    } catch (e: any) {
+      toast.error(e?.message || "Could not scan menu");
+    } finally {
+      setScanning(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   function move(id: string, dir: -1 | 1) {
     const idx = pages.findIndex((p) => p.id === id);
@@ -73,25 +135,37 @@ export function PagesPanel() {
     <div className="flex flex-col border-b border-border">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-xs font-semibold uppercase text-muted-foreground">Pages</span>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="ghost" className="h-6 w-6" title="Add page">
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={addPage}>Add flyer page</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLandingPage(1200, 630)}>
-              Add landing page (1200×630)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLandingPage(1080, 1080)}>
-              Add square page (1080×1080)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLandingPage(1080, 1920)}>
-              Add story page (1080×1920)
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1">
+          <input ref={fileRef} type="file" accept="image/*" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleScanMenu(f); }} />
+          <Button size="icon" variant="ghost" className="h-6 w-6" title="Scan menu photo into new page"
+            disabled={scanning} onClick={() => fileRef.current?.click()}>
+            {scanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost" className="h-6 w-6" title="Add page">
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={addPage}>Add flyer page</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addLandingPage(1200, 630)}>
+                Add landing page (1200×630)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addLandingPage(1080, 1080)}>
+                Add square page (1080×1080)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addLandingPage(1080, 1920)}>
+                Add story page (1080×1920)
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={scanning} onClick={() => fileRef.current?.click()}>
+                <Camera className="mr-2 h-3.5 w-3.5" /> {scanning ? "Scanning…" : "Scan menu photo"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       <div className="max-h-64 overflow-y-auto">
         {pages.map((p, i) => {

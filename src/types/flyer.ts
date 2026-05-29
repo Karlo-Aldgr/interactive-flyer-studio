@@ -30,7 +30,8 @@ export type ActionType =
   | "schedule_consultation"
   | "show_menu"
   | "join_challenge"
-  | "business_rating";
+  | "business_rating"
+  | "menu_add_item";
 
 export interface SurveyQuestion {
   id: string;
@@ -244,6 +245,16 @@ export interface ActionPayload {
   menuCurrency?: string;
   menuCheckoutMode?: "order_only" | "payment";
   menuPaymentLink?: string;
+
+  // menu_add_item — clickable product hotspot on a scanned menu page
+  menuItem?: {
+    id?: string;
+    name: string;
+    price?: number;
+    description?: string;
+    category?: "main" | "side" | "drink" | "dessert" | "other";
+    color?: string;
+  };
 
   // join_challenge
   challengeTitle?: string;
