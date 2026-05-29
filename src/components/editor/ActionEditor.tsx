@@ -2494,7 +2494,9 @@ const CATEGORIES: { value: string; label: string }[] = [
 
 function MenuSectionsEditor({ action, update }: { action: LayerAction | null; update: (p: any) => void }) {
   const p = action?.payload || {};
+  const { user } = useAuth();
   const { flyerId } = useParams();
+
   const [sections, setSections] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
