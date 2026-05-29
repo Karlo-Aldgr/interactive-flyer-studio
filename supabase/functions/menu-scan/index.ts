@@ -114,18 +114,24 @@ const TOOL_DEF = {
     let parsed: any = {};
     try { parsed = JSON.parse(toolCall?.function?.arguments ?? "{}"); } catch (e) { console.error("Parse fail", e); }
 
+    const clamp01 = (n: any) => Math.max(0, Math.min(1, Number(n) || 0));
     const sections = (parsed.sections ?? []).map((s: any) => ({
       id: crypto.randomUUID(),
       name: String(s.name || "Menu"),
-      items: (s.items ?? []).map((it: any) => ({
-        id: crypto.randomUUID(),
-        name: String(it.name || ""),
-        description: it.description ? String(it.description) : "",
-        price: typeof it.price === "number" ? it.price : Number(it.price) || 0,
-        category: ["main", "side", "drink", "dessert", "other"].includes(it.category) ? it.category : "other",
-        color: "",
-        upsell: it.category === "side" || it.category === "drink",
-      })),
+      items: (s.items ?? []).map((it: any) => {
+        const b = it.bbox || {};
+        const hasBbox = ["x", "y", "w", "h"].every(k => typeof b[k] === "number");
+        return {
+          id: crypto.randomUUID(),
+          name: String(it.name || ""),
+          description: it.description ? String(it.description) : "",
+          price: typeof it.price === "number" ? it.price : Number(it.price) || 0,
+          category: ["main", "side", "drink", "dessert", "other"].includes(it.category) ? it.category : "other",
+          color: "",
+          upsell: it.category === "side" || it.category === "drink",
+          bbox: hasBbox ? { x: clamp01(b.x), y: clamp01(b.y), w: clamp01(b.w), h: clamp01(b.h) } : null,
+        };
+      }),
     }));
 
     return new Response(JSON.stringify({ sections }), {
