@@ -354,11 +354,22 @@ function ConsultDialog({ action, flyerId, onClose }: { action: LayerAction; flye
   );
 }
 
-// ---- Menu viewer ----
+// ---- Menu viewer with ordering + upsell ----
+type MenuItem = { id: string; name: string; description?: string; price: number; category?: string; color?: string; upsell?: boolean };
+type CartLine = { item: MenuItem; qty: number };
+
 function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId: string; onClose: () => void }) {
   const p = action.payload;
+  const currency = p.menuCurrency || "$";
+  const checkoutMode = p.menuCheckoutMode || "order_only";
   const [sections, setSections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [view, setView] = useState<"menu" | "upsell" | "picker" | "checkout">("menu");
+  const [pickerCategory, setPickerCategory] = useState<"side" | "drink">("side");
+  const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("menus").select("sections").eq("action_id", action.id).maybeSingle();
@@ -367,35 +378,163 @@ function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId
     })();
   }, [action.id]);
 
+  const allItems: MenuItem[] = useMemo(() => sections.flatMap((s: any) => (s.items || []) as MenuItem[]), [sections]);
+  const upsells = (cat: "side" | "drink") => allItems.filter(i => i.category === cat && (i.upsell ?? true));
+
+  const total = cart.reduce((sum, l) => sum + (l.item.price || 0) * l.qty, 0);
+  const itemCount = cart.reduce((n, l) => n + l.qty, 0);
+
+  function addItem(item: MenuItem) {
+    setCart(prev => {
+      const found = prev.find(l => l.item.id === item.id);
+      if (found) return prev.map(l => l.item.id === item.id ? { ...l, qty: l.qty + 1 } : l);
+      return [...prev, { item, qty: 1 }];
+    });
+  }
+  function removeItem(id: string) { setCart(prev => prev.filter(l => l.item.id !== id)); }
+
+  function handleItemTap(item: MenuItem) {
+    addItem(item);
+    setView("upsell");
+  }
+
+  async function submitOrder() {
+    if (!name.trim()) return toast.error("Please enter your name");
+    if (cart.length === 0) return toast.error("Cart is empty");
+    setSubmitting(true);
+    const items = cart.map(l => ({ id: l.item.id, name: l.item.name, price: l.item.price, qty: l.qty, category: l.item.category }));
+    const subtotal_cents = Math.round(total * 100);
+    const { error } = await supabase.from("menu_orders").insert([{
+      flyer_id: flyerId, action_id: action.id, customer_name: name.trim(), customer_phone: phone.trim() || null,
+      items, subtotal_cents, notes: notes.trim() || null,
+    }]);
+    setSubmitting(false);
+    if (error) return toast.error("Could not place order");
+    if (checkoutMode === "payment" && p.menuPaymentLink) {
+      toast.success("Order placed — redirecting to payment.");
+      window.open(p.menuPaymentLink, "_blank");
+    } else {
+      toast.success("Order sent! We'll be in touch.");
+    }
+    onClose();
+  }
+
+  const fmt = (n: number) => `${currency}${(n || 0).toFixed(2)}`;
+
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{p.menuTitle || "Menu"}</DialogTitle></DialogHeader>
+
         {loading ? <Loader2 className="mx-auto h-6 w-6 animate-spin" /> : (
-          <div className="space-y-5">
-            {sections.length === 0 && <p className="text-sm text-muted-foreground">Menu coming soon.</p>}
-            {sections.map((sec) => (
-              <div key={sec.id}>
-                <h3 className="mb-2 font-semibold text-base border-b border-border pb-1">{sec.name}</h3>
-                <div className="space-y-2">
-                  {(sec.items || []).map((it: any) => (
-                    <div key={it.id} className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{it.name}</div>
-                        {it.description && <div className="text-xs text-muted-foreground">{it.description}</div>}
-                      </div>
-                      {it.price && <div className="text-sm font-medium whitespace-nowrap">{it.price}</div>}
+          <>
+            {view === "menu" && (
+              <div className="space-y-5">
+                {sections.length === 0 && <p className="text-sm text-muted-foreground">Menu coming soon.</p>}
+                {sections.map((sec: any) => (
+                  <div key={sec.id}>
+                    <h3 className="mb-2 font-semibold text-base border-b border-border pb-1">{sec.name}</h3>
+                    <div className="space-y-2">
+                      {(sec.items || []).map((it: MenuItem) => (
+                        <button key={it.id} onClick={() => handleItemTap(it)}
+                          className="flex w-full items-start justify-between gap-3 rounded p-2 text-left hover:bg-accent transition"
+                          style={it.color ? { borderLeft: `4px solid ${it.color}` } : undefined}>
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">{it.name}</div>
+                            {it.description && <div className="text-xs text-muted-foreground">{it.description}</div>}
+                          </div>
+                          <div className="text-sm font-medium whitespace-nowrap">{fmt(it.price)}</div>
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {view === "upsell" && (
+              <div className="space-y-3">
+                <p className="text-sm">Added to your order. Anything else?</p>
+                <div className="grid gap-2">
+                  <Button variant="outline" onClick={() => setView("menu")}>+ Add another item</Button>
+                  <Button variant="outline" disabled={upsells("side").length === 0} onClick={() => { setPickerCategory("side"); setView("picker"); }}>
+                    + Add a side {upsells("side").length === 0 && "(none available)"}
+                  </Button>
+                  <Button variant="outline" disabled={upsells("drink").length === 0} onClick={() => { setPickerCategory("drink"); setView("picker"); }}>
+                    + Add a drink {upsells("drink").length === 0 && "(none available)"}
+                  </Button>
+                  <Button onClick={() => setView("checkout")}>Go to checkout · {fmt(total)}</Button>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+
+            {view === "picker" && (
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm">Pick a {pickerCategory}</h3>
+                {upsells(pickerCategory).map((it) => (
+                  <button key={it.id} onClick={() => { addItem(it); setView("upsell"); }}
+                    className="flex w-full items-start justify-between gap-3 rounded border border-border p-2 text-left hover:bg-accent">
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{it.name}</div>
+                      {it.description && <div className="text-xs text-muted-foreground">{it.description}</div>}
+                    </div>
+                    <div className="text-sm font-medium">{fmt(it.price)}</div>
+                  </button>
+                ))}
+                <Button variant="ghost" size="sm" onClick={() => setView("upsell")}>← Back</Button>
+              </div>
+            )}
+
+            {view === "checkout" && (
+              <div className="space-y-3">
+                <div className="rounded border border-border p-2 space-y-1">
+                  {cart.map(l => (
+                    <div key={l.item.id} className="flex items-center justify-between text-sm">
+                      <span>{l.qty}× {l.item.name}</span>
+                      <span className="flex items-center gap-2">
+                        {fmt(l.item.price * l.qty)}
+                        <button onClick={() => removeItem(l.item.id)} className="text-muted-foreground hover:text-destructive text-xs">remove</button>
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between border-t border-border pt-1 font-semibold text-sm">
+                    <span>Total</span><span>{fmt(total)}</span>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Your name *</Label>
+                  <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs">Phone</Label>
+                  <Input className="mt-1" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs">Notes</Label>
+                  <Textarea className="mt-1" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Allergies, requests…" />
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setView("menu")} className="flex-1">Add more</Button>
+                  <Button disabled={submitting} onClick={submitOrder} className="flex-1">
+                    {submitting ? "Sending…" : checkoutMode === "payment" ? "Order & pay" : "Place order"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {itemCount > 0 && view !== "checkout" && (
+              <button onClick={() => setView("checkout")}
+                className="sticky bottom-0 mt-3 w-full rounded bg-primary text-primary-foreground py-2 text-sm font-medium shadow">
+                Cart · {itemCount} item{itemCount > 1 ? "s" : ""} · {fmt(total)}
+              </button>
+            )}
+          </>
         )}
       </DialogContent>
     </Dialog>
   );
 }
+
 
 // ---- Challenge ----
 function ChallengeDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId: string; onClose: () => void }) {
