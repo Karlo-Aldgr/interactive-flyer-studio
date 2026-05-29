@@ -124,6 +124,44 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
     return v === "master" ? "live" : "analytics";
   });
   const [goingToWaiter, setGoingToWaiter] = useState(false);
+  const [resetTarget, setResetTarget] = useState<null | "analytics" | "cart" | "polls" | "appointments" | "live_orders">(null);
+  const [resetting, setResetting] = useState(false);
+
+  const RESET_LABELS: Record<NonNullable<typeof resetTarget>, string> = {
+    analytics: "Analytics",
+    cart: "Cart orders",
+    polls: "Poll votes",
+    appointments: "Appointments",
+    live_orders: "Live orders",
+  };
+
+  async function performReset() {
+    if (!resetTarget) return;
+    setResetting(true);
+    try {
+      let error: any = null;
+      if (resetTarget === "analytics") {
+        ({ error } = await supabase.from("analytics_events").delete().eq("flyer_id", flyer.id));
+      } else if (resetTarget === "cart") {
+        ({ error } = await supabase.from("form_submissions").delete().eq("flyer_id", flyer.id).in("data->>kind", ["cart_order", "cart_pay_later"]));
+      } else if (resetTarget === "polls") {
+        ({ error } = await supabase.from("poll_votes").delete().eq("flyer_id", flyer.id));
+      } else if (resetTarget === "appointments") {
+        ({ error } = await supabase.from("appointments").delete().eq("flyer_id", flyer.id));
+      } else if (resetTarget === "live_orders") {
+        ({ error } = await supabase.from("menu_orders").delete().eq("flyer_id", flyer.id));
+      }
+      if (error) throw error;
+      toast.success(`${RESET_LABELS[resetTarget]} reset`);
+      setResetTarget(null);
+      onRefresh?.();
+    } catch (e: any) {
+      toast.error(e?.message || "Reset failed");
+    } finally {
+      setResetting(false);
+    }
+  }
+
 
   async function chooseRole(r: "master" | "analytics" | "waiter") {
     if (r === "waiter") {
