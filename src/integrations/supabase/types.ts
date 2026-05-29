@@ -815,6 +815,7 @@ export type Database = {
         | "show_menu"
         | "join_challenge"
         | "business_rating"
+        | "menu_add_item"
       app_role: "admin" | "user"
       appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
@@ -987,6 +988,7 @@ export const Constants = {
         "show_menu",
         "join_challenge",
         "business_rating",
+        "menu_add_item",
       ],
       app_role: ["admin", "user"],
       appointment_status: ["confirmed", "cancelled"],
