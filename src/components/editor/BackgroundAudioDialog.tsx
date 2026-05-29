@@ -132,7 +132,11 @@ export function BackgroundAudioDialog({ open, onOpenChange }: Props) {
               min={0}
               max={100}
               step={1}
-              onValueChange={(v) => patch({ bgAudioVolume: (v[0] ?? 50) / 100 })}
+              onValueChange={(v) => {
+                const nv = (v[0] ?? 50) / 100;
+                if (previewRef.current) previewRef.current.volume = nv;
+                patch({ bgAudioVolume: nv });
+              }}
             />
           </div>
 
