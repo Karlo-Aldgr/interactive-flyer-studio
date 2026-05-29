@@ -28,11 +28,13 @@ const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
 
 export function PagesPanel() {
   const flyer = useEditorStore((s) => s.flyer);
+  const setFlyer = useEditorStore((s) => s.setFlyer);
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectPage = useEditorStore((s) => s.selectPage);
   const addPage = useEditorStore((s) => s.addPage);
   const addLandingPage = useEditorStore((s) => s.addLandingPage);
+  const addScannedMenuPage = useEditorStore((s) => s.addScannedMenuPage);
   const setPageSize = useEditorStore((s) => s.setPageSize);
   const deletePage = useEditorStore((s) => s.deletePage);
   const duplicatePage = useEditorStore((s) => s.duplicatePage);
