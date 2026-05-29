@@ -545,6 +545,27 @@ export function MenuCartUI({
                     <span>Total</span><span>{fmt(total)}</span>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setOrderType("dine_in")}
+                    className={`rounded border px-3 py-2 text-xs font-medium ${orderType === "dine_in" ? "border-primary bg-primary/10" : "border-border"}`}>
+                    🍽 Dine in now
+                  </button>
+                  <button type="button" onClick={() => setOrderType("order_ahead")}
+                    className={`rounded border px-3 py-2 text-xs font-medium ${orderType === "order_ahead" ? "border-red-500 bg-red-500/10" : "border-border"}`}>
+                    ⏱ Order ahead (manager approval)
+                  </button>
+                </div>
+                <div>
+                  <Label className="text-xs">Table number *</Label>
+                  <Input className="mt-1" value={tableNumber} onChange={(e) => setTableNumber(e.target.value)} placeholder="e.g. 12" />
+                  {waiterName && <div className="mt-1 text-xs text-emerald-600">Server: {waiterName}</div>}
+                </div>
+                {orderType === "order_ahead" && (
+                  <div>
+                    <Label className="text-xs">Pickup time *</Label>
+                    <Input type="datetime-local" className="mt-1" value={pickupAt} onChange={(e) => setPickupAt(e.target.value)} />
+                  </div>
+                )}
                 <div>
                   <Label className="text-xs">Your name *</Label>
                   <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
@@ -560,9 +581,10 @@ export function MenuCartUI({
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setView(sections.length ? "menu" : "upsell")} className="flex-1">Add more</Button>
                   <Button disabled={submitting} onClick={submitOrder} className="flex-1">
-                    {submitting ? "Sending…" : checkoutMode === "payment" ? "Order & pay" : "Place order"}
+                    {submitting ? "Sending…" : orderType === "order_ahead" ? "Submit for approval" : checkoutMode === "payment" ? "Order & pay" : "Place order"}
                   </Button>
                 </div>
+
               </div>
             )}
 
