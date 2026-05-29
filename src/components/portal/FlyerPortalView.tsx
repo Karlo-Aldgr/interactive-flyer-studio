@@ -143,7 +143,9 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
       if (resetTarget === "analytics") {
         ({ error } = await supabase.from("analytics_events").delete().eq("flyer_id", flyer.id));
       } else if (resetTarget === "cart") {
-        ({ error } = await supabase.from("form_submissions").delete().eq("flyer_id", flyer.id).in("data->>kind", ["cart_order", "cart_pay_later"]));
+        const r1 = await supabase.from("form_submissions").delete().eq("flyer_id", flyer.id).eq("data->>kind", "cart_order");
+        const r2 = await supabase.from("form_submissions").delete().eq("flyer_id", flyer.id).eq("data->>kind", "cart_pay_later");
+        error = r1.error || r2.error;
       } else if (resetTarget === "polls") {
         ({ error } = await supabase.from("poll_votes").delete().eq("flyer_id", flyer.id));
       } else if (resetTarget === "appointments") {
