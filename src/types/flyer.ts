@@ -246,6 +246,16 @@ export interface ActionPayload {
   menuCheckoutMode?: "order_only" | "payment";
   menuPaymentLink?: string;
 
+  // menu_add_item — clickable product hotspot on a scanned menu page
+  menuItem?: {
+    id?: string;
+    name: string;
+    price?: number;
+    description?: string;
+    category?: "main" | "side" | "drink" | "dessert" | "other";
+    color?: string;
+  };
+
   // join_challenge
   challengeTitle?: string;
   challengeDescription?: string;
