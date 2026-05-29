@@ -744,6 +744,13 @@ export type Database = {
             referencedRelation: "waiters"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "table_assignments_waiter_id_fkey"
+            columns: ["waiter_id"]
+            isOneToOne: false
+            referencedRelation: "waiters_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       table_reservations: {
@@ -883,7 +890,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      waiters_public: {
+        Row: {
+          active: boolean | null
+          color: string | null
+          flyer_id: string | null
+          id: string | null
+          name: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          color?: string | null
+          flyer_id?: string | null
+          id?: string | null
+          name?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          color?: string | null
+          flyer_id?: string | null
+          id?: string | null
+          name?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       archive_menu_orders_daily: { Args: never; Returns: number }
