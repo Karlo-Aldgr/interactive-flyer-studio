@@ -388,6 +388,38 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
       />
       {isOwner && <PortalLinkDialog flyerId={flyer.id} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />}
 
+      <Dialog open={role === null} onOpenChange={() => { /* gated */ }}>
+        <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Who's signing in?</DialogTitle>
+            <DialogDescription>Choose how you want to use this portal.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Button variant="outline" className="h-auto justify-start gap-3 p-4" onClick={() => chooseRole("master")}>
+              <Crown className="h-5 w-5 text-amber-500" />
+              <div className="text-left">
+                <div className="font-medium">Master</div>
+                <div className="text-xs text-muted-foreground">Live orders across all tables · PIN required</div>
+              </div>
+            </Button>
+            <Button variant="outline" className="h-auto justify-start gap-3 p-4" disabled={goingToWaiter} onClick={() => chooseRole("waiter")}>
+              <UserCog className="h-5 w-5 text-blue-500" />
+              <div className="text-left">
+                <div className="font-medium">Waiter</div>
+                <div className="text-xs text-muted-foreground">Just my tables · PIN required</div>
+              </div>
+            </Button>
+            <Button variant="outline" className="h-auto justify-start gap-3 p-4" onClick={() => chooseRole("analytics")}>
+              <BarChart3 className="h-5 w-5 text-emerald-500" />
+              <div className="text-left">
+                <div className="font-medium">Analytics</div>
+                <div className="text-xs text-muted-foreground">Views, clicks, subscribers, polls, forms</div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
         {[
           ["Views", viewEvents.length],
