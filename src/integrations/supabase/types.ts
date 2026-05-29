@@ -239,6 +239,27 @@ export type Database = {
         }
         Relationships: []
       }
+      flyer_master_auth: {
+        Row: {
+          created_at: string
+          flyer_id: string
+          master_pin_hash: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          flyer_id: string
+          master_pin_hash: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          flyer_id?: string
+          master_pin_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flyer_portal_credentials: {
         Row: {
           created_at: string
@@ -460,6 +481,9 @@ export type Database = {
       menu_orders: {
         Row: {
           action_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          archived_at: string | null
           created_at: string
           customer_email: string | null
           customer_name: string
@@ -468,14 +492,21 @@ export type Database = {
           id: string
           items: Json
           notes: string | null
+          order_type: string
           payment_status: string
+          pickup_at: string | null
           session_id: string | null
           status: string
           subtotal_cents: number
+          table_number: string | null
           updated_at: string
+          waiter_id: string | null
         }
         Insert: {
           action_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name: string
@@ -484,14 +515,21 @@ export type Database = {
           id?: string
           items?: Json
           notes?: string | null
+          order_type?: string
           payment_status?: string
+          pickup_at?: string | null
           session_id?: string | null
           status?: string
           subtotal_cents?: number
+          table_number?: string | null
           updated_at?: string
+          waiter_id?: string | null
         }
         Update: {
           action_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name?: string
@@ -500,11 +538,15 @@ export type Database = {
           id?: string
           items?: Json
           notes?: string | null
+          order_type?: string
           payment_status?: string
+          pickup_at?: string | null
           session_id?: string | null
           status?: string
           subtotal_cents?: number
+          table_number?: string | null
           updated_at?: string
+          waiter_id?: string | null
         }
         Relationships: []
       }
@@ -669,6 +711,41 @@ export type Database = {
         }
         Relationships: []
       }
+      table_assignments: {
+        Row: {
+          created_at: string
+          flyer_id: string
+          id: string
+          table_number: string
+          updated_at: string
+          waiter_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          flyer_id: string
+          id?: string
+          table_number: string
+          updated_at?: string
+          waiter_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          flyer_id?: string
+          id?: string
+          table_number?: string
+          updated_at?: string
+          waiter_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_assignments_waiter_id_fkey"
+            columns: ["waiter_id"]
+            isOneToOne: false
+            referencedRelation: "waiters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       table_reservations: {
         Row: {
           action_id: string | null
@@ -771,11 +848,45 @@ export type Database = {
         }
         Relationships: []
       }
+      waiters: {
+        Row: {
+          active: boolean
+          color: string
+          created_at: string
+          flyer_id: string
+          id: string
+          name: string
+          pin_hash: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          color?: string
+          created_at?: string
+          flyer_id: string
+          id?: string
+          name: string
+          pin_hash: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          color?: string
+          created_at?: string
+          flyer_id?: string
+          id?: string
+          name?: string
+          pin_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      archive_menu_orders_daily: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
