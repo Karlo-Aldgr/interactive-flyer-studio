@@ -417,11 +417,43 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
             </Button>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setResetTarget("analytics")}>Reset analytics</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setResetTarget("cart")}>Reset cart</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setResetTarget("polls")}>Reset polls</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setResetTarget("appointments")}>Reset appointments</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setResetTarget("live_orders")}>Reset live orders</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="ghost" size="sm" onClick={() => { sessionStorage.removeItem(ROLE_KEY); setRole(null); }}>
             Switch role
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={resetTarget !== null} onOpenChange={(o) => !o && setResetTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset {resetTarget ? RESET_LABELS[resetTarget].toLowerCase() : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes all {resetTarget ? RESET_LABELS[resetTarget].toLowerCase() : ""} data for this flyer. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={resetting} onClick={(e) => { e.preventDefault(); performReset(); }}>
+              {resetting ? "Resetting…" : "Reset"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <ShareDialog
         open={shareOpen}
