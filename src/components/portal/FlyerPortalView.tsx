@@ -404,7 +404,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
         ))}
       </div>
 
-      <Tabs defaultValue="analytics">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="polls">Polls ({polls.length})</TabsTrigger>
