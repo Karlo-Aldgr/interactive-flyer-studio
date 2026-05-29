@@ -407,7 +407,10 @@ export function MenuCartUI({
   const total = cart.reduce((sum, l) => sum + (l.item.price || 0) * l.qty, 0);
   const itemCount = cart.reduce((n, l) => n + l.qty, 0);
 
-  function handleItemTap(item: MenuItem) { add(item); setView("upsell"); }
+  function handleItemTap(item: MenuItem) {
+    add(item);
+    toast.success(`${item.name} added`, { duration: 1200 });
+  }
 
   async function submitOrder() {
     if (!name.trim()) return toast.error("Please enter your name");
