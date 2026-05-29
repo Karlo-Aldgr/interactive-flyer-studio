@@ -456,6 +456,20 @@ export function MenuCartUI({
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
 
+        {/* Top banner: table waiter greeting (or prompt) */}
+        {tableNumber.trim() ? (
+          <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+            {waiterName
+              ? <>👋 Your server tonight is <strong>{waiterName}</strong>. Table <strong>{tableNumber}</strong>.</>
+              : <>Table <strong>{tableNumber}</strong> — a server will be with you shortly.</>}
+          </div>
+        ) : (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs">
+            Enter your table number at checkout to see your server.
+          </div>
+        )}
+
+
         {loading ? <Loader2 className="mx-auto h-6 w-6 animate-spin" /> : (
           <>
             {view === "menu" && (
