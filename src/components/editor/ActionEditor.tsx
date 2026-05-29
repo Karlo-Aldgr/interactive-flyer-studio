@@ -54,6 +54,7 @@ const ACTION_LABELS: Record<ActionType, string> = {
   show_menu: "Show menu",
   join_challenge: "Join challenge",
   business_rating: "Business rating (5 stars)",
+  menu_add_item: "Add menu item to cart",
 };
 
 const PRESET_TYPES: ActionType[] = ["book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map", "gallery", "survey", "testimonial", "reserve_table", "schedule_consultation", "show_menu", "join_challenge", "business_rating"];
