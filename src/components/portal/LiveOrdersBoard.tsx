@@ -205,7 +205,8 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
               })}
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
