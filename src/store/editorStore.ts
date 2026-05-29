@@ -213,6 +213,64 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ pages: [...s.pages, newPage], selectedPageId: newPage.id, past, future: [], dirty: true });
   },
 
+  addScannedMenuPage: ({ imageUrl, imgWidth, imgHeight, items }) => {
+    const s = get();
+    if (!s.flyer) return "";
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    // Fit the page to flyer width, preserve aspect ratio
+    const pageW = s.flyer.settings.width;
+    const pageH = Math.round(pageW * (imgHeight / Math.max(1, imgWidth)));
+    const base = emptyPage(s.flyer.id, s.pages.length);
+    const pageId = base.id;
+    const imgLayer: Layer = {
+      ...defaultLayer("image", pageId, 0),
+      position: { x: 0, y: 0 },
+      size: { width: pageW, height: pageH },
+      content: { src: imageUrl },
+      style: {},
+    };
+    const hotspotLayers: Layer[] = items
+      .filter((it) => it.bbox && it.bbox.w > 0 && it.bbox.h > 0)
+      .map((it, idx) => {
+        const b = it.bbox;
+        const hl: Layer = {
+          ...defaultLayer("hotspot", pageId, idx + 1),
+          position: { x: b.x * pageW, y: b.y * pageH },
+          size: { width: Math.max(20, b.w * pageW), height: Math.max(20, b.h * pageH) },
+          content: { hotspotShape: "rect" },
+          action: {
+            id: uid(),
+            type: "menu_add_item" as any,
+            payload: {
+              menuItem: {
+                id: it.id || uid(),
+                name: it.name,
+                price: it.price ?? 0,
+                description: it.description,
+                category: (it.category as any) || "other",
+                color: it.color,
+              },
+            },
+          },
+        };
+        return hl;
+      });
+    const newPage: FlyerPage = {
+      ...base,
+      name: `Menu page ${s.pages.length + 1}`,
+      background: { ...base.background, size: { width: pageW, height: pageH } },
+      layers: [imgLayer, ...hotspotLayers],
+    };
+    set({
+      pages: [...s.pages, newPage],
+      selectedPageId: newPage.id,
+      past,
+      future: [],
+      dirty: true,
+    });
+    return pageId;
+  },
+
   setPageSize: (id, w, h, mode) => {
     const s = get();
     const page = s.pages.find((p) => p.id === id);
