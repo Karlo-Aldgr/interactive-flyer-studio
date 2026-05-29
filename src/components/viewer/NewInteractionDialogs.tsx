@@ -400,12 +400,27 @@ export function MenuCartUI({
     setSubmitting(true);
     const items = cart.map((l) => ({ id: l.item.id, name: l.item.name, price: l.item.price, qty: l.qty, category: l.item.category }));
     const subtotal_cents = Math.round(total * 100);
+    // Insert into menu_orders for the dedicated orders table
     const { error } = await supabase.from("menu_orders").insert([{
       flyer_id: flyerId, action_id: actionId || null, customer_name: name.trim(), customer_phone: phone.trim() || null,
       items, subtotal_cents, notes: notes.trim() || null,
     }]);
+    // Also record in form_submissions so it shows up in the flyer portal "Cart orders" tab
+    const { error: subErr } = await supabase.from("form_submissions").insert([{
+      flyer_id: flyerId,
+      data: {
+        kind: "cart_order",
+        source: "menu_scan",
+        customer: { name: name.trim(), phone: phone.trim() || null },
+        items,
+        currency,
+        total: Number(total.toFixed(2)),
+        notes: notes.trim() || null,
+      } as any,
+      status: "new",
+    }]);
     setSubmitting(false);
-    if (error) return toast.error("Could not place order");
+    if (error || subErr) return toast.error("Could not place order");
     if (checkoutMode === "payment" && paymentLink) {
       toast.success("Order placed — redirecting to payment.");
       window.open(paymentLink, "_blank");
