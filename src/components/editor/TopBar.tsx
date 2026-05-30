@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
   Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, Music2, BarChart3, Users, Wallet, Inbox, Link as LinkIcon,
-  Briefcase, PartyPopper, CalendarIcon,
+  Briefcase, PartyPopper, CalendarIcon, Timer,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
