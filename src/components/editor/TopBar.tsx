@@ -615,6 +615,21 @@ export function TopBar({ saving }: Props) {
           <TooltipTrigger asChild>
             <Button
               size="sm"
+              variant={(flyer.settings as any)?.autoAdvanceEnabled ? "default" : "outline"}
+              onClick={() => setAutoAdvanceOpen(true)}
+            >
+              <Timer className="mr-1 h-4 w-4" /> Auto-advance
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {(flyer.settings as any)?.autoAdvanceEnabled
+              ? `Auto-advancing every ${(flyer.settings as any)?.autoAdvanceMs ?? 5000}ms — click to edit`
+              : "Automatically flip to the next page on a timer"}
+          </TooltipContent>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
               variant={hasAnySocial(flyer.settings.social) ? "default" : "outline"}
               onClick={() => setSocialOpen(true)}
             >
