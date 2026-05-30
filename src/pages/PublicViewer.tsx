@@ -1575,6 +1575,25 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageIndex, loading, flyer?.id, pages.length]);
 
+  // Auto-advance: cycle to the next page on a configurable timer (ms).
+  // Paused while any popup/dialog/form/video/coupon/gallery overlay is open.
+  useEffect(() => {
+    if (loading || !flyer || pages.length < 2) return;
+    const enabled = (flyer.settings as any)?.autoAdvanceEnabled ?? false;
+    const ms = Number((flyer.settings as any)?.autoAdvanceMs ?? 0);
+    const loop = (flyer.settings as any)?.autoAdvanceLoop ?? true;
+    if (!enabled || !ms || ms < 100) return;
+    if (popup || video || formAction || coupon || gallery || confirmAction || zoomImage || zoomPopup) return;
+    const t = window.setTimeout(() => {
+      setPageIndex((i) => {
+        const next = i + 1;
+        if (next >= pages.length) return loop ? 0 : i;
+        return next;
+      });
+    }, ms);
+    return () => window.clearTimeout(t);
+  }, [pageIndex, loading, flyer, pages.length, popup, video, formAction, coupon, gallery, confirmAction, zoomImage, zoomPopup]);
+
   // Wait for image layers to load before drawing hotspot/highlight overlays so
   // viewers see the image first, never naked rings on a blank background.
   // NOTE: hooks must be called before any early return.
