@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
   Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, Music2, BarChart3, Users, Wallet, Inbox, Link as LinkIcon,
-  Briefcase, PartyPopper, CalendarIcon,
+  Briefcase, PartyPopper, CalendarIcon, Timer,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -93,6 +94,7 @@ export function TopBar({ saving }: Props) {
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
   const [socialOpen, setSocialOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [autoAdvanceOpen, setAutoAdvanceOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<FlyerCategory>(((flyer as any)?.category as FlyerCategory) || "business");
   const [editEventDate, setEditEventDate] = useState<Date | undefined>(
     (flyer as any)?.event_date ? new Date(((flyer as any).event_date as string) + "T00:00:00") : undefined
@@ -613,6 +615,22 @@ export function TopBar({ saving }: Props) {
           <TooltipTrigger asChild>
             <Button
               size="sm"
+              variant={(flyer.settings as any)?.autoAdvanceEnabled ? "default" : "outline"}
+              onClick={() => setAutoAdvanceOpen(true)}
+            >
+              <Timer className="mr-1 h-4 w-4" /> Auto-advance
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {(flyer.settings as any)?.autoAdvanceEnabled
+              ? `Auto-advancing every ${(flyer.settings as any)?.autoAdvanceMs ?? 5000}ms — click to edit`
+              : "Automatically flip to the next page on a timer"}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
               variant={hasAnySocial(flyer.settings.social) ? "default" : "outline"}
               onClick={() => setSocialOpen(true)}
             >
@@ -808,6 +826,64 @@ export function TopBar({ saving }: Props) {
         flyerTitle={flyer.title}
         flyerUrl={viewerUrl}
       />
+
+      <Dialog open={autoAdvanceOpen} onOpenChange={setAutoAdvanceOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Auto-advance pages</DialogTitle>
+            <DialogDescription>
+              Automatically flip to the next page on a timer. Pauses while any popup, video, or form is open.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <Label className="text-sm font-medium">Enable auto-advance</Label>
+                <p className="text-xs text-muted-foreground">Cycles pages on the live flyer.</p>
+              </div>
+              <Switch
+                checked={(flyer.settings as any)?.autoAdvanceEnabled ?? false}
+                onCheckedChange={(v) =>
+                  setFlyer({ settings: { ...flyer.settings, autoAdvanceEnabled: v } as any })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Interval (milliseconds)</Label>
+              <Input
+                type="number"
+                min={100}
+                step={100}
+                value={(flyer.settings as any)?.autoAdvanceMs ?? 5000}
+                onChange={(e) =>
+                  setFlyer({
+                    settings: {
+                      ...flyer.settings,
+                      autoAdvanceMs: Math.max(100, Number(e.target.value) || 0),
+                    } as any,
+                  })
+                }
+              />
+              <p className="mt-1 text-xs text-muted-foreground">1000 ms = 1 second. Minimum 100ms.</p>
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <Label className="text-sm font-medium">Loop back to first page</Label>
+                <p className="text-xs text-muted-foreground">When the last page is reached, restart from page 1.</p>
+              </div>
+              <Switch
+                checked={(flyer.settings as any)?.autoAdvanceLoop ?? true}
+                onCheckedChange={(v) =>
+                  setFlyer({ settings: { ...flyer.settings, autoAdvanceLoop: v } as any })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setAutoAdvanceOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }
