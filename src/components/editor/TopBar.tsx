@@ -626,6 +626,7 @@ export function TopBar({ saving }: Props) {
               ? `Auto-advancing every ${(flyer.settings as any)?.autoAdvanceMs ?? 5000}ms — click to edit`
               : "Automatically flip to the next page on a timer"}
           </TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
