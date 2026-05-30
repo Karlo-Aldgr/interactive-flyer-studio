@@ -1697,8 +1697,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
 
   return (
     <div
-      className={`flex min-h-screen justify-center ${enlarged ? "items-start" : "items-start"} ${isLinkedPage ? "overflow-hidden" : "overflow-auto"}`}
-      style={{ background: page.background.color || "#fff", touchAction: "pinch-zoom" }}
+      className={`min-h-screen ${isLinkedPage ? "overflow-hidden" : "overflow-auto"}`}
+      style={{ background: page.background.color || "#fff", touchAction: enlarged ? "pan-x pan-y pinch-zoom" : "pinch-zoom" }}
     >
       {previewMode && (
         <div className="fixed top-3 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-4 py-1.5 text-xs font-medium shadow-elegant backdrop-blur">
@@ -1712,7 +1712,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </button>
         </div>
       )}
-      <div ref={stageWrapRef} style={{ position: "relative", width: W * scale, height: H * scale, background: page.background.color || "#fff" }}>
+      <div ref={stageWrapRef} style={{ position: "relative", width: W * scale, height: H * scale, margin: "0 auto", background: page.background.color || "#fff" }}>
         <Stage width={W * scale} height={H * scale} scaleX={scale} scaleY={scale}>
           <KLayer>
             <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
