@@ -7,7 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2 } from "lucide-react";
+import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -420,10 +421,24 @@ export function PagesPanel() {
       )}
 
       {flyer && (flyer.settings as any)?.menuCatalog && (
-        <MenuCatalogEditor
-          catalog={(flyer.settings as any).menuCatalog}
-          onChange={(next) => setFlyer({ settings: { ...flyer.settings, menuCatalog: next } as any })}
-        />
+        <div className="border-t border-border p-3">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="h-8 w-full text-xs">
+                <UtensilsCrossed className="mr-1 h-3.5 w-3.5" /> Edit menu items
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
+              <DialogHeader className="px-4 pt-4">
+                <DialogTitle>Menu items</DialogTitle>
+              </DialogHeader>
+              <MenuCatalogEditor
+                catalog={(flyer.settings as any).menuCatalog}
+                onChange={(next) => setFlyer({ settings: { ...flyer.settings, menuCatalog: next } as any })}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       )}
     </div>
   );
