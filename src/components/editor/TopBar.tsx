@@ -94,6 +94,7 @@ export function TopBar({ saving }: Props) {
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
   const [socialOpen, setSocialOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [autoAdvanceOpen, setAutoAdvanceOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<FlyerCategory>(((flyer as any)?.category as FlyerCategory) || "business");
   const [editEventDate, setEditEventDate] = useState<Date | undefined>(
     (flyer as any)?.event_date ? new Date(((flyer as any).event_date as string) + "T00:00:00") : undefined
