@@ -826,6 +826,64 @@ export function TopBar({ saving }: Props) {
         flyerTitle={flyer.title}
         flyerUrl={viewerUrl}
       />
+
+      <Dialog open={autoAdvanceOpen} onOpenChange={setAutoAdvanceOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Auto-advance pages</DialogTitle>
+            <DialogDescription>
+              Automatically flip to the next page on a timer. Pauses while any popup, video, or form is open.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <Label className="text-sm font-medium">Enable auto-advance</Label>
+                <p className="text-xs text-muted-foreground">Cycles pages on the live flyer.</p>
+              </div>
+              <Switch
+                checked={(flyer.settings as any)?.autoAdvanceEnabled ?? false}
+                onCheckedChange={(v) =>
+                  setFlyer({ settings: { ...flyer.settings, autoAdvanceEnabled: v } as any })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Interval (milliseconds)</Label>
+              <Input
+                type="number"
+                min={100}
+                step={100}
+                value={(flyer.settings as any)?.autoAdvanceMs ?? 5000}
+                onChange={(e) =>
+                  setFlyer({
+                    settings: {
+                      ...flyer.settings,
+                      autoAdvanceMs: Math.max(100, Number(e.target.value) || 0),
+                    } as any,
+                  })
+                }
+              />
+              <p className="mt-1 text-xs text-muted-foreground">1000 ms = 1 second. Minimum 100ms.</p>
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <Label className="text-sm font-medium">Loop back to first page</Label>
+                <p className="text-xs text-muted-foreground">When the last page is reached, restart from page 1.</p>
+              </div>
+              <Switch
+                checked={(flyer.settings as any)?.autoAdvanceLoop ?? true}
+                onCheckedChange={(v) =>
+                  setFlyer({ settings: { ...flyer.settings, autoAdvanceLoop: v } as any })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setAutoAdvanceOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }
