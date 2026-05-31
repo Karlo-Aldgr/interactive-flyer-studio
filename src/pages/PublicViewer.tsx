@@ -103,7 +103,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Flyer, FlyerPage, Layer, LayerAction, AirMessageBubble } from "@/types/flyer";
 import { IntroAnimatedGroup, resolveIntro } from "@/components/editor/IntroAnimatedGroup";
 import { AirBubble } from "@/components/AirBubble";
-import { Loader2, Copy, Check, MessageSquare, Share2 } from "lucide-react";
+import { Loader2, Copy, Check, MessageSquare, Share2, ChevronLeft, ChevronRight } from "lucide-react";
 import { buildSocialShareUrl } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -1594,6 +1594,23 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     return () => window.clearTimeout(t);
   }, [pageIndex, loading, flyer, pages.length, popup, video, formAction, coupon, gallery, confirmAction, zoomImage, zoomPopup]);
 
+  // Keyboard navigation: ArrowLeft/ArrowRight to change pages.
+  useEffect(() => {
+    if (pages.length < 2) return;
+    const blocked = popup || video || formAction || coupon || gallery || confirmAction || zoomImage || zoomPopup;
+    if (blocked) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (e.key === "ArrowRight") setPageIndex((i) => Math.min(pages.length - 1, i + 1));
+      else if (e.key === "ArrowLeft") setPageIndex((i) => Math.max(0, i - 1));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pages.length, popup, video, formAction, coupon, gallery, confirmAction, zoomImage, zoomPopup]);
+
+
+
   // Wait for image layers to load before drawing hotspot/highlight overlays so
   // viewers see the image first, never naked rings on a blank background.
   // NOTE: hooks must be called before any early return.
@@ -1914,6 +1931,61 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           >
             <Share2 size={18} />
           </button>
+        )}
+        {!isLinkedPage && !previewMode && pages.length > 1 && !popup && !video && !formAction && !coupon && !gallery && !confirmAction && !zoomImage && !zoomPopup && (
+          <div
+            style={{
+              position: "fixed",
+              bottom: 16,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 31,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "6px 10px",
+              borderRadius: 9999,
+              background: "rgba(0,0,0,0.55)",
+              color: "#fff",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Previous page"
+              disabled={pageIndex === 0}
+              onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+              style={{
+                width: 36, height: 36, borderRadius: 9999, border: "none",
+                background: "transparent", color: "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: pageIndex === 0 ? "not-allowed" : "pointer",
+                opacity: pageIndex === 0 ? 0.4 : 1,
+              }}
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <span style={{ fontSize: 13, fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "center" }}>
+              {pageIndex + 1} / {pages.length}
+            </span>
+            <button
+              type="button"
+              aria-label="Next page"
+              disabled={pageIndex >= pages.length - 1}
+              onClick={() => setPageIndex((i) => Math.min(pages.length - 1, i + 1))}
+              style={{
+                width: 36, height: 36, borderRadius: 9999, border: "none",
+                background: "transparent", color: "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: pageIndex >= pages.length - 1 ? "not-allowed" : "pointer",
+                opacity: pageIndex >= pages.length - 1 ? 0.4 : 1,
+              }}
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
         )}
       </div>
 
