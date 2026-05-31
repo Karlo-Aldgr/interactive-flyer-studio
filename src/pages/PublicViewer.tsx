@@ -1594,6 +1594,23 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     return () => window.clearTimeout(t);
   }, [pageIndex, loading, flyer, pages.length, popup, video, formAction, coupon, gallery, confirmAction, zoomImage, zoomPopup]);
 
+  // Keyboard navigation: ArrowLeft/ArrowRight to change pages.
+  useEffect(() => {
+    if (pages.length < 2) return;
+    const blocked = popup || video || formAction || coupon || gallery || confirmAction || zoomImage || zoomPopup;
+    if (blocked) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (e.key === "ArrowRight") setPageIndex((i) => Math.min(pages.length - 1, i + 1));
+      else if (e.key === "ArrowLeft") setPageIndex((i) => Math.max(0, i - 1));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pages.length, popup, video, formAction, coupon, gallery, confirmAction, zoomImage, zoomPopup]);
+
+
+
   // Wait for image layers to load before drawing hotspot/highlight overlays so
   // viewers see the image first, never naked rings on a blank background.
   // NOTE: hooks must be called before any early return.
