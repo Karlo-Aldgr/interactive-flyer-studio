@@ -169,7 +169,10 @@ export function PagesPanel() {
         </div>
       </div>
       <div className="max-h-64 overflow-y-auto">
-        {pages.map((p, i) => {
+        {(() => { let flyerCount = 0; return pages.map((p, i) => {
+          const isLanding = !!p.background?.linkPageId;
+          if (!isLanding) flyerCount += 1;
+          const label = isLanding ? "L" : String(flyerCount);
           const active = p.id === selectedPageId;
           const editing = editingId === p.id;
           return (
@@ -178,8 +181,8 @@ export function PagesPanel() {
               onClick={() => selectPage(p.id)}
               className={`group flex items-center gap-2 border-b border-border px-3 py-2 text-sm cursor-pointer ${active ? "bg-primary/10" : "hover:bg-muted/60"}`}
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold">
-                {i + 1}
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold" title={isLanding ? "Landing page (not counted)" : `Page ${flyerCount}`}>
+                {label}
               </span>
               {editing ? (
                 <Input
