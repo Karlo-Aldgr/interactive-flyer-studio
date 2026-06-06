@@ -228,7 +228,7 @@ export function PagesPanel() {
               </div>
             </div>
           );
-        })}
+        }); })()}
       </div>
 
       {activePage && (
