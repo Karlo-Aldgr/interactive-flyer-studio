@@ -1104,9 +1104,18 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [action?.id, action?.type, JSON.stringify(action?.payload)]);
 
-  // For embedded editors, propagate drafts immediately (they're saved with the parent)
+  // For embedded editors, propagate drafts immediately (they're saved with the parent).
+  // For top-level editors, auto-commit valid drafts so creators don't have to remember
+  // to click "Save action" — the explicit Save button still works as a confirmation.
   useEffect(() => {
-    if (embedded) onChange(draft);
+    if (embedded) {
+      onChange(draft);
+      return;
+    }
+    if (draft === null) return;
+    if (!isValid(draft)) return;
+    const t = setTimeout(() => onChange(draft), 250);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft]);
 
