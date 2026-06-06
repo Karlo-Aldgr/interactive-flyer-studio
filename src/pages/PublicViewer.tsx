@@ -557,8 +557,15 @@ function KonvaAirMessages({
   );
 }
 
+function useKonvaDisplayImage(src?: string) {
+  const safeSrc = src || "";
+  const [anonymousImg, anonymousStatus] = useImage(safeSrc, "anonymous");
+  const [plainImg] = useImage(anonymousStatus === "failed" ? safeSrc : "");
+  return anonymousImg || plainImg;
+}
+
 function ImageNode({ layer, props }: { layer: Layer; props: any }) {
-  const [img] = useImage(layer.content.src ?? "", "anonymous");
+  const img = useKonvaDisplayImage(layer.content.src);
   return <KonvaImage {...props} image={img} cornerRadius={layer.style.cornerRadius} />;
 }
 
