@@ -239,6 +239,39 @@ export type Database = {
         }
         Relationships: []
       }
+      example_flyers: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          sort_order: number
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          sort_order?: number
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          sort_order?: number
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       flyer_master_auth: {
         Row: {
           created_at: string
