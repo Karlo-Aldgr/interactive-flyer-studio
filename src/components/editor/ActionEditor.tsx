@@ -1894,6 +1894,17 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
           </>
         )}
 
+        {type === "product_grid" && (
+          <ProductGridEditor
+            title={p.productGridTitle || ""}
+            ctaLabel={p.productGridCtaLabel || ""}
+            products={p.products || []}
+            onChange={(patch) => update(patch)}
+          />
+        )}
+
+
+
         {type === "air_messages" && (
           <AirMessagesEditor
             depth={depth}
