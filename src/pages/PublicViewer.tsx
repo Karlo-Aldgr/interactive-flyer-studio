@@ -1889,6 +1889,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 .filter((l) => (l.action || l.type === "hotspot") && !hiddenIds.has(l.id))
                 .map((l) => {
                   const isEllipse = l.type === "hotspot" && l.content.hotspotShape === "ellipse";
+                  const color = l.action?.highlight?.color ?? "#7c3aed";
                   return isEllipse ? (
                     <Ellipse
                       key={"hb-" + l.id}
@@ -1896,16 +1897,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                       y={l.position.y + l.size.height / 2}
                       radiusX={l.size.width / 2}
                       radiusY={l.size.height / 2}
-                      stroke="#7c3aed" strokeWidth={2} dash={[8, 5]}
-                      fill="rgba(124,58,237,0.15)"
+                      stroke={color} strokeWidth={2} dash={[8, 5]}
+                      fill={`${color}26`}
                     />
                   ) : (
                     <Rect
                       key={"hb-" + l.id}
                       x={l.position.x} y={l.position.y}
                       width={l.size.width} height={l.size.height}
-                      stroke="#7c3aed" strokeWidth={2} dash={[8, 5]}
-                      fill="rgba(124,58,237,0.15)"
+                      stroke={color} strokeWidth={2} dash={[8, 5]}
+                      fill={`${color}26`}
                     />
                   );
                 })}
