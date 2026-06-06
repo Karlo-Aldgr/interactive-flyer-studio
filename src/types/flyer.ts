@@ -31,7 +31,19 @@ export type ActionType =
   | "show_menu"
   | "join_challenge"
   | "business_rating"
-  | "menu_add_item";
+  | "menu_add_item"
+  | "product_grid";
+
+export interface ProductGridItem {
+  id: string;
+  name: string;
+  price?: string;
+  currency?: string;
+  imageUrl?: string;
+  description?: string;
+  sizesEnabled?: boolean;
+  sizes?: string[]; // subset of ["S","M","L","XL","2XL","3XL","4XL","5XL","6XL"]
+}
 
 export interface SurveyQuestion {
   id: string;
