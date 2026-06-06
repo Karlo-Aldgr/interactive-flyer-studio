@@ -268,6 +268,11 @@ export interface ActionPayload {
     color?: string;
   };
 
+  // product_grid — multi-product shop popup
+  productGridTitle?: string;
+  productGridCtaLabel?: string;
+  products?: ProductGridItem[];
+
   // join_challenge
   challengeTitle?: string;
   challengeDescription?: string;
