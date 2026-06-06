@@ -741,6 +741,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [subscribeData, setSubscribeData] = useState<{ name: string; email: string; phone: string }>({ name: "", email: "", phone: "" });
   const [appointmentAction, setAppointmentAction] = useState<{ action: LayerAction; layer: Layer | null } | null>(null);
   const [newInteractionAction, setNewInteractionAction] = useState<LayerAction | null>(null);
+  const [productGrid, setProductGrid] = useState<LayerAction | null>(null);
+  const [productDetail, setProductDetail] = useState<{ action: LayerAction; product: any } | null>(null);
+  const [pdSize, setPdSize] = useState<string>("");
+  const [pdQty, setPdQty] = useState<number>(1);
   const sessionId = useMemo(() => getPollSessionId(), []);
   const [subscribing, setSubscribing] = useState(false);
   // Shopping cart for buy_product actions with productCartEnabled
