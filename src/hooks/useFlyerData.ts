@@ -198,7 +198,7 @@ export function useFlyerData(flyerId: string | undefined) {
         await supabase.from("actions").delete().eq("layer_id", l.id);
         await supabase.from("actions").insert([{
           layer_id: l.id,
-          type: l.action.type,
+          type: l.action.type as any,
           payload: l.action.payload as any,
           highlight: (l.action.highlight ?? null) as any,
         }]);

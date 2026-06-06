@@ -741,17 +741,22 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [subscribeData, setSubscribeData] = useState<{ name: string; email: string; phone: string }>({ name: "", email: "", phone: "" });
   const [appointmentAction, setAppointmentAction] = useState<{ action: LayerAction; layer: Layer | null } | null>(null);
   const [newInteractionAction, setNewInteractionAction] = useState<LayerAction | null>(null);
+  const [productGrid, setProductGrid] = useState<LayerAction | null>(null);
+  const [productDetail, setProductDetail] = useState<{ action: LayerAction; product: any } | null>(null);
+  const [pdSize, setPdSize] = useState<string>("");
+  const [pdQty, setPdQty] = useState<number>(1);
   const sessionId = useMemo(() => getPollSessionId(), []);
   const [subscribing, setSubscribing] = useState(false);
   // Shopping cart for buy_product actions with productCartEnabled
   type CartItem = {
-    id: string; // stable per product
+    id: string; // stable per product+size combo
     name: string;
     price: number; // numeric, 0 if not parseable
     priceDisplay: string;
     currency: string;
     image?: string;
     qty: number;
+    size?: string;
   };
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -786,6 +791,29 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       ];
     });
     toast.success(`Added ${addQty} × "${p.productName || "Product"}" to cart`);
+  }
+  function addProductToCart(prod: any, size: string | undefined, qty: number) {
+    const priceNum = Number(String(prod.price ?? "").replace(/[^0-9.]/g, "")) || 0;
+    const addQty = Math.max(1, Math.floor(qty || 1));
+    const lineId = `${prod.id}${size ? `|${size}` : ""}`;
+    setCart((prev) => {
+      const existing = prev.find((it) => it.id === lineId);
+      if (existing) return prev.map((it) => (it.id === lineId ? { ...it, qty: it.qty + addQty } : it));
+      return [
+        ...prev,
+        {
+          id: lineId,
+          name: prod.name || "Product",
+          price: priceNum,
+          priceDisplay: prod.price || "",
+          currency: prod.currency || "",
+          image: prod.imageUrl,
+          qty: addQty,
+          size,
+        },
+      ];
+    });
+    toast.success(`Added ${addQty} × "${prod.name || "Product"}"${size ? ` (${size})` : ""} to cart`);
   }
   const cartCount = cart.reduce((n, it) => n + it.qty, 0);
   const cartTotal = cart.reduce((n, it) => n + it.price * it.qty, 0);
@@ -1281,6 +1309,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         break;
       case "gallery":
         setGallery(a);
+        break;
+      case "product_grid":
+        setProductGrid(a);
+        setProductDetail(null);
         break;
       case "air_messages":
         setAirMessages((prev) => (prev.some((p) => p.action.id === a.id) ? prev : [...prev, { action: a, layer: layer ?? null }]));
@@ -1932,7 +1964,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             <Share2 size={18} />
           </button>
         )}
-        {!isLinkedPage && pages.length > 1 && !popup && !video && !formAction && !coupon && !gallery && !confirmAction && !zoomImage && !zoomPopup && (
+        {!isLinkedPage && pages.length > 1 && !popup && !video && !formAction && !coupon && !gallery && !confirmAction && !zoomImage && !zoomPopup && !productGrid && (
           <div
             style={{
               position: "fixed",
@@ -2570,6 +2602,135 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </button>
       )}
 
+      {/* Multi-product shop (product_grid) */}
+      <Dialog
+        open={!!productGrid}
+        onOpenChange={(o) => {
+          if (!o) { setProductGrid(null); setProductDetail(null); }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LucideIcons.ShoppingBag className="h-5 w-5" />
+              {productGrid?.payload.productGridTitle || "Shop"}
+            </DialogTitle>
+            {!productDetail && (
+              <DialogDescription>
+                {(productGrid?.payload.products?.length || 0)} product{(productGrid?.payload.products?.length || 0) === 1 ? "" : "s"}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {!productDetail && productGrid && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(productGrid.payload.products || []).map((prod: any) => (
+                <button
+                  key={prod.id}
+                  type="button"
+                  onClick={() => {
+                    setProductDetail({ action: productGrid, product: prod });
+                    setPdSize(prod.sizesEnabled && prod.sizes?.length ? prod.sizes[0] : "");
+                    setPdQty(1);
+                  }}
+                  className="text-left rounded-lg border border-border bg-card hover:border-primary transition overflow-hidden flex flex-col"
+                >
+                  <div className="aspect-square bg-muted flex items-center justify-center">
+                    {prod.imageUrl ? (
+                      <img src={prod.imageUrl} alt={prod.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <LucideIcons.Package className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="p-2">
+                    <div className="text-sm font-medium truncate">{prod.name || "Untitled"}</div>
+                    {prod.price && (
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {prod.currency ? `${prod.currency} ` : ""}{prod.price}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {productDetail && (() => {
+            const prod = productDetail.product;
+            const priceNum = Number(String(prod.price ?? "").replace(/[^0-9.]/g, "")) || 0;
+            const cur = prod.currency ? `${prod.currency} ` : "";
+            return (
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setProductDetail(null)}
+                  className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                >
+                  <LucideIcons.ChevronLeft className="h-3.5 w-3.5" /> Back to shop
+                </button>
+                {prod.imageUrl && (
+                  <img src={prod.imageUrl} alt={prod.name} className="w-full max-h-72 object-contain rounded-md bg-muted" />
+                )}
+                <div>
+                  <div className="text-lg font-semibold">{prod.name}</div>
+                  {prod.price && (
+                    <div className="text-base text-foreground mt-1">{cur}{prod.price}</div>
+                  )}
+                </div>
+                {prod.description && (
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{prod.description}</p>
+                )}
+                {prod.sizesEnabled && prod.sizes?.length > 0 && (
+                  <div>
+                    <Label className="text-xs">Size</Label>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {prod.sizes.map((s: string) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setPdSize(s)}
+                          className={`px-3 py-1.5 text-sm rounded border ${pdSize === s ? "bg-primary text-primary-foreground border-primary" : "border-border bg-background hover:bg-muted"}`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium">Quantity</span>
+                  <div className="inline-flex items-center gap-2">
+                    <button type="button" className="h-8 w-8 rounded-md border border-border hover:bg-muted disabled:opacity-50" disabled={pdQty <= 1} onClick={() => setPdQty((q) => Math.max(1, q - 1))}>−</button>
+                    <input type="number" min={1} max={999} value={pdQty} onChange={(e) => { const n = parseInt(e.target.value, 10); setPdQty(Number.isFinite(n) && n > 0 ? Math.min(999, n) : 1); }} className="h-8 w-14 rounded-md border border-border bg-background text-center text-sm" />
+                    <button type="button" className="h-8 w-8 rounded-md border border-border hover:bg-muted" onClick={() => setPdQty((q) => Math.min(999, q + 1))}>+</button>
+                  </div>
+                </div>
+                {priceNum > 0 && (
+                  <div className="flex items-center justify-between border-t border-border pt-2">
+                    <span className="text-sm text-muted-foreground">Subtotal</span>
+                    <span className="text-base font-semibold">{cur}{(priceNum * pdQty).toFixed(2)}</span>
+                  </div>
+                )}
+                <Button
+                  className="w-full"
+                  disabled={prod.sizesEnabled && prod.sizes?.length > 0 && !pdSize}
+                  onClick={() => {
+                    logClick(null, "product_grid_add_to_cart");
+                    addProductToCart(prod, pdSize || undefined, pdQty);
+                    setProductDetail(null);
+                    setProductGrid(null);
+                    setCartOpen(true);
+                  }}
+                >
+                  <LucideIcons.ShoppingCart className="h-4 w-4 mr-2" />
+                  Add to cart
+                </Button>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       {/* Cart drawer */}
       <Dialog open={cartOpen} onOpenChange={setCartOpen}>
         <DialogContent className="max-w-md">
@@ -2594,7 +2755,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{it.name}</div>
+                    <div className="text-sm font-medium truncate">{it.name}{it.size ? <span className="ml-1 text-xs text-muted-foreground">· {it.size}</span> : null}</div>
                     <div className="text-xs text-muted-foreground">
                       {it.currency ? `${it.currency} ` : ""}{it.priceDisplay || it.price.toFixed(2)}
                     </div>
