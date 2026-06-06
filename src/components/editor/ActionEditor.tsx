@@ -2681,3 +2681,123 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
   );
 }
 
+const ALL_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL", "6XL"];
+
+function ProductGridEditor({
+  title, ctaLabel, products, onChange,
+}: {
+  title: string;
+  ctaLabel: string;
+  products: ProductGridItem[];
+  onChange: (patch: { productGridTitle?: string; productGridCtaLabel?: string; products?: ProductGridItem[] }) => void;
+}) {
+  const setProducts = (next: ProductGridItem[]) => onChange({ products: next });
+  const updateAt = (idx: number, patch: Partial<ProductGridItem>) =>
+    setProducts(products.map((p, i) => (i === idx ? { ...p, ...patch } : p)));
+  const removeAt = (idx: number) => setProducts(products.filter((_, i) => i !== idx));
+  const add = () => {
+    if (products.length >= 12) {
+      toast.error("Maximum 12 products");
+      return;
+    }
+    setProducts([...products, { id: crypto.randomUUID(), name: "", price: "", currency: "$", sizesEnabled: false, sizes: [] }]);
+  };
+
+  return (
+    <>
+      <p className="text-[11px] text-muted-foreground">
+        Opens a shop popup with up to 12 products. Buyers tap an item, choose size + quantity, and add it to the flyer's shared cart (Venmo / Cash App / Apple Cash from your flyer's checkout settings).
+      </p>
+      <div>
+        <Label className="text-xs">Shop title</Label>
+        <Input className="mt-1" value={title} onChange={(e) => onChange({ productGridTitle: e.target.value })} placeholder="Shop" />
+      </div>
+      <div>
+        <Label className="text-xs">"View" button label (on cards)</Label>
+        <Input className="mt-1" value={ctaLabel} onChange={(e) => onChange({ productGridCtaLabel: e.target.value })} placeholder="View" />
+      </div>
+
+      <div className="space-y-3">
+        {products.map((prod, idx) => (
+          <div key={prod.id} className="rounded-md border border-border p-3 space-y-2 bg-muted/20">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold">Product {idx + 1}</span>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => removeAt(idx)}
+                aria-label="Remove product"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+            <AssetUpload
+              label="Image"
+              value={prod.imageUrl}
+              onChange={(url) => updateAt(idx, { imageUrl: url })}
+            />
+            <div>
+              <Label className="text-xs">Name</Label>
+              <Input className="mt-1" value={prod.name} onChange={(e) => updateAt(idx, { name: e.target.value })} placeholder="e.g. T-shirt" />
+            </div>
+            <div className="grid grid-cols-[1fr_90px] gap-2">
+              <div>
+                <Label className="text-xs">Price</Label>
+                <Input className="mt-1" value={prod.price || ""} onChange={(e) => updateAt(idx, { price: e.target.value })} placeholder="25.00" />
+              </div>
+              <div>
+                <Label className="text-xs">Currency</Label>
+                <Input className="mt-1" value={prod.currency || ""} onChange={(e) => updateAt(idx, { currency: e.target.value })} placeholder="$" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Short message / description</Label>
+              <Textarea className="mt-1" rows={2} value={prod.description || ""} onChange={(e) => updateAt(idx, { description: e.target.value })} placeholder="Tell buyers about this product…" />
+            </div>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={!!prod.sizesEnabled}
+                onChange={(e) => updateAt(idx, { sizesEnabled: e.target.checked, sizes: e.target.checked && !(prod.sizes?.length) ? ["S","M","L","XL"] : prod.sizes })}
+              />
+              <span className="text-xs">
+                <span className="font-medium">This product has sizes</span>
+                <span className="block text-muted-foreground">Pick which sizes are available below.</span>
+              </span>
+            </label>
+            {prod.sizesEnabled && (
+              <div className="flex flex-wrap gap-1.5">
+                {ALL_SIZES.map((s) => {
+                  const on = (prod.sizes || []).includes(s);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        const set = new Set(prod.sizes || []);
+                        if (on) set.delete(s); else set.add(s);
+                        updateAt(idx, { sizes: ALL_SIZES.filter((x) => set.has(x)) });
+                      }}
+                      className={`px-2 py-1 text-xs rounded border ${on ? "bg-primary text-primary-foreground border-primary" : "border-border bg-background hover:bg-muted"}`}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <Button size="sm" variant="outline" onClick={add} disabled={products.length >= 12}>
+        <Plus className="mr-1 h-3.5 w-3.5" /> Add product ({products.length}/12)
+      </Button>
+      <p className="text-[11px] text-muted-foreground">
+        Tip: open <strong>Checkout</strong> in the top bar to set this flyer's Venmo / Cash App / Apple Cash so buyers can pay you when they check out.
+      </p>
+    </>
+  );
+}
+
