@@ -1128,6 +1128,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
       id: draft?.id || crypto.randomUUID(),
       type: type as ActionType,
       payload: { ...p, ...patch },
+      ...(draft?.highlight ? { highlight: draft.highlight } : {}),
     });
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(action);

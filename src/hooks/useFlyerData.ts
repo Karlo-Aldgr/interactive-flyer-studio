@@ -190,18 +190,21 @@ export function useFlyerData(flyerId: string | undefined) {
       const layersWithAction = allLayers.filter((l) => l.action);
       const layersWithoutAction = allLayers.filter((l) => !l.action).map((l) => l.id);
       if (layersWithoutAction.length) {
-        await supabase.from("actions").delete().in("layer_id", layersWithoutAction);
+        const { error } = await supabase.from("actions").delete().in("layer_id", layersWithoutAction);
+        if (error) throw error;
       }
       for (const l of layersWithAction) {
         if (!l.action) continue;
         // Upsert by layer_id (delete then insert is simpler given no unique constraint)
-        await supabase.from("actions").delete().eq("layer_id", l.id);
-        await supabase.from("actions").insert([{
+        const { error: deleteError } = await supabase.from("actions").delete().eq("layer_id", l.id);
+        if (deleteError) throw deleteError;
+        const { error: insertError } = await supabase.from("actions").insert([{
           layer_id: l.id,
           type: l.action.type as any,
           payload: l.action.payload as any,
           highlight: (l.action.highlight ?? null) as any,
         }]);
+        if (insertError) throw insertError;
       }
     } catch (e: any) {
       toast.error("Save failed: " + e.message);
