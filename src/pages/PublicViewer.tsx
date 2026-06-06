@@ -1986,61 +1986,78 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             <Share2 size={18} />
           </button>
         )}
-        {!isLinkedPage && pages.length > 1 && !popup && !video && !formAction && !coupon && !gallery && !confirmAction && !zoomImage && !zoomPopup && !productGrid && (
-          <div
-            style={{
-              position: "fixed",
-              bottom: 16,
-              left: "50%",
-              transform: "translateX(-50%)",
-              zIndex: 31,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "6px 10px",
-              borderRadius: 9999,
-              background: "rgba(0,0,0,0.55)",
-              color: "#fff",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
-            }}
-          >
-            <button
-              type="button"
-              aria-label="Previous page"
-              disabled={pageIndex === 0}
-              onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+        {(() => {
+          // Landing pages (those configured to redirect to another page) should
+          // not appear in the visitor-facing page count or navigation.
+          const navPages = pages.filter((p) => !p.background?.linkPageId);
+          const navIdx = navPages.findIndex((p) => p.id === pages[pageIndex]?.id);
+          const visibleIdx = navIdx >= 0 ? navIdx : 0;
+          const total = navPages.length;
+          const goTo = (nextNavIdx: number) => {
+            const clamped = Math.max(0, Math.min(total - 1, nextNavIdx));
+            const target = navPages[clamped];
+            if (!target) return;
+            const realIdx = pages.findIndex((p) => p.id === target.id);
+            if (realIdx >= 0) setPageIndex(realIdx);
+          };
+          if (isLinkedPage || total <= 1 || popup || video || formAction || coupon || gallery || confirmAction || zoomImage || zoomPopup || productGrid) return null;
+          return (
+            <div
               style={{
-                width: 36, height: 36, borderRadius: 9999, border: "none",
-                background: "transparent", color: "#fff",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: pageIndex === 0 ? "not-allowed" : "pointer",
-                opacity: pageIndex === 0 ? 0.4 : 1,
+                position: "fixed",
+                bottom: 16,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 31,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "6px 10px",
+                borderRadius: 9999,
+                background: "rgba(0,0,0,0.55)",
+                color: "#fff",
+                backdropFilter: "blur(6px)",
+                WebkitBackdropFilter: "blur(6px)",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
               }}
             >
-              <ChevronLeft size={20} />
-            </button>
-            <span style={{ fontSize: 13, fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "center" }}>
-              {pageIndex + 1} / {pages.length}
-            </span>
-            <button
-              type="button"
-              aria-label="Next page"
-              disabled={pageIndex >= pages.length - 1}
-              onClick={() => setPageIndex((i) => Math.min(pages.length - 1, i + 1))}
-              style={{
-                width: 36, height: 36, borderRadius: 9999, border: "none",
-                background: "transparent", color: "#fff",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: pageIndex >= pages.length - 1 ? "not-allowed" : "pointer",
-                opacity: pageIndex >= pages.length - 1 ? 0.4 : 1,
-              }}
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        )}
+              <button
+                type="button"
+                aria-label="Previous page"
+                disabled={visibleIdx === 0}
+                onClick={() => goTo(visibleIdx - 1)}
+                style={{
+                  width: 36, height: 36, borderRadius: 9999, border: "none",
+                  background: "transparent", color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: visibleIdx === 0 ? "not-allowed" : "pointer",
+                  opacity: visibleIdx === 0 ? 0.4 : 1,
+                }}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <span style={{ fontSize: 13, fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "center" }}>
+                {visibleIdx + 1} / {total}
+              </span>
+              <button
+                type="button"
+                aria-label="Next page"
+                disabled={visibleIdx >= total - 1}
+                onClick={() => goTo(visibleIdx + 1)}
+                style={{
+                  width: 36, height: 36, borderRadius: 9999, border: "none",
+                  background: "transparent", color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: visibleIdx >= total - 1 ? "not-allowed" : "pointer",
+                  opacity: visibleIdx >= total - 1 ? 0.4 : 1,
+                }}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          );
+        })()}
+
       </div>
 
 
