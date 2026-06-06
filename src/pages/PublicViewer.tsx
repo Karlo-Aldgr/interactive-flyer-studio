@@ -1964,7 +1964,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             <Share2 size={18} />
           </button>
         )}
-        {!isLinkedPage && pages.length > 1 && !popup && !video && !formAction && !coupon && !gallery && !confirmAction && !zoomImage && !zoomPopup && (
+        {!isLinkedPage && pages.length > 1 && !popup && !video && !formAction && !coupon && !gallery && !confirmAction && !zoomImage && !zoomPopup && !productGrid && (
           <div
             style={{
               position: "fixed",
