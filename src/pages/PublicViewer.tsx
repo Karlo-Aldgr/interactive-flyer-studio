@@ -557,8 +557,29 @@ function KonvaAirMessages({
   );
 }
 
+function useKonvaDisplayImage(src?: string) {
+  const safeSrc = src || "";
+  const [anonymousImg, anonymousStatus] = useImage(safeSrc, "anonymous");
+  const [plainImg, setPlainImg] = useState<HTMLImageElement | undefined>();
+
+  useEffect(() => {
+    if (!safeSrc || anonymousStatus !== "failed") {
+      setPlainImg(undefined);
+      return;
+    }
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => { if (!cancelled) setPlainImg(img); };
+    img.onerror = () => { if (!cancelled) setPlainImg(undefined); };
+    img.src = safeSrc;
+    return () => { cancelled = true; };
+  }, [safeSrc, anonymousStatus]);
+
+  return anonymousImg || plainImg;
+}
+
 function ImageNode({ layer, props }: { layer: Layer; props: any }) {
-  const [img] = useImage(layer.content.src ?? "", "anonymous");
+  const img = useKonvaDisplayImage(layer.content.src);
   return <KonvaImage {...props} image={img} cornerRadius={layer.style.cornerRadius} />;
 }
 
