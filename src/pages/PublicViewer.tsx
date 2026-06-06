@@ -749,13 +749,14 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [subscribing, setSubscribing] = useState(false);
   // Shopping cart for buy_product actions with productCartEnabled
   type CartItem = {
-    id: string; // stable per product
+    id: string; // stable per product+size combo
     name: string;
     price: number; // numeric, 0 if not parseable
     priceDisplay: string;
     currency: string;
     image?: string;
     qty: number;
+    size?: string;
   };
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -790,6 +791,29 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       ];
     });
     toast.success(`Added ${addQty} × "${p.productName || "Product"}" to cart`);
+  }
+  function addProductToCart(prod: any, size: string | undefined, qty: number) {
+    const priceNum = Number(String(prod.price ?? "").replace(/[^0-9.]/g, "")) || 0;
+    const addQty = Math.max(1, Math.floor(qty || 1));
+    const lineId = `${prod.id}${size ? `|${size}` : ""}`;
+    setCart((prev) => {
+      const existing = prev.find((it) => it.id === lineId);
+      if (existing) return prev.map((it) => (it.id === lineId ? { ...it, qty: it.qty + addQty } : it));
+      return [
+        ...prev,
+        {
+          id: lineId,
+          name: prod.name || "Product",
+          price: priceNum,
+          priceDisplay: prod.price || "",
+          currency: prod.currency || "",
+          image: prod.imageUrl,
+          qty: addQty,
+          size,
+        },
+      ];
+    });
+    toast.success(`Added ${addQty} × "${prod.name || "Product"}"${size ? ` (${size})` : ""} to cart`);
   }
   const cartCount = cart.reduce((n, it) => n + it.qty, 0);
   const cartTotal = cart.reduce((n, it) => n + it.price * it.qty, 0);
