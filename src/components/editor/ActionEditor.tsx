@@ -1102,22 +1102,14 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
   useEffect(() => {
     setDraft(action);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [action?.id, action?.type, JSON.stringify(action?.payload)]);
+  }, [action?.id, action?.type, JSON.stringify(action?.payload), JSON.stringify(action?.highlight)]);
 
-  // For embedded editors, propagate drafts immediately (they're saved with the parent).
-  // For top-level editors, auto-commit valid drafts so creators don't have to remember
-  // to click "Save action" — the explicit Save button still works as a confirmation.
+  // For embedded editors, propagate drafts immediately because they're saved with the parent.
+  // Top-level editors stay manual: creators must click Save action to commit changes.
   useEffect(() => {
-    if (embedded) {
-      onChange(draft);
-      return;
-    }
-    if (draft === null) return;
-    if (!isValid(draft)) return;
-    const t = setTimeout(() => onChange(draft), 250);
-    return () => clearTimeout(t);
+    if (embedded) onChange(draft);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft]);
+  }, [draft, embedded]);
 
   // Publish the current draft to the editor store so the canvas can render
   // a live preview (e.g. air-message bubbles) before the user clicks Save.
@@ -1149,8 +1141,7 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
   }
   function discard() { setDraft(action); }
 
-  // Highlight (visual cue) edits propagate live without requiring a Save click —
-  // they're purely presentational and users expect immediate feedback on the canvas.
+  // Highlight edits are part of the action settings and follow the manual Save flow.
   function updateHighlight(patch: Partial<NonNullable<LayerAction["highlight"]>>) {
     if (!draft) return;
     const next: LayerAction = {
@@ -1158,7 +1149,6 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
       highlight: { ...(draft.highlight || {}), ...patch },
     };
     setDraft(next);
-    if (!embedded) onChange(next);
   }
 
   return (
