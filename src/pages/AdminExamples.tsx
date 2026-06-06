@@ -31,6 +31,24 @@ export default function AdminExamples() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const uploadThumb = async (file: File) => {
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `examples/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("flyer-thumbnails").upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from("flyer-thumbnails").getPublicUrl(path);
+      setForm((f) => ({ ...f, thumbnail_url: data.publicUrl }));
+      toast.success("Thumbnail uploaded");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -156,8 +174,23 @@ export default function AdminExamples() {
               <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://tapthatflyer.com/f/your-slug" />
             </div>
             <div>
-              <Label>Thumbnail image URL (optional)</Label>
-              <Input value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} placeholder="https://..." />
+              <Label>Thumbnail image (optional)</Label>
+              <div className="flex gap-2">
+                <Input value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} placeholder="https://... or upload" />
+                <Button type="button" variant="outline" disabled={uploading} onClick={() => document.getElementById("thumb-file-input")?.click()}>
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Upload"}
+                </Button>
+                <input
+                  id="thumb-file-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadThumb(f); e.target.value = ""; }}
+                />
+              </div>
+              {form.thumbnail_url && (
+                <img src={form.thumbnail_url} alt="thumbnail preview" className="mt-2 h-24 w-auto rounded border border-border object-cover" />
+              )}
             </div>
             <div>
               <Label>Description (optional)</Label>
