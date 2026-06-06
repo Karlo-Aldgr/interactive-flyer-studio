@@ -31,6 +31,24 @@ export default function AdminExamples() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const uploadThumb = async (file: File) => {
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `examples/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("flyer-thumbnails").upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from("flyer-thumbnails").getPublicUrl(path);
+      setForm((f) => ({ ...f, thumbnail_url: data.publicUrl }));
+      toast.success("Thumbnail uploaded");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
