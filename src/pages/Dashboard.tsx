@@ -172,6 +172,7 @@ export default function Dashboard() {
             <Button asChild variant="ghost" size="sm"><Link to="/my-jobs">My jobs</Link></Button>
             <Button asChild size="sm" className="shadow-glow"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit job</Link></Button>
             {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/jobs">Admin</Link></Button>}
+            {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/examples">Examples</Link></Button>}
             <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="mr-1 h-4 w-4" />Sign out</Button>
           </div>

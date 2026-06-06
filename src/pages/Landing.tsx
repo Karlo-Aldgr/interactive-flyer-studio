@@ -21,6 +21,7 @@ export default function Landing() {
           <nav className="hidden gap-8 text-sm font-medium text-muted-foreground md:flex">
             <a href="#options" className="hover:text-foreground transition">How it works</a>
             <a href="#interactions" className="hover:text-foreground transition">Interactions</a>
+            <Link to="/examples" className="hover:text-foreground transition">Examples</Link>
             <a href="#start" className="hover:text-foreground transition">Get started</a>
           </nav>
           <div className="flex items-center gap-2">
