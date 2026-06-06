@@ -2626,7 +2626,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{it.name}</div>
+                    <div className="text-sm font-medium truncate">{it.name}{it.size ? <span className="ml-1 text-xs text-muted-foreground">· {it.size}</span> : null}</div>
                     <div className="text-xs text-muted-foreground">
                       {it.currency ? `${it.currency} ` : ""}{it.priceDisplay || it.price.toFixed(2)}
                     </div>
