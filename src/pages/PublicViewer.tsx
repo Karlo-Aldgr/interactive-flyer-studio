@@ -1310,6 +1310,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "gallery":
         setGallery(a);
         break;
+      case "product_grid":
+        setProductGrid(a);
+        setProductDetail(null);
+        break;
       case "air_messages":
         setAirMessages((prev) => (prev.some((p) => p.action.id === a.id) ? prev : [...prev, { action: a, layer: layer ?? null }]));
         break;
