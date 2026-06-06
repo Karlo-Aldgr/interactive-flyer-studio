@@ -126,6 +126,8 @@ function isValid(draft: LayerAction | null): boolean {
       return !!(p.challengeTitle);
     case "business_rating":
       return true;
+    case "product_grid":
+      return !!(p.products && p.products.length > 0 && p.products.every((x) => x.name?.trim()));
     default: return true;
   }
 }
