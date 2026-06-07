@@ -25,6 +25,7 @@ export default function Landing() {
             <a href="#start" className="hover:text-foreground transition">Get started</a>
           </nav>
           <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm" className="md:hidden"><Link to="/examples">Examples</Link></Button>
             {user ? (
               <>
                 <Button asChild variant="ghost"><Link to="/my-jobs">My jobs</Link></Button>
