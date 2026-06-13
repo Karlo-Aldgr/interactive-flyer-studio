@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { useFlyerData } from "@/hooks/useFlyerData";
 import { TopBar } from "@/components/editor/TopBar";
 import { Toolbar } from "@/components/editor/Toolbar";
@@ -7,10 +7,21 @@ import { Inspector } from "@/components/editor/Inspector";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { PagesPanel } from "@/components/editor/PagesPanel";
 import { Loader2 } from "lucide-react";
+import { useCanEdit } from "@/hooks/useCanEdit";
 
 export default function Editor() {
   const { flyerId } = useParams();
+  const { canEdit, loading: accessLoading } = useCanEdit();
   const { loading, saving } = useFlyerData(flyerId);
+
+  if (accessLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (!canEdit) return <Navigate to="/dashboard" replace />;
 
   if (loading) {
     return (
