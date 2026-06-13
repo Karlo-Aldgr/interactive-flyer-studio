@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Sparkles, Plus, BarChart3, ExternalLink, MoreVertical, Trash2, Copy, Pencil, Loader2, FileText, LogOut, CalendarIcon, Briefcase, PartyPopper } from "lucide-react";
+import { Sparkles, Plus, BarChart3, ExternalLink, MoreVertical, Trash2, Copy, Pencil, Loader2, FileText, LogOut, CalendarIcon, Briefcase, PartyPopper, MailCheck, ShieldCheck } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Flyer, FlyerCategory } from "@/types/flyer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn, buildSocialShareUrl } from "@/lib/utils";
+import { useCanEdit } from "@/hooks/useCanEdit";
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const [newCategory, setNewCategory] = useState<FlyerCategory>("business");
   const [newEventDate, setNewEventDate] = useState<Date | undefined>(undefined);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { canEdit, loading: accessLoading } = useCanEdit();
 
   useEffect(() => {
     if (!user) return;
@@ -72,7 +74,7 @@ export default function Dashboard() {
     );
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (canEdit) load(); }, [canEdit]);
 
   const create = async () => {
     if (!user) return;
@@ -172,6 +174,7 @@ export default function Dashboard() {
             <Button asChild variant="ghost" size="sm"><Link to="/my-jobs">My jobs</Link></Button>
             <Button asChild size="sm" className="shadow-glow"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit job</Link></Button>
             {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/jobs">Admin</Link></Button>}
+            {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/editors"><ShieldCheck className="mr-1 h-4 w-4" />Editors</Link></Button>}
             {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/examples">Examples</Link></Button>}
             <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="mr-1 h-4 w-4" />Sign out</Button>
@@ -180,6 +183,25 @@ export default function Dashboard() {
       </header>
 
       <main className="container py-10">
+        {accessLoading ? (
+          <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        ) : !canEdit ? (
+          <Card className="mx-auto max-w-2xl border-dashed p-10 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <MailCheck className="h-7 w-7" />
+            </div>
+            <h1 className="font-display text-2xl font-bold md:text-3xl">Thanks — your order has been submitted and is under review!</h1>
+            <p className="mt-3 text-muted-foreground">
+              You will be contacted shortly via email or phone call. Once approved, your editor will be unlocked here automatically.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <Button asChild><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit another job</Link></Button>
+              <Button asChild variant="outline"><Link to="/my-jobs">View my jobs</Link></Button>
+              <Button asChild variant="ghost"><Link to="/examples">See examples</Link></Button>
+            </div>
+          </Card>
+        ) : (
+        <>
         <div className="flex items-end justify-between">
           <div>
             <h1 className="font-display text-3xl font-bold">Your flyers</h1>
@@ -267,6 +289,8 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+        </>
+        )}
       </main>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

@@ -26,6 +26,7 @@ const MyJobs = lazy(() => import("./pages/MyJobs"));
 const WaiterPortal = lazy(() => import("./pages/WaiterPortal"));
 const Examples = lazy(() => import("./pages/Examples"));
 const AdminExamples = lazy(() => import("./pages/AdminExamples"));
+const AdminEditors = lazy(() => import("./pages/AdminEditors"));
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/w/:token" element={<WaiterPortal />} />
               <Route path="/examples" element={<Examples />} />
               <Route path="/admin/examples" element={<ProtectedRoute><AdminExamples /></ProtectedRoute>} />
+              <Route path="/admin/editors" element={<ProtectedRoute><AdminEditors /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

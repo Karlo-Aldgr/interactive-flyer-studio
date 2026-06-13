@@ -950,6 +950,8 @@ export type Database = {
     }
     Functions: {
       archive_menu_orders_daily: { Args: never; Returns: number }
+      current_user_can_edit: { Args: never; Returns: boolean }
+      grant_editor_by_email: { Args: { _email: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -957,6 +959,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      list_editors: {
+        Args: never
+        Returns: {
+          email: string
+          granted_at: string
+          user_id: string
+        }[]
+      }
+      revoke_editor_by_email: { Args: { _email: string }; Returns: Json }
       unpublish_expired_events: { Args: never; Returns: number }
     }
     Enums: {
@@ -991,7 +1002,7 @@ export type Database = {
         | "business_rating"
         | "menu_add_item"
         | "product_grid"
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "editor"
       appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
       flyer_category: "business" | "event"
@@ -1166,7 +1177,7 @@ export const Constants = {
         "menu_add_item",
         "product_grid",
       ],
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "editor"],
       appointment_status: ["confirmed", "cancelled"],
       event_type: ["view", "click", "submit", "reveal"],
       flyer_category: ["business", "event"],
