@@ -601,7 +601,7 @@ export function TopBar({ saving }: Props) {
           </TooltipContent>
         </Tooltip>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-start gap-2">
         <Tooltip>
 
           <TooltipTrigger asChild>
