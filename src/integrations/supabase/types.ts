@@ -991,7 +991,7 @@ export type Database = {
         | "business_rating"
         | "menu_add_item"
         | "product_grid"
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "editor"
       appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
       flyer_category: "business" | "event"
@@ -1166,7 +1166,7 @@ export const Constants = {
         "menu_add_item",
         "product_grid",
       ],
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "editor"],
       appointment_status: ["confirmed", "cancelled"],
       event_type: ["view", "click", "submit", "reveal"],
       flyer_category: ["business", "event"],
