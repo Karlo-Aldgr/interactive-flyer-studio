@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Sparkles, Plus, BarChart3, ExternalLink, MoreVertical, Trash2, Copy, Pencil, Loader2, FileText, LogOut, CalendarIcon, Briefcase, PartyPopper } from "lucide-react";
+import { Sparkles, Plus, BarChart3, ExternalLink, MoreVertical, Trash2, Copy, Pencil, Loader2, FileText, LogOut, CalendarIcon, Briefcase, PartyPopper, MailCheck, ShieldCheck } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Flyer, FlyerCategory } from "@/types/flyer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn, buildSocialShareUrl } from "@/lib/utils";
+import { useCanEdit } from "@/hooks/useCanEdit";
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const [newCategory, setNewCategory] = useState<FlyerCategory>("business");
   const [newEventDate, setNewEventDate] = useState<Date | undefined>(undefined);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { canEdit, loading: accessLoading } = useCanEdit();
 
   useEffect(() => {
     if (!user) return;
@@ -72,7 +74,7 @@ export default function Dashboard() {
     );
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (canEdit) load(); }, [canEdit]);
 
   const create = async () => {
     if (!user) return;
@@ -172,6 +174,7 @@ export default function Dashboard() {
             <Button asChild variant="ghost" size="sm"><Link to="/my-jobs">My jobs</Link></Button>
             <Button asChild size="sm" className="shadow-glow"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit job</Link></Button>
             {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/jobs">Admin</Link></Button>}
+            {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/editors"><ShieldCheck className="mr-1 h-4 w-4" />Editors</Link></Button>}
             {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/examples">Examples</Link></Button>}
             <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="mr-1 h-4 w-4" />Sign out</Button>
