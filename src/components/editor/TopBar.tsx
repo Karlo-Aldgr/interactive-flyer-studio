@@ -518,6 +518,7 @@ export function TopBar({ saving }: Props) {
               size="sm"
               variant={(flyer as any).category === "event" ? "default" : "outline"}
               onClick={openCategory}
+              className="rounded-full"
             >
               {(flyer as any).category === "event" ? <PartyPopper className="mr-1 h-4 w-4" /> : <Briefcase className="mr-1 h-4 w-4" />}
               {(flyer as any).category === "event"
@@ -533,7 +534,7 @@ export function TopBar({ saving }: Props) {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button size="sm" variant="outline" onClick={() => setSubscribersOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setSubscribersOpen(true)} className="rounded-full">
               <Users className="mr-1 h-4 w-4" /> Subscribers
             </Button>
           </TooltipTrigger>
@@ -541,7 +542,7 @@ export function TopBar({ saving }: Props) {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="rounded-full">
               <Link to={`/flyer/${flyer.id}/portal`}>
                 <Inbox className="mr-1 h-4 w-4" /> Portal
               </Link>
@@ -551,7 +552,7 @@ export function TopBar({ saving }: Props) {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button size="sm" variant="outline" onClick={() => setPortalLinkOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setPortalLinkOpen(true)} className="rounded-full">
               <LinkIcon className="mr-1 h-4 w-4" /> Portal link
             </Button>
           </TooltipTrigger>
@@ -559,7 +560,7 @@ export function TopBar({ saving }: Props) {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="rounded-full">
               <Link to={`/analytics/${flyer.id}`}>
                 <BarChart3 className="mr-1 h-4 w-4" /> Results
               </Link>
@@ -569,7 +570,7 @@ export function TopBar({ saving }: Props) {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="rounded-full">
               <a href={`/preview/${flyer.id}`} target="_blank" rel="noreferrer">
                 <Eye className="mr-1 h-4 w-4" />Preview <span className="ml-1 hidden text-[10px] uppercase tracking-wide text-muted-foreground sm:inline">(private)</span>
               </a>
@@ -585,6 +586,7 @@ export function TopBar({ saving }: Props) {
               size="sm"
               variant={flyer.settings.introAudioUrl ? "default" : "outline"}
               onClick={() => setIntroAudioOpen(true)}
+              className="rounded-full"
             >
               <Music className="mr-1 h-4 w-4" /> Intro audio
             </Button>
@@ -601,6 +603,7 @@ export function TopBar({ saving }: Props) {
               size="sm"
               variant={flyer.settings.bgAudioUrl ? "default" : "outline"}
               onClick={() => setBgAudioOpen(true)}
+              className="rounded-full"
             >
               <Music2 className="mr-1 h-4 w-4" /> Background audio
             </Button>
@@ -617,6 +620,7 @@ export function TopBar({ saving }: Props) {
               size="sm"
               variant={(flyer.settings as any)?.autoAdvanceEnabled ? "default" : "outline"}
               onClick={() => setAutoAdvanceOpen(true)}
+              className="rounded-full"
             >
               <Timer className="mr-1 h-4 w-4" /> Auto-advance
             </Button>
@@ -633,6 +637,7 @@ export function TopBar({ saving }: Props) {
               size="sm"
               variant={hasAnySocial(flyer.settings.social) ? "default" : "outline"}
               onClick={() => setSocialOpen(true)}
+              className="rounded-full"
             >
               <Share2 className="mr-1 h-4 w-4" /> Social
             </Button>
@@ -647,6 +652,7 @@ export function TopBar({ saving }: Props) {
               size="sm"
               variant={(flyer.settings.payVenmo || flyer.settings.payCashapp || flyer.settings.payApplePayContact) ? "default" : "outline"}
               onClick={() => setPaySettingsOpen(true)}
+              className="rounded-full"
             >
               <Wallet className="mr-1 h-4 w-4" /> Checkout
             </Button>
@@ -655,18 +661,18 @@ export function TopBar({ saving }: Props) {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button size="sm" variant="outline" onClick={() => setPayOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setPayOpen(true)} className="rounded-full">
               <DollarSign className="mr-1 h-4 w-4" /> Pay link
             </Button>
           </TooltipTrigger>
           <TooltipContent>Generate a one-off Venmo / Cash App / PayPal link to send to customers</TooltipContent>
         </Tooltip>
         {flyer.status === "published" && (
-          <Button size="sm" variant="outline" onClick={openShare}>
+          <Button size="sm" variant="outline" onClick={openShare} className="rounded-full">
             <Share2 className="mr-1 h-4 w-4" /> Share
           </Button>
         )}
-        <Button size="sm" onClick={togglePublish} className={flyer.status === "published" ? "" : "shadow-glow"}>
+        <Button size="sm" onClick={togglePublish} className={cn("rounded-full", flyer.status === "published" ? "" : "shadow-glow")}>
           <Globe className="mr-1 h-4 w-4" />
           {flyer.status === "published" ? "Unpublish" : "Publish"}
         </Button>
