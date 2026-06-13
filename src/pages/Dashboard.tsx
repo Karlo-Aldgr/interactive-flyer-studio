@@ -183,6 +183,25 @@ export default function Dashboard() {
       </header>
 
       <main className="container py-10">
+        {accessLoading ? (
+          <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        ) : !canEdit ? (
+          <Card className="mx-auto max-w-2xl border-dashed p-10 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <MailCheck className="h-7 w-7" />
+            </div>
+            <h1 className="font-display text-2xl font-bold md:text-3xl">Thanks — your order has been submitted and is under review!</h1>
+            <p className="mt-3 text-muted-foreground">
+              You will be contacted shortly via email or phone call. Once approved, your editor will be unlocked here automatically.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <Button asChild><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit another job</Link></Button>
+              <Button asChild variant="outline"><Link to="/my-jobs">View my jobs</Link></Button>
+              <Button asChild variant="ghost"><Link to="/examples">See examples</Link></Button>
+            </div>
+          </Card>
+        ) : (
+        <>
         <div className="flex items-end justify-between">
           <div>
             <h1 className="font-display text-3xl font-bold">Your flyers</h1>
@@ -270,6 +289,8 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+        </>
+        )}
       </main>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
