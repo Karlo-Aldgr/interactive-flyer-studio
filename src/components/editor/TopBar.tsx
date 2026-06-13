@@ -599,7 +599,10 @@ export function TopBar({ saving }: Props) {
               : "Play an audio clip when viewers first open the flyer"}
           </TooltipContent>
         </Tooltip>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
         <Tooltip>
+
           <TooltipTrigger asChild>
             <Button
               size="sm"
