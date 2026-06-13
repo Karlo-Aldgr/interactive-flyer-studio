@@ -681,7 +681,9 @@ export function TopBar({ saving }: Props) {
           <Globe className="mr-1 h-4 w-4" />
           {flyer.status === "published" ? "Unpublish" : "Publish"}
         </Button>
+        </div>
       </div>
+
 
       {/* Resize Dialog */}
       <Dialog open={resizeOpen} onOpenChange={setResizeOpen}>
