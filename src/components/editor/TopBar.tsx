@@ -499,7 +499,8 @@ export function TopBar({ saving }: Props) {
         </TooltipContent>
       </Tooltip>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex flex-col items-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(zoom - 0.1)}>
             <ZoomOut className="h-3.5 w-3.5" />
@@ -512,6 +513,7 @@ export function TopBar({ saving }: Props) {
         <span className="text-xs text-muted-foreground">
           {saving ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Saving...</span> : "Saved"}
         </span>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -597,7 +599,10 @@ export function TopBar({ saving }: Props) {
               : "Play an audio clip when viewers first open the flyer"}
           </TooltipContent>
         </Tooltip>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
         <Tooltip>
+
           <TooltipTrigger asChild>
             <Button
               size="sm"
@@ -676,7 +681,9 @@ export function TopBar({ saving }: Props) {
           <Globe className="mr-1 h-4 w-4" />
           {flyer.status === "published" ? "Unpublish" : "Publish"}
         </Button>
+        </div>
       </div>
+
 
       {/* Resize Dialog */}
       <Dialog open={resizeOpen} onOpenChange={setResizeOpen}>
