@@ -524,6 +524,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
           <TabsTrigger value="forms">Forms ({submissions.length})</TabsTrigger>
           <TabsTrigger value="cart">Cart ({cartOrders.length})</TabsTrigger>
           <TabsTrigger value="interactions">Interactions</TabsTrigger>
+          {actions.some((a) => a.type === "novel") && <TabsTrigger value="novels">📖 Novels</TabsTrigger>}
           {isOwner && <TabsTrigger value="live">🟢 Live Orders</TabsTrigger>}
           {isOwner && <TabsTrigger value="staff">Staff & Tables</TabsTrigger>}
           {isOwner && <TabsTrigger value="archive">Archive</TabsTrigger>}
