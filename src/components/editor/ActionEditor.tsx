@@ -2898,9 +2898,28 @@ function NovelEditor({ draft, update }: { draft: LayerAction; update: (patch: an
           onChange={(e) => { setText(e.target.value); update({ novelManuscript: e.target.value }); }}
           placeholder="# Chapter 1: The Beginning&#10;&#10;It was a dark and stormy night...&#10;&#10;# Chapter 2: The Journey&#10;..."
         />
-        <Button className="mt-2" size="sm" onClick={splitNow} disabled={busy}>
-          {busy ? "Splitting…" : `Split into chapters (${chapters.length} now)`}
-        </Button>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button size="sm" onClick={splitNow} disabled={busy}>
+            {busy ? "Splitting…" : `Split into chapters (${chapters.length} now)`}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const nextNum = (chapters[chapters.length - 1]?.number || chapters.length) + 1;
+              const newCh: NovelChapter = {
+                id: `ch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                number: nextNum,
+                title: `Chapter ${nextNum}`,
+                body: "",
+                free: chapters.length < freeCount,
+              };
+              update({ novelChapters: [...chapters, newCh] });
+            }}
+          >
+            + Add chapter
+          </Button>
+        </div>
       </div>
 
       {chapters.length > 0 && (
@@ -2920,33 +2939,35 @@ function NovelEditor({ draft, update }: { draft: LayerAction; update: (patch: an
               <span className="text-[11px] text-muted-foreground">chapters</span>
             </div>
           </div>
-          <div className="max-h-72 space-y-1 overflow-y-auto">
+          <div className="max-h-96 space-y-1 overflow-y-auto">
             {chapters.map((c, idx) => (
-              <div key={c.id} className="flex items-center gap-2 rounded border border-border bg-muted/30 p-2">
-                <span className="w-6 text-xs text-muted-foreground">{idx + 1}.</span>
-                <Input
-                  className="h-7 flex-1 text-xs"
-                  value={c.title}
-                  onChange={(e) => patchChapter(c.id, { title: e.target.value })}
-                />
-                <label className="flex items-center gap-1 text-[11px]">
-                  <Switch checked={!!c.free} onCheckedChange={(v) => patchChapter(c.id, { free: v })} />
-                  Free
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  className="h-7 w-20 text-xs"
-                  placeholder="price"
-                  value={c.price ?? ""}
-                  onChange={(e) => patchChapter(c.id, { price: e.target.value === "" ? undefined : Number(e.target.value) })}
-                />
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeChapter(c.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+              <ChapterRow
+                key={c.id}
+                index={idx}
+                chapter={c}
+                onPatch={(patch) => patchChapter(c.id, patch)}
+                onRemove={() => removeChapter(c.id)}
+              />
             ))}
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              const nextNum = (chapters[chapters.length - 1]?.number || chapters.length) + 1;
+              const newCh: NovelChapter = {
+                id: `ch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                number: nextNum,
+                title: `Chapter ${nextNum}`,
+                body: "",
+                free: chapters.length < freeCount,
+              };
+              update({ novelChapters: [...chapters, newCh] });
+            }}
+          >
+            + Add chapter
+          </Button>
         </div>
       )}
 
@@ -3002,5 +3023,59 @@ function NovelEditor({ draft, update }: { draft: LayerAction; update: (patch: an
     </div>
   );
 }
+
+function ChapterRow({
+  index,
+  chapter,
+  onPatch,
+  onRemove,
+}: {
+  index: number;
+  chapter: NovelChapter;
+  onPatch: (patch: Partial<NovelChapter>) => void;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded border border-border bg-muted/30 p-2">
+      <div className="flex items-center gap-2">
+        <span className="w-6 text-xs text-muted-foreground">{index + 1}.</span>
+        <Input
+          className="h-7 flex-1 text-xs"
+          value={chapter.title}
+          onChange={(e) => onPatch({ title: e.target.value })}
+        />
+        <label className="flex items-center gap-1 text-[11px]">
+          <Switch checked={!!chapter.free} onCheckedChange={(v) => onPatch({ free: v })} />
+          Free
+        </label>
+        <Input
+          type="number"
+          step="0.01"
+          className="h-7 w-20 text-xs"
+          placeholder="price"
+          value={chapter.price ?? ""}
+          onChange={(e) => onPatch({ price: e.target.value === "" ? undefined : Number(e.target.value) })}
+        />
+        <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => setOpen((v) => !v)}>
+          {open ? "Hide" : "Edit"}
+        </Button>
+        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onRemove}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      {open && (
+        <Textarea
+          className="mt-2 font-mono text-xs"
+          rows={8}
+          placeholder="Chapter body…"
+          value={chapter.body}
+          onChange={(e) => onPatch({ body: e.target.value })}
+        />
+      )}
+    </div>
+  );
+}
+
 
 
