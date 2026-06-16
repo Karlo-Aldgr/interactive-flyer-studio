@@ -22,6 +22,7 @@ import { sourceFromEventMetadata } from "@/lib/trafficSource";
 import { StaffTablesPanel } from "@/components/portal/StaffTablesPanel";
 import { LiveOrdersBoard } from "@/components/portal/LiveOrdersBoard";
 import { OrdersArchivePanel } from "@/components/portal/OrdersArchivePanel";
+import { NovelsPanel } from "@/components/portal/NovelsPanel";
 
 const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
 function getShareOrigin() {
