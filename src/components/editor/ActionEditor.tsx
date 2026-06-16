@@ -2387,6 +2387,9 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
           </>
         )}
 
+        {type === "novel" && <NovelEditor draft={draft!} update={update} />}
+
+
         {draft && !embedded && (
           <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 space-y-2">
             <div className="flex items-center justify-between">
