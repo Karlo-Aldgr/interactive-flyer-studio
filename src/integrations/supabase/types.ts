@@ -1117,6 +1117,7 @@ export type Database = {
         | "business_rating"
         | "menu_add_item"
         | "product_grid"
+        | "novel"
       app_role: "admin" | "user" | "editor"
       appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
@@ -1291,6 +1292,7 @@ export const Constants = {
         "business_rating",
         "menu_add_item",
         "product_grid",
+        "novel",
       ],
       app_role: ["admin", "user", "editor"],
       appointment_status: ["confirmed", "cancelled"],
