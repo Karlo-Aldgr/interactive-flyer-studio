@@ -3,6 +3,7 @@ import {
   FormInput, Navigation, Eye, CalendarPlus, Ticket, CheckSquare, ShoppingCart,
   BadgePercent, MapPin, Package, MessagesSquare, BarChart3, Mail, CalendarCheck,
   Images, ClipboardList, Quote, Utensils, BookOpen, Briefcase, Trophy, Star, ShoppingBag,
+  BookText,
 } from "lucide-react";
 
 export type InteractionDef = {
