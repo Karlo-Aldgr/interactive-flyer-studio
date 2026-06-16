@@ -1354,6 +1354,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "show_menu":
       case "join_challenge":
       case "business_rating":
+      case "novel":
         setNewInteractionAction(a);
         break;
       case "menu_add_item": {

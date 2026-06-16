@@ -43,6 +43,7 @@ export default function NewInteractionDialogs({ action, flyerId, sessionId, onCl
   if (type === "show_menu") return <MenuDialog action={action} flyerId={flyerId} onClose={onClose} />;
   if (type === "join_challenge") return <ChallengeDialog action={action} flyerId={flyerId} onClose={onClose} />;
   if (type === "business_rating") return <RatingDialog action={action} flyerId={flyerId} sessionId={sessionId} onClose={onClose} />;
+  if (type === "novel") return <NovelDialog action={action} flyerId={flyerId} onClose={onClose} />;
   return null;
 }
 
@@ -760,5 +761,299 @@ function RatingDialog({ action, flyerId, sessionId, onClose }: { action: LayerAc
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---- Novel / Story reader ----
+import { Lock, BookOpen, Mail as MailIcon, Heart } from "lucide-react";
+import type { NovelChapter } from "@/types/flyer";
+
+function buildPaypalUrl(handle: string | undefined, email: string | undefined, amount: number, currency: string): string {
+  if (handle) {
+    const h = handle.replace(/^@/, "");
+    return `https://www.paypal.com/paypalme/${encodeURIComponent(h)}/${amount}${(currency || "USD").toUpperCase()}`;
+  }
+  if (email) {
+    const params = new URLSearchParams({
+      cmd: "_xclick",
+      business: email,
+      amount: amount.toFixed(2),
+      currency_code: (currency || "USD").toUpperCase(),
+      item_name: "Book unlock",
+    });
+    return `https://www.paypal.com/cgi-bin/webscr?${params.toString()}`;
+  }
+  return "";
+}
+
+function NovelDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId: string; onClose: () => void }) {
+  const p: any = action.payload;
+  const chapters: NovelChapter[] = p.novelChapters || [];
+  const freeCount = typeof p.novelFreeCount === "number" ? p.novelFreeCount : 3;
+  const currency = p.novelCurrency || "USD";
+  const cacheKey = `novel_unlock_${flyerId}_${action.id}`;
+  const emailKey = `novel_email_${flyerId}_${action.id}`;
+
+  const [unlockedSet, setUnlockedSet] = useState<Set<number>>(() => {
+    try { return new Set<number>(JSON.parse(localStorage.getItem(cacheKey) || "[]")); } catch { return new Set(); }
+  });
+  const [bundleUnlocked, setBundleUnlocked] = useState<boolean>(() => localStorage.getItem(`${cacheKey}_bundle`) === "1");
+  const [openChapterId, setOpenChapterId] = useState<string | null>(null);
+  const [email, setEmail] = useState<string>(() => localStorage.getItem(emailKey) || "");
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const [unlockTarget, setUnlockTarget] = useState<{ kind: "bundle" | "chapter"; chapter?: NovelChapter; amount: number } | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [followOpen, setFollowOpen] = useState(false);
+  const [followName, setFollowName] = useState("");
+  const [followEmail, setFollowEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [txnId, setTxnId] = useState("");
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerEmail, setBuyerEmail] = useState("");
+
+  function persistUnlocked(numbers: number[], bundle: boolean) {
+    setUnlockedSet(new Set(numbers));
+    setBundleUnlocked(bundle);
+    localStorage.setItem(cacheKey, JSON.stringify(numbers));
+    localStorage.setItem(`${cacheKey}_bundle`, bundle ? "1" : "0");
+  }
+
+  async function restoreFromEmail() {
+    if (!email.trim()) return toast.error("Enter your email");
+    setSubmitting(true);
+    const { data, error } = await supabase
+      .from("novel_purchases")
+      .select("purchase_type, chapter_numbers, status")
+      .eq("flyer_id", flyerId)
+      .eq("action_id", action.id)
+      .ilike("buyer_email", email.trim())
+      .eq("status", "completed");
+    setSubmitting(false);
+    if (error) return toast.error(error.message);
+    const rows = data || [];
+    let bundle = bundleUnlocked;
+    const nums = new Set<number>(unlockedSet);
+    for (const r of rows) {
+      if (r.purchase_type === "bundle") bundle = true;
+      else for (const n of (r.chapter_numbers || [])) nums.add(n);
+    }
+    persistUnlocked(Array.from(nums), bundle);
+    localStorage.setItem(emailKey, email.trim());
+    setRestoreOpen(false);
+    toast.success(rows.length ? `Restored ${rows.length} purchase(s)` : "No completed purchases found yet");
+  }
+
+  function isUnlocked(c: NovelChapter, idx: number) {
+    if (c.free === true) return true;
+    if (c.free === false) {} else if (idx < freeCount) return true;
+    if (bundleUnlocked) return true;
+    return unlockedSet.has(c.number);
+  }
+
+  function priceFor(c: NovelChapter) {
+    return typeof c.price === "number" ? c.price : (typeof p.novelChapterPrice === "number" ? p.novelChapterPrice : 0.99);
+  }
+
+  function openPaypal(kind: "bundle" | "chapter", chapter?: NovelChapter) {
+    const amount = kind === "bundle" ? (Number(p.novelBundlePrice) || 0) : priceFor(chapter!);
+    if (!amount) return toast.error("Price not set by author");
+    const url = buildPaypalUrl(p.novelPaypalHandle, p.novelPaypalEmail, amount, currency);
+    if (!url) return toast.error("Author has not set up PayPal");
+    setUnlockTarget({ kind, chapter, amount });
+    supabase.from("analytics_events").insert([{
+      flyer_id: flyerId, event_type: "click" as any,
+      metadata: { action_type: kind === "bundle" ? "novel_unlock_bundle_click" : "novel_unlock_chapter_click", chapter: chapter?.number, amount } as any,
+    } as any]);
+    window.open(url, "_blank", "noopener");
+    setConfirmOpen(true);
+  }
+
+  async function confirmPurchase() {
+    if (!buyerEmail.trim()) return toast.error("Enter the email you used at PayPal");
+    if (!unlockTarget) return;
+    setSubmitting(true);
+    const row: any = {
+      flyer_id: flyerId,
+      action_id: action.id,
+      book_title: p.novelBookTitle || null,
+      buyer_email: buyerEmail.trim(),
+      buyer_name: buyerName.trim() || null,
+      purchase_type: unlockTarget.kind,
+      chapter_numbers: unlockTarget.kind === "chapter" && unlockTarget.chapter ? [unlockTarget.chapter.number] : [],
+      amount: unlockTarget.amount,
+      currency,
+      paypal_txn_id: txnId.trim() || null,
+      status: "pending",
+    };
+    const { error } = await supabase.from("novel_purchases").insert([row]);
+    setSubmitting(false);
+    if (error) return toast.error(error.message);
+    toast.success("Thanks! Your unlock is pending review. You'll get access shortly after the author confirms.");
+    localStorage.setItem(emailKey, buyerEmail.trim());
+    setEmail(buyerEmail.trim());
+    setConfirmOpen(false);
+    setTxnId(""); setBuyerName(""); setBuyerEmail("");
+  }
+
+  async function submitFollow(tier: "free" | "paid") {
+    if (!followEmail.trim()) return toast.error("Enter your email");
+    setSubmitting(true);
+    const { error } = await supabase.from("novel_subscriptions").insert([{
+      flyer_id: flyerId,
+      action_id: action.id,
+      book_title: p.novelBookTitle || null,
+      subscriber_email: followEmail.trim(),
+      subscriber_name: followName.trim() || null,
+      tier,
+      status: "active",
+    }]);
+    setSubmitting(false);
+    if (error && !String(error.message).includes("duplicate")) return toast.error(error.message);
+    toast.success(tier === "free" ? "You're following the author!" : "Subscribed — opening PayPal…");
+    if (tier === "paid" && p.novelSubscribeUrl) {
+      window.open(p.novelSubscribeUrl, "_blank", "noopener");
+    }
+    setFollowOpen(false);
+    setFollowName(""); setFollowEmail("");
+  }
+
+  const openChapter = chapters.find((c) => c.id === openChapterId);
+
+  return (
+    <>
+      <Dialog open={!openChapter} onOpenChange={(v) => !v && onClose()}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              {p.novelBookTitle || "Untitled Book"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {p.novelCoverUrl && (
+            <img src={p.novelCoverUrl} alt={p.novelBookTitle || "Cover"} className="mx-auto max-h-64 rounded-md object-contain" />
+          )}
+          {p.novelAuthor && <p className="text-center text-sm text-muted-foreground">by {p.novelAuthor}</p>}
+
+          {(p.novelFollowEnabled !== false || p.novelSubscribeEnabled) && (
+            <div className="flex flex-wrap justify-center gap-2">
+              {p.novelFollowEnabled !== false && (
+                <Button size="sm" variant="outline" onClick={() => setFollowOpen(true)}>
+                  <Heart className="mr-1 h-3.5 w-3.5" /> Follow author
+                </Button>
+              )}
+            </div>
+          )}
+
+          {p.novelBundlePrice ? (
+            <div className="rounded-md border border-primary/40 bg-primary/5 p-3 text-center">
+              <div className="text-sm font-semibold">Unlock the entire book</div>
+              <div className="my-1 text-2xl font-bold">{currency} {Number(p.novelBundlePrice).toFixed(2)}</div>
+              {bundleUnlocked ? (
+                <span className="text-xs text-emerald-600">✓ Unlocked</span>
+              ) : (
+                <Button size="sm" className="mt-1" onClick={() => openPaypal("bundle")}>Pay with PayPal</Button>
+              )}
+            </div>
+          ) : null}
+
+          <div className="text-right">
+            <Button size="sm" variant="ghost" onClick={() => setRestoreOpen(true)}>
+              <MailIcon className="mr-1 h-3.5 w-3.5" /> Already paid? Restore
+            </Button>
+          </div>
+
+          <div className="space-y-1">
+            {chapters.map((c, idx) => {
+              const unlocked = isUnlocked(c, idx);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    if (unlocked) {
+                      setOpenChapterId(c.id);
+                      supabase.from("analytics_events").insert([{ flyer_id: flyerId, event_type: "view" as any, metadata: { action_type: "novel_chapter_view", chapter: c.number } as any }]);
+                    } else {
+                      openPaypal("chapter", c);
+                    }
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md border border-border bg-card p-2 text-left hover:bg-muted/50"
+                >
+                  <span className="w-8 text-xs text-muted-foreground">{idx + 1}.</span>
+                  <span className="flex-1 text-sm font-medium">{c.title}</span>
+                  {unlocked ? (
+                    <span className="text-xs text-emerald-600">Open</span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Lock className="h-3.5 w-3.5" /> {currency} {priceFor(c).toFixed(2)}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {openChapter && (
+        <Dialog open onOpenChange={(v) => !v && setOpenChapterId(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>{openChapter.title}</DialogTitle></DialogHeader>
+            <div className="prose prose-sm max-w-none whitespace-pre-wrap font-serif text-base leading-relaxed text-foreground">
+              {openChapter.body}
+            </div>
+            <div className="mt-4 text-right">
+              <Button variant="outline" size="sm" onClick={() => setOpenChapterId(null)}>Back to chapters</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Restore */}
+      <Dialog open={restoreOpen} onOpenChange={setRestoreOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Restore your purchases</DialogTitle></DialogHeader>
+          <Label className="text-xs">Email used at PayPal</Label>
+          <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+          <Button onClick={restoreFromEmail} disabled={submitting}>{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Restore"}</Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm purchase */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Confirm your payment</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">After paying via PayPal, enter the email you used so the author can verify your unlock.</p>
+          <div className="space-y-2">
+            <div><Label className="text-xs">Name (optional)</Label><Input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} /></div>
+            <div><Label className="text-xs">Your email *</Label><Input type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} /></div>
+            <div><Label className="text-xs">PayPal transaction ID (optional)</Label><Input value={txnId} onChange={(e) => setTxnId(e.target.value)} /></div>
+          </div>
+          <Button onClick={confirmPurchase} disabled={submitting}>{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Submit"}</Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Follow */}
+      <Dialog open={followOpen} onOpenChange={setFollowOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Follow {p.novelAuthor || "the author"}</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <div><Label className="text-xs">Name (optional)</Label><Input value={followName} onChange={(e) => setFollowName(e.target.value)} /></div>
+            <div><Label className="text-xs">Email *</Label><Input type="email" value={followEmail} onChange={(e) => setFollowEmail(e.target.value)} /></div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => submitFollow("free")} disabled={submitting}>
+              <Heart className="mr-1 h-4 w-4" /> Follow for free
+            </Button>
+            {p.novelSubscribeEnabled && p.novelSubscribePrice ? (
+              <Button variant="outline" onClick={() => submitFollow("paid")} disabled={submitting}>
+                Subscribe — {currency} {Number(p.novelSubscribePrice).toFixed(2)}/mo
+              </Button>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

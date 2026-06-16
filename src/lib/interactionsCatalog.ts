@@ -3,6 +3,7 @@ import {
   FormInput, Navigation, Eye, CalendarPlus, Ticket, CheckSquare, ShoppingCart,
   BadgePercent, MapPin, Package, MessagesSquare, BarChart3, Mail, CalendarCheck,
   Images, ClipboardList, Quote, Utensils, BookOpen, Briefcase, Trophy, Star, ShoppingBag,
+  BookText,
 } from "lucide-react";
 
 export type InteractionDef = {
@@ -101,4 +102,7 @@ export const INTERACTIONS: InteractionDef[] = [
   { id: "business_rating", label: "Business rating (5 stars)", icon: Star,
     short: "Show average rating, collect star votes.",
     details: "Displays your average rating + a tap-to-rate widget so visitors can rate your business 1–5 stars." },
+  { id: "novel", label: "Novel / Story (paid chapters)", icon: BookText,
+    short: "Serialized book with free preview + PayPal unlock.",
+    details: "Paste your manuscript with # Chapter markers — the book is split into chapters. First chapters are free; readers unlock the rest (per-chapter or full bundle) via PayPal. Includes free follow + paid subscribe to author." },
 ];

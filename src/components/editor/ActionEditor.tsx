@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ActionType, LayerAction, PopupButton, PopupHotspot, AirMessageBubble, PollOption, GalleryImage, ProductGridItem } from "@/types/flyer";
+import { ActionType, LayerAction, PopupButton, PopupHotspot, AirMessageBubble, PollOption, GalleryImage, ProductGridItem, NovelChapter } from "@/types/flyer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
@@ -56,9 +56,10 @@ const ACTION_LABELS: Record<ActionType, string> = {
   business_rating: "Business rating (5 stars)",
   menu_add_item: "Add menu item to cart",
   product_grid: "Multi-product shop",
+  novel: "Novel / Story (paid chapters)",
 };
 
-const PRESET_TYPES: ActionType[] = ["product_grid", "book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map", "gallery", "survey", "testimonial", "reserve_table", "schedule_consultation", "show_menu", "join_challenge", "business_rating"];
+const PRESET_TYPES: ActionType[] = ["novel", "product_grid", "book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map", "gallery", "survey", "testimonial", "reserve_table", "schedule_consultation", "show_menu", "join_challenge", "business_rating"];
 const BASIC_TYPES: ActionType[] = [
   "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
 ];
@@ -128,6 +129,8 @@ function isValid(draft: LayerAction | null): boolean {
       return true;
     case "product_grid":
       return !!(p.products && p.products.length > 0 && p.products.every((x) => x.name?.trim()));
+    case "novel":
+      return !!(p.novelChapters && p.novelChapters.length > 0);
     default: return true;
   }
 }
@@ -2384,6 +2387,9 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
           </>
         )}
 
+        {type === "novel" && <NovelEditor draft={draft!} update={update} />}
+
+
         {draft && !embedded && (
           <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 space-y-2">
             <div className="flex items-center justify-between">
@@ -2800,4 +2806,201 @@ function ProductGridEditor({
     </>
   );
 }
+
+function NovelEditor({ draft, update }: { draft: LayerAction; update: (patch: any) => void }) {
+  const p: any = draft.payload || {};
+  const chapters: NovelChapter[] = p.novelChapters || [];
+  const freeCount = typeof p.novelFreeCount === "number" ? p.novelFreeCount : 3;
+  const [busy, setBusy] = useState(false);
+  const [text, setText] = useState<string>(p.novelManuscript || "");
+
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function importTxt(file: File) {
+    const content = await file.text();
+    setText(content);
+    update({ novelManuscript: content });
+    toast.success("Manuscript loaded — click 'Split into chapters'");
+  }
+
+  async function splitNow() {
+    if (!text.trim()) return toast.error("Paste or upload your manuscript first.");
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("split-novel", { body: { text } });
+      if (error) throw error;
+      const raw = (data?.chapters || []) as Array<{ number: number; title: string; body: string }>;
+      if (!raw.length) {
+        setBusy(false);
+        return toast.error("No chapters found.");
+      }
+      const built: NovelChapter[] = raw.map((c, i) => ({
+        id: crypto.randomUUID(),
+        number: c.number || i + 1,
+        title: c.title || `Chapter ${i + 1}`,
+        body: c.body || "",
+        free: i < freeCount ? true : false,
+      }));
+      update({ novelChapters: built, novelManuscript: text, novelFreeCount: freeCount });
+      toast.success(`Split into ${built.length} chapter${built.length === 1 ? "" : "s"}`);
+      if (data?.warning) toast.warning(data.warning);
+    } catch (e: any) {
+      toast.error(e?.message || "Could not split chapters");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function patchChapter(id: string, patch: Partial<NovelChapter>) {
+    update({ novelChapters: chapters.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
+  }
+  function removeChapter(id: string) {
+    update({ novelChapters: chapters.filter((c) => c.id !== id) });
+  }
+  function applyFreeCount(n: number) {
+    const next = chapters.map((c, i) => ({ ...c, free: i < n }));
+    update({ novelChapters: next, novelFreeCount: n });
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-[11px] text-muted-foreground">
+        Build a paid serialized book. Use <code className="rounded bg-muted px-1">#&nbsp;Chapter&nbsp;1</code> markers in your manuscript — each one starts a new chapter. The first {freeCount} chapters are free; the rest unlock via PayPal.
+      </p>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Book title</Label>
+          <Input className="mt-1" value={p.novelBookTitle || ""} onChange={(e) => update({ novelBookTitle: e.target.value })} placeholder="The Long Road" />
+        </div>
+        <div>
+          <Label className="text-xs">Author name</Label>
+          <Input className="mt-1" value={p.novelAuthor || ""} onChange={(e) => update({ novelAuthor: e.target.value })} placeholder="Jane Doe" />
+        </div>
+      </div>
+
+      <AssetUpload label="Cover image (optional)" value={p.novelCoverUrl} onChange={(url) => update({ novelCoverUrl: url })} />
+
+      <div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Manuscript</Label>
+          <div className="flex gap-1">
+            <input ref={fileRef} type="file" accept=".txt,text/plain" className="hidden" onChange={(e) => e.target.files?.[0] && importTxt(e.target.files[0])} />
+            <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
+              <Upload className="mr-1 h-3.5 w-3.5" /> Import .txt
+            </Button>
+          </div>
+        </div>
+        <Textarea
+          className="mt-1 font-mono text-xs"
+          rows={8}
+          value={text}
+          onChange={(e) => { setText(e.target.value); update({ novelManuscript: e.target.value }); }}
+          placeholder="# Chapter 1: The Beginning&#10;&#10;It was a dark and stormy night...&#10;&#10;# Chapter 2: The Journey&#10;..."
+        />
+        <Button className="mt-2" size="sm" onClick={splitNow} disabled={busy}>
+          {busy ? "Splitting…" : `Split into chapters (${chapters.length} now)`}
+        </Button>
+      </div>
+
+      {chapters.length > 0 && (
+        <div className="space-y-2 rounded-md border border-border p-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold">Chapters ({chapters.length})</Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-[11px]">Free preview:</Label>
+              <Input
+                type="number"
+                min={0}
+                max={chapters.length}
+                className="h-7 w-16"
+                value={freeCount}
+                onChange={(e) => applyFreeCount(Math.max(0, Math.min(chapters.length, Number(e.target.value) || 0)))}
+              />
+              <span className="text-[11px] text-muted-foreground">chapters</span>
+            </div>
+          </div>
+          <div className="max-h-72 space-y-1 overflow-y-auto">
+            {chapters.map((c, idx) => (
+              <div key={c.id} className="flex items-center gap-2 rounded border border-border bg-muted/30 p-2">
+                <span className="w-6 text-xs text-muted-foreground">{idx + 1}.</span>
+                <Input
+                  className="h-7 flex-1 text-xs"
+                  value={c.title}
+                  onChange={(e) => patchChapter(c.id, { title: e.target.value })}
+                />
+                <label className="flex items-center gap-1 text-[11px]">
+                  <Switch checked={!!c.free} onCheckedChange={(v) => patchChapter(c.id, { free: v })} />
+                  Free
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  className="h-7 w-20 text-xs"
+                  placeholder="price"
+                  value={c.price ?? ""}
+                  onChange={(e) => patchChapter(c.id, { price: e.target.value === "" ? undefined : Number(e.target.value) })}
+                />
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeChapter(c.id)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <Label className="text-xs">Bundle price</Label>
+          <Input type="number" step="0.01" className="mt-1" value={p.novelBundlePrice ?? ""} onChange={(e) => update({ novelBundlePrice: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="9.99" />
+        </div>
+        <div>
+          <Label className="text-xs">Per-chapter</Label>
+          <Input type="number" step="0.01" className="mt-1" value={p.novelChapterPrice ?? ""} onChange={(e) => update({ novelChapterPrice: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="0.99" />
+        </div>
+        <div>
+          <Label className="text-xs">Currency</Label>
+          <Input className="mt-1" value={p.novelCurrency || "USD"} onChange={(e) => update({ novelCurrency: e.target.value })} placeholder="USD" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">PayPal.me handle</Label>
+          <Input className="mt-1" value={p.novelPaypalHandle || ""} onChange={(e) => update({ novelPaypalHandle: e.target.value })} placeholder="janedoe" />
+        </div>
+        <div>
+          <Label className="text-xs">PayPal email (fallback)</Label>
+          <Input className="mt-1" value={p.novelPaypalEmail || ""} onChange={(e) => update({ novelPaypalEmail: e.target.value })} placeholder="jane@example.com" />
+        </div>
+      </div>
+
+      <div className="rounded-md border border-border p-3 space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wide">Author subscriptions</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Show "Follow author" (free email list)</Label>
+          <Switch checked={p.novelFollowEnabled !== false} onCheckedChange={(v) => update({ novelFollowEnabled: v })} />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Show paid subscription option</Label>
+          <Switch checked={!!p.novelSubscribeEnabled} onCheckedChange={(v) => update({ novelSubscribeEnabled: v })} />
+        </div>
+        {p.novelSubscribeEnabled && (
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Monthly price</Label>
+              <Input type="number" step="0.01" className="mt-1" value={p.novelSubscribePrice ?? ""} onChange={(e) => update({ novelSubscribePrice: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="4.99" />
+            </div>
+            <div>
+              <Label className="text-xs">PayPal subscription URL</Label>
+              <Input className="mt-1" value={p.novelSubscribeUrl || ""} onChange={(e) => update({ novelSubscribeUrl: e.target.value })} placeholder="https://www.paypal.com/..." />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 

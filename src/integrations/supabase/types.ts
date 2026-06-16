@@ -610,6 +610,121 @@ export type Database = {
         }
         Relationships: []
       }
+      novel_purchases: {
+        Row: {
+          action_id: string
+          amount: number | null
+          book_title: string | null
+          buyer_email: string
+          buyer_name: string | null
+          chapter_numbers: number[]
+          created_at: string
+          currency: string | null
+          flyer_id: string
+          id: string
+          paypal_txn_id: string | null
+          purchase_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_id: string
+          amount?: number | null
+          book_title?: string | null
+          buyer_email: string
+          buyer_name?: string | null
+          chapter_numbers?: number[]
+          created_at?: string
+          currency?: string | null
+          flyer_id: string
+          id?: string
+          paypal_txn_id?: string | null
+          purchase_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string
+          amount?: number | null
+          book_title?: string | null
+          buyer_email?: string
+          buyer_name?: string | null
+          chapter_numbers?: number[]
+          created_at?: string
+          currency?: string | null
+          flyer_id?: string
+          id?: string
+          paypal_txn_id?: string | null
+          purchase_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "novel_purchases_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      novel_subscriptions: {
+        Row: {
+          action_id: string
+          book_title: string | null
+          created_at: string
+          ended_at: string | null
+          flyer_id: string
+          id: string
+          paypal_subscription_id: string | null
+          started_at: string
+          status: string
+          subscriber_email: string
+          subscriber_name: string | null
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          action_id: string
+          book_title?: string | null
+          created_at?: string
+          ended_at?: string | null
+          flyer_id: string
+          id?: string
+          paypal_subscription_id?: string | null
+          started_at?: string
+          status?: string
+          subscriber_email: string
+          subscriber_name?: string | null
+          tier?: string
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string
+          book_title?: string | null
+          created_at?: string
+          ended_at?: string | null
+          flyer_id?: string
+          id?: string
+          paypal_subscription_id?: string | null
+          started_at?: string
+          status?: string
+          subscriber_email?: string
+          subscriber_name?: string | null
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "novel_subscriptions_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pages: {
         Row: {
           background: Json

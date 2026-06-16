@@ -22,6 +22,7 @@ import { sourceFromEventMetadata } from "@/lib/trafficSource";
 import { StaffTablesPanel } from "@/components/portal/StaffTablesPanel";
 import { LiveOrdersBoard } from "@/components/portal/LiveOrdersBoard";
 import { OrdersArchivePanel } from "@/components/portal/OrdersArchivePanel";
+import { NovelsPanel } from "@/components/portal/NovelsPanel";
 
 const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
 function getShareOrigin() {
@@ -523,6 +524,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
           <TabsTrigger value="forms">Forms ({submissions.length})</TabsTrigger>
           <TabsTrigger value="cart">Cart ({cartOrders.length})</TabsTrigger>
           <TabsTrigger value="interactions">Interactions</TabsTrigger>
+          {actions.some((a) => a.type === "novel") && <TabsTrigger value="novels">📖 Novels</TabsTrigger>}
           {isOwner && <TabsTrigger value="live">🟢 Live Orders</TabsTrigger>}
           {isOwner && <TabsTrigger value="staff">Staff & Tables</TabsTrigger>}
           {isOwner && <TabsTrigger value="archive">Archive</TabsTrigger>}
@@ -892,6 +894,11 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
         <TabsContent value="interactions">
           <InteractionsModerationPanel flyerId={flyer.id} isOwner={isOwner} />
         </TabsContent>
+
+        <TabsContent value="novels" className="space-y-4">
+          <NovelsPanel flyerId={flyer.id} actions={actions} onRefresh={onRefresh} />
+        </TabsContent>
+
 
         {extraActionTypes.map((t) => {
           const rows = clickEvents.filter((e) => e?.metadata?.action_type === t);
