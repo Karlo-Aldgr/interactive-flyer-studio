@@ -298,6 +298,23 @@ export interface ActionPayload {
   ratingPrompt?: string;
   ratingAllowComment?: boolean;
   ratingThankYou?: string;
+
+  // novel — interactive story/book reader with paid chapter unlocks
+  novelBookTitle?: string;
+  novelAuthor?: string;
+  novelCoverUrl?: string;
+  novelManuscript?: string;                // raw pasted text (kept so author can re-split)
+  novelChapters?: NovelChapter[];
+  novelFreeCount?: number;                 // first N chapters free (default 3) — used when chapter.free is undefined
+  novelBundlePrice?: number;               // unlock-all price
+  novelChapterPrice?: number;              // default per-chapter price
+  novelCurrency?: string;                  // "USD", "EUR", "$"
+  novelPaypalHandle?: string;              // PayPal.me handle, no leading @
+  novelPaypalEmail?: string;               // PayPal business email (fallback)
+  novelFollowEnabled?: boolean;            // show "Follow author (free)" button (default true)
+  novelSubscribeEnabled?: boolean;         // show paid subscribe option
+  novelSubscribePrice?: number;            // monthly subscribe price
+  novelSubscribeUrl?: string;              // PayPal subscription button URL (author-provided)
 }
 
 export type BubbleTextCase = "as-is" | "upper" | "lower";
