@@ -32,7 +32,18 @@ export type ActionType =
   | "join_challenge"
   | "business_rating"
   | "menu_add_item"
-  | "product_grid";
+  | "product_grid"
+  | "novel";
+
+export interface NovelChapter {
+  id: string;
+  number: number;
+  title: string;
+  body: string;
+  free?: boolean;            // overrides bundle/free preview
+  price?: number;            // optional per-chapter price override
+}
+
 
 export interface ProductGridItem {
   id: string;
