@@ -3024,4 +3024,58 @@ function NovelEditor({ draft, update }: { draft: LayerAction; update: (patch: an
   );
 }
 
+function ChapterRow({
+  index,
+  chapter,
+  onPatch,
+  onRemove,
+}: {
+  index: number;
+  chapter: NovelChapter;
+  onPatch: (patch: Partial<NovelChapter>) => void;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded border border-border bg-muted/30 p-2">
+      <div className="flex items-center gap-2">
+        <span className="w-6 text-xs text-muted-foreground">{index + 1}.</span>
+        <Input
+          className="h-7 flex-1 text-xs"
+          value={chapter.title}
+          onChange={(e) => onPatch({ title: e.target.value })}
+        />
+        <label className="flex items-center gap-1 text-[11px]">
+          <Switch checked={!!chapter.free} onCheckedChange={(v) => onPatch({ free: v })} />
+          Free
+        </label>
+        <Input
+          type="number"
+          step="0.01"
+          className="h-7 w-20 text-xs"
+          placeholder="price"
+          value={chapter.price ?? ""}
+          onChange={(e) => onPatch({ price: e.target.value === "" ? undefined : Number(e.target.value) })}
+        />
+        <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => setOpen((v) => !v)}>
+          {open ? "Hide" : "Edit"}
+        </Button>
+        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onRemove}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      {open && (
+        <Textarea
+          className="mt-2 font-mono text-xs"
+          rows={8}
+          placeholder="Chapter body…"
+          value={chapter.body}
+          onChange={(e) => onPatch({ body: e.target.value })}
+        />
+      )}
+    </div>
+  );
+}
+
+
 
