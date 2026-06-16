@@ -129,6 +129,8 @@ function isValid(draft: LayerAction | null): boolean {
       return true;
     case "product_grid":
       return !!(p.products && p.products.length > 0 && p.products.every((x) => x.name?.trim()));
+    case "novel":
+      return !!(p.novelChapters && p.novelChapters.length > 0);
     default: return true;
   }
 }
