@@ -895,6 +895,11 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
           <InteractionsModerationPanel flyerId={flyer.id} isOwner={isOwner} />
         </TabsContent>
 
+        <TabsContent value="novels" className="space-y-4">
+          <NovelsPanel flyerId={flyer.id} actions={actions} onRefresh={onRefresh} />
+        </TabsContent>
+
+
         {extraActionTypes.map((t) => {
           const rows = clickEvents.filter((e) => e?.metadata?.action_type === t);
           const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
