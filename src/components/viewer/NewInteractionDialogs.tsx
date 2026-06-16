@@ -43,6 +43,7 @@ export default function NewInteractionDialogs({ action, flyerId, sessionId, onCl
   if (type === "show_menu") return <MenuDialog action={action} flyerId={flyerId} onClose={onClose} />;
   if (type === "join_challenge") return <ChallengeDialog action={action} flyerId={flyerId} onClose={onClose} />;
   if (type === "business_rating") return <RatingDialog action={action} flyerId={flyerId} sessionId={sessionId} onClose={onClose} />;
+  if (type === "novel") return <NovelDialog action={action} flyerId={flyerId} onClose={onClose} />;
   return null;
 }
 
