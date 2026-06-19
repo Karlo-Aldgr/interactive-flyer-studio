@@ -996,19 +996,39 @@ function NovelDialog({ action, flyerId, onClose }: { action: LayerAction; flyerI
         </DialogContent>
       </Dialog>
 
-      {openChapter && (
+      {openChapter && (() => {
+        const currentIdx = chapters.findIndex((c) => c.id === openChapter.id);
+        const nextChapter = currentIdx >= 0 && currentIdx < chapters.length - 1 ? chapters[currentIdx + 1] : null;
+        const nextUnlocked = nextChapter ? isUnlocked(nextChapter, currentIdx + 1) : false;
+        return (
         <Dialog open onOpenChange={(v) => !v && setOpenChapterId(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{openChapter.title}</DialogTitle></DialogHeader>
             <div className="prose prose-sm max-w-none whitespace-pre-wrap font-serif text-base leading-relaxed text-foreground">
               {openChapter.body}
             </div>
-            <div className="mt-4 text-right">
+            <div className="mt-4 flex items-center justify-between gap-2">
               <Button variant="outline" size="sm" onClick={() => setOpenChapterId(null)}>Back to chapters</Button>
+              {nextChapter && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (nextUnlocked) {
+                      setOpenChapterId(nextChapter.id);
+                      supabase.from("analytics_events").insert([{ flyer_id: flyerId, event_type: "view" as any, metadata: { action_type: "novel_chapter_view", chapter: nextChapter.number } as any }]);
+                    } else {
+                      openPaypal("chapter", nextChapter);
+                    }
+                  }}
+                >
+                  {nextUnlocked ? "Next chapter" : `Unlock next — ${currency} ${priceFor(nextChapter).toFixed(2)}`}
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>
-      )}
+        );
+      })()}
 
       {/* Restore */}
       <Dialog open={restoreOpen} onOpenChange={setRestoreOpen}>
