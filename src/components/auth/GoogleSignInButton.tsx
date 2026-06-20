@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { buildAuthRedirectUrl, GOOGLE_SIGNIN_DISABLED_MESSAGE } from "@/lib/authUtils";
-import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -27,9 +27,6 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-function isGoogleProviderDisabled(body: string, status: number): boolean {
-  return status === 400 && /provider is not enabled|unsupported provider/i.test(body);
-}
 
 export function GoogleSignInButton({
   next,
@@ -43,16 +40,12 @@ export function GoogleSignInButton({
   const google = async () => {
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: buildAuthRedirectUrl(next),
-          skipBrowserRedirect: true,
-        },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: buildAuthRedirectUrl(next),
       });
 
-      if (error) {
-        const msg = error.message ?? "";
+      if (result.error) {
+        const msg = result.error instanceof Error ? result.error.message : String(result.error);
         toast.error(
           /provider is not enabled/i.test(msg) || /unsupported provider/i.test(msg)
             ? GOOGLE_SIGNIN_DISABLED_MESSAGE
@@ -61,24 +54,10 @@ export function GoogleSignInButton({
         return;
       }
 
-      const url = data?.url;
-      if (!url) {
-        toast.error("Unable to start Google sign-in. Please try again.");
+      if (result.redirected) {
+        // Browser will redirect to Google - let it happen
         return;
       }
-
-      try {
-        const probe = await fetch(url);
-        const body = await probe.text();
-        if (isGoogleProviderDisabled(body, probe.status)) {
-          toast.error(GOOGLE_SIGNIN_DISABLED_MESSAGE);
-          return;
-        }
-      } catch {
-        /* If probe fails (network/CORS), still try opening Google OAuth */
-      }
-
-      window.location.assign(url);
     } finally {
       setBusy(false);
     }
