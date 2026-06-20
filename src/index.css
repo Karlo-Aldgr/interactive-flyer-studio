@@ -116,3 +116,33 @@
     background-clip: text;
   }
 }
+
+/* Landing page shimmer for final CTA */
+@keyframes landing-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.landing-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, hsl(0 0% 100% / 0.18) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: landing-shimmer 6s linear infinite;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+.landing-tilt {
+  transition: transform 400ms cubic-bezier(.2,.7,.2,1), box-shadow 400ms cubic-bezier(.2,.7,.2,1);
+  transform-style: preserve-3d;
+}
+@media (hover: hover) {
+  .landing-tilt:hover {
+    transform: translate3d(0, -6px, 0) rotateX(3deg) rotateY(-3deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-shimmer::after { animation: none; display: none; }
+  .landing-tilt { transition: none; }
+  .landing-tilt:hover { transform: none; }
+}
