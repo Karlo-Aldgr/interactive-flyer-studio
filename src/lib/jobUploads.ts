@@ -27,3 +27,24 @@ export function jobUploadFilename(stored: string): string {
   const path = jobUploadPath(stored);
   return path.split("/").pop() || path;
 }
+
+export async function downloadJobUpload(stored: string): Promise<boolean> {
+  const url = await getJobUploadSignedUrl(stored, 300);
+  if (!url) return false;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = jobUploadFilename(stored);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    return true;
+  } catch {
+    return false;
+  }
+}
