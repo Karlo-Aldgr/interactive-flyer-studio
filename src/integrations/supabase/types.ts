@@ -763,30 +763,6 @@ export type Database = {
           },
         ]
       }
-      profiles: {
-        Row: {
-          created_at: string
-          email: string
-          full_name: string | null
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          full_name?: string | null
-          id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          full_name?: string | null
-          id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       poll_votes: {
         Row: {
           action_id: string
@@ -1103,17 +1079,6 @@ export type Database = {
         Returns: {
           email: string
           granted_at: string
-          user_id: string
-        }[]
-      }
-      list_users_with_roles: {
-        Args: never
-        Returns: {
-          email: string
-          flyer_count: number
-          job_count: number
-          roles: string[]
-          signed_up_at: string
           user_id: string
         }[]
       }
