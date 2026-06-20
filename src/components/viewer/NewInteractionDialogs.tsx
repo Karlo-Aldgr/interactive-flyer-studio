@@ -414,6 +414,7 @@ export function MenuCartUI({
 
   function handleItemTap(item: MenuItem) {
     add(item);
+    setView("upsell");
     toast.success(`${item.name} added`, { duration: 1200 });
   }
 

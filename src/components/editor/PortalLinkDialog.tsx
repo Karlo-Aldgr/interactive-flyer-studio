@@ -26,26 +26,14 @@ export function PortalLinkDialog({ flyerId, open, onOpenChange }: Props) {
     if (!open) return;
     setLoading(true);
     (async () => {
-      // Ensure a credentials row exists (auto-created by trigger for new flyers,
-      // but be defensive for older ones).
-      let { data, error } = await supabase
-        .from("flyer_portal_credentials" as any)
-        .select("portal_token, portal_access_code")
-        .eq("flyer_id", flyerId)
-        .maybeSingle();
-      if (!data && !error) {
-        const inserted = await supabase
-          .from("flyer_portal_credentials" as any)
-          .insert({ flyer_id: flyerId })
-          .select("portal_token, portal_access_code")
-          .maybeSingle();
-        data = inserted.data as any;
-        error = inserted.error as any;
-      }
+      const { data, error } = await supabase.rpc("ensure_flyer_portal_credentials" as any, {
+        _flyer_id: flyerId,
+      });
+      const row = Array.isArray(data) ? data[0] : data;
       if (error) toast.error(error.message);
-      else if (data) {
-        setToken((data as any).portal_token);
-        setCode((data as any).portal_access_code);
+      else if (row) {
+        setToken((row as any).portal_token);
+        setCode((row as any).portal_access_code);
       }
       setLoading(false);
     })();
@@ -56,24 +44,17 @@ export function PortalLinkDialog({ flyerId, open, onOpenChange }: Props) {
 
   async function regenerate(field: "token" | "code" | "both") {
     setBusy(true);
-    const update: any = {};
-    if (field === "token" || field === "both") update.portal_token = crypto.randomUUID();
-    if (field === "code" || field === "both") {
-      update.portal_access_code = Array.from({ length: 6 }, () =>
-        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]
-      ).join("");
-    }
-    const { data, error } = await supabase
-      .from("flyer_portal_credentials" as any)
-      .update(update)
-      .eq("flyer_id", flyerId)
-      .select("portal_token, portal_access_code")
-      .maybeSingle();
+    const { data, error } = await supabase.rpc("regenerate_flyer_portal_credentials" as any, {
+      _flyer_id: flyerId,
+      _reset_token: field === "token" || field === "both",
+      _reset_code: field === "code" || field === "both",
+    });
+    const row = Array.isArray(data) ? data[0] : data;
     setBusy(false);
     if (error) return toast.error(error.message);
-    if (data) {
-      setToken((data as any).portal_token);
-      setCode((data as any).portal_access_code);
+    if (row) {
+      setToken((row as any).portal_token);
+      setCode((row as any).portal_access_code);
       toast.success("Updated. Old link no longer works.");
     }
   }
