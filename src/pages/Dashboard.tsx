@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { cn, buildSocialShareUrl } from "@/lib/utils";
+import { cn, buildPublicFlyerUrl } from "@/lib/utils";
 import { useCanEdit } from "@/hooks/useCanEdit";
 
 export default function Dashboard() {
@@ -159,7 +159,7 @@ export default function Dashboard() {
     if (!slug) return;
     // Use the share-worker URL so platforms (Facebook, WhatsApp, iMessage)
     // see per-flyer OG previews — same link the editor's Share dialog copies.
-    navigator.clipboard.writeText(buildSocialShareUrl(slug));
+    navigator.clipboard.writeText(buildPublicFlyerUrl(slug));
     toast.success("Share link copied — paste it anywhere for a rich preview");
   };
 

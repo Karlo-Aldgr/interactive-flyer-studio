@@ -7,6 +7,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Copy, Loader2, RefreshCcw, Link as LinkIcon } from "lucide-react";
+import { buildPublicPortalUrl } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface Props {
@@ -50,9 +51,8 @@ export function PortalLinkDialog({ flyerId, open, onOpenChange }: Props) {
     })();
   }, [open, flyerId]);
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const url = token ? `${origin}/p/${token}` : "";
-  const urlWithCode = token && code ? `${url}?code=${encodeURIComponent(code)}` : "";
+  const url = token ? buildPublicPortalUrl(token) : "";
+  const urlWithCode = token && code ? buildPublicPortalUrl(token, code) : "";
 
   async function regenerate(field: "token" | "code" | "both") {
     setBusy(true);

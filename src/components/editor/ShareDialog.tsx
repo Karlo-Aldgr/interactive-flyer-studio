@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Download, Share2, RefreshCw, Loader2, ImagePlus, Clipboard } from "lucide-react";
+import { getPublicAppOrigin, isLovablePreviewHost } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface ExtraLink {
@@ -41,21 +42,14 @@ interface Props {
   landingPreviewMeta?: { label?: string; description?: string };
 }
 
-const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
-
 /** Defensive guard: never let a private/preview URL be shared. */
 function sanitizeShareUrl(url: string): string {
   if (!url) return url;
   try {
     const u = new URL(url);
-    const host = u.hostname;
-    const isPreviewHost =
-      host.endsWith("lovableproject.com") ||
-      host.startsWith("id-preview--") ||
-      (host.endsWith("lovable.app") && host.includes("preview"));
     const isPrivatePath = u.pathname.startsWith("/preview/");
-    if (isPreviewHost || isPrivatePath) {
-      const pub = new URL(PUBLISHED_ORIGIN);
+    if (isLovablePreviewHost(u.hostname) || isPrivatePath) {
+      const pub = new URL(getPublicAppOrigin());
       u.protocol = pub.protocol;
       u.host = pub.host;
       if (isPrivatePath) u.pathname = "/";
@@ -380,7 +374,7 @@ export function ShareDialog({
 
             <div className="flex flex-col items-center gap-4">
               <div className="rounded-lg bg-white p-4 shadow-sm">
-                <QRCodeCanvas id="share-qr-canvas" value={safeSocialUrl} size={160} level="M" includeMargin={false} />
+                <QRCodeCanvas id="share-qr-canvas" value={safeDisplayUrl} size={160} level="M" includeMargin={false} />
               </div>
               <div className="flex w-full gap-2">
                 <Input readOnly value={safeSocialUrl} className="flex-1 text-xs" onFocus={(e) => e.target.select()} />
