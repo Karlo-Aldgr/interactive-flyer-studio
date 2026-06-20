@@ -4,15 +4,14 @@ import { useEditorStore, ResizeMode } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  ChevronLeft, Undo2, Redo2, Eye, Globe, Loader2, ZoomIn, ZoomOut,
-  Crosshair, Monitor, Tablet, Smartphone, Crop, Share2, Sparkles, DollarSign, Music, Music2, BarChart3, Users, Wallet, Inbox, Link as LinkIcon,
-  Briefcase, PartyPopper, CalendarIcon, Timer,
+  ChevronLeft, Undo2, Redo2, Globe, Loader2, ZoomIn, ZoomOut, Crop, Share2,
+  Briefcase, PartyPopper, CalendarIcon,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle, buildPublicFlyerUrl, buildSocialShareUrl } from "@/lib/utils";
+import { buildPublicFlyerUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,7 +30,10 @@ import { BackgroundAudioDialog } from "./BackgroundAudioDialog";
 import { SubscribersPanel } from "./SubscribersPanel";
 import { PortalLinkDialog } from "./PortalLinkDialog";
 import { SocialMediaDialog } from "./SocialMediaDialog";
-import { hasAnySocial } from "@/components/viewer/SocialSlideout";
+import {
+  TopBarFlyerMenu, TopBarMediaMenu, TopBarMobileMenu, TopBarPaymentsMenu,
+  TopBarPortalMenu, TopBarPreviewButton, TopBarViewMenu, type TopBarMenuActions,
+} from "./TopBarActionMenus";
 
 interface Props { saving: boolean }
 
@@ -80,11 +82,12 @@ export function TopBar({ saving }: Props) {
   const [socialOpen, setSocialOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [autoAdvanceOpen, setAutoAdvanceOpen] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const dirty = useEditorStore((s) => s.dirty);
   const [editCategory, setEditCategory] = useState<FlyerCategory>(((flyer as any)?.category as FlyerCategory) || "business");
   const [editEventDate, setEditEventDate] = useState<Date | undefined>(
     (flyer as any)?.event_date ? new Date(((flyer as any).event_date as string) + "T00:00:00") : undefined
   );
-  const [savingCategory, setSavingCategory] = useState(false);
 
   useEffect(() => {
     if (!flyer || flyer.status !== "published" || !isRealFlyerTitle(flyer.title) || !flyerSlugLooksUntitled(flyer.public_slug)) return;
@@ -353,7 +356,7 @@ export function TopBar({ saving }: Props) {
   }
 
   const viewerUrl = flyer.public_slug ? buildPublicFlyerUrl(flyer.public_slug) : "";
-  const socialUrl = flyer.public_slug ? buildSocialShareUrl(flyer.public_slug) : viewerUrl;
+  const socialUrl = viewerUrl;
 
   // If any page is configured as a tap-anywhere landing page, build a second
   // share link that opens the landing itself (?page=<landingId>). The primary
@@ -363,299 +366,157 @@ export function TopBar({ saving }: Props) {
   // viewer jumps straight to the flyer page (bypassing the landing). Crawlers
   // still see ?page=<landingPageId> and use the landing's social preview.
   const landingShareUrl = (() => {
-    if (!landingPage || !viewerUrl) return "";
-    const sep = viewerUrl.includes("?") ? "&" : "?";
+    if (!landingPage || !socialUrl) return "";
+    const sep = socialUrl.includes("?") ? "&" : "?";
     const openId = landingPage.background?.linkPageId;
     const openParam = openId ? `&open=${openId}` : "";
-    return `${viewerUrl}${sep}page=${landingPage.id}${openParam}`;
+    return `${socialUrl}${sep}page=${landingPage.id}${openParam}`;
   })();
   const flyerPreviewSection = landingPage
     ? {
         label: "Direct flyer link",
         description: "Skips the landing — opens the flyer.",
         thumbnailUrl: flyerPreviewThumb,
-        url: viewerUrl,
+        url: socialUrl,
       }
     : undefined;
 
+  const menuActions: TopBarMenuActions = {
+    flyer,
+    flyerId: flyer.id,
+    showHitboxes,
+    deviceFrame,
+    onToggleHitboxes: toggleHitboxes,
+    onSetDeviceFrame: setDeviceFrame,
+    onToggleHighlights: () =>
+      setFlyer({
+        settings: {
+          ...flyer.settings,
+          highlightsEnabled: !(flyer.settings.highlightsEnabled ?? true),
+        },
+      }),
+    onOpenCategory: openCategory,
+    onOpenSubscribers: () => setSubscribersOpen(true),
+    onOpenPortalLink: () => setPortalLinkOpen(true),
+    onOpenIntroAudio: () => setIntroAudioOpen(true),
+    onOpenBgAudio: () => setBgAudioOpen(true),
+    onOpenAutoAdvance: () => setAutoAdvanceOpen(true),
+    onOpenSocial: () => setSocialOpen(true),
+    onOpenCheckout: () => setPaySettingsOpen(true),
+    onOpenPayLink: () => setPayOpen(true),
+    onOpenShare: openShare,
+    onOpenResize: () => setResizeOpen(true),
+  };
+
   return (
-    <header className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
-      <Button asChild variant="ghost" size="sm">
-        <Link to="/dashboard"><ChevronLeft className="mr-1 h-4 w-4" />Dashboard</Link>
+    <header className="relative z-50 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card px-2 sm:px-3">
+      {/* Navigation + document */}
+      <Button asChild variant="ghost" size="sm" className="shrink-0 px-2">
+        <Link to="/dashboard">
+          <ChevronLeft className="h-4 w-4 sm:mr-1" />
+          <span className="hidden sm:inline">Dashboard</span>
+        </Link>
       </Button>
       <Input
-        className="h-8 max-w-xs border-transparent bg-transparent font-semibold focus-visible:border-input"
+        className="h-8 min-w-0 flex-1 max-w-[8rem] border-transparent bg-transparent font-semibold focus-visible:border-input sm:max-w-[12rem] lg:max-w-xs"
         value={flyer.title}
         onChange={(e) => updateTitle(e.target.value)}
       />
-      <div className="ml-2 flex items-center gap-1">
-        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={undo} disabled={!past}>
+
+      {/* Edit */}
+      <div className="flex shrink-0 items-center gap-0.5">
+        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={undo} disabled={!past} title="Undo">
           <Undo2 className="h-4 w-4" />
         </Button>
-        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={redo} disabled={!future}>
+        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={redo} disabled={!future} title="Redo">
           <Redo2 className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Device frame preview */}
-      <div className="ml-2 flex items-center rounded-md border border-border p-0.5">
-        {([
-          { f: "desktop" as const, I: Monitor },
-          { f: "tablet" as const, I: Tablet },
-          { f: "mobile" as const, I: Smartphone },
-        ]).map(({ f, I }) => (
-          <Tooltip key={f}>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant={deviceFrame === f ? "default" : "ghost"}
-                className="h-7 w-7"
-                onClick={() => setDeviceFrame(f)}
-              >
-                <I className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Preview as {f}</TooltipContent>
-          </Tooltip>
-        ))}
+      <div className="hidden h-6 w-px bg-border sm:block" />
+
+      {/* Zoom */}
+      <div className="flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground">
+        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(zoom - 0.1)} title="Zoom out">
+          <ZoomOut className="h-3.5 w-3.5" />
+        </Button>
+        <span className="w-9 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(zoom + 0.1)} title="Zoom in">
+          <ZoomIn className="h-3.5 w-3.5" />
+        </Button>
       </div>
 
-      {/* Canvas size dialog trigger */}
+      {/* Canvas size */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button size="sm" variant="outline" className="h-8" onClick={() => setResizeOpen(true)}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="hidden h-8 shrink-0 px-2 md:inline-flex"
+            onClick={() => setResizeOpen(true)}
+          >
             <Crop className="mr-1 h-3.5 w-3.5" />
-            {flyer.settings.width}×{flyer.settings.height}
+            <span className="tabular-nums">{flyer.settings.width}×{flyer.settings.height}</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>Change canvas size or crop</TooltipContent>
       </Tooltip>
 
-      {/* Hitbox toggle */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            size="icon"
-            variant={showHitboxes ? "default" : "ghost"}
-            className="h-8 w-8"
-            onClick={toggleHitboxes}
-          >
-            <Crosshair className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Show clickable areas</TooltipContent>
-      </Tooltip>
+      {/* View menu — desktop/tablet */}
+      <div className="hidden md:block">
+        <TopBarViewMenu {...menuActions} />
+      </div>
 
-      {/* Global highlights toggle */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            size="icon"
-            variant={(flyer.settings.highlightsEnabled ?? true) ? "default" : "ghost"}
-            className="h-8 w-8"
-            onClick={() =>
-              setFlyer({
-                settings: {
-                  ...flyer.settings,
-                  highlightsEnabled: !(flyer.settings.highlightsEnabled ?? true),
-                },
-              })
-            }
-          >
-            <Sparkles className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          {(flyer.settings.highlightsEnabled ?? true)
-            ? "Tap highlights ON — click to disable for all layers"
-            : "Tap highlights OFF — click to enable"}
-        </TooltipContent>
-      </Tooltip>
+      <div className="flex-1" />
 
-      <div className="ml-auto flex flex-col items-start gap-2">
-        <div className="flex flex-wrap items-center justify-start gap-2">
-
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(zoom - 0.1)}>
-            <ZoomOut className="h-3.5 w-3.5" />
-          </Button>
-          <span className="w-10 text-center">{Math.round(zoom * 100)}%</span>
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(zoom + 0.1)}>
-            <ZoomIn className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {saving ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Saving...</span> : "Saved"}
-        </span>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="sm"
-              variant={(flyer as any).category === "event" ? "default" : "outline"}
-              onClick={openCategory}
-              className="rounded-full"
-            >
-              {(flyer as any).category === "event" ? <PartyPopper className="mr-1 h-4 w-4" /> : <Briefcase className="mr-1 h-4 w-4" />}
-              {(flyer as any).category === "event"
-                ? ((flyer as any).event_date ? format(new Date(((flyer as any).event_date as string) + "T00:00:00"), "MMM d") : "Event")
-                : "Business"}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {(flyer as any).category === "event"
-              ? "Event flyer — auto-unpublishes the day after the event"
-              : "Business flyer — stays published until you unpublish"}
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="sm" variant="outline" onClick={() => setSubscribersOpen(true)} className="rounded-full">
-              <Users className="mr-1 h-4 w-4" /> Subscribers
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>View subscribers, export to Excel, mass email</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button asChild size="sm" variant="outline" className="rounded-full">
-              <Link to={`/flyer/${flyer.id}/portal`}>
-                <Inbox className="mr-1 h-4 w-4" /> Portal
-              </Link>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Appointments, subscribers, form submissions</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="sm" variant="outline" onClick={() => setPortalLinkOpen(true)} className="rounded-full">
-              <LinkIcon className="mr-1 h-4 w-4" /> Portal link
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Get a private link + access code to share this flyer's portal</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button asChild size="sm" variant="outline" className="rounded-full">
-              <Link to={`/analytics/${flyer.id}`}>
-                <BarChart3 className="mr-1 h-4 w-4" /> Results
-              </Link>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>View live poll results</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button asChild size="sm" variant="outline" className="rounded-full">
-              <a href={`/preview/${flyer.id}`} target="_blank" rel="noreferrer">
-                <Eye className="mr-1 h-4 w-4" />Preview <span className="ml-1 hidden text-[10px] uppercase tracking-wide text-muted-foreground sm:inline">(private)</span>
-              </a>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            Only you can see this. To send it to others, use <strong>Share</strong> after publishing.
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="sm"
-              variant={flyer.settings.introAudioUrl ? "default" : "outline"}
-              onClick={() => setIntroAudioOpen(true)}
-              className="rounded-full"
-            >
-              <Music className="mr-1 h-4 w-4" /> Intro audio
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {flyer.settings.introAudioUrl
-              ? "Intro audio set — click to edit"
-              : "Play an audio clip when viewers first open the flyer"}
-          </TooltipContent>
-        </Tooltip>
-        </div>
-        <div className="flex flex-wrap items-center justify-start gap-2">
-        <Tooltip>
-
-          <TooltipTrigger asChild>
-            <Button
-              size="sm"
-              variant={flyer.settings.bgAudioUrl ? "default" : "outline"}
-              onClick={() => setBgAudioOpen(true)}
-              className="rounded-full"
-            >
-              <Music2 className="mr-1 h-4 w-4" /> Background audio
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {flyer.settings.bgAudioUrl
-              ? "Background audio set — click to edit"
-              : "Loop a background soundtrack across all pages"}
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="sm"
-              variant={(flyer.settings as any)?.autoAdvanceEnabled ? "default" : "outline"}
-              onClick={() => setAutoAdvanceOpen(true)}
-              className="rounded-full"
-            >
-              <Timer className="mr-1 h-4 w-4" /> Auto-advance
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {(flyer.settings as any)?.autoAdvanceEnabled
-              ? `Auto-advancing every ${(flyer.settings as any)?.autoAdvanceMs ?? 5000}ms — click to edit`
-              : "Automatically flip to the next page on a timer"}
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="sm"
-              variant={hasAnySocial(flyer.settings.social) ? "default" : "outline"}
-              onClick={() => setSocialOpen(true)}
-              className="rounded-full"
-            >
-              <Share2 className="mr-1 h-4 w-4" /> Social
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            Add Instagram, TikTok, etc. — appears as a slide-out tab on the flyer
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="sm"
-              variant={(flyer.settings.payVenmo || flyer.settings.payCashapp || flyer.settings.payApplePayContact) ? "default" : "outline"}
-              onClick={() => setPaySettingsOpen(true)}
-              className="rounded-full"
-            >
-              <Wallet className="mr-1 h-4 w-4" /> Checkout
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Set Venmo / Cash App / Apple Cash for cart checkout</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="sm" variant="outline" onClick={() => setPayOpen(true)} className="rounded-full">
-              <DollarSign className="mr-1 h-4 w-4" /> Pay link
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Generate a one-off Venmo / Cash App / PayPal link to send to customers</TooltipContent>
-        </Tooltip>
-        {flyer.status === "published" && (
-          <Button size="sm" variant="outline" onClick={openShare} className="rounded-full">
-            <Share2 className="mr-1 h-4 w-4" /> Share
-          </Button>
+      {/* Save status */}
+      <span className="hidden shrink-0 text-xs text-muted-foreground lg:inline">
+        {saving ? (
+          <span className="flex items-center gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" /> Saving…
+          </span>
+        ) : dirty ? (
+          <span className="text-amber-600">Unsaved changes</span>
+        ) : (
+          "Saved"
         )}
-        <Button size="sm" onClick={togglePublish} className={cn("rounded-full", flyer.status === "published" ? "" : "shadow-glow")}>
-          <Globe className="mr-1 h-4 w-4" />
-          {flyer.status === "published" ? "Unpublish" : "Publish"}
+      </span>
+
+      {/* Primary actions — always visible */}
+      <div className="lg:hidden">
+        <TopBarPreviewButton flyerId={flyer.id} compact />
+      </div>
+      <div className="hidden lg:block">
+        <TopBarPreviewButton flyerId={flyer.id} />
+      </div>
+
+      {flyer.status === "published" && (
+        <Button size="sm" variant="outline" className="hidden h-8 lg:inline-flex" onClick={openShare}>
+          <Share2 className="mr-1 h-4 w-4" /> Share
         </Button>
-        </div>
+      )}
+
+      <Button
+        size="sm"
+        onClick={togglePublish}
+        className={cn("h-8 shrink-0 px-3", flyer.status === "published" ? "" : "shadow-glow")}
+      >
+        <Globe className="mr-1 h-4 w-4 hidden sm:inline" />
+        <span className="hidden sm:inline">{flyer.status === "published" ? "Unpublish" : "Publish"}</span>
+        <Globe className="h-4 w-4 sm:hidden" />
+      </Button>
+
+      {/* Grouped menus — large screens */}
+      <div className="hidden items-center gap-1 lg:flex">
+        <TopBarPortalMenu {...menuActions} />
+        <TopBarMediaMenu {...menuActions} />
+        <TopBarPaymentsMenu {...menuActions} />
+        <TopBarFlyerMenu {...menuActions} />
+      </div>
+
+      {/* Overflow — small / medium screens */}
+      <div className="lg:hidden">
+        <TopBarMobileMenu {...menuActions} />
       </div>
 
 

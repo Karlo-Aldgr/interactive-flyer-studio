@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { Flyer, FlyerPage, Layer, LayerAction, LayerContent, LayerStyle, PageIntro } from "@/types/flyer";
 import { defaultLayer, emptyPage, uid } from "@/lib/konvaHelpers";
 import type { SubjectDetection } from "@/lib/subjectDetect";
+import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant } from "@/lib/editorToolPresets";
 
 export type DrawMode = null | "hotspot" | "hotspot-ellipse" | "crop" | "extract-rect" | "extract-auto";
 
@@ -68,7 +69,12 @@ interface EditorState {
   introReplayKey: number;
   replayIntro: () => void;
   // layers
-  addLayer: (type: Layer["type"]) => void;
+  addLayer: (
+    type: Layer["type"],
+    options?: { content?: Partial<LayerContent>; style?: Partial<LayerStyle>; size?: { width: number; height: number } }
+  ) => void;
+  addShapeLayer: (variant: ShapeVariant) => void;
+  addButtonLayer: (presetId: ButtonPresetId) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
   addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }, shape?: "rect" | "ellipse") => void;
   addExtractedLayer: (args: {
@@ -461,7 +467,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-  addLayer: (type) => {
+  addLayer: (type, options) => {
     const s = get();
     const pageId = s.selectedPageId;
     if (!pageId) return;
@@ -469,12 +475,34 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!page) return;
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
     const layer = defaultLayer(type, pageId, page.layers.length);
+    if (options?.content) layer.content = { ...layer.content, ...options.content };
+    if (options?.style) layer.style = { ...layer.style, ...options.style };
+    if (options?.size) layer.size = { ...options.size };
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
       past,
       future: [],
       dirty: true,
+    });
+  },
+
+  addShapeLayer: (variant: ShapeVariant) => {
+    const preset = SHAPE_PRESETS.find((p) => p.id === variant);
+    if (!preset) return;
+    get().addLayer("shape", {
+      content: preset.content,
+      style: preset.style,
+      size: preset.size,
+    });
+  },
+
+  addButtonLayer: (presetId: ButtonPresetId) => {
+    const preset = BUTTON_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    get().addLayer("button", {
+      content: { label: preset.contentLabel },
+      style: preset.style,
     });
   },
 
