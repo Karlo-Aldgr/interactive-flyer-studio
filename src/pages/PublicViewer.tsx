@@ -117,6 +117,8 @@ import { useMenuCart } from "@/store/menuCartStore";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { toast } from "sonner";
 import { getCurrentTrafficSource } from "@/lib/trafficSource";
+import { OrderStatusTracker, OrderTrackFloatingButton } from "@/components/viewer/OrderStatusTracker";
+import { saveOrderTrack } from "@/lib/customerOrderStatus";
 
 
 // Highlight ring shown around tappable layers in the viewer.
@@ -821,6 +823,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  const [orderTrackOpen, setOrderTrackOpen] = useState(false);
   const [payLaterConfirmOpen, setPayLaterConfirmOpen] = useState(false);
   const [payLaterAccepted, setPayLaterAccepted] = useState(false);
   const [payLaterSubmitting, setPayLaterSubmitting] = useState(false);
@@ -2942,6 +2945,15 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   return;
                 }
                 setPlacedOrderId((inserted as any)?.id || null);
+                if ((inserted as any)?.id && flyer) {
+                  saveOrderTrack(flyer.id, {
+                    orderId: (inserted as any).id,
+                    kind: "cart",
+                    email: checkoutData.email,
+                    phone: checkoutData.phone || undefined,
+                    placedAt: new Date().toISOString(),
+                  });
+                }
                 logClick(null, "cart_checkout_submit");
                 setCheckoutSuccess(true);
               }}
@@ -3098,6 +3110,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                 >
                   {hasAny ? "I'll pay later" : "Done"}
                 </Button>
+                {placedOrderId && (
+                  <Button variant="secondary" className="w-full" onClick={() => setOrderTrackOpen(true)}>
+                    Track order status
+                  </Button>
+                )}
               </div>
             );
           })()}
@@ -3172,6 +3189,17 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </div>
         </DialogContent>
       </Dialog>
+
+      {flyer && (
+        <>
+          <OrderStatusTracker
+            flyerId={flyer.id}
+            open={orderTrackOpen}
+            onOpenChange={setOrderTrackOpen}
+          />
+          <OrderTrackFloatingButton flyerId={flyer.id} onOpen={() => setOrderTrackOpen(true)} />
+        </>
+      )}
     </div>
   );
 }
