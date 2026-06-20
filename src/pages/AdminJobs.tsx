@@ -16,6 +16,8 @@ import { Loader2, ExternalLink, Trash2, Pencil, FileText, Database, X, Sparkles 
 import { INTERACTIONS } from "@/lib/interactionsCatalog";
 import { format, formatDistanceToNow } from "date-fns";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { JobDeletedBanner, JobStaffBadges } from "@/components/dashboard/JobStaffBadges";
+import { jobIsCustomerDeleted } from "@/lib/customerJobs";
 import { checkIsAdmin } from "@/lib/roles";
 import { getJobUploadSignedUrl, jobUploadFilename } from "@/lib/jobUploads";
 
@@ -247,8 +249,9 @@ export default function AdminJobs() {
               {filtered.map((j) => {
                 const isNew = j.status === "new" && (Date.now() - new Date(j.created_at).getTime() < NEW_BADGE_MS);
                 const linkedFlyer = flyers.find((f) => f.id === j.flyer_id);
+                const customerDeleted = jobIsCustomerDeleted(j);
                 return (
-                  <Card key={j.id} className={`p-5 ${isNew ? "ring-2 ring-primary/60 shadow-glow" : ""}`}>
+                  <Card key={j.id} className={`p-5 ${isNew ? "ring-2 ring-primary/60 shadow-glow" : ""} ${customerDeleted ? "border-destructive/30" : ""}`}>
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -256,6 +259,7 @@ export default function AdminJobs() {
                           <h3 className="font-semibold">{j.title}</h3>
                           <Badge variant="secondary">{STATUS_LABEL[j.status]}</Badge>
                           <Badge variant="outline">{j.type}</Badge>
+                          <JobStaffBadges job={j} />
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {j.customer_email ?? "—"} · {format(new Date(j.created_at), "PPp")}
@@ -318,8 +322,14 @@ export default function AdminJobs() {
       {/* Manage job dialog */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Manage job</DialogTitle></DialogHeader>
-          {editing && (
+          <DialogHeader>
+            <DialogTitle>
+              {editing && jobIsCustomerDeleted(editing) ? "Cancelled project" : "Manage job"}
+            </DialogTitle>
+          </DialogHeader>
+          {editing && jobIsCustomerDeleted(editing) ? (
+            <JobDeletedBanner job={editing} mode="admin" />
+          ) : editing && (
             <div className="space-y-4">
               <div>
                 <Label>Status</Label>
@@ -362,7 +372,9 @@ export default function AdminJobs() {
           )}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={saveJob}>Save</Button>
+            {editing && !jobIsCustomerDeleted(editing) && (
+              <Button onClick={saveJob}>Save</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

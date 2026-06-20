@@ -193,6 +193,14 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
     }
   }, [hasFoodOrdering, ROLE_KEY]);
 
+  // Non-food flyers skip Master/Waiter — go straight to Analytics.
+  useEffect(() => {
+    if (role !== null || hasFoodOrdering) return;
+    sessionStorage.setItem(ROLE_KEY, "analytics");
+    setRole("analytics");
+    setActiveTab("analytics");
+  }, [hasFoodOrdering, role, ROLE_KEY]);
+
   async function chooseRole(r: "master" | "analytics" | "waiter") {
     if (r === "waiter") {
       setGoingToWaiter(true);
@@ -501,7 +509,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
       />
       {isOwner && <PortalLinkDialog flyerId={flyer.id} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />}
 
-      <Dialog open={role === null} onOpenChange={() => { /* gated */ }}>
+      <Dialog open={role === null && hasFoodOrdering} onOpenChange={() => { /* gated */ }}>
         <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>{hasFoodOrdering ? "Who's signing in?" : "Open portal"}</DialogTitle>

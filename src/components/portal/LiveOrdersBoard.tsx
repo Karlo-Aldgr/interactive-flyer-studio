@@ -75,7 +75,7 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
   async function handleUnlock() {
     try {
       if (pinSet === false) {
-        if (pin.length < 4) return toast.error("Choose 4+ digit PIN");
+        if (pin.length < 4 || pin.length > 8) return toast.error("Choose a PIN between 4 and 8 digits");
         await setMasterPin(flyerId, pin);
         toast.success("Master PIN set");
         setPinSet(true);
@@ -144,12 +144,15 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Lock className="h-4 w-4" /> Master Order Portal</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {pinSet === null ? <p className="text-sm text-muted-foreground">Loading…</p> : pinSet === false ? (
-            <p className="text-sm">No master PIN set. Choose one now to protect the live orders view.</p>
+            <>
+              <p className="text-sm font-medium">This Master Portal does not have an existing PIN yet.</p>
+              <p className="text-sm text-muted-foreground">Please register a PIN first (4–8 digits). You will use the same PIN every time you access live orders.</p>
+            </>
           ) : (
-            <p className="text-sm">Enter master PIN to view live orders across all tables.</p>
+            <p className="text-sm">Enter your master PIN to view live orders across all tables.</p>
           )}
-          <Input type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="••••" onKeyDown={(e) => e.key === "Enter" && handleUnlock()} />
-          <Button onClick={handleUnlock} className="w-full">{pinSet === false ? "Set PIN & unlock" : "Unlock"}</Button>
+          <Input type="password" inputMode="numeric" maxLength={8} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="••••" onKeyDown={(e) => e.key === "Enter" && handleUnlock()} />
+          <Button onClick={handleUnlock} className="w-full">{pinSet === false ? "Register PIN & unlock" : "Unlock"}</Button>
         </CardContent>
       </Card>
     );
