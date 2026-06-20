@@ -1,16 +1,19 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { isPasswordRecoveryUrl, passwordRecoveryRedirectPath } from "@/lib/authUtils";
 import Landing from "./pages/Landing";
 
 // Lazy-loaded routes — keeps Konva/Recharts/etc out of the initial bundle
 const Auth = lazy(() => import("./pages/Auth"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Editor = lazy(() => import("./pages/Editor"));
 const PublicViewer = lazy(() => import("./pages/PublicViewer"));
@@ -36,6 +39,20 @@ const FullScreenSpinner = () => (
   </div>
 );
 
+/** Send recovery email links to the reset form even when Supabase lands on /dashboard or /auth. */
+function PasswordRecoveryRedirect() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isPasswordRecoveryUrl()) return;
+    if (location.pathname === "/auth/reset-password") return;
+    navigate(passwordRecoveryRedirectPath(), { replace: true });
+  }, [location.pathname, location.search, location.hash, navigate]);
+
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -43,10 +60,13 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <PasswordRecoveryRedirect />
           <Suspense fallback={<FullScreenSpinner />}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+              <Route path="/auth/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/editor/:flyerId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
               <Route path="/analytics/:flyerId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
