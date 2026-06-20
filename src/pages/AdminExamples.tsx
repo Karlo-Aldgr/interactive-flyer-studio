@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import { checkIsAdmin } from "@/lib/roles";
 
 type Example = {
   id: string;
@@ -52,8 +54,7 @@ export default function AdminExamples() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
-      .then(({ data }) => setIsAdmin(!!data));
+    checkIsAdmin(user.id).then(setIsAdmin);
   }, [user]);
 
   const load = async () => {
@@ -119,18 +120,16 @@ export default function AdminExamples() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="sm"><Link to="/dashboard"><ArrowLeft className="mr-1 h-4 w-4" /> Dashboard</Link></Button>
-            <h1 className="font-display text-xl font-bold">Manage Examples</h1>
-          </div>
-          <Button onClick={openNew}><Plus className="mr-1 h-4 w-4" /> Add example</Button>
+    <AdminLayout active="examples">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold sm:text-3xl">Manage examples</h1>
+          <p className="text-sm text-muted-foreground">Sample TapFlyers shown on the landing page and customer dashboard.</p>
         </div>
-      </header>
+        <Button onClick={openNew} className="w-full sm:w-auto"><Plus className="mr-1 h-4 w-4" /> Add example</Button>
+      </div>
 
-      <main className="container py-8">
+      <div className="mt-8">
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         ) : items.length === 0 ? (
@@ -157,7 +156,7 @@ export default function AdminExamples() {
             ))}
           </div>
         )}
-      </main>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -207,6 +206,6 @@ export default function AdminExamples() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminLayout>
   );
 }

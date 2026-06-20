@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Sparkles, Plus, BarChart3, ExternalLink, MoreVertical, Trash2, Copy, Pencil, Loader2, FileText, LogOut, CalendarIcon, Briefcase, PartyPopper, MailCheck, ShieldCheck } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { Plus, Loader2, CalendarIcon, Briefcase, PartyPopper } from "lucide-react";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
+import { CustomerDashboard } from "@/components/dashboard/CustomerDashboard";
+import { EditorDashboard } from "@/components/dashboard/EditorDashboard";
 import { Flyer, FlyerCategory } from "@/types/flyer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -16,24 +17,24 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { cn, buildPublicFlyerUrl } from "@/lib/utils";
 import { useCanEdit } from "@/hooks/useCanEdit";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { loadUserJobs, type UserJob } from "@/lib/userJobs";
 
 export default function Dashboard() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [flyers, setFlyers] = useState<Flyer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [customerJobs, setCustomerJobs] = useState<UserJob[]>([]);
+  const [customerJobsLoading, setCustomerJobsLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [newCategory, setNewCategory] = useState<FlyerCategory>("business");
   const [newEventDate, setNewEventDate] = useState<Date | undefined>(undefined);
-  const [isAdmin, setIsAdmin] = useState(false);
   const { canEdit, loading: accessLoading } = useCanEdit();
-
-  useEffect(() => {
-    if (!user) return;
-    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role","admin").maybeSingle()
-      .then(({ data }) => setIsAdmin(!!data));
-  }, [user]);
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const [searchParams] = useSearchParams();
+  const studioMode = searchParams.get("studio") === "1";
 
   const load = async () => {
     setLoading(true);
@@ -75,6 +76,16 @@ export default function Dashboard() {
   };
 
   useEffect(() => { if (canEdit) load(); }, [canEdit]);
+
+  useEffect(() => {
+    if (!user || canEdit || accessLoading) return;
+    setCustomerJobsLoading(true);
+    loadUserJobs(user.id, { limit: 5 }).then(({ jobs, error }) => {
+      if (error) toast.error(error.message || "Could not load your projects");
+      else setCustomerJobs(jobs);
+      setCustomerJobsLoading(false);
+    });
+  }, [user, canEdit, accessLoading]);
 
   const create = async () => {
     if (!user) return;
@@ -164,134 +175,31 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="TapThatFlyer logo" className="h-9 w-auto" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm"><Link to="/my-jobs">My jobs</Link></Button>
-            <Button asChild size="sm" className="shadow-glow"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit job</Link></Button>
-            {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/jobs">Admin</Link></Button>}
-            {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/editors"><ShieldCheck className="mr-1 h-4 w-4" />Editors</Link></Button>}
-            {isAdmin && <Button asChild variant="outline" size="sm"><Link to="/admin/examples">Examples</Link></Button>}
-            <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>
-            <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="mr-1 h-4 w-4" />Sign out</Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container py-10">
-        {accessLoading ? (
+    <DashboardShell>
+      <DashboardPage maxWidth={!accessLoading && canEdit ? "6xl" : "4xl"}>
+        {adminLoading || accessLoading ? (
           <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        ) : isAdmin && !studioMode ? (
+          <Navigate to="/admin/jobs" replace />
         ) : !canEdit ? (
-          <Card className="mx-auto max-w-2xl border-dashed p-10 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <MailCheck className="h-7 w-7" />
-            </div>
-            <h1 className="font-display text-2xl font-bold md:text-3xl">Thanks — your order has been submitted and is under review!</h1>
-            <p className="mt-3 text-muted-foreground">
-              You will be contacted shortly via email or phone call. Once approved, your editor will be unlocked here automatically.
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-              <Button asChild><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit another job</Link></Button>
-              <Button asChild variant="outline"><Link to="/my-jobs">View my jobs</Link></Button>
-              <Button asChild variant="ghost"><Link to="/examples">See examples</Link></Button>
-            </div>
-          </Card>
-        ) : (
-        <>
-        <div className="flex items-end justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-bold">Your flyers</h1>
-            <p className="mt-1 text-muted-foreground">Design, publish, and track engagement.</p>
-          </div>
-          <Button onClick={openCreate} disabled={creating} className="shadow-glow">
-            {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-1 h-4 w-4" />}
-            New flyer
-          </Button>
-        </div>
-
-        <div className="mt-8">
-          {loading ? (
-            <div className="flex h-40 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-          ) : flyers.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center gap-3 border-dashed py-20 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <FileText className="h-7 w-7" />
-              </div>
-              <h3 className="font-display text-lg font-semibold">No flyers yet</h3>
-              <p className="max-w-xs text-sm text-muted-foreground">Create your first interactive flyer and publish it in minutes.</p>
-              <Button onClick={openCreate} disabled={creating} className="mt-2"><Plus className="mr-1 h-4 w-4" />Create flyer</Button>
-            </Card>
+          customerJobsLoading ? (
+            <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {flyers.map((f) => (
-                <Card key={f.id} className="group overflow-hidden transition hover:shadow-elegant">
-                  <Link to={`/editor/${f.id}`} className="block">
-                    <div className="aspect-[3/4] gradient-canvas border-b border-border relative">
-                      {(f.thumbnail_url || (f as any)._pageImageFallback) ? (
-                        <img
-                          src={f.thumbnail_url || (f as any)._pageImageFallback}
-                          alt={f.title}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                          onError={(e) => {
-                            const fallback = (f as any)._pageImageFallback;
-                            const el = e.currentTarget as HTMLImageElement;
-                            if (fallback && el.src !== fallback) el.src = fallback;
-                          }}
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-muted-foreground">
-                          <FileText className="h-10 w-10 opacity-40" />
-                        </div>
-                      )}
-                      <span className={`absolute left-3 top-3 rounded-full px-2 py-0.5 text-xs font-medium ${f.status === "published" ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>
-                        {f.status}
-                      </span>
-                      <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-0.5 text-xs font-medium text-foreground backdrop-blur">
-                        {f.category === "event" ? <PartyPopper className="h-3 w-3" /> : <Briefcase className="h-3 w-3" />}
-                        {f.category === "event" ? "Event" : "Business"}
-                      </span>
-                    </div>
-                  </Link>
-                  <div className="flex items-center justify-between gap-2 p-4">
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold">{f.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {f.category === "event" && f.event_date
-                          ? <>Event {format(new Date(f.event_date + "T00:00:00"), "MMM d, yyyy")}</>
-                          : <>Updated {new Date(f.updated_at).toLocaleDateString()}</>}
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/editor/${f.id}`)}><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(`/analytics/${f.id}`)}><BarChart3 className="mr-2 h-4 w-4" />Analytics</DropdownMenuItem>
-                        {f.public_slug && (
-                          <>
-                            <DropdownMenuItem onClick={() => copyLink(f.public_slug)}><Copy className="mr-2 h-4 w-4" />Copy link</DropdownMenuItem>
-                            <DropdownMenuItem asChild><a href={`/f/${f.public_slug}`} target="_blank" rel="noreferrer"><ExternalLink className="mr-2 h-4 w-4" />Open</a></DropdownMenuItem>
-                          </>
-                        )}
-                        <DropdownMenuItem onClick={() => duplicate(f)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => remove(f.id)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-        </>
+            <CustomerDashboard jobs={customerJobs} userEmail={user?.email} />
+          )
+        ) : (
+          <EditorDashboard
+            flyers={flyers}
+            loading={loading}
+            creating={creating}
+            userEmail={user?.email}
+            onOpenCreate={openCreate}
+            onRemove={remove}
+            onDuplicate={duplicate}
+            onCopyLink={copyLink}
+          />
         )}
-      </main>
+      </DashboardPage>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-md">
@@ -363,6 +271,6 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardShell>
   );
 }

@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Download, Search, ArrowLeft } from "lucide-react";
+import { Loader2, Download, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import { checkIsAdmin } from "@/lib/roles";
 
 type Contact = {
   source: "subscriber" | "checkout";
@@ -27,15 +29,7 @@ export default function AdminContacts() {
 
   useEffect(() => {
     if (!user) return;
-    (async () => {
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      setIsAdmin(!!data);
-    })();
+    checkIsAdmin(user.id).then(setIsAdmin);
   }, [user]);
 
   useEffect(() => {
@@ -109,30 +103,18 @@ export default function AdminContacts() {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
   }
   if (!user) return <Navigate to="/auth" replace />;
-  if (!isAdmin) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3 p-6 text-center">
-        <h1 className="text-xl font-semibold">Admins only</h1>
-        <p className="text-sm text-muted-foreground">Your account doesn't have super-admin access.</p>
-        <Link to="/dashboard"><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Back to dashboard</Button></Link>
-      </div>
-    );
-  }
+  if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   const subs = filtered.filter((c) => c.source === "subscriber");
   const orders = filtered.filter((c) => c.source === "checkout");
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <AdminLayout active="contacts">
+      <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Super Admin · Contacts</h1>
+          <h1 className="font-display text-2xl font-bold sm:text-3xl">Contacts</h1>
           <p className="text-sm text-muted-foreground">All emails and phone numbers collected across every flyer.</p>
-        </div>
-        <div className="flex gap-2">
-          <Link to="/admin/analytics"><Button variant="ghost" size="sm">Analytics</Button></Link>
-          <Link to="/admin/jobs"><Button variant="ghost" size="sm">Jobs</Button></Link>
-          <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="mr-1 h-4 w-4" /> Dashboard</Button></Link>
         </div>
       </div>
 
@@ -160,7 +142,8 @@ export default function AdminContacts() {
           <TabsContent value="orders"><Table rows={orders} /></TabsContent>
         </Tabs>
       )}
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
 

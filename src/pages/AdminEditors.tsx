@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Trash2, UserPlus } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { Loader2, Trash2, UserPlus } from "lucide-react";
+import { checkIsAdmin } from "@/lib/roles";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 
 type Editor = { user_id: string; email: string; granted_at: string };
 
@@ -23,9 +24,7 @@ export default function AdminEditors() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
-      .then(({ data }) => {
-        const ok = !!data;
+    checkIsAdmin(user.id).then((ok) => {
         setIsAdmin(ok);
         if (!ok) navigate("/dashboard");
       });
@@ -69,18 +68,9 @@ export default function AdminEditors() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="TapThatFlyer" className="h-9 w-auto" />
-          </Link>
-          <Button asChild variant="ghost" size="sm"><Link to="/dashboard"><ArrowLeft className="mr-1 h-4 w-4" />Dashboard</Link></Button>
-        </div>
-      </header>
-
-      <main className="container max-w-3xl py-10">
-        <h1 className="font-display text-3xl font-bold">Editor access</h1>
+    <AdminLayout active="editors">
+      <div className="mx-auto max-w-3xl">
+        <h1 className="font-display text-2xl font-bold sm:text-3xl">Editor access</h1>
         <p className="mt-1 text-muted-foreground">
           New customers sign up to submit a job and don't get editor access by default.
           Grant editor access here by email after you've reviewed their order.
@@ -88,7 +78,7 @@ export default function AdminEditors() {
 
         <Card className="mt-8 p-6">
           <Label htmlFor="email">Grant editor access by email</Label>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
             <Input
               id="email"
               type="email"
@@ -97,7 +87,7 @@ export default function AdminEditors() {
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && grant()}
             />
-            <Button onClick={grant} disabled={busy || !email.trim()}>
+            <Button onClick={grant} disabled={busy || !email.trim()} className="w-full sm:w-auto">
               {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
               Grant
             </Button>
@@ -124,7 +114,7 @@ export default function AdminEditors() {
             ))
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

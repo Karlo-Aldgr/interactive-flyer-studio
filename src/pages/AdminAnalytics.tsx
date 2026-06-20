@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, ArrowLeft, BarChart3, Eye, MousePointerClick, Users, Smartphone } from "lucide-react";
+import { Loader2, BarChart3, Eye, MousePointerClick, Users, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { sourceFromEventMetadata } from "@/lib/trafficSource";
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import { checkIsAdmin } from "@/lib/roles";
 
 type Ev = {
   id: string;
@@ -36,15 +38,7 @@ export default function AdminAnalytics() {
 
   useEffect(() => {
     if (!user) return;
-    (async () => {
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      setIsAdmin(!!data);
-    })();
+    checkIsAdmin(user.id).then(setIsAdmin);
   }, [user]);
 
   useEffect(() => {
@@ -126,26 +120,11 @@ export default function AdminAnalytics() {
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <span className="font-semibold">Site Analytics</span>
-            <Badge variant="outline" className="ml-2">Super admin</Badge>
-          </div>
-          <div className="flex gap-2">
-            <Button asChild variant="ghost" size="sm"><Link to="/admin/jobs">Jobs</Link></Button>
-            <Button asChild variant="ghost" size="sm"><Link to="/admin/contacts">Contacts</Link></Button>
-            <Button asChild variant="ghost" size="sm"><Link to="/dashboard"><ArrowLeft className="mr-1 h-4 w-4" />Dashboard</Link></Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container space-y-6 py-8">
-        <div className="flex items-center justify-between">
+    <AdminLayout active="analytics">
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold">Site-wide analytics</h1>
+            <h1 className="font-display text-2xl font-bold sm:text-3xl">Site-wide analytics</h1>
             <p className="text-sm text-muted-foreground">Views, clicks, and engagement across every flyer.</p>
           </div>
           <Select value={range} onValueChange={setRange}>
@@ -276,8 +255,8 @@ export default function AdminAnalytics() {
             </div>
           </>
         )}
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
 
