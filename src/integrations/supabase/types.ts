@@ -409,13 +409,20 @@ export type Database = {
           admin_notes: string | null
           brief: string | null
           created_at: string
+          customer_deletion_reason: string | null
           customer_email: string | null
+          customer_updated_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           flyer_id: string | null
           id: string
           payment_link: string | null
           preview_ready: boolean
           price_cents: number | null
           selected_actions: Json
+          staff_acknowledged_at: string | null
+          staff_acknowledged_by: string | null
+          staff_content_seen_at: string | null
           status: Database["public"]["Enums"]["job_status"]
           title: string
           type: Database["public"]["Enums"]["job_type"]
@@ -427,13 +434,20 @@ export type Database = {
           admin_notes?: string | null
           brief?: string | null
           created_at?: string
+          customer_deletion_reason?: string | null
           customer_email?: string | null
+          customer_updated_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           flyer_id?: string | null
           id?: string
           payment_link?: string | null
           preview_ready?: boolean
           price_cents?: number | null
           selected_actions?: Json
+          staff_acknowledged_at?: string | null
+          staff_acknowledged_by?: string | null
+          staff_content_seen_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           title?: string
           type: Database["public"]["Enums"]["job_type"]
@@ -445,13 +459,20 @@ export type Database = {
           admin_notes?: string | null
           brief?: string | null
           created_at?: string
+          customer_deletion_reason?: string | null
           customer_email?: string | null
+          customer_updated_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           flyer_id?: string | null
           id?: string
           payment_link?: string | null
           preview_ready?: boolean
           price_cents?: number | null
           selected_actions?: Json
+          staff_acknowledged_at?: string | null
+          staff_acknowledged_by?: string | null
+          staff_content_seen_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           title?: string
           type?: Database["public"]["Enums"]["job_type"]
@@ -511,6 +532,59 @@ export type Database = {
           },
         ]
       }
+      menu_daily_summaries: {
+        Row: {
+          cancelled_orders: number
+          completed_orders: number
+          created_at: string
+          flyer_id: string
+          id: string
+          paid_orders: number
+          pending_orders: number
+          summary_date: string
+          total_orders: number
+          total_sales_cents: number
+          unpaid_orders: number
+          updated_at: string
+        }
+        Insert: {
+          cancelled_orders?: number
+          completed_orders?: number
+          created_at?: string
+          flyer_id: string
+          id?: string
+          paid_orders?: number
+          pending_orders?: number
+          summary_date: string
+          total_orders?: number
+          total_sales_cents?: number
+          unpaid_orders?: number
+          updated_at?: string
+        }
+        Update: {
+          cancelled_orders?: number
+          completed_orders?: number
+          created_at?: string
+          flyer_id?: string
+          id?: string
+          paid_orders?: number
+          pending_orders?: number
+          summary_date?: string
+          total_orders?: number
+          total_sales_cents?: number
+          unpaid_orders?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_daily_summaries_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_orders: {
         Row: {
           action_id: string | null
@@ -526,6 +600,8 @@ export type Database = {
           items: Json
           notes: string | null
           order_type: string
+          paid_at: string | null
+          payment_method: string
           payment_status: string
           pickup_at: string | null
           session_id: string | null
@@ -549,6 +625,8 @@ export type Database = {
           items?: Json
           notes?: string | null
           order_type?: string
+          paid_at?: string | null
+          payment_method?: string
           payment_status?: string
           pickup_at?: string | null
           session_id?: string | null
@@ -572,6 +650,8 @@ export type Database = {
           items?: Json
           notes?: string | null
           order_type?: string
+          paid_at?: string | null
+          payment_method?: string
           payment_status?: string
           pickup_at?: string | null
           session_id?: string | null
@@ -787,6 +867,30 @@ export type Database = {
           id?: string
           option_id?: string
           session_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1066,6 +1170,20 @@ export type Database = {
     Functions: {
       archive_menu_orders_daily: { Args: never; Returns: number }
       current_user_can_edit: { Args: never; Returns: boolean }
+      customer_delete_job: {
+        Args: { _job_id: string; _reason: string }
+        Returns: Json
+      }
+      customer_update_job: {
+        Args: {
+          _brief?: string
+          _job_id: string
+          _selected_actions?: Json
+          _title?: string
+          _upload_url?: string
+        }
+        Returns: Json
+      }
       grant_editor_by_email: { Args: { _email: string }; Returns: Json }
       has_role: {
         Args: {
@@ -1082,8 +1200,40 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_users_with_roles: {
+        Args: never
+        Returns: {
+          email: string
+          flyer_count: number
+          job_count: number
+          roles: string[]
+          signed_up_at: string
+          user_id: string
+        }[]
+      }
       revoke_editor_by_email: { Args: { _email: string }; Returns: Json }
+      staff_acknowledge_job: { Args: { _job_id: string }; Returns: Json }
+      staff_mark_job_seen: { Args: { _job_id: string }; Returns: Json }
       unpublish_expired_events: { Args: never; Returns: number }
+      upsert_menu_daily_summary: {
+        Args: { p_date: string; p_flyer_id: string }
+        Returns: undefined
+      }
+      waiter_pin_hash: {
+        Args: { p_flyer_id: string; p_pin: string }
+        Returns: string
+      }
+      waiter_portal_resolve_token: { Args: { p_token: string }; Returns: Json }
+      waiter_portal_rpc: {
+        Args: {
+          p_action: string
+          p_flyer_id: string
+          p_order_id?: string
+          p_pin: string
+          p_status?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       action_type:
