@@ -6,9 +6,28 @@ export function sanitizeNextPath(next: string | null | undefined): string {
   return next;
 }
 
+/** Published app origin for auth emails/OAuth — avoids preview-only reset links. */
+function getAuthAppOrigin(): string {
+  if (typeof window === "undefined") {
+    return (import.meta as any).env?.VITE_APP_ORIGIN?.replace(/\/$/, "") || "";
+  }
+  // Lazy import avoids pulling utils into edge bundles if this file is reused.
+  const published = (import.meta as any).env?.VITE_APP_ORIGIN as string | undefined;
+  const hostname = window.location.hostname;
+  const isPreview =
+    hostname.endsWith(".lovable.app") ||
+    hostname.endsWith(".lovableproject.com") ||
+    hostname.startsWith("preview--");
+  const isLocal = hostname === "localhost" || hostname === "127.0.0.1";
+  if (published && (isPreview || (!isLocal && published.startsWith("http")))) {
+    return published.replace(/\/$/, "");
+  }
+  return window.location.origin;
+}
+
 export function buildAuthRedirectUrl(next: string): string {
   const safeNext = sanitizeNextPath(next);
-  return `${window.location.origin}/auth?next=${encodeURIComponent(safeNext)}`;
+  return `${getAuthAppOrigin()}/auth?next=${encodeURIComponent(safeNext)}`;
 }
 
 /** True when the URL carries a Supabase password-recovery token (hash or query). */
@@ -24,7 +43,7 @@ export function isPasswordRecoveryUrl(): boolean {
 
 export function buildPasswordResetRedirectUrl(next?: string | null): string {
   const safeNext = sanitizeNextPath(next ?? undefined);
-  return `${window.location.origin}/auth/reset-password?next=${encodeURIComponent(safeNext)}`;
+  return `${getAuthAppOrigin()}/auth/reset-password?next=${encodeURIComponent(safeNext)}`;
 }
 
 export function passwordRecoveryRedirectPath(): string {
