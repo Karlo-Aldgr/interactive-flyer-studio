@@ -12,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, ExternalLink, Trash2, Pencil, FileText, Database, X, Sparkles } from "lucide-react";
+import { Loader2, ExternalLink, Trash2, Pencil, FileText, Database, X, Sparkles } from "lucide-react";
 import { INTERACTIONS } from "@/lib/interactionsCatalog";
 import { format, formatDistanceToNow } from "date-fns";
-import logo from "@/assets/logo.png";
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import { checkIsAdmin } from "@/lib/roles";
 import { getJobUploadSignedUrl, jobUploadFilename } from "@/lib/jobUploads";
 
 
@@ -52,11 +53,11 @@ export default function AdminJobs() {
   const [eNotes, setENotes] = useState<string>("");
 
   useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role","admin").maybeSingle();
-      setIsAdmin(!!data);
-    })();
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    checkIsAdmin(user.id).then(setIsAdmin);
   }, [user]);
 
   const refresh = async () => {
@@ -193,22 +194,8 @@ export default function AdminJobs() {
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Link to="/"><img src={logo} alt="logo" className="h-9 w-auto" /></Link>
-            <Badge variant="outline" className="ml-2">Super admin</Badge>
-          </div>
-          <div className="flex gap-2">
-            <Button asChild variant="ghost" size="sm"><Link to="/admin/analytics">Analytics</Link></Button>
-            <Button asChild variant="ghost" size="sm"><Link to="/admin/contacts">Contacts</Link></Button>
-            <Button asChild variant="ghost" size="sm"><Link to="/dashboard"><ArrowLeft className="mr-1 h-4 w-4" />Dashboard</Link></Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container py-8 space-y-8">
+    <AdminLayout active="jobs">
+      <div className="space-y-8">
         {backupOverdue && (
           <Card className="flex flex-wrap items-center justify-between gap-3 border-amber-500/40 bg-amber-500/10 p-4">
             <div className="flex items-start gap-3">
@@ -327,7 +314,6 @@ export default function AdminJobs() {
             </div>
           )}
         </section>
-      </main>
 
       {/* Manage job dialog */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
@@ -393,6 +379,7 @@ export default function AdminJobs() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

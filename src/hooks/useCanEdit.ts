@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { checkCanEdit } from "@/lib/roles";
 
 export function useCanEdit() {
   const { user, loading: authLoading } = useAuth();
@@ -8,14 +8,11 @@ export function useCanEdit() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { setCanEdit(false); return; }
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .in("role", ["admin", "editor"])
-      .maybeSingle()
-      .then(({ data }) => setCanEdit(!!data));
+    if (!user) {
+      setCanEdit(false);
+      return;
+    }
+    checkCanEdit().then(setCanEdit);
   }, [user, authLoading]);
 
   return { canEdit, loading: canEdit === null };
