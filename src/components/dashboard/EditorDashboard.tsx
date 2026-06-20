@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import type { Flyer } from "@/types/flyer";
 import { greetingName } from "@/lib/displayName";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { EditorJobQueue } from "@/components/dashboard/EditorJobQueue";
 
 type StatusFilter = "all" | "published" | "draft";
 
@@ -114,6 +115,8 @@ export function EditorDashboard({
           </Button>
         }
       />
+
+      <EditorJobQueue flyers={flyers} />
 
       {!loading && flyers.length > 0 && (
         <>
