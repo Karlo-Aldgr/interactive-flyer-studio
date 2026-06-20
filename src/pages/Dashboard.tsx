@@ -180,7 +180,7 @@ export default function Dashboard() {
         {adminLoading || accessLoading ? (
           <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         ) : isAdmin && !studioMode ? (
-          <Navigate to="/admin/jobs" replace />
+          <Navigate to="/admin/users" replace />
         ) : !canEdit ? (
           customerJobsLoading ? (
             <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>

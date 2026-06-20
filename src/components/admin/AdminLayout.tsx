@@ -45,7 +45,7 @@ export function AdminLayout({ active, children }: AdminLayoutProps) {
                 </nav>
               </SheetContent>
             </Sheet>
-            <Link to="/admin/jobs" className="shrink-0">
+            <Link to="/admin/users" className="shrink-0">
               <img src={logo} alt="TapThatFlyer" className="h-8 w-auto sm:h-9" />
             </Link>
             <Badge variant="outline" className="hidden shrink-0 sm:inline-flex">
