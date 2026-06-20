@@ -578,9 +578,43 @@ function useKonvaDisplayImage(src?: string) {
   return anonymousImg || plainImg;
 }
 
-function ImageNode({ layer, props }: { layer: Layer; props: any }) {
+function ImageNode({ layer, props, showHoverOutline }: { layer: Layer; props: any; showHoverOutline?: boolean }) {
   const img = useKonvaDisplayImage(layer.content.src);
-  return <KonvaImage {...props} image={img} cornerRadius={layer.style.cornerRadius} />;
+  const [hovered, setHovered] = useState(false);
+
+  if (!showHoverOutline) {
+    return <KonvaImage {...props} image={img} cornerRadius={layer.style.cornerRadius} />;
+  }
+
+  const { onMouseEnter, onMouseLeave, width, height, ...rest } = props;
+
+  return (
+    <Group
+      {...rest}
+      width={width}
+      height={height}
+      onMouseEnter={(e: any) => {
+        onMouseEnter?.(e);
+        setHovered(true);
+      }}
+      onMouseLeave={(e: any) => {
+        onMouseLeave?.(e);
+        setHovered(false);
+      }}
+    >
+      <KonvaImage image={img} width={width} height={height} cornerRadius={layer.style.cornerRadius} />
+      {hovered && (
+        <Rect
+          width={width}
+          height={height}
+          cornerRadius={layer.style.cornerRadius}
+          stroke="#7c3aed"
+          strokeWidth={2}
+          listening={false}
+        />
+      )}
+    </Group>
+  );
 }
 
 function IconNode({ layer, props }: { layer: Layer; props: any }) {
@@ -635,7 +669,7 @@ function renderLayer(l: Layer, onClick: () => void, hidden: boolean) {
         />
       );
     case "image":
-      return <ImageNode key={l.id} layer={l} props={common} />;
+      return <ImageNode key={l.id} layer={l} props={common} showHoverOutline={!!l.content.extractedFrom && hasAction} />;
     case "icon":
       return <IconNode key={l.id} layer={l} props={common} />;
     case "shape":

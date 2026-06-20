@@ -6,9 +6,11 @@ import { LayerRenderer } from "./LayerRenderer";
 import { HighlightOverlay } from "./HighlightOverlay";
 import { IntroAnimatedGroup, resolveIntro } from "./IntroAnimatedGroup";
 import { Button } from "@/components/ui/button";
-import { X, Check } from "lucide-react";
+import { X, Check, Loader2 } from "lucide-react";
 import type { AirMessageBubble, Layer as FlyerLayer } from "@/types/flyer";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
+import { useObjectExtract } from "@/hooks/useObjectExtract";
+import { bboxToCanvasRect } from "@/lib/subjectDetect";
 
 const ACTION_LABEL: Record<string, string> = {
   open_url: "URL", popup: "Popup", video: "Video", call: "Call",
@@ -128,9 +130,13 @@ export function Canvas() {
   const pendingCrop = useEditorStore((s) => s.pendingCrop);
   const cropCanvas = useEditorStore((s) => s.cropCanvas);
   const cancelCrop = useEditorStore((s) => s.cancelCrop);
+  const extractSourceLayerId = useEditorStore((s) => s.extractSourceLayerId);
+  const subjectDetections = useEditorStore((s) => s.subjectDetections);
+  const cancelObjectExtract = useEditorStore((s) => s.cancelObjectExtract);
   const introReplayKey = useEditorStore((s) => s.introReplayKey);
   const setStageRef = useEditorStore((s) => s.setStageRef);
   const previewAction = useEditorStore((s) => s.previewAction);
+  const { extractFromRect, extractFromSubject, extracting } = useObjectExtract();
 
   const stageRef = useRef<any>(null);
   const trRef = useRef<any>(null);
@@ -146,10 +152,14 @@ export function Canvas() {
 
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
+  const [hoveredDetectionId, setHoveredDetectionId] = useState<string | null>(null);
 
   const page = pages.find((p) => p.id === selectedPageId);
   const W = page?.background?.size?.width ?? flyer?.settings.width ?? 900;
   const H = page?.background?.size?.height ?? flyer?.settings.height ?? 1200;
+  const extractSourceLayer = page?.layers.find((l) => l.id === extractSourceLayerId);
+  const isRectDrawMode = drawMode === "hotspot" || drawMode === "extract-rect";
 
   // Crop rect state (in canvas coords)
   const [cropRect, setCropRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -178,6 +188,23 @@ export function Canvas() {
   }, [page]);
 
   useEffect(() => {
+    if (drawMode) {
+      setHoveredLayerId(null);
+      setHoveredDetectionId(null);
+    }
+  }, [drawMode]);
+
+  async function finishRectSelection(rect: { x: number; y: number; width: number; height: number }) {
+    if (drawMode === "extract-rect") {
+      await extractFromRect(rect);
+    } else if (drawMode === "hotspot") {
+      addHotspotLayer(rect, "rect");
+    }
+    setDrawStart(null);
+    setDrawCurrent(null);
+  }
+
+  useEffect(() => {
     if (!trRef.current) return;
     if (selectedLayerId && nodeRefs.current[selectedLayerId] && !drawMode) {
       trRef.current.nodes([nodeRefs.current[selectedLayerId]]);
@@ -203,6 +230,12 @@ export function Canvas() {
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (e.key === "Escape") {
         if (drawMode === "crop") { cancelCrop(); return; }
+        if (drawMode === "extract-rect" || drawMode === "extract-auto") {
+          cancelObjectExtract();
+          setDrawStart(null);
+          setDrawCurrent(null);
+          return;
+        }
         if (drawMode) {
           setDrawMode(null);
           setDrawStart(null);
@@ -229,7 +262,7 @@ export function Canvas() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedLayerId, page, deleteLayer, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop]);
+  }, [selectedLayerId, page, deleteLayer, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop, cancelObjectExtract]);
 
   if (!page || !flyer) return null;
 
@@ -271,6 +304,58 @@ export function Canvas() {
           </Button>
         </div>
       )}
+      {drawMode === "extract-auto" && (
+        <div className="absolute left-1/2 top-3 z-20 flex max-w-lg -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
+          {extracting ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+              <span className="font-medium">Extracting subject…</span>
+            </>
+          ) : (
+            <>
+              <span className="font-medium">Click a highlighted subject to extract</span>
+              <span className="text-muted-foreground">
+                {subjectDetections.filter((d) => !d.extracted).length} remaining
+              </span>
+            </>
+          )}
+          <span className="text-muted-foreground">— Esc to exit</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            disabled={extracting}
+            onClick={cancelObjectExtract}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+      {drawMode === "extract-rect" && (
+        <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
+          {extracting ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+              <span className="font-medium">Extracting object…</span>
+            </>
+          ) : (
+            <>
+              <span className="font-medium">Drag over the object to extract as a new layer</span>
+              <span className="text-muted-foreground">— original image stays untouched</span>
+            </>
+          )}
+          <span className="text-muted-foreground">— Esc to cancel</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            disabled={extracting}
+            onClick={() => { cancelObjectExtract(); setDrawStart(null); setDrawCurrent(null); }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
       {drawMode === "crop" && cropRect && (
         <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
           <span className="font-medium">Adjust the crop region</span>
@@ -290,7 +375,7 @@ export function Canvas() {
             width: W * zoom,
             height: H * zoom,
             background: page.background.color || "#fff",
-            cursor: drawMode === "hotspot" || drawMode === "hotspot-ellipse" ? "crosshair" : "default",
+            cursor: isRectDrawMode || drawMode === "hotspot-ellipse" || drawMode === "extract-auto" ? "crosshair" : "default",
           }}
         >
           <Stage
@@ -300,21 +385,45 @@ export function Canvas() {
             scaleX={zoom}
             scaleY={zoom}
             onMouseDown={(e) => {
+              if (drawMode === "extract-rect" && !extracting) {
+                const p = getStagePos(e);
+                if (p) { setDrawStart(p); setDrawCurrent(p); }
+                return;
+              }
               if (drawMode === "hotspot" || drawMode === "hotspot-ellipse") {
                 const p = getStagePos(e);
                 if (p) { setDrawStart(p); setDrawCurrent(p); }
                 return;
               }
               if (drawMode === "crop") return;
-              if (e.target === e.target.getStage()) selectLayer(null);
+              if (e.target === e.target.getStage()) {
+                selectLayer(null);
+                setHoveredLayerId(null);
+              }
             }}
             onMouseMove={(e) => {
-              if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart) {
+              if ((isRectDrawMode || drawMode === "hotspot-ellipse") && drawStart && !extracting) {
                 const p = getStagePos(e);
                 if (p) setDrawCurrent(p);
               }
             }}
             onMouseUp={() => {
+              if (drawMode === "extract-rect" && drawStart && drawCurrent && !extracting) {
+                const w = Math.abs(drawCurrent.x - drawStart.x);
+                const h = Math.abs(drawCurrent.y - drawStart.y);
+                if (w >= 8 && h >= 8) {
+                  finishRectSelection({
+                    x: Math.min(drawStart.x, drawCurrent.x),
+                    y: Math.min(drawStart.y, drawCurrent.y),
+                    width: w,
+                    height: h,
+                  });
+                } else {
+                  setDrawStart(null);
+                  setDrawCurrent(null);
+                }
+                return;
+              }
               if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart && drawCurrent) {
                 const w = Math.abs(drawCurrent.x - drawStart.x);
                 const h = Math.abs(drawCurrent.y - drawStart.y);
@@ -329,21 +438,45 @@ export function Canvas() {
               }
             }}
             onTouchStart={(e) => {
+              if (drawMode === "extract-rect" && !extracting) {
+                const p = getStagePos(e);
+                if (p) { setDrawStart(p); setDrawCurrent(p); }
+                return;
+              }
               if (drawMode === "hotspot" || drawMode === "hotspot-ellipse") {
                 const p = getStagePos(e);
                 if (p) { setDrawStart(p); setDrawCurrent(p); }
                 return;
               }
               if (drawMode === "crop") return;
-              if (e.target === e.target.getStage()) selectLayer(null);
+              if (e.target === e.target.getStage()) {
+                selectLayer(null);
+                setHoveredLayerId(null);
+              }
             }}
             onTouchMove={(e) => {
-              if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart) {
+              if ((isRectDrawMode || drawMode === "hotspot-ellipse") && drawStart && !extracting) {
                 const p = getStagePos(e);
                 if (p) setDrawCurrent(p);
               }
             }}
             onTouchEnd={() => {
+              if (drawMode === "extract-rect" && drawStart && drawCurrent && !extracting) {
+                const w = Math.abs(drawCurrent.x - drawStart.x);
+                const h = Math.abs(drawCurrent.y - drawStart.y);
+                if (w >= 8 && h >= 8) {
+                  finishRectSelection({
+                    x: Math.min(drawStart.x, drawCurrent.x),
+                    y: Math.min(drawStart.y, drawCurrent.y),
+                    width: w,
+                    height: h,
+                  });
+                } else {
+                  setDrawStart(null);
+                  setDrawCurrent(null);
+                }
+                return;
+              }
               if ((drawMode === "hotspot" || drawMode === "hotspot-ellipse") && drawStart && drawCurrent) {
                 const w = Math.abs(drawCurrent.x - drawStart.x);
                 const h = Math.abs(drawCurrent.y - drawStart.y);
@@ -397,6 +530,8 @@ export function Canvas() {
                       draggable={!drawMode}
                       onSelect={() => !drawMode && selectLayer(l.id)}
                       onChange={(patch) => updateLayer(l.id, patch)}
+                      onHoverStart={() => !drawMode && setHoveredLayerId(l.id)}
+                      onHoverEnd={() => setHoveredLayerId((id) => (id === l.id ? null : id))}
                       refSetter={(node) => {
                         if (node) nodeRefs.current[l.id] = node;
                         else delete nodeRefs.current[l.id];
@@ -421,7 +556,9 @@ export function Canvas() {
                   <Rect
                     x={previewRect.x} y={previewRect.y}
                     width={previewRect.width} height={previewRect.height}
-                    fill="rgba(124,58,237,0.12)" stroke="#7c3aed" strokeWidth={1.5}
+                    fill={drawMode === "extract-rect" ? "rgba(14,165,233,0.14)" : "rgba(124,58,237,0.12)"}
+                    stroke={drawMode === "extract-rect" ? "#0ea5e9" : "#7c3aed"}
+                    strokeWidth={1.5}
                     dash={[6, 4]} listening={false}
                   />
                 )
@@ -433,13 +570,143 @@ export function Canvas() {
               />
             </KLayer>
 
+            {(drawMode === "extract-rect" || drawMode === "extract-auto") && extractSourceLayer && (
+              <KLayer listening={false}>
+                <Rect
+                  x={extractSourceLayer.position.x}
+                  y={extractSourceLayer.position.y}
+                  width={extractSourceLayer.size.width}
+                  height={extractSourceLayer.size.height}
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  dash={[10, 6]}
+                />
+              </KLayer>
+            )}
+
+            {drawMode === "extract-auto" && extractSourceLayer && (
+              <KLayer>
+                {subjectDetections
+                  .filter((d) => !d.extracted)
+                  .map((det) => {
+                    const r = bboxToCanvasRect(det.bbox, {
+                      x: extractSourceLayer.position.x,
+                      y: extractSourceLayer.position.y,
+                      width: extractSourceLayer.size.width,
+                      height: extractSourceLayer.size.height,
+                    });
+                    const hovered = hoveredDetectionId === det.id;
+                    const labelW = Math.min(220, Math.max(72, det.label.length * 6.5 + 16));
+                    return (
+                      <Group key={det.id}>
+                        <Rect
+                          x={r.x}
+                          y={r.y}
+                          width={r.width}
+                          height={r.height}
+                          fill={hovered ? "rgba(14,165,233,0.22)" : "rgba(14,165,233,0.1)"}
+                          stroke="#0ea5e9"
+                          strokeWidth={hovered ? 2.5 : 1.5}
+                          dash={[8, 4]}
+                          onMouseEnter={() => setHoveredDetectionId(det.id)}
+                          onMouseLeave={() =>
+                            setHoveredDetectionId((id) => (id === det.id ? null : id))
+                          }
+                          onClick={() => !extracting && extractFromSubject(det)}
+                          onTap={() => !extracting && extractFromSubject(det)}
+                        />
+                        {hovered && (
+                          <Group x={r.x + 4} y={r.y + 4} listening={false}>
+                            <Rect width={labelW} height={18} fill="#0ea5e9" cornerRadius={4} />
+                            <Text
+                              text={det.label}
+                              x={6}
+                              y={3}
+                              width={labelW - 12}
+                              fontSize={11}
+                              fill="#fff"
+                              fontStyle="600"
+                              ellipsis
+                            />
+                          </Group>
+                        )}
+                      </Group>
+                    );
+                  })}
+              </KLayer>
+            )}
+
+            {hoveredLayerId && hoveredLayerId !== selectedLayerId && !drawMode && (() => {
+              const hl = sortedLayers.find((l) => l.id === hoveredLayerId);
+              if (!hl) return null;
+              const isEllipse = hl.type === "hotspot" && hl.content.hotspotShape === "ellipse";
+              return (
+                <KLayer listening={false}>
+                  {isEllipse ? (
+                    <Ellipse
+                      x={hl.position.x + hl.size.width / 2}
+                      y={hl.position.y + hl.size.height / 2}
+                      radiusX={hl.size.width / 2}
+                      radiusY={hl.size.height / 2}
+                      stroke="#3b82f6"
+                      strokeWidth={1.5}
+                      dash={[6, 4]}
+                    />
+                  ) : (
+                    <Rect
+                      x={hl.position.x}
+                      y={hl.position.y}
+                      width={hl.size.width}
+                      height={hl.size.height}
+                      stroke="#3b82f6"
+                      strokeWidth={1.5}
+                      dash={[6, 4]}
+                    />
+                  )}
+                </KLayer>
+              );
+            })()}
+
+            {!drawMode && sortedLayers.some((l) => l.content.extractedFrom && !l.action) && (
+              <KLayer listening={false}>
+                {sortedLayers
+                  .filter((l) => l.content.extractedFrom && !l.action)
+                  .map((l) => (
+                    <Group key={`cutout-hint-${l.id}`}>
+                      <Rect
+                        x={l.position.x}
+                        y={l.position.y}
+                        width={l.size.width}
+                        height={l.size.height}
+                        stroke="#f59e0b"
+                        strokeWidth={selectedLayerId === l.id ? 2 : 1}
+                        dash={[8, 5]}
+                      />
+                      {selectedLayerId === l.id && (
+                        <Group x={l.position.x + 4} y={Math.max(0, l.position.y - 22)}>
+                          <Rect width={78} height={18} fill="#f59e0b" cornerRadius={4} />
+                          <Text text="Add action" x={6} y={3} fontSize={11} fill="#fff" fontStyle="600" />
+                        </Group>
+                      )}
+                    </Group>
+                  ))}
+              </KLayer>
+            )}
+
             {/* Hitbox overlay */}
             {showHitboxes && (
               <KLayer listening={false}>
                 {sortedLayers
-                  .filter((l) => l.action || l.type === "hotspot")
+                  .filter((l) => l.action || l.type === "hotspot" || l.content.extractedFrom)
                   .map((l) => {
-                    const labelText = l.action ? ACTION_LABEL[l.action.type] || l.action.type : "Hotspot";
+                    const needsAction = !!l.content.extractedFrom && !l.action;
+                    const labelText = needsAction
+                      ? "Needs action"
+                      : l.action
+                        ? ACTION_LABEL[l.action.type] || l.action.type
+                        : "Hotspot";
+                    const stroke = needsAction ? "#f59e0b" : "#7c3aed";
+                    const fill = needsAction ? "rgba(245,158,11,0.10)" : "rgba(124,58,237,0.10)";
                     const isEllipse = l.type === "hotspot" && l.content.hotspotShape === "ellipse";
                     return (
                       <Group key={"hb-" + l.id}>
@@ -449,21 +716,21 @@ export function Canvas() {
                             y={l.position.y + l.size.height / 2}
                             radiusX={l.size.width / 2}
                             radiusY={l.size.height / 2}
-                            stroke="#7c3aed"
+                            stroke={stroke}
                             strokeWidth={2}
                             dash={[8, 5]}
-                            fill="rgba(124,58,237,0.10)"
+                            fill={fill}
                           />
                         ) : (
                           <Rect
                             x={l.position.x} y={l.position.y}
                             width={l.size.width} height={l.size.height}
-                            stroke="#7c3aed" strokeWidth={2}
-                            dash={[8, 5]} fill="rgba(124,58,237,0.10)"
+                            stroke={stroke} strokeWidth={2}
+                            dash={[8, 5]} fill={fill}
                           />
                         )}
                         <Group x={l.position.x + 4} y={l.position.y + 4}>
-                          <Rect width={Math.max(36, labelText.length * 7 + 12)} height={18} fill="#7c3aed" cornerRadius={4} />
+                          <Rect width={Math.max(36, labelText.length * 7 + 12)} height={18} fill={stroke} cornerRadius={4} />
                           <Text text={labelText} x={6} y={3} fontSize={11} fill="#fff" fontStyle="600" />
                         </Group>
                       </Group>

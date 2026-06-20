@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { Flyer, FlyerPage, Layer, LayerAction, LayerContent, LayerStyle, PageIntro } from "@/types/flyer";
 import { defaultLayer, emptyPage, uid } from "@/lib/konvaHelpers";
+import type { SubjectDetection } from "@/lib/subjectDetect";
+
+export type DrawMode = null | "hotspot" | "hotspot-ellipse" | "crop" | "extract-rect" | "extract-auto";
 
 interface Snapshot {
   pages: FlyerPage[];
@@ -18,7 +21,9 @@ interface EditorState {
   past: Snapshot[];
   future: Snapshot[];
   dirty: boolean;
-  drawMode: null | "hotspot" | "hotspot-ellipse" | "crop";
+  drawMode: DrawMode;
+  extractSourceLayerId: string | null;
+  subjectDetections: SubjectDetection[];
   showHitboxes: boolean;
   deviceFrame: DeviceFrame;
   pendingCrop: { width: number; height: number } | null;
@@ -35,7 +40,11 @@ interface EditorState {
   setZoom: (z: number) => void;
   selectPage: (id: string) => void;
   selectLayer: (id: string | null) => void;
-  setDrawMode: (mode: null | "hotspot" | "hotspot-ellipse" | "crop") => void;
+  setDrawMode: (mode: DrawMode) => void;
+  startObjectExtract: (sourceLayerId: string) => void;
+  startAutoSubjectExtract: (sourceLayerId: string, detections: SubjectDetection[]) => void;
+  markSubjectExtracted: (detectionId: string) => void;
+  cancelObjectExtract: () => void;
   toggleHitboxes: () => void;
   setDeviceFrame: (f: DeviceFrame) => void;
   startCrop: (size: { width: number; height: number }) => void;
@@ -62,6 +71,15 @@ interface EditorState {
   addLayer: (type: Layer["type"]) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
   addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }, shape?: "rect" | "ellipse") => void;
+  addExtractedLayer: (args: {
+    src: string;
+    position: { x: number; y: number };
+    size: { width: number; height: number };
+    sourceLayerId: string;
+    extractionBbox: { x: number; y: number; w: number; h: number };
+    subjectLabel?: string;
+    stayInAutoMode?: boolean;
+  }) => void;
   addAirBubbleLayer: (action: LayerAction, size?: { width: number; height: number }) => void;
   updateLayer: (id: string, patch: Partial<Layer>) => void;
   updateLayerStyle: (id: string, patch: Partial<LayerStyle>) => void;
@@ -100,6 +118,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   future: [],
   dirty: false,
   drawMode: null,
+  extractSourceLayerId: null,
+  subjectDetections: [],
   showHitboxes: false,
   deviceFrame: "desktop",
   pendingCrop: null,
@@ -128,7 +148,38 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   selectPage: (id) => set({ selectedPageId: id, selectedLayerId: null }),
   selectLayer: (id) => set({ selectedLayerId: id }),
-  setDrawMode: (mode) => set({ drawMode: mode }),
+  setDrawMode: (mode) => {
+    const keepExtract = mode === "extract-rect" || mode === "extract-auto";
+    set({
+      drawMode: mode,
+      extractSourceLayerId: keepExtract ? get().extractSourceLayerId : null,
+      subjectDetections: mode === "extract-auto" ? get().subjectDetections : [],
+    });
+  },
+  startObjectExtract: (sourceLayerId) =>
+    set({
+      extractSourceLayerId: sourceLayerId,
+      subjectDetections: [],
+      drawMode: "extract-rect",
+      selectedLayerId: null,
+      previewAction: null,
+    }),
+  startAutoSubjectExtract: (sourceLayerId, detections) =>
+    set({
+      extractSourceLayerId: sourceLayerId,
+      subjectDetections: detections,
+      drawMode: "extract-auto",
+      selectedLayerId: null,
+      previewAction: null,
+    }),
+  markSubjectExtracted: (detectionId) =>
+    set((s) => ({
+      subjectDetections: s.subjectDetections.map((d) =>
+        d.id === detectionId ? { ...d, extracted: true } : d
+      ),
+    })),
+  cancelObjectExtract: () =>
+    set({ extractSourceLayerId: null, subjectDetections: [], drawMode: null }),
   toggleHitboxes: () => set((s) => ({ showHitboxes: !s.showHitboxes })),
   setDeviceFrame: (f) => set({ deviceFrame: f }),
   startCrop: (size) => set({ pendingCrop: size, drawMode: "crop", selectedLayerId: null }),
@@ -497,6 +548,39 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
       drawMode: null,
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  addExtractedLayer: ({ src, position, size, sourceLayerId, extractionBbox, subjectLabel, stayInAutoMode }) => {
+    const s = get();
+    const pageId = s.selectedPageId;
+    if (!pageId) return;
+    const page = s.pages.find((p) => p.id === pageId);
+    if (!page) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const maxZ = page.layers.reduce((m, l) => Math.max(m, l.z_index), -1);
+    const layer: Layer = {
+      ...defaultLayer("image", pageId, maxZ + 1),
+      position,
+      size,
+      z_index: maxZ + 1,
+      content: {
+        src,
+        extractedFrom: sourceLayerId,
+        extractionBbox,
+        subjectLabel,
+        label: subjectLabel || "Cutout",
+      },
+    };
+    set({
+      pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
+      selectedLayerId: layer.id,
+      extractSourceLayerId: stayInAutoMode ? sourceLayerId : null,
+      subjectDetections: stayInAutoMode ? s.subjectDetections : [],
+      drawMode: stayInAutoMode ? "extract-auto" : null,
       past,
       future: [],
       dirty: true,

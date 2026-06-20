@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import * as LucideIcons from "lucide-react";
 import { Type, Image as ImageIcon, Square, Circle, Minus, MousePointerClick, Star, Heart, Smile, ThumbsUp, SquareDashed, CircleDashed, Sparkles } from "lucide-react";
 import { SmartDetectDialog } from "./SmartDetectDialog";
+import { ObjectExtractPanel } from "./ObjectExtractPanel";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -159,6 +160,7 @@ export function Toolbar() {
         <TooltipContent side="right">Hotspot circle (drag to draw)</TooltipContent>
       </Tooltip>
       <div className="my-1 h-px w-8 bg-border" />
+      <ObjectExtractPanel />
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ActionEditor } from "./ActionEditor";
+import { CutoutLayerBanner } from "./CutoutLayerBanner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Play, Sparkles } from "lucide-react";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
@@ -34,9 +35,13 @@ export function Inspector() {
   const setLayerIntro = useEditorStore((s) => s.setLayerIntro);
   const setPageBackground = useEditorStore((s) => s.setPageBackground);
   const replayIntro = useEditorStore((s) => s.replayIntro);
+  const selectLayer = useEditorStore((s) => s.selectLayer);
 
   const page = pages.find((p) => p.id === selectedPageId);
   const layer = page?.layers.find((l) => l.id === selectedLayerId);
+  const sourceLayer = layer?.content.extractedFrom
+    ? page?.layers.find((l) => l.id === layer.content.extractedFrom)
+    : undefined;
 
   if (!layer) {
     return (
@@ -65,6 +70,14 @@ export function Inspector() {
       </TabsList>
 
       <TabsContent value="style" className="flex-1 space-y-3 overflow-y-auto px-3 pb-3">
+        {layer.content.extractedFrom && (
+          <CutoutLayerBanner
+            layer={layer}
+            sourceLayer={sourceLayer}
+            onSelectSource={() => layer.content.extractedFrom && selectLayer(layer.content.extractedFrom)}
+            onLabelChange={(label) => updateLayerContent(layer.id, { label })}
+          />
+        )}
         {isHotspot && (
           <>
             <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-2 text-[11px] text-muted-foreground">
@@ -191,11 +204,17 @@ export function Inspector() {
           </div>
         )}
 
-        {layer.type === "image" && (
+        {layer.type === "image" && !layer.content.extractedFrom && (
           <div>
             <Label className="text-xs">Image URL</Label>
             <Input className="mt-1" value={layer.content.src || ""} onChange={(e) => updateLayerContent(layer.id, { src: e.target.value })} />
           </div>
+        )}
+
+        {layer.type === "image" && layer.content.extractedFrom && (
+          <p className="text-[11px] text-muted-foreground">
+            Cutout image is generated from your selection and stored in flyer assets.
+          </p>
         )}
 
         <div>
@@ -204,8 +223,23 @@ export function Inspector() {
         </div>
       </TabsContent>
 
-      <TabsContent value="action" className="flex-1 overflow-y-auto px-3 pb-3">
-        <ActionEditor action={layer.action ?? null} onChange={(a) => setLayerAction(layer.id, a)} />
+      <TabsContent value="action" className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3">
+        {layer.content.extractedFrom && (
+          <CutoutLayerBanner
+            layer={layer}
+            sourceLayer={sourceLayer}
+            variant="action"
+            onSelectSource={() => layer.content.extractedFrom && selectLayer(layer.content.extractedFrom)}
+            onLabelChange={(label) => updateLayerContent(layer.id, { label })}
+          />
+        )}
+        <div className="min-h-0 flex-1">
+          <ActionEditor
+            action={layer.action ?? null}
+            initialType={layer.content.extractedFrom && !layer.action ? "open_url" : undefined}
+            onChange={(a) => setLayerAction(layer.id, a)}
+          />
+        </div>
       </TabsContent>
 
       <TabsContent value="animation" className="flex-1 space-y-3 overflow-y-auto px-3 pb-3">

@@ -1,6 +1,7 @@
 import { useEditorStore } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Trash2, Type, Image, Square, MousePointerClick, Star, SquareDashed } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Trash2, Type, Image, Square, MousePointerClick, Star, SquareDashed, Scissors } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Layer } from "@/types/flyer";
 
 const ICON: Record<Layer["type"], any> = {
@@ -27,8 +28,11 @@ export function LayersPanel() {
       <div className="max-h-72 overflow-y-auto">
         {layers.length === 0 && <div className="p-4 text-xs text-muted-foreground">No layers yet.</div>}
         {layers.map((l) => {
-          const Icon = ICON[l.type];
-          const label = l.content.text || l.content.label || l.content.iconName || l.type;
+          const isCutout = !!l.content.extractedFrom;
+          const Icon = isCutout ? Scissors : ICON[l.type];
+          const label = isCutout
+            ? (l.content.label || l.content.subjectLabel || "Cutout")
+            : (l.content.text || l.content.label || l.content.iconName || l.type);
           const active = l.id === selectedLayerId;
           return (
             <div
@@ -36,8 +40,16 @@ export function LayersPanel() {
               className={`group flex items-center gap-2 border-b border-border px-3 py-2 text-sm cursor-pointer ${active ? "bg-primary/10" : "hover:bg-muted/60"}`}
               onClick={() => selectLayer(l.id)}
             >
-              <Icon className="h-4 w-4 text-muted-foreground" />
+              <Icon className={`h-4 w-4 shrink-0 ${isCutout ? "text-primary" : "text-muted-foreground"}`} />
               <span className="flex-1 truncate">{label}</span>
+              {isCutout && (
+                <Badge variant="outline" className="h-4 shrink-0 px-1 text-[9px] uppercase">
+                  Cutout
+                </Badge>
+              )}
+              {isCutout && !l.action && (
+                <span className="shrink-0 text-[9px] font-medium text-amber-600">No action</span>
+              )}
               <div className="flex opacity-0 group-hover:opacity-100">
                 <Button size="icon" variant="ghost" className="h-6 w-6" title="Bring to front" onClick={(e) => { e.stopPropagation(); bringToFront(l.id); }}>
                   <ChevronsUp className="h-3 w-3" />

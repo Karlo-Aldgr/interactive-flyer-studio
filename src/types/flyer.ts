@@ -375,6 +375,11 @@ export interface LayerContent {
   shape?: "rect" | "circle" | "line";
   hidden?: boolean; // for reveal action targets
   hotspotShape?: "rect" | "ellipse";
+  /** Source image layer id when this layer is a non-destructive cutout */
+  extractedFrom?: string;
+  /** Normalized 0..1 region within the source image layer */
+  extractionBbox?: { x: number; y: number; w: number; h: number };
+  subjectLabel?: string;
 }
 
 export type HighlightStyle = "none" | "pulse" | "solid" | "dashed" | "glow" | "corners" | "circle";
