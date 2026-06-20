@@ -23,17 +23,7 @@ import { StaffTablesPanel } from "@/components/portal/StaffTablesPanel";
 import { LiveOrdersBoard } from "@/components/portal/LiveOrdersBoard";
 import { OrdersArchivePanel } from "@/components/portal/OrdersArchivePanel";
 import { NovelsPanel } from "@/components/portal/NovelsPanel";
-
-const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
-function getShareOrigin() {
-  if (typeof window === "undefined") return PUBLISHED_ORIGIN;
-  const origin = window.location.origin;
-  const isPreviewSandbox =
-    origin.includes("lovableproject.com") ||
-    origin.includes("id-preview--") ||
-    (origin.includes("lovable.app") && origin.includes("preview"));
-  return isPreviewSandbox ? PUBLISHED_ORIGIN : origin;
-}
+import { buildPublicFlyerUrl } from "@/lib/utils";
 
 export type OrderStatus = "new" | "on_hold" | "pay_later" | "completed";
 const ORDER_STATUSES: { value: OrderStatus; label: string; cls: string; ring: string }[] = [
@@ -384,7 +374,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
   const apptsForCalDate = calDate ? appointments.filter((a) => new Date(a.start_at).toDateString() === calDate.toDateString()) : [];
 
   const isPublished = flyer.status === "published" && !!flyer.public_slug;
-  const shareUrl = flyer.public_slug ? `${getShareOrigin()}/f/${flyer.public_slug}` : "";
+  const shareUrl = flyer.public_slug ? buildPublicFlyerUrl(flyer.public_slug) : "";
 
   return (
     <div className="container mx-auto max-w-6xl space-y-4 p-4 md:p-8">

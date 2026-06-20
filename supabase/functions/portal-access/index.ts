@@ -25,23 +25,29 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: flyer, error: flyerErr } = await supabase
-      .from("flyers")
-    const { data: flyer, error: flyerErr } = await supabase
-      .from("flyers")
-      .select("id, title, status, public_slug, settings, thumbnail_url, created_at, flyer_portal_credentials(portal_access_code)")
-      .eq("flyer_portal_credentials.portal_token", token)
-      .not("flyer_portal_credentials", "is", null)
+    const { data: cred, error: credErr } = await supabase
+      .from("flyer_portal_credentials")
+      .select("flyer_id, portal_access_code")
+      .eq("portal_token", token)
       .maybeSingle();
 
-    if (flyerErr) return json({ error: flyerErr.message }, 500);
-    if (!flyer || !(flyer as any).flyer_portal_credentials) return json({ error: "Invalid link" }, 404);
-    const expectedCode = (flyer as any).flyer_portal_credentials.portal_access_code as string;
-    if (String(code).trim().toUpperCase() !== String(expectedCode).toUpperCase()) {
+    if (credErr) return json({ error: credErr.message }, 500);
+    if (!cred) return json({ error: "Invalid link" }, 404);
+    if (String(code).trim().toUpperCase() !== String(cred.portal_access_code).toUpperCase()) {
       return json({ error: "Invalid access code" }, 401);
     }
 
-    // can render only the tabs that match what was actually built.
+    const flyerId = cred.flyer_id;
+    const { data: flyer, error: flyerErr } = await supabase
+      .from("flyers")
+      .select("id, title, status, public_slug, settings, thumbnail_url, created_at")
+      .eq("id", flyerId)
+      .maybeSingle();
+
+    if (flyerErr) return json({ error: flyerErr.message }, 500);
+    if (!flyer) return json({ error: "Flyer not found" }, 404);
+
+    // Load pages/layers/actions so the portal can render only the tabs that match what was built.
     const { data: pages } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);
     const pageIds = (pages || []).map((p: any) => p.id);
     let actions: any[] = [];
@@ -196,6 +202,7 @@ Deno.serve(async (req) => {
         hasForms: actionTypes.has("form") || actionTypes.has("rsvp"),
         hasPolls: actionTypes.has("poll"),
         hasCheckout: actionTypes.has("checkout") || actionTypes.has("buy_ticket") || actionTypes.has("buy_product"),
+        hasFoodOrdering: actionTypes.has("show_menu") || actionTypes.has("menu_add_item"),
         hasCalls: actionTypes.has("call") || actionTypes.has("sms"),
       },
       actions: actions.map((a: any) => ({ id: a.id, type: a.type, payload: a.payload, layer_id: a.layer_id })),

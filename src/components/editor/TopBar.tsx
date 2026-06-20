@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
+import { cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle, buildPublicFlyerUrl, buildSocialShareUrl } from "@/lib/utils";
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -34,21 +34,6 @@ import { SocialMediaDialog } from "./SocialMediaDialog";
 import { hasAnySocial } from "@/components/viewer/SocialSlideout";
 
 interface Props { saving: boolean }
-
-// Public origin where the flyer is published. We must NEVER hand out a URL
-// pointing at the Lovable preview sandbox (lovableproject.com / id-preview--*),
-// because those hosts require a Lovable login and recipients will be bounced
-// to a sign-in screen. Always rewrite to the published .lovable.app domain.
-const PUBLISHED_ORIGIN = "https://interactive-flyer-studio.lovable.app";
-function getShareOrigin() {
-  if (typeof window === "undefined") return PUBLISHED_ORIGIN;
-  const origin = window.location.origin;
-  const isPreviewSandbox =
-    origin.includes("lovableproject.com") ||
-    origin.includes("id-preview--") ||
-    (origin.includes("lovable.app") && origin.includes("preview"));
-  return isPreviewSandbox ? PUBLISHED_ORIGIN : origin;
-}
 
 const PRESETS: { label: string; w: number; h: number }[] = [
   { label: "Story 9:16 (1080×1920)", w: 1080, h: 1920 },
@@ -367,20 +352,8 @@ export function TopBar({ saving }: Props) {
     setResizeOpen(false);
   }
 
-  const viewerUrl = flyer.public_slug ? `${getShareOrigin()}/f/${flyer.public_slug}` : "";
-  // The "social URL" is what gets pasted into Messenger/WhatsApp/etc. It must
-  // hit a server that returns clean HTML with per-flyer OG tags. We use a
-  // Cloudflare Worker for this (see /worker/README.md). If no Worker is
-  // configured yet, fall back to the viewer URL — previews will be generic
-  // until the Worker is set up.
-  const shareOrigin =
-    (typeof window !== "undefined" && localStorage.getItem("flyerflow.shareOrigin")) ||
-    (import.meta as any).env?.VITE_SHARE_ORIGIN ||
-    "https://tapthatflyer-share.showoffgrafixs.workers.dev";
-  const socialUrl =
-    shareOrigin && flyer.public_slug
-      ? `${shareOrigin.replace(/\/$/, "")}/f/${flyer.public_slug}`
-      : viewerUrl;
+  const viewerUrl = flyer.public_slug ? buildPublicFlyerUrl(flyer.public_slug) : "";
+  const socialUrl = flyer.public_slug ? buildSocialShareUrl(flyer.public_slug) : viewerUrl;
 
   // If any page is configured as a tap-anywhere landing page, build a second
   // share link that opens the landing itself (?page=<landingId>). The primary
@@ -390,18 +363,18 @@ export function TopBar({ saving }: Props) {
   // viewer jumps straight to the flyer page (bypassing the landing). Crawlers
   // still see ?page=<landingPageId> and use the landing's social preview.
   const landingShareUrl = (() => {
-    if (!landingPage || !socialUrl) return "";
-    const sep = socialUrl.includes("?") ? "&" : "?";
+    if (!landingPage || !viewerUrl) return "";
+    const sep = viewerUrl.includes("?") ? "&" : "?";
     const openId = landingPage.background?.linkPageId;
     const openParam = openId ? `&open=${openId}` : "";
-    return `${socialUrl}${sep}page=${landingPage.id}${openParam}`;
+    return `${viewerUrl}${sep}page=${landingPage.id}${openParam}`;
   })();
   const flyerPreviewSection = landingPage
     ? {
         label: "Direct flyer link",
         description: "Skips the landing — opens the flyer.",
         thumbnailUrl: flyerPreviewThumb,
-        url: socialUrl,
+        url: viewerUrl,
       }
     : undefined;
 

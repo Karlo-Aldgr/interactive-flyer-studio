@@ -25,13 +25,49 @@ export function slugFromFlyerTitle(title: string, currentSlug?: string | null) {
   return `${slugBaseFromTitle(title)}-${suffix}`;
 }
 
+/** Local-only dev hosts where the editor and public viewer share the same origin. */
+function isLocalDevHost(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.startsWith("192.168.") ||
+    hostname.startsWith("10.") ||
+    hostname.endsWith(".local")
+  );
+}
+
+/** Lovable preview sandboxes — require a Lovable login; never use for public share links. */
+export function isLovablePreviewHost(hostname: string): boolean {
+  return (
+    hostname.includes("preview--") ||
+    hostname.includes("id-preview--") ||
+    hostname.includes("lovableproject.com")
+  );
+}
+
+const DEFAULT_PUBLIC_APP_ORIGIN = "https://interactive-flyer-studio.lovable.app";
+
 /**
- * The origin used for share links that need rich social previews
- * (Facebook, WhatsApp, iMessage, etc.). Routes through the Cloudflare
- * Worker which serves per-flyer OG meta tags to crawlers and 302s
- * humans to the live viewer.
+ * Where public flyer + portal links must point so anyone (incognito, phone QR)
+ * can open them without a Lovable account.
+ */
+export function getPublicAppOrigin(): string {
+  const published =
+    (import.meta as any).env?.VITE_APP_ORIGIN || DEFAULT_PUBLIC_APP_ORIGIN;
+  if (typeof window === "undefined") return published;
+  if (isLocalDevHost(window.location.hostname)) return window.location.origin;
+  if (isLovablePreviewHost(window.location.hostname)) return published;
+  return window.location.origin;
+}
+
+/**
+ * Origin for social/OG share worker URLs (WhatsApp, iMessage previews).
+ * Falls back to the public app origin when no worker is configured.
  */
 export function getShareOrigin(): string {
+  if (typeof window !== "undefined" && isLocalDevHost(window.location.hostname)) {
+    return window.location.origin;
+  }
   if (typeof window !== "undefined") {
     const override = window.localStorage.getItem("flyerflow.shareOrigin");
     if (override) return override;
@@ -42,6 +78,35 @@ export function getShareOrigin(): string {
   );
 }
 
+/** Direct public viewer link — use for QR codes, copy link, and portal URLs. */
+export function buildPublicFlyerUrl(slug: string): string {
+  return `${getPublicAppOrigin().replace(/\/$/, "")}/f/${slug}`;
+}
+
+export function buildPublicPortalUrl(token: string, code?: string): string {
+  const base = `${getPublicAppOrigin().replace(/\/$/, "")}/p/${token}`;
+  return code ? `${base}?code=${encodeURIComponent(code)}` : base;
+}
+
 export function buildSocialShareUrl(slug: string): string {
   return `${getShareOrigin().replace(/\/$/, "")}/f/${slug}`;
+}
+
+/** Rewrite legacy or preview-only URLs to the public app origin. */
+export function normalizeExampleFlyerUrl(url: string): string {
+  if (typeof window === "undefined" || !url.trim()) return url;
+  try {
+    const parsed = new URL(url);
+    const match = parsed.pathname.match(/^\/f\/([^/]+)\/?$/);
+    if (!match) return url;
+    const needsRewrite =
+      isLovablePreviewHost(parsed.hostname) ||
+      parsed.hostname.includes("tapthatflyer") ||
+      parsed.hostname.includes("workers.dev") ||
+      parsed.hostname.includes("interactive-flyer-studio");
+    if (!needsRewrite) return url;
+    return buildPublicFlyerUrl(match[1]);
+  } catch {
+    return url;
+  }
 }
