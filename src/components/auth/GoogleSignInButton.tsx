@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { buildAuthRedirectUrl, GOOGLE_SIGNIN_DISABLED_MESSAGE } from "@/lib/authUtils";
-import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
 
 function GoogleIcon({ className }: { className?: string }) {
