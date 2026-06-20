@@ -19,10 +19,22 @@ import { useParams } from "react-router-dom";
 interface Props {
   action: LayerAction | null;
   onChange: (a: LayerAction | null) => void;
+  /** When the layer has no saved action, pre-select this type (e.g. cutouts → open_url). */
+  initialType?: ActionType;
   /** Recursion depth to prevent infinite nesting in popup buttons. */
   depth?: number;
   /** Hide save/discard footer when used as nested editor. */
   embedded?: boolean;
+}
+
+function initialDraft(action: LayerAction | null, initialType?: ActionType): LayerAction | null {
+  if (action) return action;
+  if (!initialType) return null;
+  return {
+    id: crypto.randomUUID(),
+    type: initialType,
+    payload: initialType === "open_url" ? { newTab: true } : {},
+  };
 }
 
 const ACTION_LABELS: Record<ActionType, string> = {
@@ -1092,7 +1104,7 @@ function PollEditor({
   );
 }
 
-export function ActionEditor({ action, onChange, depth = 0, embedded = false }: Props) {
+export function ActionEditor({ action, onChange, initialType, depth = 0, embedded = false }: Props) {
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
@@ -1100,12 +1112,12 @@ export function ActionEditor({ action, onChange, depth = 0, embedded = false }: 
   const addAirBubbleLayer = useEditorStore((s) => s.addAirBubbleLayer);
   const currentPage = pages.find((p) => p.id === selectedPageId);
 
-  const [draft, setDraft] = useState<LayerAction | null>(action);
+  const [draft, setDraft] = useState<LayerAction | null>(() => initialDraft(action, initialType));
 
   useEffect(() => {
-    setDraft(action);
+    setDraft(initialDraft(action, initialType));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [action?.id, action?.type, JSON.stringify(action?.payload), JSON.stringify(action?.highlight)]);
+  }, [selectedLayerId, action?.id, action?.type, JSON.stringify(action?.payload), JSON.stringify(action?.highlight), initialType]);
 
   // For embedded editors, propagate drafts immediately because they're saved with the parent.
   // Top-level editors stay manual: creators must click Save action to commit changes.
