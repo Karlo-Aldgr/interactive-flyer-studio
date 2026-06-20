@@ -27,9 +27,6 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-function isGoogleProviderDisabled(body: string, status: number): boolean {
-  return status === 400 && /provider is not enabled|unsupported provider/i.test(body);
-}
 
 export function GoogleSignInButton({
   next,
