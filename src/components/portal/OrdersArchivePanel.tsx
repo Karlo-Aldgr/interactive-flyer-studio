@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { paymentBadgeCls, paymentStatusLabel } from "@/lib/menuOrderStatus";
 
 type Order = {
   id: string; customer_name: string; items: any[]; subtotal_cents: number;
-  status: string; table_number: string | null; order_type: string;
+  status: string; payment_status?: string;
+  table_number: string | null; order_type: string;
   created_at: string; archived_at: string | null;
 };
 
@@ -41,13 +43,25 @@ export function OrdersArchivePanel({ flyerId }: { flyerId: string }) {
     load();
   }
 
-  async function archiveAllNow() {
-    if (!confirm("Manually archive ALL active orders right now? (Normally happens automatically at 3 AM)")) return;
+  async function deleteOrder(id: string) {
+    if (!confirm("Permanently delete this archived order? This cannot be undone.")) return;
+    const { error } = await supabase.from("menu_orders").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Order deleted");
+    load();
+  }
+
+  async function archiveOldNow() {
+    if (!confirm("Archive active orders older than 5 days now? (Daily job also runs at 3 AM)")) return;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 5);
     const { error } = await supabase.from("menu_orders")
       .update({ archived_at: new Date().toISOString() })
-      .eq("flyer_id", flyerId).is("archived_at", null);
+      .eq("flyer_id", flyerId)
+      .is("archived_at", null)
+      .lt("created_at", cutoff.toISOString());
     if (error) return toast.error(error.message);
-    toast.success("Archived. Cart is fresh.");
+    toast.success("Old orders archived");
     load();
   }
 
@@ -60,10 +74,12 @@ export function OrdersArchivePanel({ flyerId }: { flyerId: string }) {
         </div>
         <Button variant="outline" size="sm" onClick={load} disabled={loading}>Refresh</Button>
         <div className="ml-auto">
-          <Button variant="destructive" size="sm" onClick={archiveAllNow}>Force archive now</Button>
+          <Button variant="outline" size="sm" onClick={archiveOldNow}>Archive orders &gt; 5 days</Button>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">All active orders are automatically archived every day at 3 AM so the cart starts fresh. Use Recall to pull an archived order back.</p>
+      <p className="text-xs text-muted-foreground">
+        Active orders stay on Live Orders and Food Orders. Orders older than 5 days move here automatically at 3 AM (after a daily summary is saved). Use Recall to restore one order to the live board, or Delete to remove old records permanently.
+      </p>
 
       {orders.length === 0 ? (
         <p className="text-sm text-muted-foreground">No archived orders on {date}.</p>
@@ -75,11 +91,15 @@ export function OrdersArchivePanel({ flyerId }: { flyerId: string }) {
                 <div className="flex items-center gap-2 font-medium">
                   Table {o.table_number || "—"} · {o.customer_name}
                   <Badge variant="secondary" className="text-[10px]">{o.status}</Badge>
+                  <Badge className={`text-[10px] ${paymentBadgeCls(o.payment_status)}`}>
+                    {paymentStatusLabel(o.payment_status)}
+                  </Badge>
                   {o.order_type === "order_ahead" && <Badge variant="destructive" className="text-[10px]">order ahead</Badge>}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">{new Date(o.created_at).toLocaleTimeString()}</span>
                   <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={() => recall(o.id)}>Recall</Button>
+                  <Button size="sm" variant="destructive" className="h-6 px-2 text-[10px]" onClick={() => deleteOrder(o.id)}>Delete</Button>
                 </div>
               </div>
               <ul className="mt-1 space-y-0.5 text-muted-foreground">

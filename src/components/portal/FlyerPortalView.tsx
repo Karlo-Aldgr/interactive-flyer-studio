@@ -19,18 +19,23 @@ import { ShareDialog } from "@/components/editor/ShareDialog";
 import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
 import { InteractionsModerationPanel } from "@/components/portal/InteractionsModerationPanel";
 import { sourceFromEventMetadata } from "@/lib/trafficSource";
+import { flyerHasFoodOrdering } from "@/lib/flyerCapabilities";
+import { cartStatusToCustomerPhase } from "@/lib/customerOrderStatus";
 import { StaffTablesPanel } from "@/components/portal/StaffTablesPanel";
 import { LiveOrdersBoard } from "@/components/portal/LiveOrdersBoard";
 import { OrdersArchivePanel } from "@/components/portal/OrdersArchivePanel";
-import { NovelsPanel } from "@/components/portal/NovelsPanel";
-import { buildPublicFlyerUrl } from "@/lib/utils";
+import { FoodOrdersPanel } from "@/components/portal/FoodOrdersPanel";
+import { DailyReportsPanel } from "@/components/portal/DailyReportsPanel";
+import { FormSubmissionsPanel } from "@/components/portal/FormSubmissionsPanel";
 
-export type OrderStatus = "new" | "on_hold" | "pay_later" | "completed";
+import { buildPublicFlyerUrl } from "@/lib/utils";
+export type OrderStatus = "new" | "on_hold" | "pay_later" | "in_production" | "completed";
 const ORDER_STATUSES: { value: OrderStatus; label: string; cls: string; ring: string }[] = [
-  { value: "new",        label: "New",        cls: "bg-primary text-primary-foreground",                    ring: "border-primary/60 bg-primary/5" },
-  { value: "on_hold",    label: "On Hold",    cls: "bg-amber-500 text-white",                                ring: "border-amber-500/50 bg-amber-500/5" },
-  { value: "pay_later",  label: "Pay Later",  cls: "bg-red-600 text-white animate-pulse",                    ring: "border-red-600 bg-red-500/10" },
-  { value: "completed",  label: "Completed",  cls: "bg-emerald-600 text-white",                              ring: "border-emerald-600/40 bg-emerald-600/5" },
+  { value: "new",            label: "Pending",        cls: "bg-slate-500 text-white",                         ring: "border-slate-500/50 bg-slate-500/5" },
+  { value: "in_production",  label: "In Production",  cls: "bg-blue-600 text-white",                          ring: "border-blue-600/50 bg-blue-600/5" },
+  { value: "on_hold",        label: "On Hold",        cls: "bg-amber-500 text-white",                         ring: "border-amber-500/50 bg-amber-500/5" },
+  { value: "pay_later",      label: "Pay Later",      cls: "bg-red-600 text-white animate-pulse",             ring: "border-red-600 bg-red-500/10" },
+  { value: "completed",      label: "Complete",       cls: "bg-emerald-600 text-white",                       ring: "border-emerald-600/40 bg-emerald-600/5" },
 ];
 const statusMeta = (s: string | null | undefined) =>
   ORDER_STATUSES.find((x) => x.value === (s as OrderStatus)) || ORDER_STATUSES[0];
@@ -115,12 +120,13 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
     return v === "master" ? "live" : "analytics";
   });
   const [goingToWaiter, setGoingToWaiter] = useState(false);
+  const [foodOrderCount, setFoodOrderCount] = useState(0);
   const [resetTarget, setResetTarget] = useState<null | "analytics" | "cart" | "polls" | "appointments" | "live_orders">(null);
   const [resetting, setResetting] = useState(false);
 
   const RESET_LABELS: Record<NonNullable<typeof resetTarget>, string> = {
     analytics: "Analytics",
-    cart: "Cart orders",
+    cart: "Food orders",
     polls: "Poll votes",
     appointments: "Appointments",
     live_orders: "Live orders",
@@ -155,6 +161,37 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
     }
   }
 
+
+  const hasFoodOrdering = useMemo(() => flyerHasFoodOrdering(actions), [actions]);
+
+  useEffect(() => {
+    if (!hasFoodOrdering) return;
+    const loadCount = async () => {
+      const { count } = await supabase
+        .from("menu_orders")
+        .select("id", { count: "exact", head: true })
+        .eq("flyer_id", flyer.id)
+        .is("archived_at", null);
+      setFoodOrderCount(count || 0);
+    };
+    loadCount();
+    const iv = setInterval(loadCount, 5000);
+    return () => clearInterval(iv);
+  }, [hasFoodOrdering, flyer.id]);
+
+  // Drop stale role from a different flyer type (e.g. analytics on a menu flyer).
+  useEffect(() => {
+    const saved = sessionStorage.getItem(ROLE_KEY);
+    if (!saved) return;
+    if (!hasFoodOrdering && saved === "master") {
+      sessionStorage.removeItem(ROLE_KEY);
+      setRole(null);
+    }
+    if (hasFoodOrdering && saved === "analytics") {
+      sessionStorage.removeItem(ROLE_KEY);
+      setRole(null);
+    }
+  }, [hasFoodOrdering, ROLE_KEY]);
 
   async function chooseRole(r: "master" | "analytics" | "waiter") {
     if (r === "waiter") {
@@ -219,7 +256,12 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
     pay_later_sms: "Pay Later · Text", pay_later_email: "Pay Later · Email",
     pay_later_paid: "Pay Later · Marked Paid",
   };
-  const COVERED_ACTION_TYPES = new Set(["poll","book_appointment","subscribe","form","rsvp","checkout","buy_ticket","buy_product"]);
+  const COVERED_ACTION_TYPES = new Set([
+    "poll", "book_appointment", "subscribe", "form", "rsvp", "checkout", "buy_ticket", "buy_product",
+    "product_grid", "show_menu", "menu_add_item", "survey", "testimonial", "business_rating", "join_challenge",
+    "schedule_consultation", "reserve_table", "gallery", "air_messages", "video", "audio", "call", "sms",
+    "open_url", "popup", "navigate", "map", "coupon", "reveal", "add_to_calendar",
+  ]);
   const extraActionTypes = allActionTypes.filter((t) => !COVERED_ACTION_TYPES.has(t));
 
   const layerActions = useMemo(() => {
@@ -333,7 +375,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
       const effective: OrderStatus = isPayLater && s.status !== "completed" ? "pay_later" : ((s.status as OrderStatus) || "new");
       return { ...s, status: effective, _payLater: isPayLater };
     });
-  const cartCounts: Record<OrderStatus, number> = { new: 0, on_hold: 0, pay_later: 0, completed: 0 };
+  const cartCounts: Record<OrderStatus, number> = { new: 0, on_hold: 0, pay_later: 0, in_production: 0, completed: 0 };
   for (const o of cartOrders) {
     const s = (o.status as OrderStatus) || "new";
     if (cartCounts[s] != null) cartCounts[s] += 1;
@@ -419,7 +461,9 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               <DropdownMenuItem onClick={() => setResetTarget("cart")}>Reset cart</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setResetTarget("polls")}>Reset polls</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setResetTarget("appointments")}>Reset appointments</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setResetTarget("live_orders")}>Reset live orders</DropdownMenuItem>
+              {hasFoodOrdering && (
+                <DropdownMenuItem onClick={() => setResetTarget("live_orders")}>Reset live orders</DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="ghost" size="sm" onClick={() => { sessionStorage.removeItem(ROLE_KEY); setRole(null); }}>
@@ -460,31 +504,40 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
       <Dialog open={role === null} onOpenChange={() => { /* gated */ }}>
         <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>Who's signing in?</DialogTitle>
-            <DialogDescription>Choose how you want to use this portal.</DialogDescription>
+            <DialogTitle>{hasFoodOrdering ? "Who's signing in?" : "Open portal"}</DialogTitle>
+            <DialogDescription>
+              {hasFoodOrdering
+                ? "Choose your role for live table ordering."
+                : "View analytics, subscribers, forms, and results for this flyer."}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
-            <Button variant="outline" className="h-auto justify-start gap-3 p-4" onClick={() => chooseRole("master")}>
-              <Crown className="h-5 w-5 text-amber-500" />
-              <div className="text-left">
-                <div className="font-medium">Master</div>
-                <div className="text-xs text-muted-foreground">Live orders across all tables · PIN required</div>
-              </div>
-            </Button>
-            <Button variant="outline" className="h-auto justify-start gap-3 p-4" disabled={goingToWaiter} onClick={() => chooseRole("waiter")}>
-              <UserCog className="h-5 w-5 text-blue-500" />
-              <div className="text-left">
-                <div className="font-medium">Waiter</div>
-                <div className="text-xs text-muted-foreground">Just my tables · PIN required</div>
-              </div>
-            </Button>
-            <Button variant="outline" className="h-auto justify-start gap-3 p-4" onClick={() => chooseRole("analytics")}>
-              <BarChart3 className="h-5 w-5 text-emerald-500" />
-              <div className="text-left">
-                <div className="font-medium">Analytics</div>
-                <div className="text-xs text-muted-foreground">Views, clicks, subscribers, polls, forms</div>
-              </div>
-            </Button>
+            {hasFoodOrdering ? (
+              <>
+                <Button variant="outline" className="h-auto justify-start gap-3 p-4" onClick={() => chooseRole("master")}>
+                  <Crown className="h-5 w-5 text-amber-500" />
+                  <div className="text-left">
+                    <div className="font-medium">Master</div>
+                    <div className="text-xs text-muted-foreground">Live orders across all tables · PIN required</div>
+                  </div>
+                </Button>
+                <Button variant="outline" className="h-auto justify-start gap-3 p-4" disabled={goingToWaiter} onClick={() => chooseRole("waiter")}>
+                  <UserCog className="h-5 w-5 text-blue-500" />
+                  <div className="text-left">
+                    <div className="font-medium">Waiter</div>
+                    <div className="text-xs text-muted-foreground">Just my tables · PIN required</div>
+                  </div>
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" className="h-auto justify-start gap-3 p-4" onClick={() => chooseRole("analytics")}>
+                <BarChart3 className="h-5 w-5 text-emerald-500" />
+                <div className="text-left">
+                  <div className="font-medium">Analytics</div>
+                  <div className="text-xs text-muted-foreground">Views, clicks, subscribers, polls, forms & cart orders</div>
+                </div>
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -496,7 +549,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
           ["Return", returnVisitors],
           ["Clicks", clickEvents.length],
           ["Subs", subscribers.length],
-          ["Cart", cartOrders.length],
+          [hasFoodOrdering ? "Food" : "Cart", hasFoodOrdering ? foodOrderCount : cartOrders.length],
         ].map(([label, val]) => (
           <Card key={label as string}><CardContent className="p-3">
             <div className="text-xs text-muted-foreground">{label}</div>
@@ -506,24 +559,23 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="polls">Polls ({polls.length})</TabsTrigger>
-          <TabsTrigger value="appointments">Appointments ({appointments.length})</TabsTrigger>
-          <TabsTrigger value="subscribers">Subscribers ({subscribers.length})</TabsTrigger>
-          <TabsTrigger value="forms">Forms ({submissions.length})</TabsTrigger>
-          <TabsTrigger value="cart">Cart ({cartOrders.length})</TabsTrigger>
-          <TabsTrigger value="interactions">Interactions</TabsTrigger>
-          {actions.some((a) => a.type === "novel") && <TabsTrigger value="novels">📖 Novels</TabsTrigger>}
-          {isOwner && <TabsTrigger value="live">🟢 Live Orders</TabsTrigger>}
-          {isOwner && <TabsTrigger value="staff">Staff & Tables</TabsTrigger>}
-          {isOwner && <TabsTrigger value="archive">Archive</TabsTrigger>}
-          {extraActionTypes.map((t) => {
-            const count = clickEvents.filter((e) => e?.metadata?.action_type === t).length;
-            const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
-            return <TabsTrigger key={t} value={`act-${t}`} className="capitalize">{label} ({count})</TabsTrigger>;
-          })}
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-1">
+          <TabsList className="inline-flex h-auto w-max min-w-full flex-nowrap justify-start gap-0.5">
+            <TabsTrigger value="analytics" className="shrink-0">Analytics</TabsTrigger>
+            <TabsTrigger value="polls" className="shrink-0">Polls ({polls.length})</TabsTrigger>
+            <TabsTrigger value="appointments" className="shrink-0">Appointments ({appointments.length})</TabsTrigger>
+            <TabsTrigger value="subscribers" className="shrink-0">Subscribers ({subscribers.length})</TabsTrigger>
+            <TabsTrigger value="forms" className="shrink-0">Forms ({submissions.length})</TabsTrigger>
+            <TabsTrigger value="cart" className="shrink-0">
+              {hasFoodOrdering ? `Food Orders (${foodOrderCount})` : `Cart (${cartOrders.length})`}
+            </TabsTrigger>
+            <TabsTrigger value="interactions" className="shrink-0">Interactions</TabsTrigger>
+            {isOwner && hasFoodOrdering && <TabsTrigger value="live" className="shrink-0">🟢 Live Orders</TabsTrigger>}
+            {isOwner && hasFoodOrdering && <TabsTrigger value="staff" className="shrink-0">Staff & Tables</TabsTrigger>}
+            {isOwner && hasFoodOrdering && <TabsTrigger value="reports" className="shrink-0">Reports</TabsTrigger>}
+            {isOwner && hasFoodOrdering && <TabsTrigger value="archive" className="shrink-0">Archive</TabsTrigger>}
+          </TabsList>
+        </div>
 
         <TabsContent value="analytics" className="space-y-4">
           <Card>
@@ -796,26 +848,16 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
         </TabsContent>
 
         <TabsContent value="forms" className="space-y-2">
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Form submissions</CardTitle></CardHeader>
-            <CardContent>
-              {submissions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No submissions yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {submissions.map((s) => (
-                    <div key={s.id} className="rounded border border-border p-2 text-xs">
-                      <div className="font-mono text-muted-foreground">{new Date(s.created_at).toLocaleString()}</div>
-                      <pre className="mt-1 whitespace-pre-wrap break-words">{JSON.stringify(s.data, null, 2)}</pre>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <FormSubmissionsPanel
+            submissions={submissions.map((s) => ({ ...s, data: s.data || {} }))}
+            hasFoodOrdering={hasFoodOrdering}
+          />
         </TabsContent>
 
         <TabsContent value="cart" className="space-y-2">
+          {hasFoodOrdering ? (
+            <FoodOrdersPanel flyerId={flyer.id} userEmail={userEmail} onLogPortalEvent={onLogPortalEvent} />
+          ) : (
           <Card>
             <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm">Cart orders</CardTitle>
@@ -870,7 +912,12 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
                               </div>
                             )}
                           </div>
+                          <div className="flex flex-col items-end gap-1">
                           <Badge className={meta.cls}>{meta.label}</Badge>
+                          <span className="text-[10px] text-muted-foreground">
+                            Customer sees: {cartStatusToCustomerPhase(s.status) === "complete" ? "Complete" : cartStatusToCustomerPhase(s.status) === "in_production" ? "In Production" : "Pending"}
+                          </span>
+                        </div>
                         </div>
                       </button>
                     );
@@ -879,74 +926,72 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               )}
             </CardContent>
           </Card>
+          )}
         </TabsContent>
 
-        <TabsContent value="interactions">
+        <TabsContent value="interactions" className="space-y-4">
           <InteractionsModerationPanel flyerId={flyer.id} isOwner={isOwner} />
-        </TabsContent>
-
-        <TabsContent value="novels" className="space-y-4">
-          <NovelsPanel flyerId={flyer.id} actions={actions} onRefresh={onRefresh} />
-        </TabsContent>
-
-
-        {extraActionTypes.map((t) => {
-          const rows = clickEvents.filter((e) => e?.metadata?.action_type === t);
-          const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
-          return (
-            <TabsContent key={t} value={`act-${t}`} className="space-y-2">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm capitalize">{label} — {rows.length} interactions</CardTitle>
-                  <Button
-                    size="sm" variant="outline" disabled={rows.length === 0}
-                    onClick={() => downloadCsv(`${t}-interactions.csv`, csv(
-                      rows.map((r) => ({ created_at: r.created_at, session_id: r.session_id, layer: layerLabel[r.layer_id || ""]?.label || "", layer_type: layerLabel[r.layer_id || ""]?.type || "" })),
-                      ["created_at","session_id","layer","layer_type"]
-                    ))}
-                  >
-                    <Download className="mr-1 h-3 w-3" /> CSV
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  {rows.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No {label.toLowerCase()} tracked yet.</p>
-                  ) : (
-                    <div className="space-y-1">
-                      {rows.slice(0, 200).map((r, i) => {
-                        const lab = layerLabel[r.layer_id || ""];
-                        return (
-                          <div key={r.id || i} className="flex items-center justify-between rounded border border-border p-2 text-xs">
-                            <div className="min-w-0 flex-1">
-                              <div className="font-medium truncate">
-                                {lab?.label || "(unknown layer)"}
-                                {lab?.type && <Badge variant="secondary" className="ml-2">{lab.type}</Badge>}
+          {extraActionTypes.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Other interaction clicks</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {extraActionTypes.map((t) => {
+                  const rows = clickEvents.filter((e) => e?.metadata?.action_type === t);
+                  const label = ACTION_LABELS[t] || t.replace(/_/g, " ");
+                  return (
+                    <div key={t}>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-sm font-medium capitalize">{label} ({rows.length})</span>
+                        <Button
+                          size="sm" variant="outline" disabled={rows.length === 0}
+                          onClick={() => downloadCsv(`${t}-interactions.csv`, csv(
+                            rows.map((r) => ({ created_at: r.created_at, session_id: r.session_id, layer: layerLabel[r.layer_id || ""]?.label || "", layer_type: layerLabel[r.layer_id || ""]?.type || "" })),
+                            ["created_at","session_id","layer","layer_type"]
+                          ))}
+                        >
+                          <Download className="mr-1 h-3 w-3" /> CSV
+                        </Button>
+                      </div>
+                      {rows.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No {label.toLowerCase()} tracked yet.</p>
+                      ) : (
+                        <div className="max-h-40 space-y-1 overflow-y-auto">
+                          {rows.slice(0, 50).map((r, i) => {
+                            const lab = layerLabel[r.layer_id || ""];
+                            return (
+                              <div key={r.id || i} className="rounded border border-border p-2 text-xs">
+                                {lab?.label || "(unknown layer)"} · {new Date(r.created_at).toLocaleString()}
                               </div>
-                              <div className="text-muted-foreground">
-                                {new Date(r.created_at).toLocaleString()} · session {(r.session_id || "").slice(0, 8) || "—"}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          );
-        })}
-        {isOwner && (
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {isOwner && hasFoodOrdering && (
           <TabsContent value="live" className="space-y-4">
             <LiveOrdersBoard flyerId={flyer.id} />
           </TabsContent>
         )}
-        {isOwner && (
+        {isOwner && hasFoodOrdering && (
           <TabsContent value="staff" className="space-y-4">
             <StaffTablesPanel flyerId={flyer.id} />
           </TabsContent>
         )}
-        {isOwner && (
+        {isOwner && hasFoodOrdering && (
+          <TabsContent value="reports" className="space-y-4">
+            <DailyReportsPanel flyerId={flyer.id} flyerTitle={flyer.title} />
+          </TabsContent>
+        )}
+        {isOwner && hasFoodOrdering && (
           <TabsContent value="archive" className="space-y-4">
             <OrdersArchivePanel flyerId={flyer.id} />
           </TabsContent>

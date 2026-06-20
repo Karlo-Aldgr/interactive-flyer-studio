@@ -55,6 +55,18 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 500);
       return json({ ok: true });
     }
+    if (action === "mark_paid") {
+      if (!order_id) return json({ error: "missing order_id" }, 400);
+      const { data: ord } = await supabase.from("menu_orders").select("table_number, flyer_id").eq("id", order_id).maybeSingle();
+      if (!ord || ord.flyer_id !== flyer_id || !tables.includes(ord.table_number || "")) return json({ error: "not your table" }, 403);
+      const patch: Record<string, string> = { payment_status: "paid", paid_at: new Date().toISOString() };
+      let { error } = await supabase.from("menu_orders").update(patch).eq("id", order_id);
+      if (error?.message?.toLowerCase().includes("paid_at")) {
+        ({ error } = await supabase.from("menu_orders").update({ payment_status: "paid" }).eq("id", order_id));
+      }
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
     return json({ error: "unknown action" }, 400);
   } catch (e) {
     return json({ error: (e as Error).message }, 500);

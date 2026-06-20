@@ -7,9 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, LogOut } from "lucide-react";
+import { waiterPortalList, waiterPortalLogin, waiterPortalUpdateStatus, waiterPortalMarkPaid, resolveWaiterPortalToken } from "@/lib/waiterPortalApi";
+import { paymentBadgeCls, paymentStatusLabel } from "@/lib/menuOrderStatus";
 
 type Order = {
   id: string; customer_name: string; items: any[]; status: string;
+  payment_status?: string; payment_method?: string | null;
   table_number: string | null; notes: string | null; order_type: string;
   pickup_at: string | null; created_at: string; subtotal_cents?: number;
 };
@@ -27,37 +30,59 @@ export default function WaiterPortal() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Resolve token → flyer
+  // Resolve token → flyer (anon-safe via RPC)
   useEffect(() => {
     (async () => {
-      if (!token) return;
-      const { data } = await supabase.from("flyer_portal_credentials").select("flyer_id").eq("portal_token", token).maybeSingle();
-      if (!data) { setResolving(false); return; }
-      setFlyerId(data.flyer_id);
-      const { data: f } = await supabase.from("flyers").select("title").eq("id", data.flyer_id).maybeSingle();
-      setFlyerTitle(f?.title || "Flyer");
-      setResolving(false);
-      // restore PIN session
-      const stored = sessionStorage.getItem(`waiter_pin_${data.flyer_id}`);
-      if (stored) setPinSaved(stored);
+      if (!token) { setResolving(false); return; }
+      try {
+        const { flyerId: fid, title } = await resolveWaiterPortalToken(token);
+        setFlyerId(fid);
+        setFlyerTitle(title);
+        const stored = sessionStorage.getItem(`waiter_pin_${fid}`);
+        if (stored) setPinSaved(stored);
+      } catch (e: any) {
+        if (e?.message === "RUN_RPC_SQL") {
+          // Fallback when owner is logged in on same browser
+          const { data } = await supabase
+            .from("flyer_portal_credentials")
+            .select("flyer_id")
+            .eq("portal_token", token)
+            .maybeSingle();
+          if (data?.flyer_id) {
+            setFlyerId(data.flyer_id);
+            const { data: f } = await supabase.from("flyers").select("title").eq("id", data.flyer_id).maybeSingle();
+            setFlyerTitle(f?.title || "Flyer");
+            const stored = sessionStorage.getItem(`waiter_pin_${data.flyer_id}`);
+            if (stored) setPinSaved(stored);
+          }
+        }
+      } finally {
+        setResolving(false);
+      }
     })();
   }, [token]);
 
   const fetchOrders = useCallback(async (usePin: string) => {
     if (!flyerId) return;
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke("waiter-orders", {
-      body: { action: "list", flyer_id: flyerId, pin: usePin },
-    });
-    setLoading(false);
-    if (error || (data as any)?.error) {
+    try {
+      const data = await waiterPortalList(flyerId, usePin);
+      setWaiter(data.waiter);
+      setTables(data.tables || []);
+      setOrders(data.orders || []);
+    } catch (e: any) {
       sessionStorage.removeItem(`waiter_pin_${flyerId}`);
-      setPinSaved(null); setWaiter(null);
-      return toast.error((data as any)?.error || "PIN invalid");
+      setPinSaved(null);
+      setWaiter(null);
+      const msg = e?.message || "PIN invalid";
+      if (msg.includes("Could not find the function")) {
+        toast.error("Waiter login needs waiter_portal_rpc — run scripts/waiter-portal-rpc.sql in Supabase");
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setLoading(false);
     }
-    setWaiter((data as any).waiter);
-    setTables((data as any).tables || []);
-    setOrders((data as any).orders || []);
   }, [flyerId]);
 
   useEffect(() => {
@@ -73,13 +98,19 @@ export default function WaiterPortal() {
 
   async function login() {
     if (!flyerId || pin.length < 4) return toast.error("Enter your PIN");
-    const { data, error } = await supabase.functions.invoke("waiter-master-auth", {
-      body: { action: "waiter_verify", flyer_id: flyerId, pin },
-    });
-    if (error || !(data as any)?.ok) return toast.error("PIN not recognized");
-    sessionStorage.setItem(`waiter_pin_${flyerId}`, pin);
-    setPinSaved(pin);
-    setPin("");
+    try {
+      await waiterPortalLogin(flyerId, pin);
+      sessionStorage.setItem(`waiter_pin_${flyerId}`, pin);
+      setPinSaved(pin);
+      setPin("");
+    } catch (e: any) {
+      const msg = e?.message || "PIN not recognized";
+      if (msg.includes("Could not find the function")) {
+        toast.error("Run scripts/waiter-portal-rpc.sql in Supabase SQL editor first");
+      } else {
+        toast.error(msg);
+      }
+    }
   }
   function logout() {
     if (flyerId) sessionStorage.removeItem(`waiter_pin_${flyerId}`);
@@ -88,15 +119,37 @@ export default function WaiterPortal() {
 
   async function setStatus(orderId: string, status: string) {
     if (!flyerId || !pinSaved) return;
-    const { data, error } = await supabase.functions.invoke("waiter-orders", {
-      body: { action: "update_status", flyer_id: flyerId, pin: pinSaved, order_id: orderId, status },
-    });
-    if (error || (data as any)?.error) return toast.error((data as any)?.error || "Failed");
-    fetchOrders(pinSaved);
+    try {
+      await waiterPortalUpdateStatus(flyerId, pinSaved, orderId, status);
+      fetchOrders(pinSaved);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed");
+    }
+  }
+
+  async function markPaid(orderId: string) {
+    if (!flyerId || !pinSaved) return;
+    try {
+      await waiterPortalMarkPaid(flyerId, pinSaved, orderId);
+      toast.success("Marked as paid");
+      fetchOrders(pinSaved);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed");
+    }
   }
 
   if (resolving) return <div className="flex h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
-  if (!flyerId) return <div className="p-8 text-destructive">Invalid waiter portal link.</div>;
+  if (!flyerId) return (
+    <div className="flex min-h-screen items-center justify-center p-8">
+      <div className="max-w-md text-center space-y-2">
+        <p className="text-destructive font-medium">Invalid waiter portal link.</p>
+        <p className="text-sm text-muted-foreground">
+          Re-copy the link from Portal → Staff &amp; Tables, or run the updated{" "}
+          <code className="text-xs">scripts/waiter-portal-rpc.sql</code> in Supabase SQL editor.
+        </p>
+      </div>
+    </div>
+  );
 
   if (!waiter) {
     return (
@@ -147,16 +200,26 @@ export default function WaiterPortal() {
               <CardContent className="p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <div className="font-medium">Table {o.table_number} · {o.customer_name}</div>
-                  <Badge variant={o.status === "pending_approval" ? "destructive" : "secondary"}>{o.status}</Badge>
+                  <div className="flex items-center gap-1">
+                    <Badge className={`text-[10px] ${paymentBadgeCls(o.payment_status)}`}>
+                      {paymentStatusLabel(o.payment_status)}
+                    </Badge>
+                    <Badge variant={o.status === "pending_approval" ? "destructive" : "secondary"}>{o.status}</Badge>
+                  </div>
                 </div>
                 <ul className="my-1 text-xs">
                   {(o.items || []).map((it: any, i: number) => <li key={i}>{it.qty}× {it.name}</li>)}
                 </ul>
                 {o.notes && <div className="italic text-xs text-muted-foreground">"{o.notes}"</div>}
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {["new", "preparing", "served", "completed"].map((s) => (
+                  {["new", "preparing", "on_hold", "served", "completed"].map((s) => (
                     <Button key={s} size="sm" variant={o.status === s ? "default" : "outline"} className="h-7 px-2 text-xs" onClick={() => setStatus(o.id, s)}>{s}</Button>
                   ))}
+                  {paymentStatusLabel(o.payment_status) === "Unpaid" && (
+                    <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700" onClick={() => markPaid(o.id)}>
+                      Mark paid
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

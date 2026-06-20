@@ -7,10 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Lock, Check, X, RefreshCw } from "lucide-react";
+import { masterPinIsSet, setMasterPin, verifyMasterPin } from "@/lib/waiterPin";
+import { syncFormSubmissionMirror, markMenuOrderPaid } from "@/lib/menuOrderSync";
+import { paymentBadgeCls, paymentStatusLabel } from "@/lib/menuOrderStatus";
 
 type Order = {
   id: string; flyer_id: string; customer_name: string; customer_phone: string | null;
   items: any[]; subtotal_cents: number; notes: string | null; status: string;
+  payment_status: string; payment_method?: string | null; paid_at?: string | null;
   table_number: string | null; order_type: string; pickup_at: string | null;
   created_at: string; archived_at: string | null;
 };
@@ -26,10 +30,12 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.functions.invoke("waiter-master-auth", {
-        body: { action: "master_status", flyer_id: flyerId },
-      });
-      setPinSet(!!(data as any)?.set);
+      try {
+        setPinSet(await masterPinIsSet(flyerId));
+      } catch (e: any) {
+        toast.error(e?.message || "Could not check master PIN status");
+        setPinSet(null);
+      }
     })();
   }, [flyerId]);
 
@@ -67,40 +73,59 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
   }, [unlocked, flyerId, load, loadAssignments]);
 
   async function handleUnlock() {
-    if (pinSet === false) {
-      // first-time setup
-      if (pin.length < 4) return toast.error("Choose 4+ digit PIN");
-      const { data, error } = await supabase.functions.invoke("waiter-master-auth", {
-        body: { action: "master_set", flyer_id: flyerId, new_pin: pin },
-      });
-      if (error || (data as any)?.error) return toast.error((data as any)?.error || "Failed");
-      toast.success("Master PIN set");
-      setPinSet(true);
-      sessionStorage.setItem(SESSION_KEY, "1");
-      setUnlocked(true);
-      setPin("");
-      return;
+    try {
+      if (pinSet === false) {
+        if (pin.length < 4) return toast.error("Choose 4+ digit PIN");
+        await setMasterPin(flyerId, pin);
+        toast.success("Master PIN set");
+        setPinSet(true);
+        sessionStorage.setItem(SESSION_KEY, "1");
+        setUnlocked(true);
+        setPin("");
+        return;
+      }
+      const ok = await verifyMasterPin(flyerId, pin);
+      if (ok) {
+        sessionStorage.setItem(SESSION_KEY, "1");
+        setUnlocked(true);
+        setPin("");
+      } else {
+        toast.error("Wrong PIN");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save PIN — are you signed in as the flyer owner?");
     }
-    const { data } = await supabase.functions.invoke("waiter-master-auth", {
-      body: { action: "master_verify", flyer_id: flyerId, pin },
-    });
-    if ((data as any)?.ok) {
-      sessionStorage.setItem(SESSION_KEY, "1");
-      setUnlocked(true);
-      setPin("");
-    } else toast.error("Wrong PIN");
   }
 
   async function approve(orderId: string, decision: "approve" | "reject") {
-    const { data, error } = await supabase.functions.invoke("approve-order", { body: { order_id: orderId, decision } });
-    if (error || (data as any)?.error) return toast.error((data as any)?.error || "Failed");
+    const newStatus = decision === "approve" ? "new" : "cancelled";
+    const patch: { status: string; approved_by?: string; approved_at?: string } = { status: newStatus };
+    if (decision === "approve") {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        patch.approved_by = user.id;
+        patch.approved_at = new Date().toISOString();
+      }
+    }
+    const { error } = await supabase.from("menu_orders").update(patch).eq("id", orderId);
+    if (error) return toast.error(error.message || "Failed — sign in as flyer owner");
+    const updated = orders.find((o) => o.id === orderId);
+    if (updated) await syncFormSubmissionMirror({ ...updated, ...patch } as Order);
     toast.success(decision === "approve" ? "Approved" : "Rejected");
     load();
   }
 
   async function setStatus(orderId: string, status: string) {
-    const { error } = await supabase.from("menu_orders").update({ status }).eq("id", orderId);
+    const { data: row, error } = await supabase.from("menu_orders").update({ status }).eq("id", orderId).select("*").maybeSingle();
     if (error) return toast.error(error.message);
+    if (row) await syncFormSubmissionMirror(row as Order);
+    load();
+  }
+
+  async function handleMarkPaid(orderId: string) {
+    const { error } = await markMenuOrderPaid(orderId, "master");
+    if (error) return toast.error(error);
+    toast.success("Payment marked as received");
     load();
   }
 
@@ -174,7 +199,12 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
                     className={`rounded border p-2 text-xs ${pending ? "border-red-500 bg-red-500/10" : isAhead ? "border-red-300" : "border-border"}`}>
                     <div className="flex items-center justify-between">
                       <div className="font-medium">{o.customer_name}</div>
-                      <Badge variant={pending ? "destructive" : "secondary"} className="text-[10px]">{o.status}</Badge>
+                      <div className="flex items-center gap-1">
+                        <Badge className={`text-[10px] ${paymentBadgeCls(o.payment_status)}`}>
+                          {paymentStatusLabel(o.payment_status)}
+                        </Badge>
+                        <Badge variant={pending ? "destructive" : "secondary"} className="text-[10px]">{o.status}</Badge>
+                      </div>
                     </div>
                     {isAhead && (
                       <div className="text-[11px] text-red-600 font-medium">
@@ -194,9 +224,14 @@ export function LiveOrdersBoard({ flyerId }: { flyerId: string }) {
                           <Button size="sm" variant="destructive" className="h-6 px-2 text-[10px]" onClick={() => approve(o.id, "reject")}><X className="h-3 w-3 mr-1" />Reject</Button>
                         </>
                       )}
-                      {!pending && ["new", "preparing", "served", "completed"].map((s) => (
+                      {!pending && ["new", "preparing", "on_hold", "served", "completed"].map((s) => (
                         <Button key={s} size="sm" variant={o.status === s ? "default" : "outline"} className="h-6 px-2 text-[10px]" onClick={() => setStatus(o.id, s)}>{s}</Button>
                       ))}
+                      {paymentStatusLabel(o.payment_status) === "Unpaid" && !pending && (
+                        <Button size="sm" className="h-6 px-2 text-[10px] bg-emerald-600 hover:bg-emerald-700" onClick={() => handleMarkPaid(o.id)}>
+                          Mark paid
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
