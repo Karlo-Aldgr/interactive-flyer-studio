@@ -34,7 +34,17 @@ const AdminExamples = lazy(() => import("./pages/AdminExamples"));
 const AdminEditors = lazy(() => import("./pages/AdminEditors"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Avoid spinner flashes from re-fetching on every tab focus / remount.
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const FullScreenSpinner = () => (
   <div className="flex h-screen items-center justify-center bg-background">

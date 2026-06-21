@@ -20,6 +20,35 @@ export default defineConfig(({ mode }) => ({
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
   build: {
-    rollupOptions: {},
+    rollupOptions: {
+      output: {
+        // Split big vendor libs into their own cacheable chunks so the initial
+        // bundle stays small and library upgrades don't bust the whole cache.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("react-konva") || id.includes("/konva/") || id.includes("use-image")) {
+            return "konva";
+          }
+          if (id.includes("recharts") || id.includes("d3-")) {
+            return "charts";
+          }
+          if (id.includes("@supabase") || id.includes("@lovable.dev/cloud-auth-js")) {
+            return "supabase";
+          }
+          if (id.includes("@radix-ui")) {
+            return "radix";
+          }
+          if (id.includes("lucide-react")) {
+            return "icons";
+          }
+          if (id.includes("react-router") || id.includes("@tanstack")) {
+            return "react-vendor";
+          }
+          if (id.includes("jszip") || id.includes("qrcode.react")) {
+            return "utils-vendor";
+          }
+        },
+      },
+    },
   },
 }));
