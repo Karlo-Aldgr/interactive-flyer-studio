@@ -120,7 +120,7 @@ export function useFlyerData(flyerId: string | undefined) {
     setSaving(true);
     try {
       // 1. Update flyer meta
-      await supabase
+      const { error: flyerError } = await supabase
         .from("flyers")
         .update({
           title: f.title,
@@ -129,6 +129,7 @@ export function useFlyerData(flyerId: string | undefined) {
           settings: f.settings as any,
         })
         .eq("id", f.id);
+      if (flyerError) throw flyerError;
 
       // 2. Fetch current DB state to diff
       const { data: dbPages } = await supabase
@@ -165,7 +166,8 @@ export function useFlyerData(flyerId: string | undefined) {
         intro: (p.intro ?? null) as any,
       }));
       if (pageRows.length) {
-        await supabase.from("pages").upsert(pageRows);
+        const { error: pageError } = await supabase.from("pages").upsert(pageRows);
+        if (pageError) throw pageError;
       }
 
       // 6. Upsert layers
@@ -183,7 +185,8 @@ export function useFlyerData(flyerId: string | undefined) {
           content: l.content as any,
           intro: (l.intro ?? null) as any,
         }));
-        await supabase.from("layers").upsert(layerRows);
+        const { error: layerError } = await supabase.from("layers").upsert(layerRows);
+        if (layerError) throw layerError;
       }
 
       // 7. Upsert / delete actions
