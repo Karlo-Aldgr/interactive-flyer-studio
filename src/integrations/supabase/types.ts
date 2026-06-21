@@ -1266,6 +1266,7 @@ export type Database = {
         Args: { p_date: string; p_flyer_id: string }
         Returns: undefined
       }
+      user_can_manage_flyer: { Args: { _flyer_id: string }; Returns: boolean }
       user_can_manage_flyer_portal: {
         Args: { _flyer_id: string }
         Returns: boolean
