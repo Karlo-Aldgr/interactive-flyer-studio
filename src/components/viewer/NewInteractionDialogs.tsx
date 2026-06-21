@@ -381,6 +381,7 @@ export function MenuCartUI({
   paymentLink,
   paymentInstructions,
   loading = false,
+  specials = [],
 }: {
   flyerId: string;
   actionId?: string | null;
@@ -391,7 +392,9 @@ export function MenuCartUI({
   paymentLink?: string;
   paymentInstructions?: string;
   loading?: boolean;
+  specials?: { id: string; title: string; description?: string; code?: string; imageUrl?: string }[];
 }) {
+
   const { cart, open, view, add, removeAt, clear, setOpen, setView } = useMenuCart();
   const [pickerCategory, setPickerCategory] = useState<"side" | "drink">("side");
   const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [notes, setNotes] = useState("");
