@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Stage, Layer as KLayer, Rect, Transformer, Ellipse, Group, Text, Image as KonvaImage, Line } from "react-konva";
+import { Stage, Layer as KLayer, Rect, Transformer, Ellipse, Group, Text, Image as KonvaImage, Line, Circle } from "react-konva";
 import useImage from "use-image";
 import { useEditorStore } from "@/store/editorStore";
 import { LayerRenderer } from "./LayerRenderer";
@@ -10,7 +10,7 @@ import { X, Check, Loader2 } from "lucide-react";
 import type { AirMessageBubble, Layer as FlyerLayer } from "@/types/flyer";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { useObjectExtract } from "@/hooks/useObjectExtract";
-import { bboxToCanvasRect } from "@/lib/subjectDetect";
+import { bboxToCanvasRect, polygonToCanvasPoints } from "@/lib/subjectDetect";
 
 const ACTION_LABEL: Record<string, string> = {
   open_url: "URL", popup: "Popup", video: "Video", call: "Call",
@@ -132,6 +132,7 @@ export function Canvas() {
   const cancelCrop = useEditorStore((s) => s.cancelCrop);
   const extractSourceLayerId = useEditorStore((s) => s.extractSourceLayerId);
   const subjectDetections = useEditorStore((s) => s.subjectDetections);
+  const dismissSubjectDetection = useEditorStore((s) => s.dismissSubjectDetection);
   const cancelObjectExtract = useEditorStore((s) => s.cancelObjectExtract);
   const introReplayKey = useEditorStore((s) => s.introReplayKey);
   const setStageRef = useEditorStore((s) => s.setStageRef);
@@ -158,6 +159,7 @@ export function Canvas() {
   const page = pages.find((p) => p.id === selectedPageId);
   const W = page?.background?.size?.width ?? flyer?.settings.width ?? 900;
   const H = page?.background?.size?.height ?? flyer?.settings.height ?? 1200;
+  const activeSubjectDetections = subjectDetections.filter((d) => !d.extracted && !d.dismissed);
   const extractSourceLayer = page?.layers.find((l) => l.id === extractSourceLayerId);
   const isRectDrawMode = drawMode === "hotspot" || drawMode === "extract-rect";
 
@@ -313,9 +315,9 @@ export function Canvas() {
             </>
           ) : (
             <>
-              <span className="font-medium">Click a highlighted subject to extract</span>
+              <span className="font-medium">Click a subject outline to extract</span>
               <span className="text-muted-foreground">
-                {subjectDetections.filter((d) => !d.extracted).length} remaining
+                {activeSubjectDetections.length} remaining — use ✕ to dismiss unwanted
               </span>
             </>
           )}
@@ -586,19 +588,44 @@ export function Canvas() {
 
             {drawMode === "extract-auto" && extractSourceLayer && (
               <KLayer>
-                {subjectDetections
-                  .filter((d) => !d.extracted)
-                  .map((det) => {
-                    const r = bboxToCanvasRect(det.bbox, {
-                      x: extractSourceLayer.position.x,
-                      y: extractSourceLayer.position.y,
-                      width: extractSourceLayer.size.width,
-                      height: extractSourceLayer.size.height,
-                    });
-                    const hovered = hoveredDetectionId === det.id;
-                    const labelW = Math.min(220, Math.max(72, det.label.length * 6.5 + 16));
-                    return (
-                      <Group key={det.id}>
+                {activeSubjectDetections.map((det) => {
+                  const sourceRect = {
+                    x: extractSourceLayer.position.x,
+                    y: extractSourceLayer.position.y,
+                    width: extractSourceLayer.size.width,
+                    height: extractSourceLayer.size.height,
+                  };
+                  const r = bboxToCanvasRect(det.bbox, sourceRect);
+                  const polygonPoints =
+                    det.polygon && det.polygon.length >= 3
+                      ? polygonToCanvasPoints(det.polygon, sourceRect)
+                      : null;
+                  const hovered = hoveredDetectionId === det.id;
+                  const labelW = Math.min(220, Math.max(72, det.label.length * 6.5 + 16));
+                  const dismissX = polygonPoints
+                    ? Math.max(...polygonPoints.filter((_, i) => i % 2 === 0))
+                    : r.x + r.width;
+                  const dismissY = polygonPoints
+                    ? Math.min(...polygonPoints.filter((_, i) => i % 2 === 1))
+                    : r.y;
+
+                  return (
+                    <Group key={det.id}>
+                      {polygonPoints ? (
+                        <Line
+                          points={polygonPoints}
+                          closed
+                          fill={hovered ? "rgba(14,165,233,0.22)" : "rgba(14,165,233,0.1)"}
+                          stroke="#0ea5e9"
+                          strokeWidth={hovered ? 2.5 : 1.5}
+                          onMouseEnter={() => setHoveredDetectionId(det.id)}
+                          onMouseLeave={() =>
+                            setHoveredDetectionId((id) => (id === det.id ? null : id))
+                          }
+                          onClick={() => !extracting && extractFromSubject(det)}
+                          onTap={() => !extracting && extractFromSubject(det)}
+                        />
+                      ) : (
                         <Rect
                           x={r.x}
                           y={r.y}
@@ -615,24 +642,40 @@ export function Canvas() {
                           onClick={() => !extracting && extractFromSubject(det)}
                           onTap={() => !extracting && extractFromSubject(det)}
                         />
-                        {hovered && (
-                          <Group x={r.x + 4} y={r.y + 4} listening={false}>
-                            <Rect width={labelW} height={18} fill="#0ea5e9" cornerRadius={4} />
-                            <Text
-                              text={det.label}
-                              x={6}
-                              y={3}
-                              width={labelW - 12}
-                              fontSize={11}
-                              fill="#fff"
-                              fontStyle="600"
-                              ellipsis
-                            />
-                          </Group>
-                        )}
+                      )}
+                      <Group
+                        x={dismissX - 8}
+                        y={dismissY - 8}
+                        onClick={(e) => {
+                          e.cancelBubble = true;
+                          if (!extracting) dismissSubjectDetection(det.id);
+                        }}
+                        onTap={(e) => {
+                          e.cancelBubble = true;
+                          if (!extracting) dismissSubjectDetection(det.id);
+                        }}
+                      >
+                        <Circle radius={10} fill="#ef4444" stroke="#fff" strokeWidth={1.5} />
+                        <Text text="✕" x={-4.5} y={-6} fontSize={12} fill="#fff" fontStyle="700" listening={false} />
                       </Group>
-                    );
-                  })}
+                      {(hovered || polygonPoints) && (
+                        <Group x={r.x + 4} y={r.y + 4} listening={false}>
+                          <Rect width={labelW} height={18} fill="#0ea5e9" cornerRadius={4} />
+                          <Text
+                            text={det.label}
+                            x={6}
+                            y={3}
+                            width={labelW - 12}
+                            fontSize={11}
+                            fill="#fff"
+                            fontStyle="600"
+                            ellipsis
+                          />
+                        </Group>
+                      )}
+                    </Group>
+                  );
+                })}
               </KLayer>
             )}
 

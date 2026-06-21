@@ -20,11 +20,17 @@ type SubjectCategory =
   | "furniture"
   | "object";
 
+interface NormalizedPoint {
+  x: number;
+  y: number;
+}
+
 interface SubjectDetection {
   id: string;
   label: string;
   category: SubjectCategory;
   bbox: { x: number; y: number; width: number; height: number };
+  polygon?: NormalizedPoint[];
 }
 
 const SYSTEM_PROMPT = `You are a visual subject-detection assistant for an interactive flyer editor (similar to Photoshop "Select Subject").
@@ -41,6 +47,8 @@ Detect subjects such as:
 Rules:
 - Return TIGHT bounding boxes in normalized image coordinates (0.0–1.0), top-left origin.
 - x = left edge, y = top edge, width and height are positive fractions of image size.
+- For EACH subject, also return a polygon (12–40 points) tracing the precise silhouette — NOT a rectangle.
+- Polygon points use the same normalized full-image coordinates and follow the visible object edges.
 - Prefer fewer, meaningful subjects over hundreds of tiny fragments.
 - Skip full-image background/sky/empty regions unless they are the only subject.
 - label: short human name (e.g. "Woman in red dress", "Company logo", "Red sports car").
@@ -82,8 +90,21 @@ const TOOL_DEF = {
                 required: ["x", "y", "width", "height"],
                 additionalProperties: false,
               },
+              polygon: {
+                type: "array",
+                description: "Closed polygon tracing the subject silhouette (not a rectangle).",
+                items: {
+                  type: "object",
+                  properties: {
+                    x: { type: "number" },
+                    y: { type: "number" },
+                  },
+                  required: ["x", "y"],
+                  additionalProperties: false,
+                },
+              },
             },
-            required: ["id", "label", "category", "bbox"],
+            required: ["id", "label", "category", "bbox", "polygon"],
             additionalProperties: false,
           },
         },
@@ -97,6 +118,18 @@ const TOOL_DEF = {
 function clamp01(n: number): number {
   if (typeof n !== "number" || isNaN(n)) return 0;
   return Math.max(0, Math.min(1, n));
+}
+
+function sanitizePolygon(raw: unknown): NormalizedPoint[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((p) => p && typeof p.x === "number" && typeof p.y === "number")
+    .map((p) => ({ x: clamp01(p.x), y: clamp01(p.y) }))
+    .filter((p, i, arr) => {
+      if (i === 0) return true;
+      const prev = arr[i - 1];
+      return Math.abs(p.x - prev.x) > 0.001 || Math.abs(p.y - prev.y) > 0.001;
+    });
 }
 
 Deno.serve(async (req) => {
@@ -184,6 +217,7 @@ Deno.serve(async (req) => {
         const y = clamp01(s.bbox.y);
         const width = clamp01(s.bbox.width);
         const height = clamp01(s.bbox.height);
+        const polygon = sanitizePolygon(s.polygon);
         return {
           id: String(s.id || `subj-${i + 1}`),
           label: String(s.label).trim().slice(0, 80),
@@ -194,6 +228,7 @@ Deno.serve(async (req) => {
             width: Math.max(0.01, Math.min(1 - x, width)),
             height: Math.max(0.01, Math.min(1 - y, height)),
           },
+          ...(polygon.length >= 3 ? { polygon } : {}),
         };
       })
       .filter((s: SubjectDetection) => s.bbox.width > 0.008 && s.bbox.height > 0.008);

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { Flyer, FlyerPage, Layer, LayerAction, LayerContent, LayerStyle, PageIntro } from "@/types/flyer";
 import { defaultLayer, emptyPage, uid } from "@/lib/konvaHelpers";
-import type { SubjectDetection } from "@/lib/subjectDetect";
+import type { SubjectDetection, NormalizedPoint } from "@/lib/subjectDetect";
 import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant } from "@/lib/editorToolPresets";
 
 export type DrawMode = null | "hotspot" | "hotspot-ellipse" | "crop" | "extract-rect" | "extract-auto";
@@ -45,6 +45,8 @@ interface EditorState {
   startObjectExtract: (sourceLayerId: string) => void;
   startAutoSubjectExtract: (sourceLayerId: string, detections: SubjectDetection[]) => void;
   markSubjectExtracted: (detectionId: string) => void;
+  dismissSubjectDetection: (detectionId: string) => void;
+  updateSubjectPolygon: (detectionId: string, polygon: NormalizedPoint[]) => void;
   cancelObjectExtract: () => void;
   toggleHitboxes: () => void;
   setDeviceFrame: (f: DeviceFrame) => void;
@@ -182,6 +184,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((s) => ({
       subjectDetections: s.subjectDetections.map((d) =>
         d.id === detectionId ? { ...d, extracted: true } : d
+      ),
+    })),
+  dismissSubjectDetection: (detectionId) =>
+    set((s) => {
+      const next = s.subjectDetections.map((d) =>
+        d.id === detectionId ? { ...d, dismissed: true } : d
+      );
+      const active = next.filter((d) => !d.dismissed && !d.extracted);
+      if (active.length === 0) {
+        return { subjectDetections: [], extractSourceLayerId: null, drawMode: null };
+      }
+      return { subjectDetections: next };
+    }),
+  updateSubjectPolygon: (detectionId, polygon) =>
+    set((s) => ({
+      subjectDetections: s.subjectDetections.map((d) =>
+        d.id === detectionId ? { ...d, polygon } : d
       ),
     })),
   cancelObjectExtract: () =>
