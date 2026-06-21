@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useParams } from "react-router-dom";
+import { ACTION_LABELS, ACTION_TYPE_GROUPS } from "@/lib/actionCategories";
 
 interface Props {
   action: LayerAction | null;
@@ -37,44 +38,6 @@ function initialDraft(action: LayerAction | null, initialType?: ActionType): Lay
   };
 }
 
-const ACTION_LABELS: Record<ActionType, string> = {
-  open_url: "Open URL",
-  popup: "Show popup",
-  video: "Play video",
-  audio: "Play audio",
-  call: "Call phone",
-  sms: "Send SMS",
-  form: "Capture form",
-  navigate: "Go to page",
-  reveal: "Reveal layer",
-  add_to_calendar: "Add to calendar",
-  buy_ticket: "Buy ticket",
-  rsvp: "RSVP",
-  checkout: "Link to checkout",
-  coupon: "Coupon",
-  map: "Open in maps (GPS)",
-  buy_product: "Buy product",
-  air_messages: "Air messages (chat bubbles)",
-  poll: "Poll",
-  subscribe: "Subscribe (email signup)",
-  book_appointment: "Book appointment",
-  gallery: "Photo gallery",
-  survey: "Survey",
-  testimonial: "Testimonials",
-  reserve_table: "Reserve a table",
-  schedule_consultation: "Schedule consultation",
-  show_menu: "Show menu",
-  join_challenge: "Join challenge",
-  business_rating: "Business rating (5 stars)",
-  menu_add_item: "Add menu item to cart",
-  product_grid: "Multi-product shop",
-  novel: "Novel / Story (paid chapters)",
-};
-
-const PRESET_TYPES: ActionType[] = ["novel", "product_grid", "book_appointment", "subscribe", "air_messages", "poll", "buy_product", "buy_ticket", "rsvp", "checkout", "coupon", "map", "gallery", "survey", "testimonial", "reserve_table", "schedule_consultation", "show_menu", "join_challenge", "business_rating"];
-const BASIC_TYPES: ActionType[] = [
-  "open_url", "popup", "video", "audio", "call", "sms", "form", "navigate", "reveal", "add_to_calendar",
-];
 
 function toLocalInputValue(iso?: string): string {
   if (!iso) return "";
@@ -1180,20 +1143,16 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
             }}
           >
             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[min(420px,70vh)]">
               {!embedded && <SelectItem value="none">No action</SelectItem>}
-              <SelectGroup>
-                <SelectLabel>Presets</SelectLabel>
-                {PRESET_TYPES.map((k) => (
-                  <SelectItem key={k} value={k}>{ACTION_LABELS[k]}</SelectItem>
-                ))}
-              </SelectGroup>
-              <SelectGroup>
-                <SelectLabel>Basic</SelectLabel>
-                {BASIC_TYPES.map((k) => (
-                  <SelectItem key={k} value={k}>{ACTION_LABELS[k]}</SelectItem>
-                ))}
-              </SelectGroup>
+              {ACTION_TYPE_GROUPS.map((group) => (
+                <SelectGroup key={group.label}>
+                  <SelectLabel>{group.label}</SelectLabel>
+                  {group.types.map((k) => (
+                    <SelectItem key={k} value={k}>{ACTION_LABELS[k]}</SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -2260,9 +2219,12 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
               <Switch checked={!!p.testimonialAllowPhoto} onCheckedChange={(v) => update({ testimonialAllowPhoto: v })} />
             </div>
             <div className="flex items-center justify-between">
-              <Label className="text-xs">Auto-approve (skip moderation)</Label>
+              <Label className="text-xs">Auto-approve (portal moderation still required)</Label>
               <Switch checked={!!p.testimonialAutoApprove} onCheckedChange={(v) => update({ testimonialAutoApprove: v })} />
             </div>
+            <p className="text-[10px] text-muted-foreground">
+              Reviews are stored as pending — approve them in Portal → Interactions → Testimonials.
+            </p>
             <div>
               <Label className="text-xs">Thank-you message</Label>
               <Input className="mt-1" value={p.testimonialSuccessMessage || ""} onChange={(e) => update({ testimonialSuccessMessage: e.target.value })} placeholder="Thanks for the kind words!" />
