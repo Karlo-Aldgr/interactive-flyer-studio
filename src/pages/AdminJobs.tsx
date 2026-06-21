@@ -203,8 +203,12 @@ export default function AdminJobs() {
         }
       }
 
-      // 4. Link the flyer to the job
-      await supabase.from("jobs").update({ flyer_id: flyer.id }).eq("id", j.id);
+      // 4. Link the flyer to the job — surface errors so we don't silently leave job unlinked
+      const { error: linkErr } = await supabase
+        .from("jobs")
+        .update({ flyer_id: flyer.id })
+        .eq("id", j.id);
+      if (linkErr) throw linkErr;
 
       toast.success("Flyer created", { id: toastId });
       navigate(`/editor/${flyer.id}`);
