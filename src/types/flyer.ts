@@ -269,6 +269,8 @@ export interface ActionPayload {
   menuCheckoutMode?: "order_only" | "payment";
   menuPaymentLink?: string;
   menuPaymentInstructions?: string;
+  menuSpecials?: { id: string; title: string; description?: string; code?: string; imageUrl?: string }[];
+
 
   // menu_add_item — clickable product hotspot on a scanned menu page
   menuItem?: {

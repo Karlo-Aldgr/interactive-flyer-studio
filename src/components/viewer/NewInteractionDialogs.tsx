@@ -381,6 +381,7 @@ export function MenuCartUI({
   paymentLink,
   paymentInstructions,
   loading = false,
+  specials = [],
 }: {
   flyerId: string;
   actionId?: string | null;
@@ -391,7 +392,9 @@ export function MenuCartUI({
   paymentLink?: string;
   paymentInstructions?: string;
   loading?: boolean;
+  specials?: { id: string; title: string; description?: string; code?: string; imageUrl?: string }[];
 }) {
+
   const { cart, open, view, add, removeAt, clear, setOpen, setView } = useMenuCart();
   const [pickerCategory, setPickerCategory] = useState<"side" | "drink">("side");
   const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [notes, setNotes] = useState("");
@@ -405,6 +408,9 @@ export function MenuCartUI({
   const [postOrderPromptOpen, setPostOrderPromptOpen] = useState(false);
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [lastOrderId, setLastOrderId] = useState<string | null>(null);
+  const [specialsOpen, setSpecialsOpen] = useState(false);
+  const [specialsDismissed, setSpecialsDismissed] = useState(false);
+
 
   useEffect(() => {
     if (!tableNumber.trim()) { setWaiterName(null); return; }
@@ -425,6 +431,15 @@ export function MenuCartUI({
 
   const total = cart.reduce((sum, l) => sum + (l.item.price || 0) * l.qty, 0);
   const itemCount = cart.reduce((n, l) => n + l.qty, 0);
+
+  // Show specials popup once after the first item is added; stays until X
+  useEffect(() => {
+    if (itemCount > 0 && !specialsDismissed && (specials?.length || 0) > 0) {
+      setSpecialsOpen(true);
+    }
+  }, [itemCount, specialsDismissed, specials?.length]);
+
+
 
   function handleItemTap(item: MenuItem) {
     add(item);
@@ -738,9 +753,38 @@ export function MenuCartUI({
         onOpenChange={setTrackerOpen}
         initialTrack={lastOrderId ? loadOrderTrack(flyerId) : null}
       />
+
+      {/* Specials & coupons popup — appears after first item is added */}
+      <Dialog open={specialsOpen} onOpenChange={(v) => { if (!v) { setSpecialsOpen(false); setSpecialsDismissed(true); } }}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>🎉 Today's specials & coupons</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {specials.map((sp) => (
+              <div key={sp.id} className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 space-y-2">
+                {sp.imageUrl && (
+                  <img src={sp.imageUrl} alt={sp.title} className="w-full rounded-md object-cover max-h-48" />
+                )}
+                <div className="font-semibold">{sp.title}</div>
+                {sp.description && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{sp.description}</p>}
+                {sp.code && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Code:</span>
+                    <code className="rounded bg-background border border-border px-2 py-1 text-sm font-mono">{sp.code}</code>
+                    <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(sp.code!); toast.success("Code copied"); }}>Copy</Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground pt-1">Tap the X to close.</p>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
+
 
 function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId: string; onClose: () => void }) {
   const p = action.payload;
@@ -778,7 +822,9 @@ function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId
       checkoutMode={p.menuCheckoutMode || "order_only"}
       paymentLink={p.menuPaymentLink}
       paymentInstructions={p.menuPaymentInstructions}
+      specials={p.menuSpecials || []}
       loading={loading}
+
     />
   );
 }
