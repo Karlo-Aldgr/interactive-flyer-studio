@@ -753,9 +753,38 @@ export function MenuCartUI({
         onOpenChange={setTrackerOpen}
         initialTrack={lastOrderId ? loadOrderTrack(flyerId) : null}
       />
+
+      {/* Specials & coupons popup — appears after first item is added */}
+      <Dialog open={specialsOpen} onOpenChange={(v) => { if (!v) { setSpecialsOpen(false); setSpecialsDismissed(true); } }}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>🎉 Today's specials & coupons</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {specials.map((sp) => (
+              <div key={sp.id} className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 space-y-2">
+                {sp.imageUrl && (
+                  <img src={sp.imageUrl} alt={sp.title} className="w-full rounded-md object-cover max-h-48" />
+                )}
+                <div className="font-semibold">{sp.title}</div>
+                {sp.description && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{sp.description}</p>}
+                {sp.code && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Code:</span>
+                    <code className="rounded bg-background border border-border px-2 py-1 text-sm font-mono">{sp.code}</code>
+                    <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(sp.code!); toast.success("Code copied"); }}>Copy</Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground pt-1">Tap the X to close.</p>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
+
 
 function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId: string; onClose: () => void }) {
   const p = action.payload;
