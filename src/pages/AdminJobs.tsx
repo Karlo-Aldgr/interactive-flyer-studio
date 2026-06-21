@@ -333,7 +333,17 @@ export default function AdminJobs() {
                 const linkedFlyer = flyers.find((f) => f.id === j.flyer_id);
                 const customerDeleted = jobIsCustomerDeleted(j);
                 return (
-                  <Card key={j.id} className={`p-5 ${isNew ? "ring-2 ring-primary/60 shadow-glow" : ""} ${customerDeleted ? "border-destructive/30" : ""}`}>
+                  <Card
+                    key={j.id}
+                    role="button"
+                    tabIndex={customerDeleted ? -1 : 0}
+                    onClick={() => !customerDeleted && openJob(j)}
+                    onKeyDown={(e) => {
+                      if (customerDeleted) return;
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j); }
+                    }}
+                    className={`p-5 transition cursor-pointer hover:border-primary/50 hover:shadow-md ${isNew ? "ring-2 ring-primary/60 shadow-glow" : ""} ${customerDeleted ? "border-destructive/30 cursor-default" : ""}`}
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -342,6 +352,7 @@ export default function AdminJobs() {
                           <Badge variant="secondary">{STATUS_LABEL[j.status]}</Badge>
                           <Badge variant="outline">{j.type}</Badge>
                           <JobStaffBadges job={j} />
+                          {openingJobId === j.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {j.customer_email ?? "—"} · {format(new Date(j.created_at), "PPp")}
@@ -354,21 +365,22 @@ export default function AdminJobs() {
                         </div>
                         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
                           {typeof j.price_cents === "number" && <span className="font-semibold">${(j.price_cents / 100).toFixed(2)}</span>}
-                          {j.payment_link && <a href={j.payment_link} target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover:underline inline-flex items-center">Pay link <ExternalLink className="ml-1 h-3 w-3" /></a>}
+                          {j.payment_link && <a href={j.payment_link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary underline-offset-2 hover:underline inline-flex items-center">Pay link <ExternalLink className="ml-1 h-3 w-3" /></a>}
                           {j.upload_url && (
-                            <button type="button" onClick={async () => {
+                            <button type="button" onClick={async (e) => {
+                              e.stopPropagation();
                               const url = await getJobUploadSignedUrl(j.upload_url);
                               if (!url) return toast.error("Could not open upload");
                               window.open(url, "_blank", "noreferrer");
                             }} className="inline-flex items-center text-muted-foreground hover:text-foreground"><FileText className="mr-1 h-3.5 w-3.5" />Upload</button>
                           )}
 
-                          {linkedFlyer && <Link to={`/editor/${linkedFlyer.id}`} className="text-primary underline-offset-2 hover:underline">Open editor</Link>}
+                          {linkedFlyer && <Link to={`/editor/${linkedFlyer.id}`} onClick={(e) => e.stopPropagation()} className="text-primary underline-offset-2 hover:underline">Open editor</Link>}
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => openEdit(j)}><Pencil className="mr-1 h-3.5 w-3.5" />Manage</Button>
-                        <Button size="sm" variant="ghost" onClick={() => deleteJob(j.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button size="sm" onClick={(e) => { e.stopPropagation(); openEdit(j); }}><Pencil className="mr-1 h-3.5 w-3.5" />Manage</Button>
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteJob(j.id); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
                   </Card>
