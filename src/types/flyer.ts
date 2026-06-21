@@ -268,6 +268,7 @@ export interface ActionPayload {
   menuCurrency?: string;
   menuCheckoutMode?: "order_only" | "payment";
   menuPaymentLink?: string;
+  menuPaymentInstructions?: string;
 
   // menu_add_item — clickable product hotspot on a scanned menu page
   menuItem?: {
