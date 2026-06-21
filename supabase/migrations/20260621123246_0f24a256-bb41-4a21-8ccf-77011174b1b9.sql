@@ -1,0 +1,1 @@
+CREATE POLICY "admins insert any portal credentials" ON public.flyer_portal_credentials FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
