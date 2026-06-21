@@ -779,6 +779,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [popup, setPopup] = useState<LayerAction | null>(null);
   const [video, setVideo] = useState<string | null>(null);
   const [formAction, setFormAction] = useState<LayerAction | null>(null);
+  const [formLayerId, setFormLayerId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showHitboxes, setShowHitboxes] = useState(false);
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
@@ -1324,6 +1325,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "form":
         setFormAction(a);
         setFormData({});
+        setFormLayerId(layer?.id ?? null);
         break;
       case "navigate": {
         const idx = pages.findIndex((p) => p.id === a.payload.pageId);
@@ -1350,6 +1352,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "rsvp":
         setFormAction(a);
         setFormData({});
+        setFormLayerId(layer?.id ?? null);
         break;
       case "checkout":
         if (a.payload.productName) {
@@ -1384,6 +1387,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         break;
       case "book_appointment":
         setAppointmentAction({ action: a, layer });
+        break;
       case "survey":
       case "testimonial":
       case "reserve_table":
@@ -1402,7 +1406,6 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         }
         break;
       }
-        break;
       case "map": {
         const { mapAddress, mapLat, mapLng, mapProvider } = a.payload;
         const isApple = (() => {
@@ -1448,7 +1451,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     }
     const { error } = await supabase.from("form_submissions").insert([{
       flyer_id: flyer.id,
-      layer_id: null,
+      layer_id: formLayerId,
       data: { ...formData, _preset: isRsvp ? "rsvp" : "form" } as any,
     }]);
     if (error) {
@@ -2521,7 +2524,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         </div>
       )}
 
-      <Dialog open={!!formAction} onOpenChange={(v) => !v && setFormAction(null)}>
+      <Dialog open={!!formAction} onOpenChange={(v) => { if (!v) { setFormAction(null); setFormLayerId(null); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>

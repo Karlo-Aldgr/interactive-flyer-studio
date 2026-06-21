@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
 import { InteractionsModerationPanel } from "@/components/portal/InteractionsModerationPanel";
+import { NovelsPanel } from "@/components/portal/NovelsPanel";
 import { sourceFromEventMetadata } from "@/lib/trafficSource";
 import { flyerHasFoodOrdering } from "@/lib/flyerCapabilities";
 import { cartStatusToCustomerPhase } from "@/lib/customerOrderStatus";
@@ -163,6 +164,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
 
 
   const hasFoodOrdering = useMemo(() => flyerHasFoodOrdering(actions), [actions]);
+  const novelActionCount = useMemo(() => actions.filter((a) => a.type === "novel").length, [actions]);
 
   useEffect(() => {
     if (!hasFoodOrdering) return;
@@ -578,6 +580,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               {hasFoodOrdering ? `Food Orders (${foodOrderCount})` : `Cart (${cartOrders.length})`}
             </TabsTrigger>
             <TabsTrigger value="interactions" className="shrink-0">Interactions</TabsTrigger>
+            <TabsTrigger value="novels" className="shrink-0">Novels ({novelActionCount})</TabsTrigger>
             {isOwner && hasFoodOrdering && <TabsTrigger value="live" className="shrink-0">🟢 Live Orders</TabsTrigger>}
             {isOwner && hasFoodOrdering && <TabsTrigger value="staff" className="shrink-0">Staff & Tables</TabsTrigger>}
             {isOwner && hasFoodOrdering && <TabsTrigger value="reports" className="shrink-0">Reports</TabsTrigger>}
@@ -982,6 +985,10 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="novels" className="space-y-4">
+          <NovelsPanel flyerId={flyer.id} actions={actions} onRefresh={onRefresh} />
         </TabsContent>
 
         {isOwner && hasFoodOrdering && (
