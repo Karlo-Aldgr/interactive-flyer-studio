@@ -408,6 +408,9 @@ export function MenuCartUI({
   const [postOrderPromptOpen, setPostOrderPromptOpen] = useState(false);
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [lastOrderId, setLastOrderId] = useState<string | null>(null);
+  const [specialsOpen, setSpecialsOpen] = useState(false);
+  const [specialsDismissed, setSpecialsDismissed] = useState(false);
+
 
   useEffect(() => {
     if (!tableNumber.trim()) { setWaiterName(null); return; }
