@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ScanFace, Check, MousePointerClick } from "lucide-react";
+import { Loader2, ScanFace, Check, MousePointerClick, X } from "lucide-react";
 import { useEditorStore } from "@/store/editorStore";
 import { Layer } from "@/types/flyer";
 import { toast } from "sonner";
@@ -27,6 +27,9 @@ export function SubjectDetectDialog({
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
   const startAutoSubjectExtract = useEditorStore((s) => s.startAutoSubjectExtract);
   const startObjectExtract = useEditorStore((s) => s.startObjectExtract);
+  const dismissSubjectDetection = useEditorStore((s) => s.dismissSubjectDetection);
+  const subjectDetections = useEditorStore((s) => s.subjectDetections);
+  const drawMode = useEditorStore((s) => s.drawMode);
   const { extractFromSubject, extracting } = useObjectExtract();
 
   const page = pages.find((p) => p.id === selectedPageId);
@@ -37,8 +40,12 @@ export function SubjectDetectDialog({
     candidates.slice().sort((a, b) => b.size.width * b.size.height - a.size.width * a.size.height)[0];
 
   const [loading, setLoading] = useState(false);
-  const [subjects, setSubjects] = useState<SubjectDetection[] | null>(null);
   const [detectError, setDetectError] = useState<string | null>(null);
+
+  const activeDetections =
+    drawMode === "extract-auto" && subjectDetections.length > 0
+      ? subjectDetections.filter((d) => !d.dismissed && !d.extracted)
+      : null;
 
   function useRectangleInstead() {
     if (!targetLayer) return;
@@ -53,18 +60,16 @@ export function SubjectDetectDialog({
       return;
     }
     setLoading(true);
-    setSubjects(null);
     setDetectError(null);
     try {
       const data = await invokeEdgeFunction<{ subjects?: SubjectDetection[] }>("subject-detect", {
         imageUrl: targetLayer.content.src,
       });
       const list: SubjectDetection[] = data?.subjects ?? [];
-      setSubjects(list);
       if (list.length === 0) {
         toast.info("No subjects detected — try manual rectangle select");
       } else {
-        toast.success(`Found ${list.length} subject${list.length === 1 ? "" : "s"}`);
+        toast.success(`Found ${list.length} subject${list.length === 1 ? "" : "s"} — dismiss unwanted, then click to extract`);
         startAutoSubjectExtract(targetLayer.id, list);
         onOpenChange(false);
       }
@@ -79,7 +84,6 @@ export function SubjectDetectDialog({
 
   async function extractOne(det: SubjectDetection) {
     if (!targetLayer) return;
-    startAutoSubjectExtract(targetLayer.id, subjects ?? [det]);
     await extractFromSubject(det);
   }
 
@@ -91,7 +95,7 @@ export function SubjectDetectDialog({
             <ScanFace className="h-5 w-5 text-primary" /> Auto subject detect
           </DialogTitle>
           <DialogDescription>
-            AI finds people, products, logos, vehicles, and other objects — then you click to extract each as its own layer.
+            AI finds people, products, logos, and other objects — traces each shape precisely, then extracts as a transparent cutout layer.
           </DialogDescription>
         </DialogHeader>
 
@@ -101,7 +105,7 @@ export function SubjectDetectDialog({
           </div>
         )}
 
-        {targetLayer && !subjects && !loading && (
+        {targetLayer && !activeDetections && !loading && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Scanning:{" "}
@@ -132,38 +136,43 @@ export function SubjectDetectDialog({
           </div>
         )}
 
-        {subjects && subjects.length > 0 && (
+        {activeDetections && activeDetections.length > 0 && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Click a subject on the canvas or extract from the list below.
+              Dismiss unwanted detections with ✕, then click a shape on the canvas or extract from the list.
             </p>
             <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
-              {subjects.map((s) => (
+              {activeDetections.map((s) => (
                 <div
                   key={s.id}
-                  className={`flex items-center gap-3 rounded-md border p-2 ${
-                    s.extracted ? "border-emerald-500/50 bg-emerald-500/5" : "border-border bg-muted/20"
-                  }`}
+                  className="flex items-center gap-3 rounded-md border border-border bg-muted/20 p-2"
                 >
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-[10px]">
                         {SUBJECT_CATEGORY_LABEL[s.category] ?? s.category}
                       </Badge>
-                      {s.extracted && <Badge className="bg-emerald-500 text-[10px]">Extracted</Badge>}
                     </div>
                     <p className="text-xs font-medium">{s.label}</p>
                   </div>
-                  {!s.extracted && (
-                    <Button
-                      size="sm"
-                      className="h-7"
-                      disabled={extracting}
-                      onClick={() => extractOne(s)}
-                    >
-                      <Check className="mr-1 h-3.5 w-3.5" /> Extract
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+                    disabled={extracting}
+                    onClick={() => dismissSubjectDetection(s.id)}
+                    title="Dismiss detection"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-7"
+                    disabled={extracting}
+                    onClick={() => extractOne(s)}
+                  >
+                    <Check className="mr-1 h-3.5 w-3.5" /> Extract
+                  </Button>
                 </div>
               ))}
             </div>
@@ -173,18 +182,9 @@ export function SubjectDetectDialog({
           </div>
         )}
 
-        {subjects && subjects.length === 0 && (
-          <div className="rounded-md border border-dashed border-border bg-muted/30 p-6 text-center">
-            <p className="text-sm text-muted-foreground">No subjects detected.</p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={runDetect}>
-              Try again
-            </Button>
-          </div>
-        )}
-
         <div className="flex items-center gap-2 rounded-md border border-dashed border-primary/30 bg-primary/5 p-2 text-[11px] text-muted-foreground">
           <MousePointerClick className="h-3.5 w-3.5 shrink-0 text-primary" />
-          After detection, highlighted boxes appear on the canvas — click any box to extract.
+          After detection, shape outlines appear on the canvas — not rectangles. Click to extract a precise cutout with transparent background.
         </div>
       </DialogContent>
     </Dialog>

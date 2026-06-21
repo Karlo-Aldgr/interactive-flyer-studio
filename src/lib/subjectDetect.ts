@@ -16,6 +16,11 @@ export type SubjectCategory =
   | "furniture"
   | "object";
 
+export interface NormalizedPoint {
+  x: number;
+  y: number;
+}
+
 export interface SubjectBbox {
   x: number;
   y: number;
@@ -28,7 +33,9 @@ export interface SubjectDetection {
   label: string;
   category: SubjectCategory;
   bbox: SubjectBbox;
+  polygon?: NormalizedPoint[];
   extracted?: boolean;
+  dismissed?: boolean;
 }
 
 export function bboxToCanvasRect(bbox: SubjectBbox, sourceLayerRect: CanvasRect): CanvasRect {
@@ -38,6 +45,36 @@ export function bboxToCanvasRect(bbox: SubjectBbox, sourceLayerRect: CanvasRect)
     width: bbox.width * sourceLayerRect.width,
     height: bbox.height * sourceLayerRect.height,
   };
+}
+
+export function polygonToCanvasPoints(
+  polygon: NormalizedPoint[],
+  sourceLayerRect: CanvasRect,
+): number[] {
+  const points: number[] = [];
+  for (const p of polygon) {
+    points.push(
+      sourceLayerRect.x + p.x * sourceLayerRect.width,
+      sourceLayerRect.y + p.y * sourceLayerRect.height,
+    );
+  }
+  return points;
+}
+
+export function polygonBounds(polygon: NormalizedPoint[]): SubjectBbox | null {
+  if (polygon.length < 3) return null;
+  let minX = 1;
+  let minY = 1;
+  let maxX = 0;
+  let maxY = 0;
+  for (const p of polygon) {
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x);
+    maxY = Math.max(maxY, p.y);
+  }
+  if (maxX <= minX || maxY <= minY) return null;
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
 export function bboxToNormalized(bbox: SubjectBbox): { x: number; y: number; w: number; h: number } {

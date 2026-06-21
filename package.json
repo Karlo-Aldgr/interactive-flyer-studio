@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "deploy:subject-detect": "npx supabase functions deploy subject-detect --project-ref iwmykqilqywbzxpcgaop",
+    "deploy:subject-segment": "npx supabase functions deploy subject-segment --project-ref iwmykqilqywbzxpcgaop"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
