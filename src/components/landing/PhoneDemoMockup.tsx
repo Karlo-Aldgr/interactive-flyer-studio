@@ -64,6 +64,8 @@ function BackFlyer({
         src={src}
         alt={alt}
         draggable={false}
+        loading="lazy"
+        decoding="async"
         className="w-full rounded-lg border border-white/30 bg-card object-cover shadow-lg"
       />
     </div>
@@ -181,7 +183,7 @@ export function PhoneDemoMockup() {
               muted={muted}
               loop={!reducedMotion}
               playsInline
-              preload="auto"
+              preload="metadata"
               aria-label="Interactive flyer demo playing inside a phone"
               className="absolute inset-0 h-full w-full rounded-[1.75rem] object-cover object-top [clip-path:inset(0_round_1.75rem)]"
             />
