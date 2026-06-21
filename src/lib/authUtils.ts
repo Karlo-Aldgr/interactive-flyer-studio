@@ -29,9 +29,9 @@ export function buildAuthRedirectUrl(next: string): string {
   return `${getAuthAppOrigin()}/auth?next=${encodeURIComponent(safeNext)}`;
 }
 
-/** Fixed OAuth callback URL — Google requires an exact redirect_uri match (no query string). */
+/** Lovable OAuth callback — must match Cloud → Users → Google redirect URLs. */
 export function buildOAuthRedirectUrl(): string {
-  return `${getAuthAppOrigin()}/auth`;
+  return `${getAuthAppOrigin()}/~oauth/callback`;
 }
 
 export const AUTH_OAUTH_NEXT_KEY = "auth_oauth_next";
