@@ -825,7 +825,6 @@ function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId
       specials={p.menuSpecials || []}
       loading={loading}
 
-      loading={loading}
     />
   );
 }
