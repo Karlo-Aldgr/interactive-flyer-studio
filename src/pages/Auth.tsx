@@ -228,15 +228,26 @@ export default function Auth() {
                 Forgot password?
               </Link>
             </div>
-            <Input
-              id="signin-pw"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
-            />
+            <div className="relative">
+              <Input
+                id="signin-pw"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           <Button className="w-full shadow-glow" disabled={busy} onClick={handleSignIn}>
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
