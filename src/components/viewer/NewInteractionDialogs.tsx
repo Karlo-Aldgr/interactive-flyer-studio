@@ -822,6 +822,9 @@ function MenuDialog({ action, flyerId, onClose }: { action: LayerAction; flyerId
       checkoutMode={p.menuCheckoutMode || "order_only"}
       paymentLink={p.menuPaymentLink}
       paymentInstructions={p.menuPaymentInstructions}
+      specials={p.menuSpecials || []}
+      loading={loading}
+
       loading={loading}
     />
   );
