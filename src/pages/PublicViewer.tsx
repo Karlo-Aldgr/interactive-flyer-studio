@@ -117,7 +117,7 @@ import { useMenuCart } from "@/store/menuCartStore";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { toast } from "sonner";
 import { getCurrentTrafficSource } from "@/lib/trafficSource";
-import { OrderStatusTracker, OrderTrackFloatingButton } from "@/components/viewer/OrderStatusTracker";
+import { OrderStatusTracker } from "@/components/viewer/OrderStatusTracker";
 import { saveOrderTrack } from "@/lib/customerOrderStatus";
 
 
@@ -3194,14 +3194,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       </Dialog>
 
       {flyer && (
-        <>
-          <OrderStatusTracker
-            flyerId={flyer.id}
-            open={orderTrackOpen}
-            onOpenChange={setOrderTrackOpen}
-          />
-          <OrderTrackFloatingButton flyerId={flyer.id} onOpen={() => setOrderTrackOpen(true)} />
-        </>
+        <OrderStatusTracker
+          flyerId={flyer.id}
+          open={orderTrackOpen}
+          onOpenChange={setOrderTrackOpen}
+        />
       )}
     </div>
   );
