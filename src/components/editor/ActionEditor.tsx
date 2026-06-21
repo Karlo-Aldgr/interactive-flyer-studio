@@ -2599,6 +2599,41 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
         </div>
       )}
 
+      {/* Specials & coupons popup (shows after first item added to cart) */}
+      <div className="rounded border border-dashed border-amber-500/40 bg-amber-500/5 p-2 space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-medium">Specials & coupons popup</Label>
+          <Button size="sm" variant="outline" onClick={() => {
+            const next = [...(p.menuSpecials || []), { id: crypto.randomUUID(), title: "", description: "", code: "", imageUrl: "" }];
+            update({ menuSpecials: next });
+          }}><Plus className="mr-1 h-3.5 w-3.5" /> Add special</Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">Shown once after the customer adds their first item. Stays open until they tap X.</p>
+        {(p.menuSpecials || []).map((sp: any, idx: number) => (
+          <div key={sp.id} className="rounded border border-border/60 p-2 space-y-1 bg-background">
+            <div className="flex items-center gap-2">
+              <Input value={sp.title} placeholder="e.g. 20% off appetizers" onChange={(e) => {
+                const next = [...(p.menuSpecials || [])]; next[idx] = { ...sp, title: e.target.value }; update({ menuSpecials: next });
+              }} />
+              <Button size="icon" variant="ghost" onClick={() => {
+                update({ menuSpecials: (p.menuSpecials || []).filter((_: any, i: number) => i !== idx) });
+              }}><X className="h-3.5 w-3.5" /></Button>
+            </div>
+            <Textarea rows={2} value={sp.description || ""} placeholder="Details / fine print" onChange={(e) => {
+              const next = [...(p.menuSpecials || [])]; next[idx] = { ...sp, description: e.target.value }; update({ menuSpecials: next });
+            }} />
+            <Input value={sp.code || ""} placeholder="Coupon code (optional)" onChange={(e) => {
+              const next = [...(p.menuSpecials || [])]; next[idx] = { ...sp, code: e.target.value }; update({ menuSpecials: next });
+            }} />
+            <AssetUpload label="Image (optional)" value={sp.imageUrl} onChange={(url) => {
+              const next = [...(p.menuSpecials || [])]; next[idx] = { ...sp, imageUrl: url }; update({ menuSpecials: next });
+            }} />
+          </div>
+        ))}
+      </div>
+
+
+
       {!loaded ? (
         <p className="text-[11px] text-muted-foreground">Loading menu…</p>
       ) : (
