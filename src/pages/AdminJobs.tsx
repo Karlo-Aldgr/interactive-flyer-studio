@@ -88,6 +88,19 @@ export default function AdminJobs() {
 
   const newCount = useMemo(() => jobs.filter((j) => j.status === "new").length, [jobs]);
 
+  const staleJobs = useMemo(
+    () =>
+      jobs.filter(
+        (j) =>
+          j.status === "new" &&
+          !j.deleted_at &&
+          Date.now() - new Date(j.created_at).getTime() > NEW_BADGE_MS,
+      ),
+    [jobs],
+  );
+  const [staleDismissed, setStaleDismissed] = useState(false);
+  const showStalePrompt = !loading && !staleDismissed && staleJobs.length > 0;
+
   const openEdit = (j: any) => {
     setEditing(j);
     setEStatus(j.status);
