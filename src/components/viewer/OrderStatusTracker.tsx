@@ -18,7 +18,7 @@ import {
 } from "@/lib/customerOrderStatus";
 import { paymentStatusLabel } from "@/lib/menuOrderStatus";
 import { cn } from "@/lib/utils";
-import { Check, Loader2, Package } from "lucide-react";
+import { Check, Loader2, Package, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 type OrderStatusResponse = {
