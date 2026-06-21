@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { checkIsAdmin } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,26 @@ export default function Auth() {
   const [verificationPending, setVerificationPending] = useState<string | null>(null);
 
   const next = resolveAuthNext(params);
+  const nextIsExplicit = !!params.get("next");
+  const [adminRedirect, setAdminRedirect] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user || nextIsExplicit) return;
+    checkIsAdmin(user.id).then((isAdmin) => {
+      if (!cancelled && isAdmin) setAdminRedirect("/admin/jobs");
+    });
+    return () => { cancelled = true; };
+  }, [user, nextIsExplicit]);
+
+  const resolveDestination = async (): Promise<string> => {
+    if (nextIsExplicit && next !== "/dashboard") return next;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && (await checkIsAdmin(session.user.id))) return "/admin/jobs";
+    } catch {/* ignore */}
+    return next;
+  };
 
   useEffect(() => {
     const oauthError = parseAuthCallbackError();
@@ -104,7 +125,7 @@ export default function Auth() {
   if (isPasswordRecoveryUrl()) {
     return <Navigate to={passwordRecoveryRedirectPath()} replace />;
   }
-  if (user) return <Navigate to={next} replace />;
+  if (user) return <Navigate to={adminRedirect ?? next} replace />;
 
   const handleSignIn = async () => {
     const parsed = loginSchema.safeParse({ email, password });
@@ -123,7 +144,7 @@ export default function Auth() {
         toast.error(LOGIN_ERROR_MESSAGE);
         return;
       }
-      navigate(next);
+      navigate(await resolveDestination());
     } catch {
       toast.error(LOGIN_ERROR_MESSAGE);
     } finally {
