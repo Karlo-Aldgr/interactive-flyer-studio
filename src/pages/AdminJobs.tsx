@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { JobDeletedBanner, JobStaffBadges } from "@/components/dashboard/JobStaf
 import { jobIsCustomerDeleted } from "@/lib/customerJobs";
 import { checkIsAdmin } from "@/lib/roles";
 import { getJobUploadSignedUrl, jobUploadFilename } from "@/lib/jobUploads";
+import { uploadFlyerAsset } from "@/lib/uploadFlyerAsset";
 
 
 const STATUSES = ["new","reviewing","quoted","paid","in_progress","preview_ready","delivered","cancelled"] as const;
