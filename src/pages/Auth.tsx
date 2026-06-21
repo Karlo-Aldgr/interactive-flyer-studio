@@ -56,6 +56,26 @@ export default function Auth() {
   const [verificationPending, setVerificationPending] = useState<string | null>(null);
 
   const next = resolveAuthNext(params);
+  const nextIsExplicit = !!params.get("next");
+  const [adminRedirect, setAdminRedirect] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user || nextIsExplicit) return;
+    checkIsAdmin(user.id).then((isAdmin) => {
+      if (!cancelled && isAdmin) setAdminRedirect("/admin/jobs");
+    });
+    return () => { cancelled = true; };
+  }, [user, nextIsExplicit]);
+
+  const resolveDestination = async (): Promise<string> => {
+    if (nextIsExplicit && next !== "/dashboard") return next;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && (await checkIsAdmin(session.user.id))) return "/admin/jobs";
+    } catch {/* ignore */}
+    return next;
+  };
 
   useEffect(() => {
     const oauthError = parseAuthCallbackError();
