@@ -1,0 +1,1 @@
+CREATE POLICY "admins insert any flyer" ON public.flyers FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(), 'admin'::app_role));

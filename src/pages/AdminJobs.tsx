@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { JobDeletedBanner, JobStaffBadges } from "@/components/dashboard/JobStaf
 import { jobIsCustomerDeleted } from "@/lib/customerJobs";
 import { checkIsAdmin } from "@/lib/roles";
 import { getJobUploadSignedUrl, jobUploadFilename } from "@/lib/jobUploads";
+import { uploadFlyerAsset } from "@/lib/uploadFlyerAsset";
 
 
 const STATUSES = ["new","reviewing","quoted","paid","in_progress","preview_ready","delivered","cancelled"] as const;
@@ -35,6 +36,7 @@ const BACKUP_REMINDER_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
 export default function AdminJobs() {
   const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [flyers, setFlyers] = useState<any[]>([]);
@@ -45,6 +47,7 @@ export default function AdminJobs() {
   const [lastBackup, setLastBackup] = useState<Date | null>(null);
   const [backupDismissed, setBackupDismissed] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [openingJobId, setOpeningJobId] = useState<string | null>(null);
 
   // Editor form state
   const [eStatus, setEStatus] = useState<string>("new");
@@ -120,6 +123,85 @@ export default function AdminJobs() {
     toast.success("Job deleted");
     refresh();
   };
+
+  const openJob = async (j: any) => {
+    if (openingJobId) return;
+    if (j.flyer_id) {
+      navigate(`/editor/${j.flyer_id}`);
+      return;
+    }
+    if (!user) return;
+    setOpeningJobId(j.id);
+    const toastId = toast.loading("Creating flyer for this job...");
+    try {
+      // 1. Create flyer owned by the customer
+      const { data: flyer, error: fErr } = await supabase
+        .from("flyers")
+        .insert([{ owner_id: j.user_id, title: j.title || "Untitled flyer", category: "business" }])
+        .select()
+        .single();
+      if (fErr) throw fErr;
+
+      // 2. Create first page
+      const { data: page, error: pErr } = await supabase
+        .from("pages")
+        .insert([{ flyer_id: flyer.id, index: 0, name: "Page 1" }])
+        .select()
+        .single();
+      if (pErr) throw pErr;
+
+      // 3. If the job has an upload, copy it into flyer-assets and add an image layer
+      if (j.upload_url) {
+        try {
+          const signed = await getJobUploadSignedUrl(j.upload_url, 600);
+          if (signed) {
+            const res = await fetch(signed);
+            if (res.ok) {
+              const blob = await res.blob();
+              if (blob.type.startsWith("image/")) {
+                const filename = jobUploadFilename(j.upload_url) || "upload.png";
+                const file = new File([blob], filename, { type: blob.type });
+                const publicUrl = await uploadFlyerAsset(user.id, flyer.id, file, "uploads");
+                const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+                  const img = new Image();
+                  img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+                  img.onerror = () => resolve({ w: 600, h: 400 });
+                  img.src = publicUrl;
+                });
+                const maxW = 800;
+                const ratio = dims.w / Math.max(dims.h, 1);
+                const width = Math.min(dims.w, maxW);
+                const height = ratio > 0 ? width / ratio : 600;
+                await supabase.from("layers").insert([{
+                  page_id: page.id,
+                  type: "image" as any,
+                  position: { x: 60, y: 60 } as any,
+                  size: { width, height } as any,
+                  rotation: 0,
+                  z_index: 0,
+                  style: {} as any,
+                  content: { src: publicUrl } as any,
+                }]);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to insert job upload into flyer", e);
+        }
+      }
+
+      // 4. Link the flyer to the job
+      await supabase.from("jobs").update({ flyer_id: flyer.id }).eq("id", j.id);
+
+      toast.success("Flyer created", { id: toastId });
+      navigate(`/editor/${flyer.id}`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to create flyer", { id: toastId });
+    } finally {
+      setOpeningJobId(null);
+    }
+  };
+
 
   const deleteFlyer = async () => {
     if (!deleteFlyerId) return;
@@ -251,7 +333,17 @@ export default function AdminJobs() {
                 const linkedFlyer = flyers.find((f) => f.id === j.flyer_id);
                 const customerDeleted = jobIsCustomerDeleted(j);
                 return (
-                  <Card key={j.id} className={`p-5 ${isNew ? "ring-2 ring-primary/60 shadow-glow" : ""} ${customerDeleted ? "border-destructive/30" : ""}`}>
+                  <Card
+                    key={j.id}
+                    role="button"
+                    tabIndex={customerDeleted ? -1 : 0}
+                    onClick={() => !customerDeleted && openJob(j)}
+                    onKeyDown={(e) => {
+                      if (customerDeleted) return;
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j); }
+                    }}
+                    className={`p-5 transition cursor-pointer hover:border-primary/50 hover:shadow-md ${isNew ? "ring-2 ring-primary/60 shadow-glow" : ""} ${customerDeleted ? "border-destructive/30 cursor-default" : ""}`}
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -260,6 +352,7 @@ export default function AdminJobs() {
                           <Badge variant="secondary">{STATUS_LABEL[j.status]}</Badge>
                           <Badge variant="outline">{j.type}</Badge>
                           <JobStaffBadges job={j} />
+                          {openingJobId === j.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {j.customer_email ?? "—"} · {format(new Date(j.created_at), "PPp")}
@@ -272,21 +365,22 @@ export default function AdminJobs() {
                         </div>
                         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
                           {typeof j.price_cents === "number" && <span className="font-semibold">${(j.price_cents / 100).toFixed(2)}</span>}
-                          {j.payment_link && <a href={j.payment_link} target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover:underline inline-flex items-center">Pay link <ExternalLink className="ml-1 h-3 w-3" /></a>}
+                          {j.payment_link && <a href={j.payment_link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary underline-offset-2 hover:underline inline-flex items-center">Pay link <ExternalLink className="ml-1 h-3 w-3" /></a>}
                           {j.upload_url && (
-                            <button type="button" onClick={async () => {
+                            <button type="button" onClick={async (e) => {
+                              e.stopPropagation();
                               const url = await getJobUploadSignedUrl(j.upload_url);
                               if (!url) return toast.error("Could not open upload");
                               window.open(url, "_blank", "noreferrer");
                             }} className="inline-flex items-center text-muted-foreground hover:text-foreground"><FileText className="mr-1 h-3.5 w-3.5" />Upload</button>
                           )}
 
-                          {linkedFlyer && <Link to={`/editor/${linkedFlyer.id}`} className="text-primary underline-offset-2 hover:underline">Open editor</Link>}
+                          {linkedFlyer && <Link to={`/editor/${linkedFlyer.id}`} onClick={(e) => e.stopPropagation()} className="text-primary underline-offset-2 hover:underline">Open editor</Link>}
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => openEdit(j)}><Pencil className="mr-1 h-3.5 w-3.5" />Manage</Button>
-                        <Button size="sm" variant="ghost" onClick={() => deleteJob(j.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button size="sm" onClick={(e) => { e.stopPropagation(); openEdit(j); }}><Pencil className="mr-1 h-3.5 w-3.5" />Manage</Button>
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteJob(j.id); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
                   </Card>
