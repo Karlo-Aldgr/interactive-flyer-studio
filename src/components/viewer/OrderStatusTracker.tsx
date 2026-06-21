@@ -238,8 +238,9 @@ export function OrderStatusTracker({ flyerId, open, onOpenChange, initialTrack }
               </ul>
             )}
 
-            <Button variant="outline" size="sm" className="w-full" disabled={loading} onClick={() => track && fetchStatus(track)}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh status"}
+            <Button variant="outline" className="w-full" disabled={loading} onClick={() => track && fetchStatus(track)}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Refresh status
             </Button>
           </div>
         ) : (
