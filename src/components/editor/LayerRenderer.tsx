@@ -54,6 +54,8 @@ export function LayerRenderer(props: Props) {
     draggable,
     onClick: onSelect,
     onTap: onSelect,
+    onMouseEnter: onHoverStart,
+    onMouseLeave: onHoverEnd,
     ref: refSetter,
     onDragEnd: (e: any) => onChange({ position: { x: e.target.x(), y: e.target.y() } }),
     onTransformEnd: (e: any) => {
