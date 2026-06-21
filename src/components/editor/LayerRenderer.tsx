@@ -12,6 +12,8 @@ interface Props {
   isSelected: boolean;
   draggable: boolean;
   refSetter?: (node: any) => void;
+  onHoverStart?: () => void;
+  onHoverEnd?: () => void;
 }
 
 function ImageLayer({ layer, ...rest }: Props & { commonProps: any }) {
