@@ -36,6 +36,7 @@ const BACKUP_REMINDER_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
 export default function AdminJobs() {
   const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [flyers, setFlyers] = useState<any[]>([]);
@@ -46,6 +47,7 @@ export default function AdminJobs() {
   const [lastBackup, setLastBackup] = useState<Date | null>(null);
   const [backupDismissed, setBackupDismissed] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [openingJobId, setOpeningJobId] = useState<string | null>(null);
 
   // Editor form state
   const [eStatus, setEStatus] = useState<string>("new");
