@@ -432,6 +432,15 @@ export function MenuCartUI({
   const total = cart.reduce((sum, l) => sum + (l.item.price || 0) * l.qty, 0);
   const itemCount = cart.reduce((n, l) => n + l.qty, 0);
 
+  // Show specials popup once after the first item is added; stays until X
+  useEffect(() => {
+    if (itemCount > 0 && !specialsDismissed && (specials?.length || 0) > 0) {
+      setSpecialsOpen(true);
+    }
+  }, [itemCount, specialsDismissed, specials?.length]);
+
+
+
   function handleItemTap(item: MenuItem) {
     add(item);
     setView("upsell");
