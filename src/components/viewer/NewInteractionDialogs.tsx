@@ -707,7 +707,7 @@ export function MenuCartUI({
             <DialogTitle>Order placed ✅</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            What would you like to do next?
+            Keep this screen open to track your order status in real time.
           </p>
           <div className="grid gap-2 pt-2">
             <Button
