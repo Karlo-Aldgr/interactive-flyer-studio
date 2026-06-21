@@ -12,6 +12,8 @@ interface Props {
   isSelected: boolean;
   draggable: boolean;
   refSetter?: (node: any) => void;
+  onHoverStart?: () => void;
+  onHoverEnd?: () => void;
 }
 
 function ImageLayer({ layer, ...rest }: Props & { commonProps: any }) {
@@ -40,7 +42,7 @@ function IconLayer({ layer, commonProps }: { layer: Layer; commonProps: any }) {
 }
 
 export function LayerRenderer(props: Props) {
-  const { layer, onSelect, onChange, draggable, refSetter } = props;
+  const { layer, onSelect, onChange, draggable, refSetter, onHoverStart, onHoverEnd } = props;
 
   const commonProps: any = {
     x: layer.position.x,
@@ -52,6 +54,8 @@ export function LayerRenderer(props: Props) {
     draggable,
     onClick: onSelect,
     onTap: onSelect,
+    onMouseEnter: onHoverStart,
+    onMouseLeave: onHoverEnd,
     ref: refSetter,
     onDragEnd: (e: any) => onChange({ position: { x: e.target.x(), y: e.target.y() } }),
     onTransformEnd: (e: any) => {

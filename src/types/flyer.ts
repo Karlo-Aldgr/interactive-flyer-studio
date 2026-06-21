@@ -268,6 +268,7 @@ export interface ActionPayload {
   menuCurrency?: string;
   menuCheckoutMode?: "order_only" | "payment";
   menuPaymentLink?: string;
+  menuPaymentInstructions?: string;
 
   // menu_add_item — clickable product hotspot on a scanned menu page
   menuItem?: {
@@ -372,7 +373,8 @@ export interface LayerContent {
   src?: string; // image url
   iconName?: string;
   label?: string;
-  shape?: "rect" | "circle" | "line";
+  shape?: "rect" | "circle" | "line" | "square" | "triangle" | "octagon" | "divider";
+  lineStyle?: "solid" | "dashed";
   hidden?: boolean; // for reveal action targets
   hotspotShape?: "rect" | "ellipse";
   /** Source image layer id when this layer is a non-destructive cutout */
