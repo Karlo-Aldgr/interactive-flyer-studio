@@ -18,7 +18,7 @@ import {
 } from "@/lib/customerOrderStatus";
 import { paymentStatusLabel } from "@/lib/menuOrderStatus";
 import { cn } from "@/lib/utils";
-import { Check, Loader2, Package } from "lucide-react";
+import { Check, Loader2, Package, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 type OrderStatusResponse = {
@@ -157,10 +157,21 @@ export function OrderStatusTracker({ flyerId, open, onOpenChange, initialTrack }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
-            Track your order
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              Track your order
+            </DialogTitle>
+            <button
+              type="button"
+              onClick={() => track && fetchStatus(track)}
+              disabled={loading}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+              aria-label="Refresh status"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            </button>
+          </div>
           <DialogDescription>
             Status updates automatically as we process your request.
           </DialogDescription>
@@ -227,8 +238,9 @@ export function OrderStatusTracker({ flyerId, open, onOpenChange, initialTrack }
               </ul>
             )}
 
-            <Button variant="outline" size="sm" className="w-full" disabled={loading} onClick={() => track && fetchStatus(track)}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh status"}
+            <Button variant="outline" className="w-full" disabled={loading} onClick={() => track && fetchStatus(track)}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Refresh status
             </Button>
           </div>
         ) : (
