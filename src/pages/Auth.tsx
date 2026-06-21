@@ -125,7 +125,7 @@ export default function Auth() {
   if (isPasswordRecoveryUrl()) {
     return <Navigate to={passwordRecoveryRedirectPath()} replace />;
   }
-  if (user) return <Navigate to={next} replace />;
+  if (user) return <Navigate to={adminRedirect ?? next} replace />;
 
   const handleSignIn = async () => {
     const parsed = loginSchema.safeParse({ email, password });
