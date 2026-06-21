@@ -124,6 +124,85 @@ export default function AdminJobs() {
     refresh();
   };
 
+  const openJob = async (j: any) => {
+    if (openingJobId) return;
+    if (j.flyer_id) {
+      navigate(`/editor/${j.flyer_id}`);
+      return;
+    }
+    if (!user) return;
+    setOpeningJobId(j.id);
+    const toastId = toast.loading("Creating flyer for this job...");
+    try {
+      // 1. Create flyer owned by the customer
+      const { data: flyer, error: fErr } = await supabase
+        .from("flyers")
+        .insert([{ owner_id: j.user_id, title: j.title || "Untitled flyer", category: "business" }])
+        .select()
+        .single();
+      if (fErr) throw fErr;
+
+      // 2. Create first page
+      const { data: page, error: pErr } = await supabase
+        .from("pages")
+        .insert([{ flyer_id: flyer.id, index: 0, name: "Page 1" }])
+        .select()
+        .single();
+      if (pErr) throw pErr;
+
+      // 3. If the job has an upload, copy it into flyer-assets and add an image layer
+      if (j.upload_url) {
+        try {
+          const signed = await getJobUploadSignedUrl(j.upload_url, 600);
+          if (signed) {
+            const res = await fetch(signed);
+            if (res.ok) {
+              const blob = await res.blob();
+              if (blob.type.startsWith("image/")) {
+                const filename = jobUploadFilename(j.upload_url) || "upload.png";
+                const file = new File([blob], filename, { type: blob.type });
+                const publicUrl = await uploadFlyerAsset(user.id, flyer.id, file, "uploads");
+                const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+                  const img = new Image();
+                  img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+                  img.onerror = () => resolve({ w: 600, h: 400 });
+                  img.src = publicUrl;
+                });
+                const maxW = 800;
+                const ratio = dims.w / Math.max(dims.h, 1);
+                const width = Math.min(dims.w, maxW);
+                const height = ratio > 0 ? width / ratio : 600;
+                await supabase.from("layers").insert([{
+                  page_id: page.id,
+                  type: "image" as any,
+                  position: { x: 60, y: 60 } as any,
+                  size: { width, height } as any,
+                  rotation: 0,
+                  z_index: 0,
+                  style: {} as any,
+                  content: { src: publicUrl } as any,
+                }]);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to insert job upload into flyer", e);
+        }
+      }
+
+      // 4. Link the flyer to the job
+      await supabase.from("jobs").update({ flyer_id: flyer.id }).eq("id", j.id);
+
+      toast.success("Flyer created", { id: toastId });
+      navigate(`/editor/${flyer.id}`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to create flyer", { id: toastId });
+    } finally {
+      setOpeningJobId(null);
+    }
+  };
+
+
   const deleteFlyer = async () => {
     if (!deleteFlyerId) return;
     const { error } = await supabase.from("flyers").delete().eq("id", deleteFlyerId);
