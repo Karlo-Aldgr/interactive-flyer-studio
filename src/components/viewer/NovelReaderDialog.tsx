@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, ChevronLeft, Lock, Loader2, ExternalLink } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Lock, Loader2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { LayerAction, NovelChapter } from "@/types/flyer";
@@ -318,13 +318,31 @@ export function NovelReaderDialog({ action, flyerId, onClose, onLog }: Props) {
 
         {view === "read" && activeChapter && (
           <div className="space-y-3">
-            <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setView("list")}>
-              <ChevronLeft className="mr-1 h-4 w-4" /> All chapters
-            </Button>
             <h3 className="text-lg font-semibold">{activeChapter.title}</h3>
             <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed">
               {activeChapter.body || "(Empty chapter)"}
             </div>
+            {(() => {
+              const currentIndex = chapters.findIndex((c) => c.id === activeChapter.id);
+              const nextCh = chapters[currentIndex + 1];
+              return (
+                <div className="flex items-center justify-between pt-4">
+                  <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setView("list")}>
+                    <ChevronLeft className="mr-1 h-4 w-4" /> All chapters
+                  </Button>
+                  {nextCh && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="-mr-2"
+                      onClick={() => openChapter(nextCh, currentIndex + 1)}
+                    >
+                      Next chapter <ChevronRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
