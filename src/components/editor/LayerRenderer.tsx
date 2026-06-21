@@ -42,7 +42,7 @@ function IconLayer({ layer, commonProps }: { layer: Layer; commonProps: any }) {
 }
 
 export function LayerRenderer(props: Props) {
-  const { layer, onSelect, onChange, draggable, refSetter } = props;
+  const { layer, onSelect, onChange, draggable, refSetter, onHoverStart, onHoverEnd } = props;
 
   const commonProps: any = {
     x: layer.position.x,
