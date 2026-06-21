@@ -3194,14 +3194,11 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       </Dialog>
 
       {flyer && (
-        <>
-          <OrderStatusTracker
-            flyerId={flyer.id}
-            open={orderTrackOpen}
-            onOpenChange={setOrderTrackOpen}
-          />
-          <OrderTrackFloatingButton flyerId={flyer.id} onOpen={() => setOrderTrackOpen(true)} />
-        </>
+        <OrderStatusTracker
+          flyerId={flyer.id}
+          open={orderTrackOpen}
+          onOpenChange={setOrderTrackOpen}
+        />
       )}
     </div>
   );

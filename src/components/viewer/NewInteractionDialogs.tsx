@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Star, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { saveOrderTrack } from "@/lib/customerOrderStatus";
+import { saveOrderTrack, loadOrderTrack } from "@/lib/customerOrderStatus";
 import { insertMenuOrder } from "@/lib/menuOrderInsert";
 import { useMenuCart } from "@/store/menuCartStore";
 import type { LayerAction } from "@/types/flyer";
 import { NovelReaderDialog } from "@/components/viewer/NovelReaderDialog";
+import { OrderStatusTracker } from "@/components/viewer/OrderStatusTracker";
 
 interface Props {
   action: LayerAction | null;
@@ -401,6 +402,9 @@ export function MenuCartUI({
   const [paymentMethod, setPaymentMethod] = useState<"pay_now" | "pay_later">("pay_later");
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [waiterName, setWaiterName] = useState<string | null>(null);
+  const [postOrderPromptOpen, setPostOrderPromptOpen] = useState(false);
+  const [trackerOpen, setTrackerOpen] = useState(false);
+  const [lastOrderId, setLastOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tableNumber.trim()) { setWaiterName(null); return; }
@@ -492,14 +496,16 @@ export function MenuCartUI({
         phone: phone.trim() || undefined,
         placedAt: new Date().toISOString(),
       });
+      setLastOrderId(orderId);
     }
-    if (orderType === "order_ahead") toast.success("Order submitted — awaiting manager approval. Tap 📦 Track my order to follow progress.");
+    if (orderType === "order_ahead") toast.success("Order submitted — awaiting manager approval.");
     else if (paymentMethod === "pay_now" && paymentLink) {
-      toast.success("Order placed — payment recorded. Tap 📦 Track my order to follow progress.");
+      toast.success("Order placed — payment recorded.");
       window.open(paymentLink, "_blank");
     }
-    else toast.success(`Order sent to table ${tableNumber.trim()}! Tap 📦 Track my order to follow progress.`);
+    else toast.success(`Order sent to table ${tableNumber.trim()}!`);
     clear();
+    setPostOrderPromptOpen(true);
   }
 
   const fmt = (n: number) => `${currency}${(n || 0).toFixed(2)}`;
@@ -693,6 +699,45 @@ export function MenuCartUI({
           </>
         )}
       </DialogContent>
+
+      {/* Post-order prompt: Add to order or Track order (no second page / floating chip) */}
+      <Dialog open={postOrderPromptOpen} onOpenChange={setPostOrderPromptOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Order placed ✅</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            What would you like to do next?
+          </p>
+          <div className="grid gap-2 pt-2">
+            <Button
+              onClick={() => {
+                setPostOrderPromptOpen(false);
+                setView("menu");
+                setOpen(true, "menu");
+              }}
+            >
+              ➕ Add to order
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPostOrderPromptOpen(false);
+                setTrackerOpen(true);
+              }}
+            >
+              📦 Track order
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <OrderStatusTracker
+        flyerId={flyerId}
+        open={trackerOpen}
+        onOpenChange={setTrackerOpen}
+        initialTrack={lastOrderId ? loadOrderTrack(flyerId) : null}
+      />
     </Dialog>
   );
 }
