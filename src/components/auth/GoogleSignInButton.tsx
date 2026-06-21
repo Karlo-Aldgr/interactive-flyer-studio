@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { buildAuthRedirectUrl, GOOGLE_SIGNIN_DISABLED_MESSAGE } from "@/lib/authUtils";
+import { buildOAuthRedirectUrl, GOOGLE_SIGNIN_DISABLED_MESSAGE, stashAuthOAuthNext } from "@/lib/authUtils";
 import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
 
@@ -40,8 +40,9 @@ export function GoogleSignInButton({
   const google = async () => {
     setBusy(true);
     try {
+      stashAuthOAuthNext(next);
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: buildAuthRedirectUrl(next),
+        redirect_uri: buildOAuthRedirectUrl(),
       });
 
       if (result.error) {
