@@ -516,6 +516,41 @@ export default function AdminJobs() {
         </AlertDialogContent>
       </AlertDialog>
       </div>
+      <AlertDialog open={showStalePrompt} onOpenChange={(o) => !o && setStaleDismissed(true)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {staleJobs.length} job{staleJobs.length === 1 ? "" : "s"} waiting more than 24h
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              These new jobs have not been started yet. Open one to begin, or dismiss to review later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-72 space-y-2 overflow-y-auto">
+            {staleJobs.map((j) => (
+              <button
+                key={j.id}
+                onClick={() => { setStaleDismissed(true); openJob(j); }}
+                className="flex w-full items-center justify-between rounded-md border bg-card p-3 text-left transition hover:bg-accent"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{j.title || "Untitled job"}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {j.customer_email ?? "—"} · created {formatDistanceToNow(new Date(j.created_at))} ago
+                  </div>
+                </div>
+                <Badge variant="destructive" className="ml-3 shrink-0">Waiting</Badge>
+              </button>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setStaleDismissed(true)}>Dismiss</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setStaleDismissed(true); setFilter("new"); }}>
+              Show all new jobs
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
