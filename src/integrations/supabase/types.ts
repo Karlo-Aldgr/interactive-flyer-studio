@@ -1184,6 +1184,23 @@ export type Database = {
         }
         Returns: Json
       }
+      editor_update_job: {
+        Args: {
+          _clear_flyer?: boolean
+          _flyer_id?: string
+          _job_id: string
+          _preview_ready?: boolean
+          _status?: Database["public"]["Enums"]["job_status"]
+        }
+        Returns: Json
+      }
+      ensure_flyer_portal_credentials: {
+        Args: { _flyer_id: string }
+        Returns: {
+          portal_access_code: string
+          portal_token: string
+        }[]
+      }
       grant_editor_by_email: { Args: { _email: string }; Returns: Json }
       has_role: {
         Args: {
@@ -1211,6 +1228,36 @@ export type Database = {
           user_id: string
         }[]
       }
+      place_menu_order: {
+        Args: {
+          _action_id: string
+          _customer_name: string
+          _customer_phone: string
+          _flyer_id: string
+          _items: Json
+          _notes: string
+          _order_type: string
+          _paid_at?: string
+          _payment_method?: string
+          _payment_status?: string
+          _pickup_at: string
+          _status: string
+          _subtotal_cents: number
+          _table_number: string
+        }
+        Returns: string
+      }
+      regenerate_flyer_portal_credentials: {
+        Args: {
+          _flyer_id: string
+          _reset_code?: boolean
+          _reset_token?: boolean
+        }
+        Returns: {
+          portal_access_code: string
+          portal_token: string
+        }[]
+      }
       revoke_editor_by_email: { Args: { _email: string }; Returns: Json }
       staff_acknowledge_job: { Args: { _job_id: string }; Returns: Json }
       staff_mark_job_seen: { Args: { _job_id: string }; Returns: Json }
@@ -1218,6 +1265,10 @@ export type Database = {
       upsert_menu_daily_summary: {
         Args: { p_date: string; p_flyer_id: string }
         Returns: undefined
+      }
+      user_can_manage_flyer_portal: {
+        Args: { _flyer_id: string }
+        Returns: boolean
       }
       waiter_pin_hash: {
         Args: { p_flyer_id: string; p_pin: string }
