@@ -246,7 +246,14 @@ export function NovelReaderDialog({ action, flyerId, onClose, onLog }: Props) {
         </DialogHeader>
 
         {p.novelCoverUrl && view === "list" && (
-          <img src={p.novelCoverUrl} alt="" className="mx-auto max-h-40 rounded-lg object-cover" />
+          <div className="text-center space-y-2">
+            {bundlePrice && (
+              <p className="text-sm font-semibold text-foreground">
+                Pay {currency} {bundlePrice.toFixed(2)} to access the complete story
+              </p>
+            )}
+            <img src={p.novelCoverUrl} alt="" className="mx-auto max-h-40 rounded-lg object-cover" />
+          </div>
         )}
 
         <div className="grid grid-cols-2 gap-2">
