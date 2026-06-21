@@ -144,7 +144,7 @@ export default function Auth() {
         toast.error(LOGIN_ERROR_MESSAGE);
         return;
       }
-      navigate(next);
+      navigate(await resolveDestination());
     } catch {
       toast.error(LOGIN_ERROR_MESSAGE);
     } finally {
