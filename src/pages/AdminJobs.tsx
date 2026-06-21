@@ -126,14 +126,27 @@ export default function AdminJobs() {
 
   const openJob = async (j: any) => {
     if (openingJobId) return;
+    // If a flyer is already linked, NEVER overwrite — just open it as-is.
     if (j.flyer_id) {
       navigate(`/editor/${j.flyer_id}`);
       return;
     }
     if (!user) return;
     setOpeningJobId(j.id);
-    const toastId = toast.loading("Creating flyer for this job...");
+    const toastId = toast.loading("Opening flyer for this job...");
     try {
+      // Re-check latest job row in case flyer_id was set elsewhere — never overwrite.
+      const { data: fresh } = await supabase
+        .from("jobs")
+        .select("flyer_id")
+        .eq("id", j.id)
+        .maybeSingle();
+      if (fresh?.flyer_id) {
+        toast.dismiss(toastId);
+        navigate(`/editor/${fresh.flyer_id}`);
+        return;
+      }
+
       // 1. Create flyer owned by the customer
       const { data: flyer, error: fErr } = await supabase
         .from("flyers")
@@ -190,8 +203,12 @@ export default function AdminJobs() {
         }
       }
 
-      // 4. Link the flyer to the job
-      await supabase.from("jobs").update({ flyer_id: flyer.id }).eq("id", j.id);
+      // 4. Link the flyer to the job — surface errors so we don't silently leave job unlinked
+      const { error: linkErr } = await supabase
+        .from("jobs")
+        .update({ flyer_id: flyer.id })
+        .eq("id", j.id);
+      if (linkErr) throw linkErr;
 
       toast.success("Flyer created", { id: toastId });
       navigate(`/editor/${flyer.id}`);
