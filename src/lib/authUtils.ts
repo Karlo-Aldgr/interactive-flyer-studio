@@ -29,6 +29,31 @@ export function buildAuthRedirectUrl(next: string): string {
   return `${getAuthAppOrigin()}/auth?next=${encodeURIComponent(safeNext)}`;
 }
 
+/** Fixed OAuth callback URL — Google requires an exact redirect_uri match (no query string). */
+export function buildOAuthRedirectUrl(): string {
+  return `${getAuthAppOrigin()}/auth`;
+}
+
+export const AUTH_OAUTH_NEXT_KEY = "auth_oauth_next";
+
+export function stashAuthOAuthNext(next: string): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(AUTH_OAUTH_NEXT_KEY, sanitizeNextPath(next));
+}
+
+export function resolveAuthNext(searchParams: URLSearchParams): string {
+  const fromUrl = searchParams.get("next");
+  if (fromUrl) return sanitizeNextPath(fromUrl);
+  if (typeof window !== "undefined") {
+    const stored = sessionStorage.getItem(AUTH_OAUTH_NEXT_KEY);
+    if (stored) {
+      sessionStorage.removeItem(AUTH_OAUTH_NEXT_KEY);
+      return sanitizeNextPath(stored);
+    }
+  }
+  return "/dashboard";
+}
+
 /** True when the URL carries a Supabase password-recovery token (hash or query). */
 export function isPasswordRecoveryUrl(): boolean {
   if (typeof window === "undefined") return false;

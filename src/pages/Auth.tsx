@@ -22,6 +22,7 @@ import {
   parseAuthCallbackError,
   passwordRecoveryRedirectPath,
   sanitizeNextPath,
+  resolveAuthNext,
 } from "@/lib/authUtils";
 
 const loginSchema = z.object({
@@ -53,7 +54,7 @@ export default function Auth() {
   const [busy, setBusy] = useState(false);
   const [verificationPending, setVerificationPending] = useState<string | null>(null);
 
-  const next = sanitizeNextPath(params.get("next"));
+  const next = resolveAuthNext(params);
 
   useEffect(() => {
     const oauthError = parseAuthCallbackError();
