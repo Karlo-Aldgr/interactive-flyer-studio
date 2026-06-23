@@ -26,8 +26,12 @@ import { INTERACTIONS } from "@/lib/interactionsCatalog";
 import {
   EDITOR_JOB_STATUSES,
   EDITOR_STATUS_LABEL,
+  claimEditorJob,
+  releaseEditorJob,
   updateEditorJob,
 } from "@/lib/editorJobs";
+import { useAuth } from "@/contexts/AuthContext";
+import { displayFirstName } from "@/lib/displayName";
 import { getJobUploadSignedUrl, downloadJobUpload } from "@/lib/jobUploads";
 import {
   jobIsCustomerDeleted,
