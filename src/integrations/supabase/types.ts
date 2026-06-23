@@ -407,6 +407,8 @@ export type Database = {
       jobs: {
         Row: {
           admin_notes: string | null
+          assigned_at: string | null
+          assigned_editor_id: string | null
           brief: string | null
           created_at: string
           customer_deletion_reason: string | null
@@ -414,6 +416,7 @@ export type Database = {
           customer_updated_at: string | null
           deleted_at: string | null
           deleted_by: string | null
+          editor_started_at: string | null
           flyer_active: boolean
           flyer_id: string | null
           id: string
@@ -434,6 +437,8 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          assigned_at?: string | null
+          assigned_editor_id?: string | null
           brief?: string | null
           created_at?: string
           customer_deletion_reason?: string | null
@@ -441,6 +446,7 @@ export type Database = {
           customer_updated_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          editor_started_at?: string | null
           flyer_active?: boolean
           flyer_id?: string | null
           id?: string
@@ -461,6 +467,8 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          assigned_at?: string | null
+          assigned_editor_id?: string | null
           brief?: string | null
           created_at?: string
           customer_deletion_reason?: string | null
@@ -468,6 +476,7 @@ export type Database = {
           customer_updated_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          editor_started_at?: string | null
           flyer_active?: boolean
           flyer_id?: string | null
           id?: string
@@ -1174,6 +1183,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_assign_job_editor: {
+        Args: { _editor_id: string; _job_id: string }
+        Returns: Json
+      }
       archive_menu_orders_daily: { Args: never; Returns: number }
       current_user_can_edit: { Args: never; Returns: boolean }
       customer_delete_job: {
@@ -1194,6 +1207,8 @@ export type Database = {
         }
         Returns: Json
       }
+      editor_claim_job: { Args: { _job_id: string }; Returns: Json }
+      editor_release_job: { Args: { _job_id: string }; Returns: Json }
       editor_update_job: {
         Args: {
           _clear_flyer?: boolean
@@ -1219,6 +1234,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      job_assigned_editor_display: {
+        Args: { _user_id: string }
+        Returns: string
       }
       list_editors: {
         Args: never
