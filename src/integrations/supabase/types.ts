@@ -1211,6 +1211,7 @@ export type Database = {
           portal_token: string
         }[]
       }
+      ensure_flyer_public_slug: { Args: { _flyer_id: string }; Returns: string }
       grant_editor_by_email: { Args: { _email: string }; Returns: Json }
       has_role: {
         Args: {
