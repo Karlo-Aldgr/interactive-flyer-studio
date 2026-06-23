@@ -5,24 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, ArrowLeft, ExternalLink, Eye } from "lucide-react";
+import { Loader2, Plus, ArrowLeft, ExternalLink, Eye, ChevronRight } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { INTERACTIONS } from "@/lib/interactionsCatalog";
 import { format } from "date-fns";
 import { getJobUploadSignedUrl } from "@/lib/jobUploads";
 import { toast } from "sonner";
-
-
-const STATUS_VARIANT: Record<string, { label: string; className: string }> = {
-  new:           { label: "New",            className: "bg-blue-500/15 text-blue-700 dark:text-blue-300" },
-  reviewing:     { label: "Reviewing",      className: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
-  quoted:        { label: "Quote sent",     className: "bg-purple-500/15 text-purple-700 dark:text-purple-300" },
-  paid:          { label: "Paid",           className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
-  in_progress:   { label: "In progress",    className: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300" },
-  preview_ready: { label: "Preview ready",  className: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300" },
-  delivered:     { label: "Delivered",      className: "bg-green-500/15 text-green-700 dark:text-green-300" },
-  cancelled:     { label: "Cancelled",      className: "bg-muted text-muted-foreground" },
-};
+import { getUnifiedStatusLabel } from "@/lib/jobStatus";
 
 const labelFor = (id: string) => INTERACTIONS.find((i) => i.id === id)?.label ?? id;
 const formatPrice = (cents?: number | null) =>
@@ -61,31 +50,46 @@ export default function MyJobs() {
       </header>
 
       <main className="container max-w-4xl py-10">
-        <h1 className="font-display text-3xl font-bold md:text-4xl">My jobs</h1>
-        <p className="mt-2 text-muted-foreground">Track your submitted requests, quotes and final flyers.</p>
+        <h1 className="font-display text-3xl font-bold md:text-4xl">My projects</h1>
+        <p className="mt-2 text-muted-foreground">Track your projects, preview, pay, and share when ready.</p>
 
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         ) : jobs.length === 0 ? (
           <Card className="mt-8 p-10 text-center">
-            <p className="text-muted-foreground">You haven't submitted any jobs yet.</p>
-            <Button asChild className="mt-4"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit your first job</Link></Button>
+            <p className="text-muted-foreground">You haven't submitted any projects yet.</p>
+            <Button asChild className="mt-4"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit your first project</Link></Button>
           </Card>
         ) : (
           <div className="mt-8 space-y-4">
             {jobs.map((j) => {
-              const sv = STATUS_VARIANT[j.status] ?? STATUS_VARIANT.new;
+              const status = getUnifiedStatusLabel(j);
               const price = formatPrice(j.price_cents);
+              const paid = !!j.share_unlocked || j.status === "paid";
+              const active = j.flyer_active !== false;
+              const previewHref = paid && active && j.flyer?.public_slug
+                ? `/f/${j.flyer.public_slug}`
+                : j.flyer_id
+                  ? `/preview/${j.flyer_id}`
+                  : null;
               return (
                 <Card key={j.id} className="p-5">
                   <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{j.title}</h3>
-                        <Badge className={sv.className}>{sv.label}</Badge>
+                    <div className="min-w-0 flex-1">
+                      <Link to={`/my-jobs/${j.id}`} className="group inline-flex items-center gap-2">
+                        <h3 className="font-semibold group-hover:underline">{j.title}</h3>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Link>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <Badge className={status.className}><span className="mr-1">{status.emoji}</span>{status.label}</Badge>
                         <Badge variant="outline">{j.type === "upload" ? "Upload" : "Design"}</Badge>
+                        {paid && (
+                          <Badge variant="outline" className={active ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : ""}>
+                            {active ? "Active" : "Inactive"}
+                          </Badge>
+                        )}
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="mt-2 text-xs text-muted-foreground">
                         Submitted {format(new Date(j.created_at), "PPp")}
                       </p>
                       {j.brief && <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{j.brief}</p>}
@@ -94,20 +98,21 @@ export default function MyJobs() {
                           <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">{labelFor(id)}</span>
                         ))}
                       </div>
-                      {j.admin_notes && (
-                        <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3 text-sm">
-                          <div className="font-medium mb-1">Note from our team</div>
-                          <div className="text-muted-foreground whitespace-pre-wrap">{j.admin_notes}</div>
-                        </div>
-                      )}
                     </div>
 
                     <div className="flex flex-col items-end gap-2">
                       {price && <div className="font-display text-2xl font-bold">{price}</div>}
-                      {j.payment_link && (
+                      {!paid && j.payment_link && price && (
                         <Button asChild size="sm" className="shadow-glow">
                           <a href={j.payment_link} target="_blank" rel="noreferrer">
                             Pay now <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                      )}
+                      {previewHref && (
+                        <Button asChild size="sm" variant="outline">
+                          <a href={previewHref} target="_blank" rel="noreferrer">
+                            <Eye className="mr-1 h-3.5 w-3.5" />Preview
                           </a>
                         </Button>
                       )}
@@ -118,14 +123,9 @@ export default function MyJobs() {
                           window.open(url, "_blank", "noreferrer");
                         }}>View upload</Button>
                       )}
-
-                      {j.preview_ready && j.flyer?.public_slug && (
-                        <Button asChild size="sm" variant="outline">
-                          <a href={`/f/${j.flyer.public_slug}`} target="_blank" rel="noreferrer">
-                            <Eye className="mr-1 h-3.5 w-3.5" />Preview
-                          </a>
-                        </Button>
-                      )}
+                      <Button asChild size="sm" variant="ghost">
+                        <Link to={`/my-jobs/${j.id}`}>Manage →</Link>
+                      </Button>
                     </div>
                   </div>
                 </Card>
