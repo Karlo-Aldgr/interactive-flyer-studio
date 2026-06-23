@@ -459,8 +459,18 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                   </Button>
                 )}
 
-                <div className="space-y-3 rounded-lg border border-border p-4">
-                  <div className="font-medium">Workflow</div>
+                <fieldset
+                  className="space-y-3 rounded-lg border border-border p-4 disabled:opacity-60"
+                  disabled={selected.assigned_editor_id !== myId}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium">Workflow</div>
+                    {selected.assigned_editor_id && selected.assigned_editor_id !== myId && (
+                      <Badge variant="outline" className="text-xs">
+                        Assigned to {displayFirstName(selected.assigned_editor_email)}
+                      </Badge>
+                    )}
+                  </div>
 
                   <div className="space-y-2">
                     <Label>Status</Label>
