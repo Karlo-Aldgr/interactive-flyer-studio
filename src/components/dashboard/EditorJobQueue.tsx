@@ -289,23 +289,40 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {job.customer_email ?? "Customer"} · Submitted {format(new Date(job.created_at), "PPp")}
                   </p>
+                  {job.assigned_editor_id && (
+                    <p className="mt-1 text-xs">
+                      {job.assigned_editor_id === myId ? (
+                        <span className="font-medium text-primary">Assigned to you</span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Working on it: <span className="font-medium text-foreground">{displayFirstName(job.assigned_editor_email)}</span>
+                        </span>
+                      )}
+                      {job.assigned_at && (
+                        <span className="text-muted-foreground"> · since {format(new Date(job.assigned_at), "PPp")}</span>
+                      )}
+                    </p>
+                  )}
                   {job.brief && (
                     <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{job.brief}</p>
                   )}
                 </div>
                 <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                    {!jobIsCustomerDeleted(job) && PENDING.has(job.status) && (
+                    {!jobIsCustomerDeleted(job) && !job.assigned_editor_id && !COMPLETED.has(job.status) && (
                       <Button
                         size="sm"
                         className="w-full sm:w-auto"
-                        disabled={saving}
-                        onClick={() => applyPatch(job, { status: "in_progress" })}
+                        disabled={claimingId === job.id}
+                        onClick={() => handleClaim(job)}
                       >
-                        Start work
+                        {claimingId === job.id ? (
+                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                        ) : null}
+                        Start Working
                       </Button>
                     )}
-                    {!jobIsCustomerDeleted(job) && IN_PROGRESS.has(job.status) && job.status !== "preview_ready" && (
+                    {!jobIsCustomerDeleted(job) && job.assigned_editor_id === myId && IN_PROGRESS.has(job.status) && job.status !== "preview_ready" && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -316,7 +333,7 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                         Send preview
                       </Button>
                     )}
-                    {!jobIsCustomerDeleted(job) && job.status === "preview_ready" && (
+                    {!jobIsCustomerDeleted(job) && job.assigned_editor_id === myId && job.status === "preview_ready" && (
                       <Button
                         size="sm"
                         className="w-full sm:w-auto"
@@ -326,15 +343,17 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                         Mark completed
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                      onClick={() => openManage(job)}
-                    >
-                      <Pencil className="mr-1 h-3.5 w-3.5" />
-                      Manage
-                    </Button>
+                    {(!job.assigned_editor_id || job.assigned_editor_id === myId || jobIsCustomerDeleted(job)) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={() => openManage(job)}
+                      >
+                        <Pencil className="mr-1 h-3.5 w-3.5" />
+                        {job.assigned_editor_id === myId ? "Manage" : "View"}
+                      </Button>
+                    )}
                     {job.upload_url && (
                       <>
                         <Button
