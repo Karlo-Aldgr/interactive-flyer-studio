@@ -125,7 +125,8 @@ export async function loadUserJobs(userId: string, options: LoadOptions = {}) {
   if (error) return { jobs: [] as UserJob[], error };
 
   const jobs = await attachFlyers((data ?? []) as Record<string, unknown>[]);
-  return { jobs, error: null };
+  const enriched = await attachEditorEmails(jobs);
+  return { jobs: enriched, error: null };
 }
 
 /** All customer jobs — for editors (and admins via separate policies). */
@@ -138,7 +139,8 @@ export async function loadEditorJobs() {
   if (error) return { jobs: [] as UserJob[], error };
 
   const jobs = await attachFlyers((data ?? []) as Record<string, unknown>[]);
-  return { jobs, error: null };
+  const enriched = await attachEditorEmails(jobs);
+  return { jobs: enriched, error: null };
 }
 
 export function formatJobPrice(cents?: number | null) {
