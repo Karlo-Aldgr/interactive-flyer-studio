@@ -392,6 +392,9 @@ export default function AdminJobs() {
                           {isNew && <Badge className="bg-primary text-primary-foreground"><Sparkles className="mr-1 h-3 w-3" />NEW</Badge>}
                           <h3 className="font-semibold">{j.title}</h3>
                           <Badge variant="secondary">{STATUS_LABEL[j.status]}</Badge>
+                          <Badge variant={j.assigned_editor_id ? "default" : "outline"}>
+                            Editor: {j.assigned_editor_id ? displayFirstName(assignedEditorEmail) : "Unassigned"}
+                          </Badge>
                           <Badge variant="outline">{j.type}</Badge>
                           <JobStaffBadges job={j} />
                           {openingJobId === j.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
