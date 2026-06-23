@@ -83,6 +83,8 @@ function normalizeJob(row: Record<string, unknown>, flyer: { public_slug: string
     customer_updated_at: (row.customer_updated_at as string | null) ?? null,
     staff_content_seen_at: (row.staff_content_seen_at as string | null) ?? null,
     staff_acknowledged_at: (row.staff_acknowledged_at as string | null) ?? null,
+    share_unlocked: (row.share_unlocked as boolean | null) ?? false,
+    flyer_active: (row.flyer_active as boolean | null) ?? true,
   };
 }
 
