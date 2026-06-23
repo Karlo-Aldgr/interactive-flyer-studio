@@ -9,6 +9,8 @@ import { getJobUploadSignedUrl } from "@/lib/jobUploads";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { displayFirstName } from "@/lib/displayName";
+import { Sparkles } from "lucide-react";
 
 const labelFor = (id: string) => INTERACTIONS.find((i) => i.id === id)?.label ?? id;
 
@@ -38,6 +40,26 @@ export function JobDetailView({ job }: JobDetailViewProps) {
           </p>
         </div>
       </div>
+
+      {!isCancelled && job.assigned_editor_id && (
+        <Card className="border-primary/30 bg-primary/5 p-5">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Sparkles className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="font-semibold">
+                {displayFirstName(job.assigned_editor_email)} is working on your project
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {job.assigned_at
+                  ? `Picked up ${format(new Date(job.assigned_at), "PPP 'at' p")}.`
+                  : "Your project has been picked up by a designer."}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="p-5">
         <h2 className="font-semibold">Progress</h2>

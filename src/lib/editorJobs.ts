@@ -51,3 +51,44 @@ export async function updateEditorJob(jobId: string, patch: EditorJobUpdate) {
 
   return { ok: true as const, error: null };
 }
+
+export async function claimEditorJob(jobId: string) {
+  const { data, error } = await supabase.rpc("editor_claim_job", { _job_id: jobId });
+  if (error) return { ok: false as const, error: error.message };
+  const result = data as { ok?: boolean; error?: string } | null;
+  if (!result?.ok) return { ok: false as const, error: result?.error ?? "Could not claim job" };
+  return { ok: true as const, error: null };
+}
+
+export async function releaseEditorJob(jobId: string) {
+  const { data, error } = await supabase.rpc("editor_release_job", { _job_id: jobId });
+  if (error) return { ok: false as const, error: error.message };
+  const result = data as { ok?: boolean; error?: string } | null;
+  if (!result?.ok) return { ok: false as const, error: result?.error ?? "Could not release" };
+  return { ok: true as const, error: null };
+}
+
+export async function adminAssignJobEditor(jobId: string, editorId: string | null) {
+  const { data, error } = await supabase.rpc("admin_assign_job_editor", {
+    _job_id: jobId,
+    _editor_id: editorId,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  const result = data as { ok?: boolean; error?: string } | null;
+  if (!result?.ok) return { ok: false as const, error: result?.error ?? "Could not assign" };
+  return { ok: true as const, error: null };
+}
+
+/** Resolve assigned editor display names (emails) in batch via the SECURITY DEFINER helper. */
+export async function fetchEditorDisplayNames(userIds: string[]): Promise<Map<string, string>> {
+  const unique = Array.from(new Set(userIds.filter(Boolean)));
+  const map = new Map<string, string>();
+  if (unique.length === 0) return map;
+  await Promise.all(
+    unique.map(async (uid) => {
+      const { data } = await supabase.rpc("job_assigned_editor_display", { _user_id: uid });
+      if (typeof data === "string" && data.length > 0) map.set(uid, data);
+    })
+  );
+  return map;
+}

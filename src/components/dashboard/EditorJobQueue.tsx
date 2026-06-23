@@ -26,8 +26,12 @@ import { INTERACTIONS } from "@/lib/interactionsCatalog";
 import {
   EDITOR_JOB_STATUSES,
   EDITOR_STATUS_LABEL,
+  claimEditorJob,
+  releaseEditorJob,
   updateEditorJob,
 } from "@/lib/editorJobs";
+import { useAuth } from "@/contexts/AuthContext";
+import { displayFirstName } from "@/lib/displayName";
 import { getJobUploadSignedUrl, downloadJobUpload } from "@/lib/jobUploads";
 import {
   jobIsCustomerDeleted,
@@ -41,7 +45,7 @@ import type { Flyer } from "@/types/flyer";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-type JobFilter = "all" | "pending" | "in_progress" | "completed";
+type JobFilter = "available" | "mine" | "all" | "pending" | "in_progress" | "completed";
 
 type EditorJobQueueProps = {
   flyers: Flyer[];
@@ -53,7 +57,9 @@ const PENDING = new Set(["new", "reviewing", "quoted", "paid"]);
 const IN_PROGRESS = new Set(["in_progress", "preview_ready"]);
 const COMPLETED = new Set(["delivered", "cancelled"]);
 
-function matchesFilter(job: UserJob, filter: JobFilter) {
+function matchesFilter(job: UserJob, filter: JobFilter, myId?: string) {
+  if (filter === "available") return !job.assigned_editor_id && !jobIsCustomerDeleted(job) && !COMPLETED.has(job.status);
+  if (filter === "mine") return !!myId && job.assigned_editor_id === myId;
   if (filter === "all") return true;
   if (filter === "pending") return PENDING.has(job.status);
   if (filter === "in_progress") return IN_PROGRESS.has(job.status);
@@ -61,11 +67,14 @@ function matchesFilter(job: UserJob, filter: JobFilter) {
 }
 
 export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
+  const { user } = useAuth();
+  const myId = user?.id;
   const [jobs, setJobs] = useState<UserJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<JobFilter>("all");
+  const [filter, setFilter] = useState<JobFilter>("available");
   const [selected, setSelected] = useState<UserJob | null>(null);
   const [saving, setSaving] = useState(false);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const [eStatus, setEStatus] = useState<JobStatus>("reviewing");
   const [eFlyerId, setEFlyerId] = useState<string>("");
   const [ePreviewReady, setEPreviewReady] = useState(false);
@@ -166,24 +175,53 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
     if (updated) openManage(updated);
   };
 
-  const filtered = useMemo(() => jobs.filter((j) => matchesFilter(j, filter)), [jobs, filter]);
+  const filtered = useMemo(
+    () => jobs.filter((j) => matchesFilter(j, filter, myId)),
+    [jobs, filter, myId]
+  );
 
   const counts = useMemo(
     () => ({
+      available: jobs.filter((j) => !j.assigned_editor_id && !jobIsCustomerDeleted(j) && !COMPLETED.has(j.status)).length,
+      mine: jobs.filter((j) => myId && j.assigned_editor_id === myId).length,
       all: jobs.length,
       pending: jobs.filter((j) => PENDING.has(j.status)).length,
       in_progress: jobs.filter((j) => IN_PROGRESS.has(j.status)).length,
       completed: jobs.filter((j) => COMPLETED.has(j.status)).length,
     }),
-    [jobs]
+    [jobs, myId]
   );
 
   const filters: { value: JobFilter; label: string; count: number }[] = [
+    { value: "available", label: "Available", count: counts.available },
+    { value: "mine", label: "My jobs", count: counts.mine },
     { value: "all", label: "All", count: counts.all },
     { value: "pending", label: "Pending", count: counts.pending },
     { value: "in_progress", label: "In progress", count: counts.in_progress },
     { value: "completed", label: "Completed", count: counts.completed },
   ];
+
+  const handleClaim = async (job: UserJob) => {
+    setClaimingId(job.id);
+    const { ok, error } = await claimEditorJob(job.id);
+    setClaimingId(null);
+    if (!ok) return toast.error(error ?? "Could not claim");
+    toast.success("You're now working on this project");
+    const rows = await refresh();
+    const updated = rows.find((j) => j.id === job.id);
+    if (updated) openManage(updated);
+  };
+
+  const handleRelease = async (job: UserJob) => {
+    if (!confirm("Release this job so another editor can pick it up?")) return;
+    setSaving(true);
+    const { ok, error } = await releaseEditorJob(job.id);
+    setSaving(false);
+    if (!ok) return toast.error(error ?? "Could not release");
+    toast.success("Released");
+    setSelected(null);
+    refresh();
+  };
 
   return (
     <section className="space-y-4">
@@ -191,11 +229,11 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
         <div>
           <h2 className="font-display text-lg font-semibold">Customer requests</h2>
           <p className="text-pretty text-sm text-muted-foreground">
-            Review briefs, link your TapFlyer, update status, and send previews to customers.
+            Claim a job to start working — only one editor can be assigned at a time.
           </p>
         </div>
-        {!loading && counts.pending > 0 && (
-          <Badge className="w-fit bg-primary/15 text-primary">{counts.pending} pending</Badge>
+        {!loading && counts.available > 0 && (
+          <Badge className="w-fit bg-primary/15 text-primary">{counts.available} available</Badge>
         )}
       </div>
 
@@ -251,23 +289,40 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {job.customer_email ?? "Customer"} · Submitted {format(new Date(job.created_at), "PPp")}
                   </p>
+                  {job.assigned_editor_id && (
+                    <p className="mt-1 text-xs">
+                      {job.assigned_editor_id === myId ? (
+                        <span className="font-medium text-primary">Assigned to you</span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Working on it: <span className="font-medium text-foreground">{displayFirstName(job.assigned_editor_email)}</span>
+                        </span>
+                      )}
+                      {job.assigned_at && (
+                        <span className="text-muted-foreground"> · since {format(new Date(job.assigned_at), "PPp")}</span>
+                      )}
+                    </p>
+                  )}
                   {job.brief && (
                     <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{job.brief}</p>
                   )}
                 </div>
                 <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                    {!jobIsCustomerDeleted(job) && PENDING.has(job.status) && (
+                    {!jobIsCustomerDeleted(job) && !job.assigned_editor_id && !COMPLETED.has(job.status) && (
                       <Button
                         size="sm"
                         className="w-full sm:w-auto"
-                        disabled={saving}
-                        onClick={() => applyPatch(job, { status: "in_progress" })}
+                        disabled={claimingId === job.id}
+                        onClick={() => handleClaim(job)}
                       >
-                        Start work
+                        {claimingId === job.id ? (
+                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                        ) : null}
+                        Start Working
                       </Button>
                     )}
-                    {!jobIsCustomerDeleted(job) && IN_PROGRESS.has(job.status) && job.status !== "preview_ready" && (
+                    {!jobIsCustomerDeleted(job) && job.assigned_editor_id === myId && IN_PROGRESS.has(job.status) && job.status !== "preview_ready" && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -278,7 +333,7 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                         Send preview
                       </Button>
                     )}
-                    {!jobIsCustomerDeleted(job) && job.status === "preview_ready" && (
+                    {!jobIsCustomerDeleted(job) && job.assigned_editor_id === myId && job.status === "preview_ready" && (
                       <Button
                         size="sm"
                         className="w-full sm:w-auto"
@@ -288,15 +343,17 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                         Mark completed
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                      onClick={() => openManage(job)}
-                    >
-                      <Pencil className="mr-1 h-3.5 w-3.5" />
-                      Manage
-                    </Button>
+                    {(!job.assigned_editor_id || job.assigned_editor_id === myId || jobIsCustomerDeleted(job)) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={() => openManage(job)}
+                      >
+                        <Pencil className="mr-1 h-3.5 w-3.5" />
+                        {job.assigned_editor_id === myId ? "Manage" : "View"}
+                      </Button>
+                    )}
                     {job.upload_url && (
                       <>
                         <Button
@@ -402,8 +459,18 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                   </Button>
                 )}
 
-                <div className="space-y-3 rounded-lg border border-border p-4">
-                  <div className="font-medium">Workflow</div>
+                <fieldset
+                  className="space-y-3 rounded-lg border border-border p-4 disabled:opacity-60"
+                  disabled={selected.assigned_editor_id !== myId}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium">Workflow</div>
+                    {selected.assigned_editor_id && selected.assigned_editor_id !== myId && (
+                      <Badge variant="outline" className="text-xs">
+                        Assigned to {displayFirstName(selected.assigned_editor_email)}
+                      </Badge>
+                    )}
+                  </div>
 
                   <div className="space-y-2">
                     <Label>Status</Label>
@@ -476,7 +543,7 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                       </a>
                     </Button>
                   )}
-                </div>
+                </fieldset>
                 </>
                 )}
               </div>
@@ -484,7 +551,17 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                 <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSelected(null)}>
                   Close
                 </Button>
-                {!jobIsCustomerDeleted(selected) && (
+                {!jobIsCustomerDeleted(selected) && selected.assigned_editor_id === myId && (
+                  <Button
+                    variant="ghost"
+                    className="w-full sm:w-auto text-destructive hover:text-destructive"
+                    onClick={() => handleRelease(selected)}
+                    disabled={saving}
+                  >
+                    Release
+                  </Button>
+                )}
+                {!jobIsCustomerDeleted(selected) && selected.assigned_editor_id === myId && (
                   <Button className="w-full sm:w-auto" onClick={saveManage} disabled={saving}>
                     {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
                     Save changes

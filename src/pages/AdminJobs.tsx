@@ -21,6 +21,7 @@ import { jobIsCustomerDeleted } from "@/lib/customerJobs";
 import { checkIsAdmin } from "@/lib/roles";
 import { getJobUploadSignedUrl, jobUploadFilename } from "@/lib/jobUploads";
 import { uploadFlyerAsset } from "@/lib/uploadFlyerAsset";
+import { adminAssignJobEditor, fetchEditorDisplayNames } from "@/lib/editorJobs";
 
 
 const STATUSES = ["new","reviewing","quoted","paid","in_progress","preview_ready","delivered","cancelled"] as const;
@@ -40,6 +41,8 @@ export default function AdminJobs() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [flyers, setFlyers] = useState<any[]>([]);
+  const [editors, setEditors] = useState<{ user_id: string; email: string }[]>([]);
+  const [editorEmails, setEditorEmails] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [editing, setEditing] = useState<any | null>(null);
@@ -67,13 +70,20 @@ export default function AdminJobs() {
 
   const refresh = async () => {
     setLoading(true);
-    const [jr, fr, sr] = await Promise.all([
+    const [jr, fr, sr, er] = await Promise.all([
       supabase.from("jobs").select("*").order("created_at", { ascending: false }),
       supabase.from("flyers").select("id, title, owner_id, status, public_slug").order("created_at", { ascending: false }),
       supabase.from("app_settings").select("value").eq("key","last_backup_at").maybeSingle(),
+      supabase.rpc("list_editors"),
     ]);
-    setJobs(jr.data ?? []);
+    const jobsData = jr.data ?? [];
+    setJobs(jobsData);
     setFlyers(fr.data ?? []);
+    const editorRows = ((er.data ?? []) as any[]).map((r) => ({ user_id: r.user_id as string, email: r.email as string }));
+    setEditors(editorRows);
+    const ids = jobsData.map((j: any) => j.assigned_editor_id).filter(Boolean) as string[];
+    const map = await fetchEditorDisplayNames([...ids, ...editorRows.map((e) => e.user_id)]);
+    setEditorEmails(map);
     const lb = (sr.data?.value as any)?.at;
     setLastBackup(lb ? new Date(lb) : null);
     setLoading(false);
@@ -387,6 +397,15 @@ export default function AdminJobs() {
                         <p className="mt-1 text-xs text-muted-foreground">
                           {j.customer_email ?? "—"} · {format(new Date(j.created_at), "PPp")}
                         </p>
+                        {j.assigned_editor_id && (
+                          <p className="mt-1 text-xs">
+                            <span className="font-medium text-primary">Assigned editor:</span>{" "}
+                            <span className="text-muted-foreground">{editorEmails.get(j.assigned_editor_id) ?? j.assigned_editor_id}</span>
+                            {j.assigned_at && (
+                              <span className="text-muted-foreground"> · {format(new Date(j.assigned_at), "PPp")}</span>
+                            )}
+                          </p>
+                        )}
                         {j.brief && <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{j.brief}</p>}
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {(j.selected_actions ?? []).map((id: string) => (
@@ -484,6 +503,31 @@ export default function AdminJobs() {
                     {flyers.map((f) => <SelectItem key={f.id} value={f.id}>{f.title}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label>Assigned editor</Label>
+                <Select
+                  value={editing.assigned_editor_id ?? "none"}
+                  onValueChange={async (v) => {
+                    const editorId = v === "none" ? null : v;
+                    const { ok, error } = await adminAssignJobEditor(editing.id, editorId);
+                    if (!ok) return toast.error(error ?? "Could not assign");
+                    toast.success(editorId ? "Editor assigned" : "Editor cleared");
+                    await refresh();
+                    setEditing((prev: any) => prev ? { ...prev, assigned_editor_id: editorId, assigned_at: editorId ? new Date().toISOString() : null } : prev);
+                  }}
+                >
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {editors.map((e) => (
+                      <SelectItem key={e.user_id} value={e.user_id}>{e.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {editing.assigned_at && (
+                  <p className="mt-1 text-xs text-muted-foreground">Since {format(new Date(editing.assigned_at), "PPp")}</p>
+                )}
               </div>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={ePreviewReady} onChange={(e) => setEPreviewReady(e.target.checked)} />
