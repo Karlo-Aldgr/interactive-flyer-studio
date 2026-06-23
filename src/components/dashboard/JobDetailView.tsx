@@ -1,44 +1,25 @@
 import { format } from "date-fns";
-import { ExternalLink, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { JobStatusBadge } from "@/components/dashboard/JobStatusBadge";
 import { INTERACTIONS } from "@/lib/interactionsCatalog";
-import { formatJobPrice, type UserJob } from "@/lib/userJobs";
-import { getJobStatusMeta, type JobStatus } from "@/lib/jobStatus";
+import { type UserJob } from "@/lib/userJobs";
+import { UNIFIED_STEPS, getUnifiedStepIndex, getUnifiedStatusLabel } from "@/lib/jobStatus";
 import { getJobUploadSignedUrl } from "@/lib/jobUploads";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const labelFor = (id: string) => INTERACTIONS.find((i) => i.id === id)?.label ?? id;
-
-const TIMELINE: { status: JobStatus; label: string }[] = [
-  { status: "new", label: "Submitted" },
-  { status: "reviewing", label: "Under review" },
-  { status: "quoted", label: "Quote sent" },
-  { status: "paid", label: "Paid" },
-  { status: "in_progress", label: "In production" },
-  { status: "preview_ready", label: "Preview ready" },
-  { status: "delivered", label: "Completed" },
-];
-
-const STATUS_ORDER = TIMELINE.map((s) => s.status);
-
-function timelineIndex(status: string) {
-  if (status === "cancelled") return -1;
-  const idx = STATUS_ORDER.indexOf(status as JobStatus);
-  return idx >= 0 ? idx : 0;
-}
 
 type JobDetailViewProps = {
   job: UserJob;
 };
 
 export function JobDetailView({ job }: JobDetailViewProps) {
-  const price = formatJobPrice(job.price_cents);
-  const currentIdx = timelineIndex(job.status);
+  const currentIdx = getUnifiedStepIndex(job);
   const isCancelled = job.status === "cancelled";
+  const status = getUnifiedStatusLabel(job);
 
   return (
     <div className="space-y-6">
@@ -46,30 +27,15 @@ export function JobDetailView({ job }: JobDetailViewProps) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-2xl font-bold break-words sm:text-3xl">{job.title}</h1>
-            <JobStatusBadge status={job.status} />
+            <Badge className={status.className}>
+              <span className="mr-1">{status.emoji}</span>
+              {status.label}
+            </Badge>
             <Badge variant="outline">{job.type === "upload" ? "Upload" : "Design request"}</Badge>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
             Submitted {format(new Date(job.created_at), "PPP")} · Updated {format(new Date(job.updated_at), "PPP")}
           </p>
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-          {price && <div className="font-display text-2xl font-bold sm:text-3xl">{price}</div>}
-          {job.payment_link && (
-            <Button asChild size="sm" className="w-full shadow-glow sm:w-auto">
-              <a href={job.payment_link} target="_blank" rel="noreferrer">
-                Pay now <ExternalLink className="ml-1 h-3.5 w-3.5" />
-              </a>
-            </Button>
-          )}
-          {job.preview_ready && job.flyer?.public_slug && (
-            <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
-              <a href={`/f/${job.flyer.public_slug}`} target="_blank" rel="noreferrer">
-                <Eye className="mr-1 h-3.5 w-3.5" />
-                Open preview
-              </a>
-            </Button>
-          )}
         </div>
       </div>
 
@@ -79,11 +45,11 @@ export function JobDetailView({ job }: JobDetailViewProps) {
           <p className="mt-3 text-sm text-muted-foreground">This project was cancelled.</p>
         ) : (
           <ol className="mt-4 space-y-3">
-            {TIMELINE.map((step, i) => {
+            {UNIFIED_STEPS.map((step, i) => {
               const done = i <= currentIdx;
               const active = i === currentIdx;
               return (
-                <li key={step.status} className="flex items-center gap-3 text-sm">
+                <li key={step.key} className="flex items-center gap-3 text-sm">
                   <span
                     className={cn(
                       "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-medium",
@@ -93,11 +59,9 @@ export function JobDetailView({ job }: JobDetailViewProps) {
                     {i + 1}
                   </span>
                   <span className={cn(active ? "font-medium text-foreground" : done ? "text-foreground" : "text-muted-foreground")}>
+                    <span className="mr-1.5">{step.emoji}</span>
                     {step.label}
                   </span>
-                  {active && (
-                    <span className="text-xs text-muted-foreground">— {getJobStatusMeta(job.status).label}</span>
-                  )}
                 </li>
               );
             })}

@@ -17,6 +17,14 @@ export async function customerDeleteJob(jobId: string, reason: string) {
   return parseRpc(data, error);
 }
 
+export async function customerSetFlyerActive(jobId: string, active: boolean) {
+  const { data, error } = await supabase.rpc("customer_set_flyer_active" as any, {
+    _job_id: jobId,
+    _active: active,
+  });
+  return parseRpc(data, error);
+}
+
 export type CustomerJobUpdate = {
   title?: string;
   brief?: string | null;

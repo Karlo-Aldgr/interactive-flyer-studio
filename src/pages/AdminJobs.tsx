@@ -468,6 +468,7 @@ export default function AdminJobs() {
                 <div>
                   <Label htmlFor="price">Price (USD)</Label>
                   <Input id="price" inputMode="decimal" value={ePrice} onChange={(e) => setEPrice(e.target.value)} placeholder="149.00" className="mt-2" />
+                  <p className="mt-1 text-xs text-muted-foreground">Set price after preview/completion to request payment. Marking status <strong>Paid</strong> automatically unlocks the customer's share link and QR.</p>
                 </div>
                 <div>
                   <Label htmlFor="paylink">Payment link</Label>
