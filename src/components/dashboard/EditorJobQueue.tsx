@@ -541,7 +541,17 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                 <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSelected(null)}>
                   Close
                 </Button>
-                {!jobIsCustomerDeleted(selected) && (
+                {!jobIsCustomerDeleted(selected) && selected.assigned_editor_id === myId && (
+                  <Button
+                    variant="ghost"
+                    className="w-full sm:w-auto text-destructive hover:text-destructive"
+                    onClick={() => handleRelease(selected)}
+                    disabled={saving}
+                  >
+                    Release
+                  </Button>
+                )}
+                {!jobIsCustomerDeleted(selected) && selected.assigned_editor_id === myId && (
                   <Button className="w-full sm:w-auto" onClick={saveManage} disabled={saving}>
                     {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
                     Save changes
