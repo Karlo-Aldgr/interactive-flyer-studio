@@ -506,6 +506,9 @@ export default function AdminJobs() {
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {j.customer_email ?? "—"} · {format(new Date(j.created_at), "PPp")}
+                          {j.updated_at && j.updated_at !== j.created_at && (
+                            <span> · updated {formatDistanceToNow(new Date(j.updated_at))} ago</span>
+                          )}
                         </p>
                         <p className="mt-1 text-xs">
                           <span className="font-medium text-primary">Editor handling project:</span>{" "}
