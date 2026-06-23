@@ -175,24 +175,53 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
     if (updated) openManage(updated);
   };
 
-  const filtered = useMemo(() => jobs.filter((j) => matchesFilter(j, filter)), [jobs, filter]);
+  const filtered = useMemo(
+    () => jobs.filter((j) => matchesFilter(j, filter, myId)),
+    [jobs, filter, myId]
+  );
 
   const counts = useMemo(
     () => ({
+      available: jobs.filter((j) => !j.assigned_editor_id && !jobIsCustomerDeleted(j) && !COMPLETED.has(j.status)).length,
+      mine: jobs.filter((j) => myId && j.assigned_editor_id === myId).length,
       all: jobs.length,
       pending: jobs.filter((j) => PENDING.has(j.status)).length,
       in_progress: jobs.filter((j) => IN_PROGRESS.has(j.status)).length,
       completed: jobs.filter((j) => COMPLETED.has(j.status)).length,
     }),
-    [jobs]
+    [jobs, myId]
   );
 
   const filters: { value: JobFilter; label: string; count: number }[] = [
+    { value: "available", label: "Available", count: counts.available },
+    { value: "mine", label: "My jobs", count: counts.mine },
     { value: "all", label: "All", count: counts.all },
     { value: "pending", label: "Pending", count: counts.pending },
     { value: "in_progress", label: "In progress", count: counts.in_progress },
     { value: "completed", label: "Completed", count: counts.completed },
   ];
+
+  const handleClaim = async (job: UserJob) => {
+    setClaimingId(job.id);
+    const { ok, error } = await claimEditorJob(job.id);
+    setClaimingId(null);
+    if (!ok) return toast.error(error ?? "Could not claim");
+    toast.success("You're now working on this project");
+    const rows = await refresh();
+    const updated = rows.find((j) => j.id === job.id);
+    if (updated) openManage(updated);
+  };
+
+  const handleRelease = async (job: UserJob) => {
+    if (!confirm("Release this job so another editor can pick it up?")) return;
+    setSaving(true);
+    const { ok, error } = await releaseEditorJob(job.id);
+    setSaving(false);
+    if (!ok) return toast.error(error ?? "Could not release");
+    toast.success("Released");
+    setSelected(null);
+    refresh();
+  };
 
   return (
     <section className="space-y-4">
@@ -200,11 +229,11 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
         <div>
           <h2 className="font-display text-lg font-semibold">Customer requests</h2>
           <p className="text-pretty text-sm text-muted-foreground">
-            Review briefs, link your TapFlyer, update status, and send previews to customers.
+            Claim a job to start working — only one editor can be assigned at a time.
           </p>
         </div>
-        {!loading && counts.pending > 0 && (
-          <Badge className="w-fit bg-primary/15 text-primary">{counts.pending} pending</Badge>
+        {!loading && counts.available > 0 && (
+          <Badge className="w-fit bg-primary/15 text-primary">{counts.available} available</Badge>
         )}
       </div>
 
