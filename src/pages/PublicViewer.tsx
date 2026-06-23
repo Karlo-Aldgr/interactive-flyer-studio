@@ -2954,6 +2954,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                     kind: "cart",
                     email: checkoutData.email,
                     phone: checkoutData.phone || undefined,
+                    customerName: checkoutData.name || undefined,
+                    itemCount: cart.reduce((n: number, l: any) => n + (l.qty || 1), 0),
                     placedAt: new Date().toISOString(),
                   });
                 }
