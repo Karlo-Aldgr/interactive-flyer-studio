@@ -3202,6 +3202,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           onOpenChange={setOrderTrackOpen}
         />
       )}
+      {flyer && !previewMode && (
+        <OrderTrackFloatingButton
+          flyerId={flyer.id}
+          onOpen={() => setOrderTrackOpen(true)}
+        />
+      )}
     </div>
   );
 }
