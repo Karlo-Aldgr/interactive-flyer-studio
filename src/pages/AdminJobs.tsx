@@ -398,22 +398,75 @@ export default function AdminJobs() {
             <div>
               <h1 className="font-display text-3xl font-bold">Jobs</h1>
               <p className="text-sm text-muted-foreground">
-                {jobs.length} total {newCount > 0 && <Badge className="ml-2 bg-primary text-primary-foreground"><Sparkles className="mr-1 h-3 w-3" />{newCount} new</Badge>}
+                {jobs.length} total {counts.pending > 0 && <Badge className="ml-2 bg-primary text-primary-foreground"><Sparkles className="mr-1 h-3 w-3" />{counts.pending} waiting</Badge>}
               </p>
             </div>
             <div className="flex gap-2">
-              <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  {STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>)}
-                </SelectContent>
-              </Select>
               <Button variant="outline" onClick={runBackup} disabled={exporting}>
                 <Database className="mr-2 h-4 w-4" />Backup
               </Button>
             </div>
           </div>
+
+          {/* Summary cards */}
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              { key: "all", label: "Total", value: counts.total, tone: "bg-muted" },
+              { key: "new", label: "Pending", value: counts.pending, tone: "bg-blue-500/15 text-blue-700 dark:text-blue-300" },
+              { key: "in_progress", label: "Active", value: counts.active, tone: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300" },
+              { key: "preview_ready", label: "Review", value: counts.review, tone: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300" },
+              { key: "delivered", label: "Completed", value: counts.completed, tone: "bg-green-500/15 text-green-700 dark:text-green-300" },
+              { key: "paid", label: "Paid", value: counts.paid, tone: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
+            ].map((c) => (
+              <button
+                key={c.key}
+                onClick={() => setFilter(c.key)}
+                className={`rounded-lg border p-3 text-left transition hover:border-primary/50 ${filter === c.key ? "border-primary ring-1 ring-primary/40" : ""}`}
+              >
+                <div className="text-2xl font-bold">{c.value}</div>
+                <div className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs ${c.tone}`}>{c.label}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Filters row */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Input
+              placeholder="Search project or customer..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full sm:max-w-xs"
+            />
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                {STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={editorFilter} onValueChange={setEditorFilter}>
+              <SelectTrigger className="w-52"><SelectValue placeholder="All editors" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All editors</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {editors.map((e) => {
+                  const load = editorWorkload.get(e.user_id) ?? 0;
+                  return (
+                    <SelectItem key={e.user_id} value={e.user_id}>
+                      {displayFirstName(e.email)} ({load} active)
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            {(filter !== "all" || editorFilter !== "all" || search) && (
+              <Button variant="ghost" size="sm" onClick={() => { setFilter("all"); setEditorFilter("all"); setSearch(""); }}>
+                Clear
+              </Button>
+            )}
+            <span className="ml-auto text-xs text-muted-foreground">{filtered.length} shown · live</span>
+          </div>
+
 
           {loading ? (
             <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
