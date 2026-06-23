@@ -70,13 +70,20 @@ export default function AdminJobs() {
 
   const refresh = async () => {
     setLoading(true);
-    const [jr, fr, sr] = await Promise.all([
+    const [jr, fr, sr, er] = await Promise.all([
       supabase.from("jobs").select("*").order("created_at", { ascending: false }),
       supabase.from("flyers").select("id, title, owner_id, status, public_slug").order("created_at", { ascending: false }),
       supabase.from("app_settings").select("value").eq("key","last_backup_at").maybeSingle(),
+      supabase.rpc("list_editors"),
     ]);
-    setJobs(jr.data ?? []);
+    const jobsData = jr.data ?? [];
+    setJobs(jobsData);
     setFlyers(fr.data ?? []);
+    const editorRows = ((er.data ?? []) as any[]).map((r) => ({ user_id: r.user_id as string, email: r.email as string }));
+    setEditors(editorRows);
+    const ids = jobsData.map((j: any) => j.assigned_editor_id).filter(Boolean) as string[];
+    const map = await fetchEditorDisplayNames([...ids, ...editorRows.map((e) => e.user_id)]);
+    setEditorEmails(map);
     const lb = (sr.data?.value as any)?.at;
     setLastBackup(lb ? new Date(lb) : null);
     setLoading(false);
