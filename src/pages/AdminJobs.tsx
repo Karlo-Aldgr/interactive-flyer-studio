@@ -21,6 +21,7 @@ import { jobIsCustomerDeleted } from "@/lib/customerJobs";
 import { checkIsAdmin } from "@/lib/roles";
 import { getJobUploadSignedUrl, jobUploadFilename } from "@/lib/jobUploads";
 import { uploadFlyerAsset } from "@/lib/uploadFlyerAsset";
+import { adminAssignJobEditor, fetchEditorDisplayNames } from "@/lib/editorJobs";
 
 
 const STATUSES = ["new","reviewing","quoted","paid","in_progress","preview_ready","delivered","cancelled"] as const;
