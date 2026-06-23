@@ -504,6 +504,31 @@ export default function AdminJobs() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label>Assigned editor</Label>
+                <Select
+                  value={editing.assigned_editor_id ?? "none"}
+                  onValueChange={async (v) => {
+                    const editorId = v === "none" ? null : v;
+                    const { ok, error } = await adminAssignJobEditor(editing.id, editorId);
+                    if (!ok) return toast.error(error ?? "Could not assign");
+                    toast.success(editorId ? "Editor assigned" : "Editor cleared");
+                    await refresh();
+                    setEditing((prev: any) => prev ? { ...prev, assigned_editor_id: editorId, assigned_at: editorId ? new Date().toISOString() : null } : prev);
+                  }}
+                >
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {editors.map((e) => (
+                      <SelectItem key={e.user_id} value={e.user_id}>{e.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {editing.assigned_at && (
+                  <p className="mt-1 text-xs text-muted-foreground">Since {format(new Date(editing.assigned_at), "PPp")}</p>
+                )}
+              </div>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={ePreviewReady} onChange={(e) => setEPreviewReady(e.target.checked)} />
                 Preview ready (let customer view the linked flyer)
