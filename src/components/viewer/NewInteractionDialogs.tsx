@@ -509,6 +509,9 @@ export function MenuCartUI({
         orderId,
         kind: "menu",
         phone: phone.trim() || undefined,
+        tableNumber: tableNumber.trim() || undefined,
+        customerName: name.trim() || undefined,
+        itemCount: items.reduce((n, it: any) => n + (it.qty || 0), 0),
         placedAt: new Date().toISOString(),
       });
       setLastOrderId(orderId);

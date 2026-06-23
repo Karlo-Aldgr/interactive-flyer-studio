@@ -117,7 +117,7 @@ import { useMenuCart } from "@/store/menuCartStore";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { toast } from "sonner";
 import { getCurrentTrafficSource } from "@/lib/trafficSource";
-import { OrderStatusTracker } from "@/components/viewer/OrderStatusTracker";
+import { OrderStatusTracker, OrderTrackFloatingButton } from "@/components/viewer/OrderStatusTracker";
 import { saveOrderTrack } from "@/lib/customerOrderStatus";
 
 
@@ -2954,6 +2954,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                     kind: "cart",
                     email: checkoutData.email,
                     phone: checkoutData.phone || undefined,
+                    customerName: checkoutData.name || undefined,
+                    itemCount: cart.reduce((n: number, l: any) => n + (l.qty || 1), 0),
                     placedAt: new Date().toISOString(),
                   });
                 }
@@ -3198,6 +3200,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           flyerId={flyer.id}
           open={orderTrackOpen}
           onOpenChange={setOrderTrackOpen}
+        />
+      )}
+      {flyer && !previewMode && (
+        <OrderTrackFloatingButton
+          flyerId={flyer.id}
+          onOpen={() => setOrderTrackOpen(true)}
         />
       )}
     </div>
