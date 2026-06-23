@@ -89,7 +89,23 @@ function normalizeJob(row: Record<string, unknown>, flyer: { public_slug: string
     staff_acknowledged_at: (row.staff_acknowledged_at as string | null) ?? null,
     share_unlocked: (row.share_unlocked as boolean | null) ?? false,
     flyer_active: (row.flyer_active as boolean | null) ?? true,
+    assigned_editor_id: (row.assigned_editor_id as string | null) ?? null,
+    assigned_at: (row.assigned_at as string | null) ?? null,
+    editor_started_at: (row.editor_started_at as string | null) ?? null,
+    assigned_editor_email: null,
   };
+}
+
+async function attachEditorEmails(jobs: UserJob[]): Promise<UserJob[]> {
+  const ids = jobs.map((j) => j.assigned_editor_id).filter(Boolean) as string[];
+  if (ids.length === 0) return jobs;
+  const { fetchEditorDisplayNames } = await import("@/lib/editorJobs");
+  const map = await fetchEditorDisplayNames(ids);
+  return jobs.map((j) =>
+    j.assigned_editor_id
+      ? { ...j, assigned_editor_email: map.get(j.assigned_editor_id) ?? null }
+      : j
+  );
 }
 
 export async function loadUserJobs(userId: string, options: LoadOptions = {}) {
