@@ -400,7 +400,7 @@ export default function AdminJobs() {
                         {j.assigned_editor_id && (
                           <p className="mt-1 text-xs">
                             <span className="font-medium text-primary">Assigned editor:</span>{" "}
-                            <span className="text-muted-foreground">{j.assigned_editor_id}</span>
+                            <span className="text-muted-foreground">{editorEmails.get(j.assigned_editor_id) ?? j.assigned_editor_id}</span>
                             {j.assigned_at && (
                               <span className="text-muted-foreground"> · {format(new Date(j.assigned_at), "PPp")}</span>
                             )}
