@@ -288,23 +288,75 @@ export function OrderStatusTracker({ flyerId, open, onOpenChange, initialTrack }
   );
 }
 
-/** Small floating chip when a non-complete order is stored for this flyer session. */
+/**
+ * Floating chip — visible whenever a non-complete order is stored for this flyer.
+ * Persists across refresh/close via localStorage. Validates with the server and
+ * auto-clears if the order is already complete. Auto-opens the tracker once per
+ * page load unless the user previously dismissed it.
+ */
 export function OrderTrackFloatingButton({
   flyerId,
   onOpen,
+  autoOpen = true,
 }: {
   flyerId: string;
   onOpen: () => void;
+  autoOpen?: boolean;
 }) {
-  const track = loadOrderTrack(flyerId);
+  const [track, setTrack] = useState<StoredOrderTrack | null>(() => loadOrderTrack(flyerId));
+  const [phase, setPhase] = useState<CustomerOrderPhase | null>(null);
+  const autoOpenedRef = useState({ done: false })[0];
+
+  // Re-read on flyer change.
+  useEffect(() => {
+    setTrack(loadOrderTrack(flyerId));
+  }, [flyerId]);
+
+  // Validate with server — clear if completed.
+  useEffect(() => {
+    if (!track) return;
+    let cancelled = false;
+    const check = async () => {
+      const { data, error } = await supabase.functions.invoke("order-status", {
+        body: { kind: track.kind, orderId: track.orderId, email: track.email, phone: track.phone },
+      });
+      if (cancelled) return;
+      const res = data as { customerPhase?: CustomerOrderPhase; error?: string } | null;
+      if (error || res?.error) return;
+      if (res?.customerPhase === "complete") {
+        clearOrderTrack(flyerId);
+        setTrack(null);
+        setPhase(null);
+        return;
+      }
+      setPhase(res?.customerPhase ?? null);
+      // Auto-open once per page load if not dismissed.
+      if (autoOpen && !autoOpenedRef.done && !track.dismissedUntilReturn) {
+        autoOpenedRef.done = true;
+        onOpen();
+      }
+    };
+    void check();
+    const iv = setInterval(check, 20000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [flyerId, track, autoOpen, onOpen, autoOpenedRef]);
+
   if (!track) return null;
+
+  const label = phase && phase !== "pending" ? "Continue order" : "Track my order";
+  const summary = [
+    track.tableNumber ? `Table ${track.tableNumber}` : null,
+    track.itemCount ? `${track.itemCount} item${track.itemCount === 1 ? "" : "s"}` : null,
+  ].filter(Boolean).join(" • ");
+
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-primary/40 bg-card/95 px-4 py-2 text-xs font-medium shadow-elegant backdrop-blur hover:bg-card"
+      className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 flex flex-col items-center rounded-full border border-primary/40 bg-card/95 px-4 py-2 text-xs font-medium shadow-elegant backdrop-blur hover:bg-card"
     >
-      📦 Track my order
+      <span>📦 {label}</span>
+      {summary && <span className="text-[10px] font-normal text-muted-foreground">{summary}</span>}
     </button>
   );
 }
