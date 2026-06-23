@@ -154,8 +154,16 @@ export function OrderStatusTracker({ flyerId, open, onOpenChange, initialTrack }
   const phaseIdx = customerPhaseIndex(phase);
   const steps = track?.kind === "menu" ? MENU_CUSTOMER_PHASES : CART_CUSTOMER_PHASES;
 
+  const handleOpenChange = (v: boolean) => {
+    if (!v && track && data?.customerPhase !== "complete") {
+      // User dismissed while order is still active — suppress auto-reopen.
+      markOrderTrackDismissed(flyerId);
+    }
+    onOpenChange(v);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex items-center justify-between">
