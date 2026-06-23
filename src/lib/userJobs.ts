@@ -30,6 +30,10 @@ export type UserJob = {
   staff_acknowledged_at?: string | null;
   share_unlocked?: boolean | null;
   flyer_active?: boolean | null;
+  assigned_editor_id?: string | null;
+  assigned_at?: string | null;
+  editor_started_at?: string | null;
+  assigned_editor_email?: string | null;
 };
 
 type LoadOptions = {
