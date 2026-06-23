@@ -750,6 +750,18 @@ export function MenuCartUI({
         </DialogContent>
       </Dialog>
 
+      {/* Floating reopen button — visible after an order is placed if the prompt is closed */}
+      {lastOrderId && !postOrderPromptOpen && !open && !trackerOpen && (
+        <button
+          type="button"
+          onClick={() => setPostOrderPromptOpen(true)}
+          className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-full border border-primary/40 bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-elegant hover:bg-primary/90"
+          aria-label="Reopen order options"
+        >
+          🧾 Your order
+        </button>
+      )}
+
       <OrderStatusTracker
         flyerId={flyerId}
         open={trackerOpen}
