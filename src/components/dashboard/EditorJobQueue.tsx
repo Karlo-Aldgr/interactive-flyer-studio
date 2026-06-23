@@ -543,7 +543,7 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                       </a>
                     </Button>
                   )}
-                </div>
+                </fieldset>
                 </>
                 )}
               </div>
