@@ -22,6 +22,7 @@ import { checkIsAdmin } from "@/lib/roles";
 import { getJobUploadSignedUrl, jobUploadFilename } from "@/lib/jobUploads";
 import { uploadFlyerAsset } from "@/lib/uploadFlyerAsset";
 import { adminAssignJobEditor, fetchEditorDisplayNames } from "@/lib/editorJobs";
+import { displayFirstName } from "@/lib/displayName";
 
 
 const STATUSES = ["new","reviewing","quoted","paid","in_progress","preview_ready","delivered","cancelled"] as const;
@@ -372,6 +373,7 @@ export default function AdminJobs() {
                 const isNew = j.status === "new" && (Date.now() - new Date(j.created_at).getTime() < NEW_BADGE_MS);
                 const linkedFlyer = flyers.find((f) => f.id === j.flyer_id);
                 const customerDeleted = jobIsCustomerDeleted(j);
+                const assignedEditorEmail = j.assigned_editor_id ? editorEmails.get(j.assigned_editor_id) : null;
                 return (
                   <Card
                     key={j.id}
@@ -397,15 +399,15 @@ export default function AdminJobs() {
                         <p className="mt-1 text-xs text-muted-foreground">
                           {j.customer_email ?? "—"} · {format(new Date(j.created_at), "PPp")}
                         </p>
-                        {j.assigned_editor_id && (
-                          <p className="mt-1 text-xs">
-                            <span className="font-medium text-primary">Assigned editor:</span>{" "}
-                            <span className="text-muted-foreground">{editorEmails.get(j.assigned_editor_id) ?? j.assigned_editor_id}</span>
-                            {j.assigned_at && (
-                              <span className="text-muted-foreground"> · {format(new Date(j.assigned_at), "PPp")}</span>
-                            )}
-                          </p>
-                        )}
+                        <p className="mt-1 text-xs">
+                          <span className="font-medium text-primary">Editor handling project:</span>{" "}
+                          <span className="text-muted-foreground">
+                            {j.assigned_editor_id ? displayFirstName(assignedEditorEmail) : "Not assigned yet"}
+                          </span>
+                          {j.assigned_at && (
+                            <span className="text-muted-foreground"> · started {format(new Date(j.assigned_at), "PPp")}</span>
+                          )}
+                        </p>
                         {j.brief && <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{j.brief}</p>}
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {(j.selected_actions ?? []).map((id: string) => (
