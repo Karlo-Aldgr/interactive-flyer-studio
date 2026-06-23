@@ -46,6 +46,8 @@ export default function AdminJobs() {
   const [editorEmails, setEditorEmails] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
+  const [editorFilter, setEditorFilter] = useState<string>("all");
+  const [search, setSearch] = useState<string>("");
   const [editing, setEditing] = useState<any | null>(null);
   const [deleteFlyerId, setDeleteFlyerId] = useState<string | null>(null);
   const [lastBackup, setLastBackup] = useState<Date | null>(null);
