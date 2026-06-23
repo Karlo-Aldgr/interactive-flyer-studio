@@ -94,12 +94,62 @@ export default function AdminJobs() {
 
   useEffect(() => { if (isAdmin) refresh(); }, [isAdmin]);
 
-  const filtered = useMemo(() => {
-    if (filter === "all") return jobs;
-    return jobs.filter((j) => j.status === filter);
-  }, [jobs, filter]);
+  // Real-time + polling fallback so admin sees editor updates without manual refresh.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const channel = supabase
+      .channel("admin-jobs-stream")
+      .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
+        refresh();
+      })
+      .subscribe();
+    const interval = window.setInterval(() => { refresh(); }, 20000);
+    return () => {
+      supabase.removeChannel(channel);
+      window.clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
-  const newCount = useMemo(() => jobs.filter((j) => j.status === "new").length, [jobs]);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return jobs.filter((j) => {
+      if (filter !== "all" && j.status !== filter) return false;
+      if (editorFilter !== "all") {
+        if (editorFilter === "unassigned") {
+          if (j.assigned_editor_id) return false;
+        } else if (j.assigned_editor_id !== editorFilter) return false;
+      }
+      if (q) {
+        const hay = `${j.title ?? ""} ${j.customer_email ?? ""} ${j.brief ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [jobs, filter, editorFilter, search]);
+
+  const counts = useMemo(() => {
+    const c = { total: jobs.length, pending: 0, active: 0, review: 0, completed: 0, paid: 0 };
+    for (const j of jobs) {
+      if (j.deleted_at) continue;
+      if (j.status === "new" || j.status === "reviewing") c.pending++;
+      else if (j.status === "in_progress") c.active++;
+      else if (j.status === "preview_ready" || j.status === "quoted") c.review++;
+      else if (j.status === "delivered") c.completed++;
+      else if (j.status === "paid") c.paid++;
+    }
+    return c;
+  }, [jobs]);
+
+  const editorWorkload = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const j of jobs) {
+      if (!j.assigned_editor_id || j.deleted_at) continue;
+      if (["delivered", "paid", "cancelled"].includes(j.status)) continue;
+      m.set(j.assigned_editor_id, (m.get(j.assigned_editor_id) ?? 0) + 1);
+    }
+    return m;
+  }, [jobs]);
 
   const staleJobs = useMemo(
     () =>
