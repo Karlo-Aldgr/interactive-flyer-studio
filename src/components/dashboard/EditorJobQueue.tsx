@@ -45,7 +45,7 @@ import type { Flyer } from "@/types/flyer";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-type JobFilter = "all" | "pending" | "in_progress" | "completed";
+type JobFilter = "available" | "mine" | "all" | "pending" | "in_progress" | "completed";
 
 type EditorJobQueueProps = {
   flyers: Flyer[];
@@ -57,7 +57,9 @@ const PENDING = new Set(["new", "reviewing", "quoted", "paid"]);
 const IN_PROGRESS = new Set(["in_progress", "preview_ready"]);
 const COMPLETED = new Set(["delivered", "cancelled"]);
 
-function matchesFilter(job: UserJob, filter: JobFilter) {
+function matchesFilter(job: UserJob, filter: JobFilter, myId?: string) {
+  if (filter === "available") return !job.assigned_editor_id && !jobIsCustomerDeleted(job) && !COMPLETED.has(job.status);
+  if (filter === "mine") return !!myId && job.assigned_editor_id === myId;
   if (filter === "all") return true;
   if (filter === "pending") return PENDING.has(job.status);
   if (filter === "in_progress") return IN_PROGRESS.has(job.status);
@@ -65,11 +67,14 @@ function matchesFilter(job: UserJob, filter: JobFilter) {
 }
 
 export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
+  const { user } = useAuth();
+  const myId = user?.id;
   const [jobs, setJobs] = useState<UserJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<JobFilter>("all");
+  const [filter, setFilter] = useState<JobFilter>("available");
   const [selected, setSelected] = useState<UserJob | null>(null);
   const [saving, setSaving] = useState(false);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const [eStatus, setEStatus] = useState<JobStatus>("reviewing");
   const [eFlyerId, setEFlyerId] = useState<string>("");
   const [ePreviewReady, setEPreviewReady] = useState(false);
