@@ -9,6 +9,8 @@ import { getJobUploadSignedUrl } from "@/lib/jobUploads";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { displayFirstName } from "@/lib/displayName";
+import { Sparkles } from "lucide-react";
 
 const labelFor = (id: string) => INTERACTIONS.find((i) => i.id === id)?.label ?? id;
 
