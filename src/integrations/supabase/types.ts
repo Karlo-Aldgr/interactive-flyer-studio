@@ -414,12 +414,14 @@ export type Database = {
           customer_updated_at: string | null
           deleted_at: string | null
           deleted_by: string | null
+          flyer_active: boolean
           flyer_id: string | null
           id: string
           payment_link: string | null
           preview_ready: boolean
           price_cents: number | null
           selected_actions: Json
+          share_unlocked: boolean
           staff_acknowledged_at: string | null
           staff_acknowledged_by: string | null
           staff_content_seen_at: string | null
@@ -439,12 +441,14 @@ export type Database = {
           customer_updated_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          flyer_active?: boolean
           flyer_id?: string | null
           id?: string
           payment_link?: string | null
           preview_ready?: boolean
           price_cents?: number | null
           selected_actions?: Json
+          share_unlocked?: boolean
           staff_acknowledged_at?: string | null
           staff_acknowledged_by?: string | null
           staff_content_seen_at?: string | null
@@ -464,12 +468,14 @@ export type Database = {
           customer_updated_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          flyer_active?: boolean
           flyer_id?: string | null
           id?: string
           payment_link?: string | null
           preview_ready?: boolean
           price_cents?: number | null
           selected_actions?: Json
+          share_unlocked?: boolean
           staff_acknowledged_at?: string | null
           staff_acknowledged_by?: string | null
           staff_content_seen_at?: string | null
@@ -1172,6 +1178,10 @@ export type Database = {
       current_user_can_edit: { Args: never; Returns: boolean }
       customer_delete_job: {
         Args: { _job_id: string; _reason: string }
+        Returns: Json
+      }
+      customer_set_flyer_active: {
+        Args: { _active: boolean; _job_id: string }
         Returns: Json
       }
       customer_update_job: {
