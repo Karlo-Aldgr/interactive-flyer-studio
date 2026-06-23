@@ -28,6 +28,8 @@ export type UserJob = {
   customer_updated_at?: string | null;
   staff_content_seen_at?: string | null;
   staff_acknowledged_at?: string | null;
+  share_unlocked?: boolean | null;
+  flyer_active?: boolean | null;
 };
 
 type LoadOptions = {
