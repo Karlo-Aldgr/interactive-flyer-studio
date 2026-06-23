@@ -41,6 +41,8 @@ export default function AdminJobs() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [flyers, setFlyers] = useState<any[]>([]);
+  const [editors, setEditors] = useState<{ user_id: string; email: string }[]>([]);
+  const [editorEmails, setEditorEmails] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [editing, setEditing] = useState<any | null>(null);
