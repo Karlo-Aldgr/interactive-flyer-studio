@@ -387,6 +387,15 @@ export default function AdminJobs() {
                         <p className="mt-1 text-xs text-muted-foreground">
                           {j.customer_email ?? "—"} · {format(new Date(j.created_at), "PPp")}
                         </p>
+                        {j.assigned_editor_id && (
+                          <p className="mt-1 text-xs">
+                            <span className="font-medium text-primary">Assigned editor:</span>{" "}
+                            <span className="text-muted-foreground">{j.assigned_editor_id}</span>
+                            {j.assigned_at && (
+                              <span className="text-muted-foreground"> · {format(new Date(j.assigned_at), "PPp")}</span>
+                            )}
+                          </p>
+                        )}
                         {j.brief && <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{j.brief}</p>}
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {(j.selected_actions ?? []).map((id: string) => (
