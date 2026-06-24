@@ -21,6 +21,8 @@ type Props = {
 export function JobBillingActivationPanel({ job, onJobChanged }: Props) {
   const qrRef = useRef<HTMLDivElement>(null);
   const [toggling, setToggling] = useState(false);
+  const [miniAdBusy, setMiniAdBusy] = useState(false);
+  const miniAdEnabled = !!(job as any).mini_ad_enabled;
 
   const status = getUnifiedStatusLabel(job);
   const price = formatJobPrice(job.price_cents);
