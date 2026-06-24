@@ -24,7 +24,7 @@ function getSessionId() {
   }
 }
 
-export function MiniAdBanner({ flyerId }: Props) {
+export function MiniAdBanner({ flyerId, previewMode = false }: Props) {
   const [ad, setAd] = useState<MiniAd | null>(null);
   const [enabled, setEnabled] = useState(false);
   const impressionLogged = useRef(false);
