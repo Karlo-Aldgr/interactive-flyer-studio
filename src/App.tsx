@@ -33,6 +33,7 @@ const Examples = lazy(() => import("./pages/Examples"));
 const AdminExamples = lazy(() => import("./pages/AdminExamples"));
 const AdminEditors = lazy(() => import("./pages/AdminEditors"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const AdminMiniAds = lazy(() => import("./pages/AdminMiniAds"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
