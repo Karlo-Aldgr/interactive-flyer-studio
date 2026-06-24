@@ -8,6 +8,7 @@ import { Plus, Loader2, CalendarIcon, Briefcase, PartyPopper } from "lucide-reac
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { CustomerDashboard } from "@/components/dashboard/CustomerDashboard";
+import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
 import { EditorDashboard } from "@/components/dashboard/EditorDashboard";
 import { Flyer, FlyerCategory } from "@/types/flyer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
