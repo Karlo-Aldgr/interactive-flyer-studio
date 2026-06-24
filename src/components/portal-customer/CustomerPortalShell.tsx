@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { CustomerPortalSidebar } from "./CustomerPortalSidebar";
 import { displayFirstName } from "@/lib/displayName";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useCanEdit } from "@/hooks/useCanEdit";
 import { cn } from "@/lib/utils";
 
 type Props = {
