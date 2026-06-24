@@ -187,6 +187,18 @@ export default function Dashboard() {
     );
   }
 
+  if (customerView) {
+    return (
+      <CustomerPortalShell maxWidth="4xl">
+        {customerJobsLoading ? (
+          <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        ) : (
+          <CustomerDashboard jobs={customerJobs} userEmail={user?.email} />
+        )}
+      </CustomerPortalShell>
+    );
+  }
+
   if (isAdmin && !studioMode) {
     return <Navigate to="/admin/users" replace />;
   }
