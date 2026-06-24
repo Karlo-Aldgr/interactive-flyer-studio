@@ -8,7 +8,7 @@ type MiniAd = {
   alt_text: string | null;
 };
 
-type Props = { flyerId: string };
+type Props = { flyerId: string; previewMode?: boolean };
 
 function getSessionId() {
   try {
