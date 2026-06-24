@@ -12,6 +12,10 @@ import { toast } from "sonner";
 import { Loader2, Trash2, Plus, Upload, ExternalLink } from "lucide-react";
 import { checkIsAdmin } from "@/lib/roles";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { buildPublicFlyerUrl } from "@/lib/utils";
+
+type FlyerOpt = { id: string; title: string; public_slug: string };
 
 type MiniAd = {
   id: string;
@@ -42,6 +46,8 @@ export default function AdminMiniAds() {
   const [weight, setWeight] = useState(1);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [flyerOpts, setFlyerOpts] = useState<FlyerOpt[]>([]);
+  const [selectedFlyerId, setSelectedFlyerId] = useState<string>("");
 
   useEffect(() => {
     if (!user) return;
@@ -75,7 +81,17 @@ export default function AdminMiniAds() {
   };
 
   useEffect(() => {
-    if (isAdmin) load();
+    if (!isAdmin) return;
+    load();
+    (async () => {
+      const { data } = await supabase
+        .from("flyers")
+        .select("id, title, public_slug")
+        .eq("status", "published")
+        .not("public_slug", "is", null)
+        .order("title", { ascending: true });
+      setFlyerOpts(((data ?? []) as any[]).filter((f) => f.public_slug) as FlyerOpt[]);
+    })();
   }, [isAdmin]);
 
   const handleFile = async (file: File) => {
@@ -118,6 +134,7 @@ export default function AdminMiniAds() {
     setClickUrl("");
     setAltText("");
     setWeight(1);
+    setSelectedFlyerId("");
     if (fileRef.current) fileRef.current.value = "";
     load();
   };
@@ -188,14 +205,49 @@ export default function AdminMiniAds() {
                 />
               )}
             </div>
-            <div>
+            <div className="sm:col-span-2">
+              <Label>Link to a flyer on the network (optional)</Label>
+              <Select
+                value={selectedFlyerId || "__none__"}
+                onValueChange={(v) => {
+                  if (v === "__none__") {
+                    setSelectedFlyerId("");
+                    return;
+                  }
+                  const f = flyerOpts.find((x) => x.id === v);
+                  if (f) {
+                    setSelectedFlyerId(v);
+                    setClickUrl(buildPublicFlyerUrl(f.public_slug));
+                  }
+                }}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Pick a published flyer…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None (use external URL) —</SelectItem>
+                  {flyerOpts.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.title || f.public_slug} · /{f.public_slug}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2">
               <Label htmlFor="click">Click URL</Label>
               <Input
                 id="click"
-                placeholder="https://advertiser.example"
+                placeholder="https://advertiser.example or /f/your-flyer"
                 value={clickUrl}
-                onChange={(e) => setClickUrl(e.target.value)}
+                onChange={(e) => {
+                  setClickUrl(e.target.value);
+                  setSelectedFlyerId("");
+                }}
               />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pick a flyer above to auto-fill, or paste any URL.
+              </p>
             </div>
             <div>
               <Label htmlFor="alt">Alt text</Label>
