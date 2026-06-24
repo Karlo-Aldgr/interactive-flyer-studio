@@ -214,6 +214,36 @@ export function JobBillingActivationPanel({ job, onJobChanged }: Props) {
           </div>
         </>
       )}
+
+      <Separator />
+      <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
+        <div className="flex items-start gap-2">
+          <Megaphone className={miniAdEnabled ? "h-4 w-4 text-primary mt-0.5" : "h-4 w-4 text-muted-foreground mt-0.5"} />
+          <div>
+            <div className="text-sm font-medium">Mini-ad banner add-on</div>
+            <div className="text-xs text-muted-foreground">
+              Show a sponsored banner at the bottom of your flyer. Helps cover hosting costs.
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {miniAdBusy && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+          <Switch
+            checked={miniAdEnabled}
+            disabled={miniAdBusy}
+            onCheckedChange={async (next) => {
+              setMiniAdBusy(true);
+              const { data, error } = await supabase.rpc("customer_set_job_mini_ad" as any, { _job_id: job.id, _enabled: next });
+              setMiniAdBusy(false);
+              if (error) return toast.error(error.message);
+              const r = data as { ok: boolean; error?: string };
+              if (!r?.ok) return toast.error(r?.error || "Failed");
+              toast.success(next ? "Mini-ad banner enabled" : "Mini-ad banner disabled");
+              onJobChanged?.({ mini_ad_enabled: next } as any);
+            }}
+          />
+        </div>
+      </div>
     </Card>
   );
 }
