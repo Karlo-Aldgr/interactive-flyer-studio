@@ -1792,11 +1792,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     })
   );
 
-  // Always render in a mobile-width frame, even on desktop/tablet. The stage
-  // wrapper is centered via `margin: 0 auto`, so larger screens get gutters.
-  const MOBILE_MAX_W = 440;
-  const rawVw = typeof window !== "undefined" ? window.innerWidth : W;
-  const vw = Math.min(rawVw, MOBILE_MAX_W);
+  // Fill the viewport WIDTH edge-to-edge — preserves aspect ratio, allows
+  // vertical scrolling if the flyer is taller than the screen.
+  const vw = typeof window !== "undefined" ? window.innerWidth : W;
   const vh = typeof window !== "undefined" ? window.innerHeight : H;
   // Pages configured as full-page links (e.g. landing → flyer) should fill the
   // entire viewport edge-to-edge rather than letterbox, so the recipient sees
