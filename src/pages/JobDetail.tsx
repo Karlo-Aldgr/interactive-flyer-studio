@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
-import { DashboardPage } from "@/components/dashboard/DashboardPage";
+import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
 import { JobDetailView } from "@/components/dashboard/JobDetailView";
 import { JobBillingActivationPanel } from "@/components/dashboard/JobBillingActivationPanel";
 import { Button } from "@/components/ui/button";
@@ -41,46 +40,44 @@ export default function JobDetail() {
   }, [user, jobId]);
 
   return (
-    <DashboardShell>
-      <DashboardPage maxWidth="3xl">
-        <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2 sm:mb-6">
-          <Link to="/my-jobs">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            All projects
-          </Link>
-        </Button>
+    <CustomerPortalShell maxWidth="3xl">
+      <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2 sm:mb-6">
+        <Link to="/my-jobs">
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          All projects
+        </Link>
+      </Button>
 
-        {loading ? (
-          <div className="flex h-40 items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        ) : notFound ? (
-          <Card className="p-10 text-center">
-            <p className="text-muted-foreground">Project not found.</p>
-            <Button asChild className="mt-4">
-              <Link to="/my-jobs">Back to projects</Link>
-            </Button>
-          </Card>
-        ) : job ? (
-          <div className="space-y-6">
-            {customerCanEditJob(job) && (
-              <div className="flex flex-wrap gap-2">
-                <Button asChild size="sm" variant="outline">
-                  <Link to={`/my-jobs/${job.id}/edit`}>
-                    <Pencil className="mr-1 h-3.5 w-3.5" />
-                    Edit project
-                  </Link>
-                </Button>
-              </div>
-            )}
-            <JobBillingActivationPanel
-              job={job}
-              onJobChanged={(patch) => setJob((j) => (j ? { ...j, ...patch } : j))}
-            />
-            <JobDetailView job={job} />
-          </div>
-        ) : null}
-      </DashboardPage>
-    </DashboardShell>
+      {loading ? (
+        <div className="flex h-40 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      ) : notFound ? (
+        <Card className="p-10 text-center">
+          <p className="text-muted-foreground">Project not found.</p>
+          <Button asChild className="mt-4">
+            <Link to="/my-jobs">Back to projects</Link>
+          </Button>
+        </Card>
+      ) : job ? (
+        <div className="space-y-6">
+          {customerCanEditJob(job) && (
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="outline">
+                <Link to={`/my-jobs/${job.id}/edit`}>
+                  <Pencil className="mr-1 h-3.5 w-3.5" />
+                  Edit project
+                </Link>
+              </Button>
+            </div>
+          )}
+          <JobBillingActivationPanel
+            job={job}
+            onJobChanged={(patch) => setJob((j) => (j ? { ...j, ...patch } : j))}
+          />
+          <JobDetailView job={job} />
+        </div>
+      ) : null}
+    </CustomerPortalShell>
   );
 }
