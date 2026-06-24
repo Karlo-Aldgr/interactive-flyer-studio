@@ -205,14 +205,49 @@ export default function AdminMiniAds() {
                 />
               )}
             </div>
-            <div>
+            <div className="sm:col-span-2">
+              <Label>Link to a flyer on the network (optional)</Label>
+              <Select
+                value={selectedFlyerId || "__none__"}
+                onValueChange={(v) => {
+                  if (v === "__none__") {
+                    setSelectedFlyerId("");
+                    return;
+                  }
+                  const f = flyerOpts.find((x) => x.id === v);
+                  if (f) {
+                    setSelectedFlyerId(v);
+                    setClickUrl(buildPublicFlyerUrl(f.public_slug));
+                  }
+                }}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Pick a published flyer…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None (use external URL) —</SelectItem>
+                  {flyerOpts.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.title || f.public_slug} · /{f.public_slug}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2">
               <Label htmlFor="click">Click URL</Label>
               <Input
                 id="click"
-                placeholder="https://advertiser.example"
+                placeholder="https://advertiser.example or /f/your-flyer"
                 value={clickUrl}
-                onChange={(e) => setClickUrl(e.target.value)}
+                onChange={(e) => {
+                  setClickUrl(e.target.value);
+                  setSelectedFlyerId("");
+                }}
               />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pick a flyer above to auto-fill, or paste any URL.
+              </p>
             </div>
             <div>
               <Label htmlFor="alt">Alt text</Label>
