@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { ExternalLink, Copy, Download, Eye, Lock, Power, Loader2 } from "lucide-react";
+import { ExternalLink, Copy, Download, Eye, Lock, Power, Loader2, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,7 @@ import { buildPublicFlyerUrl } from "@/lib/utils";
 import { formatJobPrice, type UserJob } from "@/lib/userJobs";
 import { getUnifiedStatusLabel } from "@/lib/jobStatus";
 import { customerSetFlyerActive } from "@/lib/customerJobs";
+import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
   job: UserJob;
