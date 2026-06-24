@@ -1354,15 +1354,25 @@ export type Database = {
           user_id: string
         }[]
       }
-      pick_mini_ad: {
-        Args: never
-        Returns: {
-          alt_text: string
-          click_url: string
-          id: string
-          image_url: string
-        }[]
-      }
+      pick_mini_ad:
+        | {
+            Args: never
+            Returns: {
+              alt_text: string
+              click_url: string
+              id: string
+              image_url: string
+            }[]
+          }
+        | {
+            Args: { _exclude_id?: string }
+            Returns: {
+              alt_text: string
+              click_url: string
+              id: string
+              image_url: string
+            }[]
+          }
       place_menu_order: {
         Args: {
           _action_id: string

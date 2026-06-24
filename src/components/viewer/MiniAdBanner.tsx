@@ -35,9 +35,12 @@ export function MiniAdBanner({ flyerId, previewMode = false }: Props) {
       const { data: en } = await supabase.rpc("flyer_mini_ad_enabled", { _flyer_id: flyerId });
       if (cancelled || !en) return;
       setEnabled(true);
-      const { data: picked } = await supabase.rpc("pick_mini_ad");
+      let lastId: string | null = null;
+      try { lastId = localStorage.getItem("mini_ad_last_id"); } catch {}
+      const { data: picked } = await supabase.rpc("pick_mini_ad", { _exclude_id: lastId });
       const row = Array.isArray(picked) ? picked[0] : picked;
       if (cancelled || !row) return;
+      try { localStorage.setItem("mini_ad_last_id", (row as MiniAd).id); } catch {}
       setAd(row as MiniAd);
     })();
     return () => {
