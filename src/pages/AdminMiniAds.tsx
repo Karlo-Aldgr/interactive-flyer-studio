@@ -81,7 +81,17 @@ export default function AdminMiniAds() {
   };
 
   useEffect(() => {
-    if (isAdmin) load();
+    if (!isAdmin) return;
+    load();
+    (async () => {
+      const { data } = await supabase
+        .from("flyers")
+        .select("id, title, public_slug")
+        .eq("status", "published")
+        .not("public_slug", "is", null)
+        .order("title", { ascending: true });
+      setFlyerOpts(((data ?? []) as any[]).filter((f) => f.public_slug) as FlyerOpt[]);
+    })();
   }, [isAdmin]);
 
   const handleFile = async (file: File) => {
