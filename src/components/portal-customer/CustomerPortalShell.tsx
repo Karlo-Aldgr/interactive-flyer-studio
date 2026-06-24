@@ -22,6 +22,7 @@ const maxWidthClass = {
 };
 
 export function CustomerPortalShell({ children, maxWidth = "4xl" }: Props) {
+  const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
   const { canEdit } = useCanEdit();
   const backLink = isAdmin
@@ -29,6 +30,7 @@ export function CustomerPortalShell({ children, maxWidth = "4xl" }: Props) {
     : canEdit
       ? { to: "/dashboard", label: "Back to editor" }
       : null;
+
 
 
   return (
@@ -44,6 +46,14 @@ export function CustomerPortalShell({ children, maxWidth = "4xl" }: Props) {
               </Link>
             </div>
             <div className="flex items-center gap-1 sm:gap-2">
+              {backLink && (
+                <Button asChild variant="outline" size="sm" className="shrink-0 px-2 sm:px-3">
+                  <Link to={backLink.to}>
+                    <ArrowLeft className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">{backLink.label}</span>
+                  </Link>
+                </Button>
+              )}
               <span className="hidden max-w-[10rem] truncate text-sm text-muted-foreground md:inline">
                 {displayFirstName(user?.email)}
               </span>
