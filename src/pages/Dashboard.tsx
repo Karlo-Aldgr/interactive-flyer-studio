@@ -175,31 +175,45 @@ export default function Dashboard() {
     toast.success("Share link copied — paste it anywhere for a rich preview");
   };
 
+  if (adminLoading || accessLoading) {
+    return (
+      <DashboardShell>
+        <DashboardPage maxWidth="4xl">
+          <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        </DashboardPage>
+      </DashboardShell>
+    );
+  }
+
+  if (isAdmin && !studioMode) {
+    return <Navigate to="/admin/users" replace />;
+  }
+
+  if (!canEdit) {
+    return (
+      <CustomerPortalShell maxWidth="4xl">
+        {customerJobsLoading ? (
+          <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        ) : (
+          <CustomerDashboard jobs={customerJobs} userEmail={user?.email} />
+        )}
+      </CustomerPortalShell>
+    );
+  }
+
   return (
     <DashboardShell>
-      <DashboardPage maxWidth={!accessLoading && canEdit ? "6xl" : "4xl"}>
-        {adminLoading || accessLoading ? (
-          <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-        ) : isAdmin && !studioMode ? (
-          <Navigate to="/admin/users" replace />
-        ) : !canEdit ? (
-          customerJobsLoading ? (
-            <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-          ) : (
-            <CustomerDashboard jobs={customerJobs} userEmail={user?.email} />
-          )
-        ) : (
-          <EditorDashboard
-            flyers={flyers}
-            loading={loading}
-            creating={creating}
-            userEmail={user?.email}
-            onOpenCreate={openCreate}
-            onRemove={remove}
-            onDuplicate={duplicate}
-            onCopyLink={copyLink}
-          />
-        )}
+      <DashboardPage maxWidth="6xl">
+        <EditorDashboard
+          flyers={flyers}
+          loading={loading}
+          creating={creating}
+          userEmail={user?.email}
+          onOpenCreate={openCreate}
+          onRemove={remove}
+          onDuplicate={duplicate}
+          onCopyLink={copyLink}
+        />
       </DashboardPage>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
