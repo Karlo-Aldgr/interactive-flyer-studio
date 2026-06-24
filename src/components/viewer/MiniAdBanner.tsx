@@ -48,17 +48,19 @@ export function MiniAdBanner({ flyerId, previewMode = false }: Props) {
   useEffect(() => {
     if (!ad || impressionLogged.current) return;
     impressionLogged.current = true;
+    if (previewMode) return;
     supabase.from("mini_ad_events").insert({
       mini_ad_id: ad.id,
       flyer_id: flyerId,
       event_type: "impression",
       session_id: getSessionId(),
     }).then(() => {});
-  }, [ad, flyerId]);
+  }, [ad, flyerId, previewMode]);
 
   if (!enabled || !ad) return null;
 
   const handleClick = () => {
+    if (previewMode) return;
     supabase.from("mini_ad_events").insert({
       mini_ad_id: ad.id,
       flyer_id: flyerId,
