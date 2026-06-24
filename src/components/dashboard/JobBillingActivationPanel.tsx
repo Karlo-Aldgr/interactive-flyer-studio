@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { ExternalLink, Copy, Download, Eye, Lock, Power, Loader2 } from "lucide-react";
+import { ExternalLink, Copy, Download, Eye, Lock, Power, Loader2, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,7 @@ import { buildPublicFlyerUrl } from "@/lib/utils";
 import { formatJobPrice, type UserJob } from "@/lib/userJobs";
 import { getUnifiedStatusLabel } from "@/lib/jobStatus";
 import { customerSetFlyerActive } from "@/lib/customerJobs";
+import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
   job: UserJob;
@@ -20,6 +21,8 @@ type Props = {
 export function JobBillingActivationPanel({ job, onJobChanged }: Props) {
   const qrRef = useRef<HTMLDivElement>(null);
   const [toggling, setToggling] = useState(false);
+  const [miniAdBusy, setMiniAdBusy] = useState(false);
+  const miniAdEnabled = !!(job as any).mini_ad_enabled;
 
   const status = getUnifiedStatusLabel(job);
   const price = formatJobPrice(job.price_cents);
@@ -211,6 +214,36 @@ export function JobBillingActivationPanel({ job, onJobChanged }: Props) {
           </div>
         </>
       )}
+
+      <Separator />
+      <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
+        <div className="flex items-start gap-2">
+          <Megaphone className={miniAdEnabled ? "h-4 w-4 text-primary mt-0.5" : "h-4 w-4 text-muted-foreground mt-0.5"} />
+          <div>
+            <div className="text-sm font-medium">Mini-ad banner add-on</div>
+            <div className="text-xs text-muted-foreground">
+              Show a sponsored banner at the bottom of your flyer. Helps cover hosting costs.
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {miniAdBusy && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+          <Switch
+            checked={miniAdEnabled}
+            disabled={miniAdBusy}
+            onCheckedChange={async (next) => {
+              setMiniAdBusy(true);
+              const { data, error } = await supabase.rpc("customer_set_job_mini_ad" as any, { _job_id: job.id, _enabled: next });
+              setMiniAdBusy(false);
+              if (error) return toast.error(error.message);
+              const r = data as { ok: boolean; error?: string };
+              if (!r?.ok) return toast.error(r?.error || "Failed");
+              toast.success(next ? "Mini-ad banner enabled" : "Mini-ad banner disabled");
+              onJobChanged?.({ mini_ad_enabled: next } as any);
+            }}
+          />
+        </div>
+      </div>
     </Card>
   );
 }

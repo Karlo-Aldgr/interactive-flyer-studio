@@ -119,6 +119,7 @@ import { toast } from "sonner";
 import { getCurrentTrafficSource } from "@/lib/trafficSource";
 import { OrderStatusTracker, OrderTrackFloatingButton } from "@/components/viewer/OrderStatusTracker";
 import { saveOrderTrack } from "@/lib/customerOrderStatus";
+import { MiniAdBanner } from "@/components/viewer/MiniAdBanner";
 
 
 // Highlight ring shown around tappable layers in the viewer.
@@ -3208,6 +3209,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           onOpen={() => setOrderTrackOpen(true)}
         />
       )}
+      {flyer && !previewMode && <MiniAdBanner flyerId={flyer.id} />}
     </div>
   );
 }

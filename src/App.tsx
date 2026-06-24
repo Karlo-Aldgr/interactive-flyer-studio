@@ -33,6 +33,7 @@ const Examples = lazy(() => import("./pages/Examples"));
 const AdminExamples = lazy(() => import("./pages/AdminExamples"));
 const AdminEditors = lazy(() => import("./pages/AdminEditors"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const AdminMiniAds = lazy(() => import("./pages/AdminMiniAds"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,6 +101,7 @@ const App = () => (
               <Route path="/examples" element={<Examples />} />
               <Route path="/admin/examples" element={<ProtectedRoute><AdminExamples /></ProtectedRoute>} />
               <Route path="/admin/editors" element={<ProtectedRoute><AdminEditors /></ProtectedRoute>} />
+              <Route path="/admin/mini-ads" element={<ProtectedRoute><AdminMiniAds /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
