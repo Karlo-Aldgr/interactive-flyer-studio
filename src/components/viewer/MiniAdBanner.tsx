@@ -8,7 +8,7 @@ type MiniAd = {
   alt_text: string | null;
 };
 
-type Props = { flyerId: string };
+type Props = { flyerId: string; previewMode?: boolean };
 
 function getSessionId() {
   try {
@@ -24,7 +24,7 @@ function getSessionId() {
   }
 }
 
-export function MiniAdBanner({ flyerId }: Props) {
+export function MiniAdBanner({ flyerId, previewMode = false }: Props) {
   const [ad, setAd] = useState<MiniAd | null>(null);
   const [enabled, setEnabled] = useState(false);
   const impressionLogged = useRef(false);
@@ -48,17 +48,19 @@ export function MiniAdBanner({ flyerId }: Props) {
   useEffect(() => {
     if (!ad || impressionLogged.current) return;
     impressionLogged.current = true;
+    if (previewMode) return;
     supabase.from("mini_ad_events").insert({
       mini_ad_id: ad.id,
       flyer_id: flyerId,
       event_type: "impression",
       session_id: getSessionId(),
     }).then(() => {});
-  }, [ad, flyerId]);
+  }, [ad, flyerId, previewMode]);
 
   if (!enabled || !ad) return null;
 
   const handleClick = () => {
+    if (previewMode) return;
     supabase.from("mini_ad_events").insert({
       mini_ad_id: ad.id,
       flyer_id: flyerId,
