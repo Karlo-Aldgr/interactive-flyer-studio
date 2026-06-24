@@ -42,6 +42,9 @@ export function AdminNav({ active, variant = "bar" }: AdminNavProps) {
         <Button asChild variant="outline" size="sm" className="mt-2 w-full justify-start">
           <Link to="/dashboard?studio=1">Editor studio</Link>
         </Button>
+        <Button asChild variant="outline" size="sm" className="w-full justify-start">
+          <Link to="/dashboard?view=customer">Customer view</Link>
+        </Button>
       </>
     );
   }
@@ -72,6 +75,14 @@ export function AdminNav({ active, variant = "bar" }: AdminNavProps) {
         className={cn(isDrawer ? "mt-2 w-full justify-start" : "shrink-0")}
       >
         <Link to="/dashboard?studio=1">Editor studio</Link>
+      </Button>
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className={cn(isDrawer ? "w-full justify-start" : "shrink-0")}
+      >
+        <Link to="/dashboard?view=customer">Customer view</Link>
       </Button>
     </nav>
   );
