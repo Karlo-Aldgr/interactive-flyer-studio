@@ -540,9 +540,28 @@ export default function AdminJobs() {
                           {linkedFlyer && <Link to={`/editor/${linkedFlyer.id}`} onClick={(e) => e.stopPropagation()} className="text-primary underline-offset-2 hover:underline">Open editor</Link>}
                         </div>
                       </div>
-                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button size="sm" onClick={(e) => { e.stopPropagation(); openEdit(j); }}><Pencil className="mr-1 h-3.5 w-3.5" />Manage</Button>
-                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteJob(j.id); }}><Trash2 className="h-4 w-4" /></Button>
+                      <div className="flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={(e) => { e.stopPropagation(); openEdit(j); }}><Pencil className="mr-1 h-3.5 w-3.5" />Manage</Button>
+                          <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteJob(j.id); }}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5"
+                            checked={!!(j as any).mini_ad_enabled}
+                            onChange={async (e) => {
+                              const next = e.target.checked;
+                              const { data, error } = await supabase.rpc("admin_set_job_mini_ad" as any, { _job_id: j.id, _enabled: next });
+                              if (error) return toast.error(error.message);
+                              const r = data as { ok: boolean; error?: string };
+                              if (!r?.ok) return toast.error(r?.error || "Failed");
+                              toast.success(next ? "Mini-ad enabled" : "Mini-ad disabled");
+                              setJobs((prev) => prev.map((x) => x.id === j.id ? { ...x, mini_ad_enabled: next } as any : x));
+                            }}
+                          />
+                          Mini-ad banner
+                        </label>
                       </div>
                     </div>
                   </Card>
