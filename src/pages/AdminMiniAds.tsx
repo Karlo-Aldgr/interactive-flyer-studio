@@ -134,6 +134,7 @@ export default function AdminMiniAds() {
     setClickUrl("");
     setAltText("");
     setWeight(1);
+    setSelectedFlyerId("");
     if (fileRef.current) fileRef.current.value = "";
     load();
   };
