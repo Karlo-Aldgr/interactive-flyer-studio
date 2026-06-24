@@ -46,6 +46,8 @@ export default function AdminMiniAds() {
   const [weight, setWeight] = useState(1);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [flyerOpts, setFlyerOpts] = useState<FlyerOpt[]>([]);
+  const [selectedFlyerId, setSelectedFlyerId] = useState<string>("");
 
   useEffect(() => {
     if (!user) return;
