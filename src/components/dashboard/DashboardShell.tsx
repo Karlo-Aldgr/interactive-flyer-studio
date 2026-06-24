@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, UserCircle } from "lucide-react";
 import { useState } from "react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
