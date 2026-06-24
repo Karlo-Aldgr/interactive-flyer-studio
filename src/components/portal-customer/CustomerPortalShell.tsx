@@ -22,7 +22,14 @@ const maxWidthClass = {
 };
 
 export function CustomerPortalShell({ children, maxWidth = "4xl" }: Props) {
-  const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
+  const { canEdit } = useCanEdit();
+  const backLink = isAdmin
+    ? { to: "/admin/users", label: "Back to admin" }
+    : canEdit
+      ? { to: "/dashboard", label: "Back to editor" }
+      : null;
+
 
   return (
     <SidebarProvider>
