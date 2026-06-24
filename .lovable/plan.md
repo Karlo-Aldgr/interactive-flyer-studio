@@ -1,40 +1,30 @@
-# Customer Portal Shell
+# Role switcher for the customer portal
 
-Bring `/dashboard` (customer view), `/my-jobs`, `/my-jobs/:jobId`, `/my-jobs/:jobId/edit`, and `/submit-job` under a single shell with consistent navigation. Editor/admin dashboards are left untouched.
+Make the customer portal reachable from admin and editor sessions without losing their normal landing pages.
 
-## What gets built
+## Changes
 
-### 1. New `CustomerPortalShell` (`src/components/portal-customer/CustomerPortalShell.tsx`)
-Wraps customer pages with:
-- Top header: logo, user email, sign-out (reusing existing patterns from `DashboardShell`).
-- Collapsible shadcn sidebar (`collapsible="icon"`) with `SidebarTrigger` in the header so it works on mobile + desktop.
-- Sidebar nav items, active route highlighted via `NavLink`:
-  - Overview → `/dashboard`
-  - My projects → `/my-jobs`
-  - New project → `/submit-job`
-  - Examples → `/examples`
-- Content area renders children inside a centered container (mirrors `DashboardPage` widths).
+### 1. `/dashboard?view=customer` renders the customer portal for everyone
+`src/pages/Dashboard.tsx`:
+- Read a new `view` search param. When `view === "customer"`, skip the admin redirect and the `canEdit` editor branch, and always render the `CustomerPortalShell` + `CustomerDashboard` (using the existing `loadUserJobs` flow that already runs for non-editors — extend its effect so it also runs when `view === "customer"`).
+- Existing `studio=1` admin escape hatch stays as-is.
 
-### 2. New `CustomerPortalSidebar` (`src/components/portal-customer/CustomerPortalSidebar.tsx`)
-Implements the shadcn `Sidebar` pattern from the sidebar knowledge: `NavLink` + `useLocation` for active state, icon-only when collapsed, `SidebarMenu` items for the four routes above.
+### 2. "Customer view" link in admin nav
+`src/components/admin/AdminNav.tsx`:
+- Add a second secondary link right after the existing "Editor studio" button, in both the `menu` variant and the `bar/drawer` variant:
+  - Label: "Customer view"
+  - Target: `/dashboard?view=customer`
 
-### 3. Page wiring
-Swap shells in the customer-facing routes to use `CustomerPortalShell`:
-- `src/pages/Dashboard.tsx` — only for the customer branch (`!canEdit && !isAdmin`); editor/admin keep `DashboardShell`. Done by branching at render time.
-- `src/pages/MyJobs.tsx` — replace its bespoke header with `CustomerPortalShell`.
-- `src/pages/JobDetail.tsx` — replace `DashboardShell` with `CustomerPortalShell`.
-- `src/pages/EditJob.tsx` — replace `DashboardShell` with `CustomerPortalShell`.
-- `src/pages/SubmitJob.tsx` — wrap in `CustomerPortalShell` (currently uses its own logo header — remove that).
+### 3. "Customer view" link in editor header
+`src/components/dashboard/DashboardShell.tsx`:
+- Add a small "Customer view" button next to the user email / sign-out for editors (always visible — harmless for admins who already get it via `AdminNav`). Same target: `/dashboard?view=customer`.
 
-No business logic, no data fetching, no schema changes. Pure presentation/navigation refactor.
+### 4. Back-to-your-area link inside the portal
+`src/components/portal-customer/CustomerPortalShell.tsx`:
+- When `useIsAdmin()` or `useCanEdit()` reports the viewer has those roles, show a "Back to admin" or "Back to editor" link in the header (right side, before sign-out). Pure presentation.
+
+No schema, no RLS, no business-logic changes. The portal already renders fine for any signed-in user because `loadUserJobs` is scoped by `user.id`; admins/editors with no jobs will simply see the empty state.
 
 ## Out of scope
-- No changes to editor (`EditorDashboard`) or admin areas.
-- No route renames (URLs stay the same so existing links keep working).
-- No changes to flyer owner portal (`/flyer/:flyerId/portal`, `/p/:token`) — that's a separate operational surface.
-
-## Technical notes
-- Uses existing `@/components/ui/sidebar` (`SidebarProvider`, `Sidebar`, `SidebarTrigger`, etc.).
-- Shell layout: `SidebarProvider` wraps a `flex w-full` container; sidebar on the left, main column has its own sticky header containing `SidebarTrigger` + user controls.
-- Mobile: sidebar uses offcanvas behavior automatically via shadcn; trigger stays in header.
-- Active route detection: `pathname.startsWith(item.url)` for `/my-jobs` so detail/edit pages keep that item highlighted.
+- No new route. `/dashboard?view=customer` is the single entry point.
+- No persisted "preferred view" — switching is per-click.
