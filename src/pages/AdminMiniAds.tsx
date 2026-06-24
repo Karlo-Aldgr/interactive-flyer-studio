@@ -83,7 +83,7 @@ export default function AdminMiniAds() {
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "png";
-      const path = `mini-ads/${user.id}/${Date.now()}.${ext}`;
+      const path = `${user.id}/mini-ads/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("flyer-assets")
         .upload(path, file, { contentType: file.type || "image/png", upsert: false });
