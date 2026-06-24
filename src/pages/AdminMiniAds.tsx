@@ -12,6 +12,10 @@ import { toast } from "sonner";
 import { Loader2, Trash2, Plus, Upload, ExternalLink } from "lucide-react";
 import { checkIsAdmin } from "@/lib/roles";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { buildPublicFlyerUrl } from "@/lib/utils";
+
+type FlyerOpt = { id: string; title: string; public_slug: string };
 
 type MiniAd = {
   id: string;
