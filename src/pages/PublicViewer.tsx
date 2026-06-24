@@ -3209,6 +3209,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           onOpen={() => setOrderTrackOpen(true)}
         />
       )}
+      {flyer && !previewMode && <MiniAdBanner flyerId={flyer.id} />}
     </div>
   );
 }
