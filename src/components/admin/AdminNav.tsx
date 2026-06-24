@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export type AdminNavKey = "users" | "jobs" | "editors" | "analytics" | "contacts" | "examples";
+export type AdminNavKey = "users" | "jobs" | "editors" | "analytics" | "contacts" | "examples" | "mini-ads";
 
 type AdminNavProps = {
   active?: AdminNavKey;
@@ -14,6 +14,7 @@ export const ADMIN_NAV_LINKS: { key: AdminNavKey; to: string; label: string }[] 
   { key: "jobs", to: "/admin/jobs", label: "Jobs" },
   { key: "editors", to: "/admin/editors", label: "Editors" },
   { key: "examples", to: "/admin/examples", label: "Examples" },
+  { key: "mini-ads", to: "/admin/mini-ads", label: "Mini-ads" },
   { key: "analytics", to: "/admin/analytics", label: "Analytics" },
   { key: "contacts", to: "/admin/contacts", label: "Contacts" },
 ];
