@@ -1,38 +1,64 @@
-## Goal
-Reduce perceived load time and runtime lag across the app — especially on the landing page, dashboard, and public viewer.
+## Mini-Ad Add-On for Flyers
 
-## What I'll change
+A sticky bottom banner (like the BIGGS / VET4SUCCESS reference image) shown on the public viewer. Admin manages a pool of ads; the banner only appears on flyers where the add-on is enabled (either paid via job billing or toggled on by admin).
 
-### 1. Smaller initial JavaScript bundle
-- Split vendor chunks in `vite.config.ts` so big libraries (Konva/react-konva, Recharts, Supabase, Radix UI, lucide-react) become separate cached files instead of one giant bundle.
-- Confirm heavy routes already lazy-load (`App.tsx` already does ✅) and lazy-load remaining heavy components inside routes (e.g. `Canvas`, chart panels, `NovelReaderDialog`, `AppointmentBookingDialog`) so they don't load until used.
-- Replace any broad `import * as LucideIcons` patterns with direct imports where reasonable to enable tree-shaking.
+### 1. Database (one migration)
 
-### 2. Faster landing page
-- Defer the `ParallaxBackground` scroll listener work on low-power devices (already respects reduced-motion; add visibility/passive guard).
-- Lazy-load the `PhoneDemoMockup` video below the fold (`loading="lazy"`, `preload="metadata"`, `poster` attr) so the LCP isn't blocked by video bytes.
-- Add `fetchpriority="high"` + `<link rel="preload">` for the true LCP image, and `loading="lazy"` + width/height on all other images to stop layout shift.
+**`mini_ads` table** — the ad inventory managed by admin.
+- `image_url` (text), `click_url` (text), `alt_text` (text)
+- `active` (bool, default true)
+- `weight` (int, default 1) — for weighted random rotation
+- `starts_at`, `ends_at` (nullable timestamptz)
+- standard id/created_at/updated_at
+- RLS: anon/auth `SELECT` where `active = true` and within date window; admin full manage. Grants for anon (read), authenticated, service_role.
 
-### 3. Snappier React rendering
-- Add a global `QueryClient` config with `staleTime` (e.g. 60s) so React Query stops refetching on every focus/mount, which currently causes spinner flashes.
-- Memoize a couple of hot lists (Layers panel, Pages panel) where re-render churn is visible.
+**Extend `jobs` table** with mini-ad add-on flags:
+- `mini_ad_enabled` (bool, default false) — admin toggle / set true when paid
+- `mini_ad_paid` (bool, default false) — set by billing flow
+- (no schema change to `flyers`; we derive enablement by joining the flyer's job)
 
-### 4. Network / asset hygiene
-- Add `<link rel="preconnect">` for the Supabase domain in `index.html` to shave TLS time off the first DB call.
-- Verify images served from Supabase storage request `?width=` transforms where supported, and add `decoding="async"` to large `<img>` tags.
+**Helper view/function** `flyer_mini_ad_enabled(_flyer_id uuid)` → bool, SECURITY DEFINER, returns true if the flyer's job has `mini_ad_enabled = true`. Used by the public viewer (anonymous) without exposing the full jobs row.
 
-### 5. Verify
-- After changes: build, then run a Playwright pass against the landing page and `/dashboard` to capture screenshots and confirm nothing visually regressed, and read console for new warnings.
+**`mini_ad_events` table** — impressions & clicks.
+- `mini_ad_id` (fk), `flyer_id` (fk), `event_type` ('impression'|'click'), `session_id` (text), `created_at`
+- RLS: anon `INSERT` allowed; `SELECT` only for admin and flyer owner. Grants accordingly.
 
-## Out of scope
-- No backend / schema changes.
-- No design or copy changes.
-- No new dependencies (the optimizations use existing tooling).
+### 2. Admin Portal
 
-## Technical notes
-- `vite.config.ts` will get a `build.rollupOptions.output.manualChunks` block.
-- `QueryClient` lives in `src/App.tsx` — config goes there.
-- Index HTML edits are scoped to `<head>` preload/preconnect hints only.
+New page **`/admin/mini-ads`** (added to AdminNav):
+- Table of ads with image preview, click URL, active toggle, weight, schedule, edit/delete.
+- "New ad" dialog — upload image to `flyer-assets` bucket, fill URL + alt + schedule.
+- Stats column: total impressions, total clicks, CTR (aggregated from `mini_ad_events`).
 
-## Question before I start
-Do you want me to also enable route-level prefetching on hover (e.g. dashboard → editor prefetches the editor bundle when the user hovers a flyer card)? It costs a tiny bit of bandwidth but makes navigation feel instant. Default: yes.
+In **`AdminJobs.tsx`** — add a "Mini-Ad" toggle on each job card (calls a new RPC `admin_set_job_mini_ad(_job_id, _enabled)`). Shows current state.
+
+### 3. Job billing add-on
+
+In **`JobBillingActivationPanel.tsx`** — add a checkbox "Add mini-ad banner (+$X)" alongside the existing sharing activation. On checkout/activation, set `mini_ad_enabled = true` and `mini_ad_paid = true`. Price is a constant for now (e.g., $5) — wired into the existing payment flow without new payment infra.
+
+### 4. Public viewer (`PublicViewer.tsx`)
+
+- On mount, call `flyer_mini_ad_enabled(flyerId)`. If false → render nothing.
+- If true → fetch one active ad via a weighted random pick (RPC `pick_mini_ad()` returning a single row from `mini_ads` filtered by active + date window).
+- New component **`MiniAdBanner.tsx`**:
+  - Fixed bottom, full width, ~80px tall on mobile / ~96px on desktop, above any other floating buttons.
+  - `<a href={click_url} target="_blank" rel="noopener sponsored">` wrapping the image.
+  - Small "Ad" pill label in the corner (transparency / compliance).
+  - Logs an `impression` event on first render (debounced per session_id+ad_id), and a `click` event on click — both insert into `mini_ad_events` directly via the anon client.
+- Adjusts viewer bottom padding so the banner doesn't cover content / existing floating "Your order" button (re-position that button above the ad when present).
+
+### 5. Flyer portal stats
+
+In **`FlyerPortalView.tsx`** — add a small "Mini-Ad performance" card (only when add-on is enabled) showing impressions, clicks, CTR for this flyer, pulled via the portal-access edge function (extend it to aggregate `mini_ad_events` for the flyer).
+
+### Files touched
+
+- New migration (mini_ads, mini_ad_events, jobs columns, helper functions, RLS, grants)
+- New: `src/pages/AdminMiniAds.tsx`, `src/components/viewer/MiniAdBanner.tsx`
+- Edited: `src/components/admin/AdminNav.tsx`, `src/pages/AdminJobs.tsx`, `src/components/dashboard/JobBillingActivationPanel.tsx`, `src/pages/PublicViewer.tsx`, `src/components/portal/` (new stats card), `src/components/portal/FlyerPortalView.tsx`, `supabase/functions/portal-access/index.ts`, `src/App.tsx` (route)
+
+### Out of scope (can do later)
+
+- Per-flyer custom ads (only admin network for now, as chosen)
+- Multiple rotating ads per page view (one ad per session for now)
+- Geographic / category targeting
