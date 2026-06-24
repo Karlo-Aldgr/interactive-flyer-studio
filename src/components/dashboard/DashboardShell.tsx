@@ -55,6 +55,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 </Sheet>
               </>
             )}
+            <Button asChild variant="outline" size="sm" className="shrink-0 px-2 sm:px-3">
+              <Link to="/dashboard?view=customer">
+                <UserCircle className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Customer view</span>
+              </Link>
+            </Button>
             <span className="hidden max-w-[8rem] truncate text-sm text-muted-foreground md:inline">
               {displayFirstName(user?.email)}
             </span>
