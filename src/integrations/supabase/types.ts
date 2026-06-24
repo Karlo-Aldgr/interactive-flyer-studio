@@ -420,6 +420,8 @@ export type Database = {
           flyer_active: boolean
           flyer_id: string | null
           id: string
+          mini_ad_enabled: boolean
+          mini_ad_paid: boolean
           payment_link: string | null
           preview_ready: boolean
           price_cents: number | null
@@ -450,6 +452,8 @@ export type Database = {
           flyer_active?: boolean
           flyer_id?: string | null
           id?: string
+          mini_ad_enabled?: boolean
+          mini_ad_paid?: boolean
           payment_link?: string | null
           preview_ready?: boolean
           price_cents?: number | null
@@ -480,6 +484,8 @@ export type Database = {
           flyer_active?: boolean
           flyer_id?: string | null
           id?: string
+          mini_ad_enabled?: boolean
+          mini_ad_paid?: boolean
           payment_link?: string | null
           preview_ready?: boolean
           price_cents?: number | null
@@ -702,6 +708,87 @@ export type Database = {
           id?: string
           sections?: Json
           updated_at?: string
+        }
+        Relationships: []
+      }
+      mini_ad_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          flyer_id: string | null
+          id: string
+          mini_ad_id: string
+          session_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          flyer_id?: string | null
+          id?: string
+          mini_ad_id: string
+          session_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          flyer_id?: string | null
+          id?: string
+          mini_ad_id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mini_ad_events_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mini_ad_events_mini_ad_id_fkey"
+            columns: ["mini_ad_id"]
+            isOneToOne: false
+            referencedRelation: "mini_ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mini_ads: {
+        Row: {
+          active: boolean
+          alt_text: string | null
+          click_url: string
+          created_at: string
+          ends_at: string | null
+          id: string
+          image_url: string
+          starts_at: string | null
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          active?: boolean
+          alt_text?: string | null
+          click_url: string
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          image_url: string
+          starts_at?: string | null
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          active?: boolean
+          alt_text?: string | null
+          click_url?: string
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          image_url?: string
+          starts_at?: string | null
+          updated_at?: string
+          weight?: number
         }
         Relationships: []
       }
@@ -1187,6 +1274,10 @@ export type Database = {
         Args: { _editor_id: string; _job_id: string }
         Returns: Json
       }
+      admin_set_job_mini_ad: {
+        Args: { _enabled: boolean; _job_id: string }
+        Returns: Json
+      }
       archive_menu_orders_daily: { Args: never; Returns: number }
       current_user_can_edit: { Args: never; Returns: boolean }
       customer_delete_job: {
@@ -1195,6 +1286,10 @@ export type Database = {
       }
       customer_set_flyer_active: {
         Args: { _active: boolean; _job_id: string }
+        Returns: Json
+      }
+      customer_set_job_mini_ad: {
+        Args: { _enabled: boolean; _job_id: string }
         Returns: Json
       }
       customer_update_job: {
@@ -1227,6 +1322,7 @@ export type Database = {
         }[]
       }
       ensure_flyer_public_slug: { Args: { _flyer_id: string }; Returns: string }
+      flyer_mini_ad_enabled: { Args: { _flyer_id: string }; Returns: boolean }
       grant_editor_by_email: { Args: { _email: string }; Returns: Json }
       has_role: {
         Args: {
@@ -1256,6 +1352,15 @@ export type Database = {
           roles: string[]
           signed_up_at: string
           user_id: string
+        }[]
+      }
+      pick_mini_ad: {
+        Args: never
+        Returns: {
+          alt_text: string
+          click_url: string
+          id: string
+          image_url: string
         }[]
       }
       place_menu_order: {
