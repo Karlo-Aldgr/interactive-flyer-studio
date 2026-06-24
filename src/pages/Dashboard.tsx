@@ -36,6 +36,7 @@ export default function Dashboard() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const [searchParams] = useSearchParams();
   const studioMode = searchParams.get("studio") === "1";
+  const customerView = searchParams.get("view") === "customer";
 
   const load = async () => {
     setLoading(true);
@@ -79,14 +80,15 @@ export default function Dashboard() {
   useEffect(() => { if (canEdit) load(); }, [canEdit]);
 
   useEffect(() => {
-    if (!user || canEdit || accessLoading) return;
+    if (!user || accessLoading) return;
+    if (canEdit && !customerView) return;
     setCustomerJobsLoading(true);
     loadUserJobs(user.id, { limit: 5 }).then(({ jobs, error }) => {
       if (error) toast.error(error.message || "Could not load your projects");
       else setCustomerJobs(jobs);
       setCustomerJobsLoading(false);
     });
-  }, [user, canEdit, accessLoading]);
+  }, [user, canEdit, accessLoading, customerView]);
 
   const create = async () => {
     if (!user) return;
@@ -182,6 +184,18 @@ export default function Dashboard() {
           <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         </DashboardPage>
       </DashboardShell>
+    );
+  }
+
+  if (customerView) {
+    return (
+      <CustomerPortalShell maxWidth="4xl">
+        {customerJobsLoading ? (
+          <div className="flex h-60 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        ) : (
+          <CustomerDashboard jobs={customerJobs} userEmail={user?.email} />
+        )}
+      </CustomerPortalShell>
     );
   }
 

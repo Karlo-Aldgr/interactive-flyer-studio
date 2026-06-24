@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { CustomerPortalSidebar } from "./CustomerPortalSidebar";
 import { displayFirstName } from "@/lib/displayName";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useCanEdit } from "@/hooks/useCanEdit";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -21,6 +23,15 @@ const maxWidthClass = {
 
 export function CustomerPortalShell({ children, maxWidth = "4xl" }: Props) {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
+  const { canEdit } = useCanEdit();
+  const backLink = isAdmin
+    ? { to: "/admin/users", label: "Back to admin" }
+    : canEdit
+      ? { to: "/dashboard", label: "Back to editor" }
+      : null;
+
+
 
   return (
     <SidebarProvider>
@@ -35,6 +46,14 @@ export function CustomerPortalShell({ children, maxWidth = "4xl" }: Props) {
               </Link>
             </div>
             <div className="flex items-center gap-1 sm:gap-2">
+              {backLink && (
+                <Button asChild variant="outline" size="sm" className="shrink-0 px-2 sm:px-3">
+                  <Link to={backLink.to}>
+                    <ArrowLeft className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">{backLink.label}</span>
+                  </Link>
+                </Button>
+              )}
               <span className="hidden max-w-[10rem] truncate text-sm text-muted-foreground md:inline">
                 {displayFirstName(user?.email)}
               </span>
