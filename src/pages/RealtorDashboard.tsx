@@ -15,6 +15,8 @@ import {
   createListing, deleteListing, duplicateListing, loadListingStats, loadMyListings,
   setListingPublished, type Listing, type ListingStats, type ListingStatus, LISTING_STATUSES,
 } from "@/lib/realtor";
+import { loadMyRealtorProfile, type RealtorProfile } from "@/lib/realtorProfile";
+import { RealtorProfileCard } from "@/components/realtor/RealtorProfileCard";
 import { cn } from "@/lib/utils";
 
 export default function RealtorDashboard() {

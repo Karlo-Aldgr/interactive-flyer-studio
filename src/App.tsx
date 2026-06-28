@@ -40,6 +40,7 @@ const RealtorGalleryIndex = lazy(() => import("./pages/RealtorGalleryIndex"));
 const RealtorApply = lazy(() => import("./pages/RealtorApply"));
 const ForRealtors = lazy(() => import("./pages/ForRealtors"));
 const AdminRealtorApplications = lazy(() => import("./pages/AdminRealtorApplications"));
+const PublicRealtorProfile = lazy(() => import("./pages/PublicRealtorProfile"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,6 +116,7 @@ const App = () => (
               <Route path="/realtor/listing/:listingId" element={<ProtectedRoute><RealtorListing /></ProtectedRoute>} />
               <Route path="/realtor/listing/:listingId/photos" element={<ProtectedRoute><RealtorListing focusPhotos /></ProtectedRoute>} />
               <Route path="/admin/realtor-applications" element={<ProtectedRoute><AdminRealtorApplications /></ProtectedRoute>} />
+              <Route path="/r/:slug" element={<PublicRealtorProfile />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
