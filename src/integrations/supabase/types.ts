@@ -319,42 +319,60 @@ export type Database = {
       }
       flyers: {
         Row: {
+          address: string | null
           auto_unpublish_at: string | null
+          baths: number | null
+          beds: number | null
           category: Database["public"]["Enums"]["flyer_category"]
           created_at: string
           event_date: string | null
           id: string
+          listing_status: string
           owner_id: string
+          price_cents: number | null
           public_slug: string | null
           settings: Json
+          sqft: number | null
           status: Database["public"]["Enums"]["flyer_status"]
           thumbnail_url: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          address?: string | null
           auto_unpublish_at?: string | null
+          baths?: number | null
+          beds?: number | null
           category?: Database["public"]["Enums"]["flyer_category"]
           created_at?: string
           event_date?: string | null
           id?: string
+          listing_status?: string
           owner_id: string
+          price_cents?: number | null
           public_slug?: string | null
           settings?: Json
+          sqft?: number | null
           status?: Database["public"]["Enums"]["flyer_status"]
           thumbnail_url?: string | null
           title?: string
           updated_at?: string
         }
         Update: {
+          address?: string | null
           auto_unpublish_at?: string | null
+          baths?: number | null
+          beds?: number | null
           category?: Database["public"]["Enums"]["flyer_category"]
           created_at?: string
           event_date?: string | null
           id?: string
+          listing_status?: string
           owner_id?: string
+          price_cents?: number | null
           public_slug?: string | null
           settings?: Json
+          sqft?: number | null
           status?: Database["public"]["Enums"]["flyer_status"]
           thumbnail_url?: string | null
           title?: string
@@ -549,6 +567,47 @@ export type Database = {
             columns: ["page_id"]
             isOneToOne: false
             referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_photos: {
+        Row: {
+          caption: string | null
+          category: string
+          created_at: string
+          flyer_id: string
+          id: string
+          position: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          caption?: string | null
+          category?: string
+          created_at?: string
+          flyer_id: string
+          id?: string
+          position?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          caption?: string | null
+          category?: string
+          created_at?: string
+          flyer_id?: string
+          id?: string
+          position?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_photos_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
             referencedColumns: ["id"]
           },
         ]
@@ -1322,8 +1381,11 @@ export type Database = {
         }[]
       }
       ensure_flyer_public_slug: { Args: { _flyer_id: string }; Returns: string }
+      flyer_lead_count: { Args: { _flyer_id: string }; Returns: number }
       flyer_mini_ad_enabled: { Args: { _flyer_id: string }; Returns: boolean }
+      flyer_view_count: { Args: { _flyer_id: string }; Returns: number }
       grant_editor_by_email: { Args: { _email: string }; Returns: Json }
+      grant_realtor_by_email: { Args: { _email: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1392,6 +1454,14 @@ export type Database = {
         }
         Returns: string
       }
+      realtor_listing_stats: {
+        Args: { _flyer_ids: string[] }
+        Returns: {
+          flyer_id: string
+          leads: number
+          views: number
+        }[]
+      }
       regenerate_flyer_portal_credentials: {
         Args: {
           _flyer_id: string
@@ -1404,6 +1474,7 @@ export type Database = {
         }[]
       }
       revoke_editor_by_email: { Args: { _email: string }; Returns: Json }
+      revoke_realtor_by_email: { Args: { _email: string }; Returns: Json }
       staff_acknowledge_job: { Args: { _job_id: string }; Returns: Json }
       staff_mark_job_seen: { Args: { _job_id: string }; Returns: Json }
       unpublish_expired_events: { Args: never; Returns: number }
@@ -1465,10 +1536,10 @@ export type Database = {
         | "menu_add_item"
         | "product_grid"
         | "novel"
-      app_role: "admin" | "user" | "editor"
+      app_role: "admin" | "user" | "editor" | "realtor"
       appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
-      flyer_category: "business" | "event"
+      flyer_category: "business" | "event" | "realtor"
       flyer_status: "draft" | "published"
       job_status:
         | "new"
@@ -1641,10 +1712,10 @@ export const Constants = {
         "product_grid",
         "novel",
       ],
-      app_role: ["admin", "user", "editor"],
+      app_role: ["admin", "user", "editor", "realtor"],
       appointment_status: ["confirmed", "cancelled"],
       event_type: ["view", "click", "submit", "reveal"],
-      flyer_category: ["business", "event"],
+      flyer_category: ["business", "event", "realtor"],
       flyer_status: ["draft", "published"],
       job_status: [
         "new",
