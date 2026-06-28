@@ -1,10 +1,13 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LogOut, Home, Image as ImageIcon, UserCircle } from "lucide-react";
+import { LogOut, Home, Image as ImageIcon, ExternalLink } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { displayFirstName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
+import { loadMyRealtorProfile } from "@/lib/realtorProfile";
+import { toast } from "sonner";
 
 const NAV = [
   { to: "/realtor", label: "Listings", icon: Home, match: (p: string) => p === "/realtor" || p.startsWith("/realtor/listing") === false && p.startsWith("/realtor") },
@@ -14,6 +17,13 @@ const NAV = [
 export function RealtorShell({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const [slug, setSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    loadMyRealtorProfile(user.id).then((p) => setSlug(p?.profile_slug ?? null));
+  }, [user]);
+
 
   return (
     <div className="min-h-screen w-full bg-background">
