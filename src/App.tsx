@@ -34,6 +34,9 @@ const AdminExamples = lazy(() => import("./pages/AdminExamples"));
 const AdminEditors = lazy(() => import("./pages/AdminEditors"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 const AdminMiniAds = lazy(() => import("./pages/AdminMiniAds"));
+const RealtorDashboard = lazy(() => import("./pages/RealtorDashboard"));
+const RealtorListing = lazy(() => import("./pages/RealtorListing"));
+const RealtorGalleryIndex = lazy(() => import("./pages/RealtorGalleryIndex"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -102,6 +105,10 @@ const App = () => (
               <Route path="/admin/examples" element={<ProtectedRoute><AdminExamples /></ProtectedRoute>} />
               <Route path="/admin/editors" element={<ProtectedRoute><AdminEditors /></ProtectedRoute>} />
               <Route path="/admin/mini-ads" element={<ProtectedRoute><AdminMiniAds /></ProtectedRoute>} />
+              <Route path="/realtor" element={<ProtectedRoute><RealtorDashboard /></ProtectedRoute>} />
+              <Route path="/realtor/gallery" element={<ProtectedRoute><RealtorGalleryIndex /></ProtectedRoute>} />
+              <Route path="/realtor/listing/:listingId" element={<ProtectedRoute><RealtorListing /></ProtectedRoute>} />
+              <Route path="/realtor/listing/:listingId/photos" element={<ProtectedRoute><RealtorListing focusPhotos /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
