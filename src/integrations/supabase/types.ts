@@ -1033,24 +1033,39 @@ export type Database = {
       }
       profiles: {
         Row: {
+          brokerage: string | null
           created_at: string
           email: string
           full_name: string | null
+          headline: string | null
           id: string
+          phone: string | null
+          photo_url: string | null
+          profile_slug: string | null
           updated_at: string
         }
         Insert: {
+          brokerage?: string | null
           created_at?: string
           email: string
           full_name?: string | null
+          headline?: string | null
           id: string
+          phone?: string | null
+          photo_url?: string | null
+          profile_slug?: string | null
           updated_at?: string
         }
         Update: {
+          brokerage?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
+          headline?: string | null
           id?: string
+          phone?: string | null
+          photo_url?: string | null
+          profile_slug?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1468,6 +1483,7 @@ export type Database = {
       flyer_lead_count: { Args: { _flyer_id: string }; Returns: number }
       flyer_mini_ad_enabled: { Args: { _flyer_id: string }; Returns: boolean }
       flyer_view_count: { Args: { _flyer_id: string }; Returns: number }
+      get_realtor_public_profile: { Args: { _slug: string }; Returns: Json }
       grant_editor_by_email: { Args: { _email: string }; Returns: Json }
       grant_realtor_by_email: { Args: { _email: string }; Returns: Json }
       has_role: {
@@ -1562,6 +1578,17 @@ export type Database = {
       staff_acknowledge_job: { Args: { _job_id: string }; Returns: Json }
       staff_mark_job_seen: { Args: { _job_id: string }; Returns: Json }
       unpublish_expired_events: { Args: never; Returns: number }
+      update_my_realtor_profile: {
+        Args: {
+          _brokerage?: string
+          _full_name?: string
+          _headline?: string
+          _phone?: string
+          _photo_url?: string
+          _profile_slug?: string
+        }
+        Returns: Json
+      }
       upsert_menu_daily_summary: {
         Args: { p_date: string; p_flyer_id: string }
         Returns: undefined
