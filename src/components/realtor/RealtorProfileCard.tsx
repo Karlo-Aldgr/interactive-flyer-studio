@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Mail, Phone, Building2, Edit3, ExternalLink, UserCircle2 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
+import { Mail, Phone, Building2, Edit3, ExternalLink, UserCircle2, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RealtorProfileEditDialog } from "./RealtorProfileEditDialog";
 import type { RealtorProfile } from "@/lib/realtorProfile";
+
 
 type Props = {
   profile: RealtorProfile;
