@@ -29,6 +29,7 @@ export default function RealtorDashboard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ListingStatus | "all">("all");
+  const [profile, setProfile] = useState<RealtorProfile | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -43,6 +44,9 @@ export default function RealtorDashboard() {
   };
 
   useEffect(() => { if (isRealtor) refresh(); }, [isRealtor]);
+  useEffect(() => {
+    if (isRealtor && user) loadMyRealtorProfile(user.id).then((p) => p && setProfile(p));
+  }, [isRealtor, user]);
 
   const filtered = useMemo(() => {
     return listings.filter((l) => {
