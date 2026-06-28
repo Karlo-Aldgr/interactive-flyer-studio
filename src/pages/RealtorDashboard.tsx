@@ -131,6 +131,16 @@ export default function RealtorDashboard() {
           }
         />
 
+        {profile && (
+          <RealtorProfileCard
+            profile={profile}
+            activeCount={counts.active ?? 0}
+            onSaved={setProfile}
+          />
+        )}
+
+
+
         <div className="grid gap-3 sm:grid-cols-4">
           <SummaryCard label="Total listings" value={listings.length} />
           <SummaryCard label="Active" value={counts.active ?? 0} />
