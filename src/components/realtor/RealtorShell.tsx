@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LogOut, Home, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { LogOut, Home, Image as ImageIcon, Eye } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -60,13 +60,13 @@ export function RealtorShell({ children }: { children: React.ReactNode }) {
               onClick={!slug ? () => toast.error("Set a public URL in Edit profile to enable your public page") : undefined}
             >
               {slug ? (
-                <Link to={`/r/${slug}`} target="_blank" rel="noreferrer">
-                  <ExternalLink className="h-4 w-4 sm:mr-1" />
+                <Link to={`/r/${slug}`}>
+                  <Eye className="h-4 w-4 sm:mr-1" />
                   <span className="hidden sm:inline">Public page</span>
                 </Link>
               ) : (
                 <span>
-                  <ExternalLink className="h-4 w-4 sm:mr-1" />
+                  <Eye className="h-4 w-4 sm:mr-1" />
                   <span className="hidden sm:inline">Public page</span>
                 </span>
               )}
