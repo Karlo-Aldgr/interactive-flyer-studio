@@ -1,10 +1,13 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LogOut, Home, Image as ImageIcon, UserCircle } from "lucide-react";
+import { LogOut, Home, Image as ImageIcon, ExternalLink } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { displayFirstName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
+import { loadMyRealtorProfile } from "@/lib/realtorProfile";
+import { toast } from "sonner";
 
 const NAV = [
   { to: "/realtor", label: "Listings", icon: Home, match: (p: string) => p === "/realtor" || p.startsWith("/realtor/listing") === false && p.startsWith("/realtor") },
@@ -14,6 +17,13 @@ const NAV = [
 export function RealtorShell({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const [slug, setSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    loadMyRealtorProfile(user.id).then((p) => setSlug(p?.profile_slug ?? null));
+  }, [user]);
+
 
   return (
     <div className="min-h-screen w-full bg-background">
@@ -43,12 +53,25 @@ export function RealtorShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard?view=customer">
-                <UserCircle className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Customer view</span>
-              </Link>
+            <Button
+              asChild={!!slug}
+              variant="outline"
+              size="sm"
+              onClick={!slug ? () => toast.error("Set a public URL in Edit profile to enable your public page") : undefined}
+            >
+              {slug ? (
+                <Link to={`/r/${slug}`} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Public page</span>
+                </Link>
+              ) : (
+                <span>
+                  <ExternalLink className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Public page</span>
+                </span>
+              )}
             </Button>
+
             <span className="hidden text-sm text-muted-foreground md:inline">{displayFirstName(user?.email)}</span>
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="h-4 w-4 sm:mr-1" />

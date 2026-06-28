@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Mail, Phone, Building2, Edit3, ExternalLink, UserCircle2 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
+import { Mail, Phone, Building2, Edit3, ExternalLink, UserCircle2, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RealtorProfileEditDialog } from "./RealtorProfileEditDialog";
 import type { RealtorProfile } from "@/lib/realtorProfile";
+
 
 type Props = {
   profile: RealtorProfile;
@@ -72,6 +75,35 @@ export function RealtorProfileCard({ profile, activeCount, onSaved }: Props) {
           )}
         </div>
       </div>
+
+      {publicUrl && (
+        <div className="flex flex-col items-start gap-3 border-t border-border bg-muted/30 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="rounded-lg border border-border bg-background p-2">
+              <QRCodeCanvas value={publicUrl} size={96} includeMargin={false} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your public page</div>
+              <a href={publicUrl} target="_blank" rel="noreferrer" className="break-all text-sm font-medium text-primary hover:underline">
+                {publicUrl}
+              </a>
+              <div className="mt-1 text-xs text-muted-foreground">Scan or share to send buyers to your listings page.</div>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              navigator.clipboard.writeText(publicUrl);
+              toast.success("Link copied");
+            }}
+          >
+            <Copy className="mr-1 h-3.5 w-3.5" />Copy link
+          </Button>
+        </div>
+      )}
+
+
 
       <RealtorProfileEditDialog
         open={editOpen}
