@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Trash2, UserPlus } from "lucide-react";
+import { Loader2, Trash2, UserPlus, Home } from "lucide-react";
 import { checkIsAdmin } from "@/lib/roles";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 
@@ -21,6 +21,8 @@ export default function AdminEditors() {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [realtorEmail, setRealtorEmail] = useState("");
+  const [realtorBusy, setRealtorBusy] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -93,6 +95,40 @@ export default function AdminEditors() {
             </Button>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">The email must belong to an account that has already signed up.</p>
+        </Card>
+
+        <Card className="mt-6 p-6">
+          <Label htmlFor="realtor-email" className="flex items-center gap-2">
+            <Home className="h-4 w-4 text-primary" />Grant realtor access by email
+          </Label>
+          <p className="mt-1 text-xs text-muted-foreground">Realtors get their own portal at <code>/realtor</code> with listings and a per-property photo gallery.</p>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            <Input
+              id="realtor-email"
+              type="email"
+              placeholder="agent@example.com"
+              value={realtorEmail}
+              onChange={(e) => setRealtorEmail(e.target.value)}
+            />
+            <Button
+              variant="outline"
+              disabled={realtorBusy || !realtorEmail.trim()}
+              onClick={async () => {
+                setRealtorBusy(true);
+                const { data, error } = await supabase.rpc("grant_realtor_by_email" as any, { _email: realtorEmail.trim() });
+                setRealtorBusy(false);
+                if (error) return toast.error(error.message);
+                const res = data as { ok: boolean; error?: string };
+                if (!res?.ok) return toast.error(res?.error ?? "Failed");
+                toast.success("Realtor access granted");
+                setRealtorEmail("");
+              }}
+              className="w-full sm:w-auto"
+            >
+              {realtorBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Home className="mr-2 h-4 w-4" />}
+              Grant realtor
+            </Button>
+          </div>
         </Card>
 
         <h2 className="mt-10 font-display text-xl font-semibold">Editors ({editors.length})</h2>
