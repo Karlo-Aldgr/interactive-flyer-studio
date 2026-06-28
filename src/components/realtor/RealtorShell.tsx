@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LogOut, Home, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { LogOut, Home, Image as ImageIcon, Eye } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
