@@ -15,6 +15,8 @@ import {
   createListing, deleteListing, duplicateListing, loadListingStats, loadMyListings,
   setListingPublished, type Listing, type ListingStats, type ListingStatus, LISTING_STATUSES,
 } from "@/lib/realtor";
+import { loadMyRealtorProfile, type RealtorProfile } from "@/lib/realtorProfile";
+import { RealtorProfileCard } from "@/components/realtor/RealtorProfileCard";
 import { cn } from "@/lib/utils";
 
 export default function RealtorDashboard() {
@@ -27,6 +29,7 @@ export default function RealtorDashboard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ListingStatus | "all">("all");
+  const [profile, setProfile] = useState<RealtorProfile | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -41,6 +44,9 @@ export default function RealtorDashboard() {
   };
 
   useEffect(() => { if (isRealtor) refresh(); }, [isRealtor]);
+  useEffect(() => {
+    if (isRealtor && user) loadMyRealtorProfile(user.id).then((p) => p && setProfile(p));
+  }, [isRealtor, user]);
 
   const filtered = useMemo(() => {
     return listings.filter((l) => {
@@ -124,6 +130,16 @@ export default function RealtorDashboard() {
             </Button>
           }
         />
+
+        {profile && (
+          <RealtorProfileCard
+            profile={profile}
+            activeCount={counts.active ?? 0}
+            onSaved={setProfile}
+          />
+        )}
+
+
 
         <div className="grid gap-3 sm:grid-cols-4">
           <SummaryCard label="Total listings" value={listings.length} />
