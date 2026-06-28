@@ -20,6 +20,7 @@ import { cn, buildPublicFlyerUrl } from "@/lib/utils";
 import { useCanEdit } from "@/hooks/useCanEdit";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { loadUserJobs, type UserJob } from "@/lib/userJobs";
+import { useIsRealtor } from "@/hooks/useIsRealtor";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -34,6 +35,7 @@ export default function Dashboard() {
   const [newEventDate, setNewEventDate] = useState<Date | undefined>(undefined);
   const { canEdit, loading: accessLoading } = useCanEdit();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { isRealtor, loading: realtorLoading } = useIsRealtor();
   const [searchParams] = useSearchParams();
   const studioMode = searchParams.get("studio") === "1";
   const customerView = searchParams.get("view") === "customer";
@@ -177,7 +179,7 @@ export default function Dashboard() {
     toast.success("Share link copied — paste it anywhere for a rich preview");
   };
 
-  if (adminLoading || accessLoading) {
+  if (adminLoading || accessLoading || realtorLoading) {
     return (
       <DashboardShell>
         <DashboardPage maxWidth="4xl">
@@ -201,6 +203,10 @@ export default function Dashboard() {
 
   if (isAdmin && !studioMode) {
     return <Navigate to="/admin/users" replace />;
+  }
+
+  if (isRealtor && !studioMode && !isAdmin) {
+    return <Navigate to="/realtor" replace />;
   }
 
   if (!canEdit) {
