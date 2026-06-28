@@ -100,7 +100,8 @@ export function RealtorShell({ children }: { children: React.ReactNode }) {
               asChild={!!slug}
               variant="outline"
               size="sm"
-              onClick={!slug ? () => toast.error("Set a public URL in Edit profile to enable your public page") : undefined}
+              disabled={ensuring}
+              onClick={!slug ? handlePublicPage : undefined}
             >
               {slug ? (
                 <Link to={`/r/${slug}`}>
@@ -110,7 +111,7 @@ export function RealtorShell({ children }: { children: React.ReactNode }) {
               ) : (
                 <span>
                   <Eye className="h-4 w-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Public page</span>
+                  <span className="hidden sm:inline">{ensuring ? "Opening…" : "Public page"}</span>
                 </span>
               )}
             </Button>
