@@ -63,8 +63,9 @@ export default function AdminRealtorApplications() {
   const pendingCount = apps.filter((a) => a.status === "pending").length;
 
   return (
-    <AdminLayout title="Realtor applications">
+    <AdminLayout active="realtor-applications">
       <div className="space-y-4">
+        <h1 className="text-2xl font-bold">Realtor applications</h1>
         <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
           <TabsList>
             <TabsTrigger value="pending">Pending {pendingCount > 0 && <Badge className="ml-2" variant="secondary">{pendingCount}</Badge>}</TabsTrigger>
