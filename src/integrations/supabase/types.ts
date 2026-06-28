@@ -1055,6 +1055,60 @@ export type Database = {
         }
         Relationships: []
       }
+      realtor_applications: {
+        Row: {
+          applicant_user_id: string | null
+          brokerage: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          license_number: string | null
+          message: string | null
+          phone: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          applicant_user_id?: string | null
+          brokerage?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          license_number?: string | null
+          message?: string | null
+          phone?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          applicant_user_id?: string | null
+          brokerage?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          license_number?: string | null
+          message?: string | null
+          phone?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       subscribers: {
         Row: {
           created_at: string
@@ -1331,6 +1385,36 @@ export type Database = {
     Functions: {
       admin_assign_job_editor: {
         Args: { _editor_id: string; _job_id: string }
+        Returns: Json
+      }
+      admin_list_realtor_applications: {
+        Args: never
+        Returns: {
+          applicant_user_id: string | null
+          brokerage: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          license_number: string | null
+          message: string | null
+          phone: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          website: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "realtor_applications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      admin_review_realtor_application: {
+        Args: { _application_id: string; _decision: string; _notes?: string }
         Returns: Json
       }
       admin_set_job_mini_ad: {
