@@ -251,7 +251,11 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} TapThatFlyer
+        <div className="space-x-4">
+          <Link to="/for-realtors" className="hover:text-foreground underline">For Realtors</Link>
+          <Link to="/examples" className="hover:text-foreground underline">Examples</Link>
+        </div>
+        <div className="mt-2">© {new Date().getFullYear()} TapThatFlyer</div>
       </footer>
 
       {/* Interaction details dialog */}
