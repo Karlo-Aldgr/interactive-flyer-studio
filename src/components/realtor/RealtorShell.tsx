@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Home, Image as ImageIcon, Eye } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { displayFirstName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
-import { loadMyRealtorProfile } from "@/lib/realtorProfile";
+import { loadMyRealtorProfile, updateMyRealtorProfile } from "@/lib/realtorProfile";
 import { toast } from "sonner";
 
 const NAV = [
@@ -14,15 +14,58 @@ const NAV = [
   { to: "/realtor/gallery", label: "Photo Gallery", icon: ImageIcon, match: (p: string) => p.startsWith("/realtor/gallery") || p.includes("/photos") },
 ];
 
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40) || `realtor-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export function RealtorShell({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [slug, setSlug] = useState<string | null>(null);
+  const [ensuring, setEnsuring] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     loadMyRealtorProfile(user.id).then((p) => setSlug(p?.profile_slug ?? null));
   }, [user]);
+
+  const handlePublicPage = async (e: React.MouseEvent) => {
+    if (slug) return; // Link handles navigation
+    e.preventDefault();
+    if (!user || ensuring) return;
+    setEnsuring(true);
+    try {
+      const profile = await loadMyRealtorProfile(user.id);
+      const base = profile?.full_name || user.email?.split("@")[0] || "realtor";
+      let candidate = slugify(base);
+      // Try a few times in case of collision
+      for (let i = 0; i < 5; i++) {
+        try {
+          await updateMyRealtorProfile({ profile_slug: candidate });
+          setSlug(candidate);
+          navigate(`/r/${candidate}`);
+          return;
+        } catch (err: any) {
+          if (String(err?.message || "").toLowerCase().includes("taken") || String(err?.message || "").toLowerCase().includes("slug")) {
+            candidate = `${slugify(base)}-${Math.random().toString(36).slice(2, 5)}`;
+            continue;
+          }
+          throw err;
+        }
+      }
+      toast.error("Could not auto-create your public URL. Open Edit profile to set one.");
+    } catch (err: any) {
+      toast.error(err?.message || "Could not open public page");
+    } finally {
+      setEnsuring(false);
+    }
+  };
+
 
 
   return (
@@ -57,7 +100,8 @@ export function RealtorShell({ children }: { children: React.ReactNode }) {
               asChild={!!slug}
               variant="outline"
               size="sm"
-              onClick={!slug ? () => toast.error("Set a public URL in Edit profile to enable your public page") : undefined}
+              disabled={ensuring}
+              onClick={!slug ? handlePublicPage : undefined}
             >
               {slug ? (
                 <Link to={`/r/${slug}`}>
@@ -67,7 +111,7 @@ export function RealtorShell({ children }: { children: React.ReactNode }) {
               ) : (
                 <span>
                   <Eye className="h-4 w-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Public page</span>
+                  <span className="hidden sm:inline">{ensuring ? "Opening…" : "Public page"}</span>
                 </span>
               )}
             </Button>
