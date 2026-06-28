@@ -53,12 +53,25 @@ export function RealtorShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard?view=customer">
-                <UserCircle className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Customer view</span>
-              </Link>
+            <Button
+              asChild={!!slug}
+              variant="outline"
+              size="sm"
+              onClick={!slug ? () => toast.error("Set a public URL in Edit profile to enable your public page") : undefined}
+            >
+              {slug ? (
+                <Link to={`/r/${slug}`} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Public page</span>
+                </Link>
+              ) : (
+                <span>
+                  <ExternalLink className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Public page</span>
+                </span>
+              )}
             </Button>
+
             <span className="hidden text-sm text-muted-foreground md:inline">{displayFirstName(user?.email)}</span>
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="h-4 w-4 sm:mr-1" />
