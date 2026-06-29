@@ -166,6 +166,35 @@ export async function updateListingPhoto(id: string, patch: Partial<Pick<Listing
   if (error) throw error;
 }
 
+export async function uploadStagedListingPhoto(args: {
+  ownerId: string;
+  flyerId: string;
+  photoId: string;
+  file: File;
+}): Promise<string> {
+  const ext = (args.file.name.split(".").pop() ?? "jpg").toLowerCase();
+  const path = `${args.ownerId}/listings/${args.flyerId}/staged-${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from("flyer-assets")
+    .upload(path, args.file, { cacheControl: "31536000", upsert: false });
+  if (upErr) throw upErr;
+  const { data: pub } = supabase.storage.from("flyer-assets").getPublicUrl(path);
+  const { error } = await supabase
+    .from("listing_photos" as any)
+    .update({ staged_url: pub.publicUrl })
+    .eq("id", args.photoId);
+  if (error) throw error;
+  return pub.publicUrl;
+}
+
+export async function clearStagedListingPhoto(id: string) {
+  const { error } = await supabase
+    .from("listing_photos" as any)
+    .update({ staged_url: null })
+    .eq("id", id);
+  if (error) throw error;
+}
+
 export async function reorderListingPhotos(orderedIds: string[]) {
   // Batch position updates
   await Promise.all(
