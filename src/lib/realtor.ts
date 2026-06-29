@@ -123,7 +123,7 @@ export async function setListingPublished(id: string, publish: boolean) {
 export async function loadListingPhotos(flyerId: string): Promise<ListingPhoto[]> {
   const { data, error } = await supabase
     .from("listing_photos" as any)
-    .select("id, flyer_id, url, category, position, caption")
+    .select("id, flyer_id, url, category, position, caption, staged_url")
     .eq("flyer_id", flyerId)
     .order("position", { ascending: true });
   if (error) {
@@ -150,7 +150,7 @@ export async function uploadListingPhoto(args: {
   const { data, error } = await supabase
     .from("listing_photos" as any)
     .insert([{ flyer_id: args.flyerId, url: pub.publicUrl, category: args.category, position: args.position }])
-    .select("id, flyer_id, url, category, position, caption")
+    .select("id, flyer_id, url, category, position, caption, staged_url")
     .single();
   if (error) throw error;
   return data as any as ListingPhoto;
@@ -161,7 +161,7 @@ export async function deleteListingPhoto(id: string) {
   if (error) throw error;
 }
 
-export async function updateListingPhoto(id: string, patch: Partial<Pick<ListingPhoto, "category" | "caption" | "position">>) {
+export async function updateListingPhoto(id: string, patch: Partial<Pick<ListingPhoto, "category" | "caption" | "position" | "staged_url">>) {
   const { error } = await supabase.from("listing_photos" as any).update(patch).eq("id", id);
   if (error) throw error;
 }
