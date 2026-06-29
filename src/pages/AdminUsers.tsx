@@ -192,6 +192,16 @@ export default function AdminUsers() {
                         <Link to="/admin/editors">Grant editor</Link>
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant={row.roles.includes("realtor") ? "secondary" : "outline"}
+                      disabled={pendingId === row.user_id}
+                      onClick={() => toggleRealtor(row)}
+                    >
+                      <Home className="mr-1 h-3.5 w-3.5" />
+                      {row.roles.includes("realtor") ? "Revoke realtor" : "Grant realtor"}
+                    </Button>
+
                   </div>
                 </div>
               </Card>
