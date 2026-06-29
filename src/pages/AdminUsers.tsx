@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Link, Navigate } from "react-router-dom";
-import { Briefcase, FileText, Loader2, Users } from "lucide-react";
+import { Briefcase, FileText, Loader2, Users, Home } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,15 +11,17 @@ import { checkIsAdmin } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { supabase } from "@/integrations/supabase/client";
 
-type UserFilter = "all" | "customers" | "editors" | "admins";
+type UserFilter = "all" | "customers" | "editors" | "admins" | "realtors";
 
 function matchesFilter(user: AdminUserRow, filter: UserFilter) {
   const roles = user.roles ?? [];
   if (filter === "all") return true;
   if (filter === "admins") return roles.includes("admin");
   if (filter === "editors") return roles.includes("editor");
-  return !roles.includes("admin") && !roles.includes("editor");
+  if (filter === "realtors") return roles.includes("realtor");
+  return !roles.includes("admin") && !roles.includes("editor") && !roles.includes("realtor");
 }
 
 export default function AdminUsers() {
@@ -65,8 +67,25 @@ export default function AdminUsers() {
     { value: "all", label: "All", count: counts.all },
     { value: "customers", label: "Customers", count: counts.customers },
     { value: "editors", label: "Editors", count: counts.editors },
+    { value: "realtors", label: "Realtors", count: users.filter((u) => matchesFilter(u, "realtors")).length },
     { value: "admins", label: "Admins", count: counts.admins },
   ];
+
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const toggleRealtor = async (row: AdminUserRow) => {
+    const isRealtor = row.roles.includes("realtor");
+    setPendingId(row.user_id);
+    const rpc = isRealtor ? "revoke_realtor_by_email" : "grant_realtor_by_email";
+    const { data, error } = await supabase.rpc(rpc, { _email: row.email });
+    setPendingId(null);
+    if (error || (data as any)?.ok === false) {
+      toast.error((error?.message) || (data as any)?.error || "Failed");
+      return;
+    }
+    toast.success(isRealtor ? "Realtor role revoked" : "Realtor role granted");
+    refresh();
+  };
+
 
   if (authLoading || isAdmin === null) {
     return (
@@ -173,6 +192,16 @@ export default function AdminUsers() {
                         <Link to="/admin/editors">Grant editor</Link>
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant={row.roles.includes("realtor") ? "secondary" : "outline"}
+                      disabled={pendingId === row.user_id}
+                      onClick={() => toggleRealtor(row)}
+                    >
+                      <Home className="mr-1 h-3.5 w-3.5" />
+                      {row.roles.includes("realtor") ? "Revoke realtor" : "Grant realtor"}
+                    </Button>
+
                   </div>
                 </div>
               </Card>
