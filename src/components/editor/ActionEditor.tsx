@@ -106,6 +106,8 @@ function isValid(draft: LayerAction | null): boolean {
       return !!(p.products && p.products.length > 0 && p.products.every((x) => x.name?.trim()));
     case "novel":
       return !!(p.novelChapters && p.novelChapters.length > 0);
+    case "realtor_gallery":
+      return !!p.realtorListingId;
     default: return true;
   }
 }
@@ -165,6 +167,76 @@ function AssetUpload({
 }
 
 const MAX_GALLERY_IMAGES = 12;
+
+function RealtorGalleryPicker({
+  listingId, title, onChange, onTitleChange,
+}: {
+  listingId?: string;
+  title: string;
+  onChange: (id: string) => void;
+  onTitleChange: (v: string) => void;
+}) {
+  const [listings, setListings] = useState<{ id: string; title: string; address: string | null; status: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("flyers")
+        .select("id, title, address, status")
+        .eq("category", "realtor" as any)
+        .order("updated_at", { ascending: false });
+      if (!cancelled) {
+        setListings((data as any[]) ?? []);
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const selected = listings.find((l) => l.id === listingId);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] text-muted-foreground">
+        Links to a realtor listing's standalone photo gallery. The listing must be <strong>published</strong> for public viewers to load photos.
+      </p>
+      <div>
+        <Label className="text-xs">Listing</Label>
+        {loading ? (
+          <p className="mt-1 text-[11px] text-muted-foreground">Loading listings…</p>
+        ) : listings.length === 0 ? (
+          <p className="mt-1 text-[11px] text-muted-foreground">No realtor listings found. Create one in the Realtor portal first.</p>
+        ) : (
+          <Select value={listingId || ""} onValueChange={onChange}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Choose a listing" /></SelectTrigger>
+            <SelectContent>
+              {listings.map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {(l.address || l.title)} {l.status !== "published" ? " (draft)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {selected && selected.status !== "published" && (
+          <p className="mt-1 text-[11px] text-amber-600">This listing is not published — public viewers won't see the photos until you publish it.</p>
+        )}
+      </div>
+      <div>
+        <Label className="text-xs">Gallery title (optional)</Label>
+        <Input
+          className="mt-1"
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          placeholder="e.g. Property photos"
+        />
+      </div>
+    </div>
+  );
+}
+
 
 function GalleryEditor({
   title, images, onTitleChange, onImagesChange, depth,
@@ -2143,6 +2215,15 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
             onTitleChange={(v) => update({ galleryTitle: v })}
             onImagesChange={(imgs) => update({ galleryImages: imgs })}
             depth={depth}
+          />
+        )}
+
+        {type === "realtor_gallery" && (
+          <RealtorGalleryPicker
+            listingId={p.realtorListingId}
+            title={p.realtorGalleryTitle || ""}
+            onChange={(id) => update({ realtorListingId: id })}
+            onTitleChange={(v) => update({ realtorGalleryTitle: v })}
           />
         )}
 

@@ -33,7 +33,8 @@ export type ActionType =
   | "business_rating"
   | "menu_add_item"
   | "product_grid"
-  | "novel";
+  | "novel"
+  | "realtor_gallery";
 
 export interface NovelChapter {
   id: string;
@@ -231,6 +232,10 @@ export interface ActionPayload {
   // gallery — photo gallery popup (up to 12 images)
   galleryTitle?: string;
   galleryImages?: GalleryImage[];
+
+  // realtor_gallery — links to a realtor listing's standalone photo gallery
+  realtorListingId?: string;
+  realtorGalleryTitle?: string;
 
   // survey
   surveyTitle?: string;
