@@ -116,6 +116,10 @@ export async function duplicateListing(listing: Listing, ownerId: string) {
 export async function setListingPublished(id: string, publish: boolean) {
   const { error } = await supabase.from("flyers").update({ status: publish ? "published" : "draft" } as any).eq("id", id);
   if (error) throw error;
+  if (publish) {
+    // Ensure a public slug exists so the listing is openable from the public profile.
+    await supabase.rpc("ensure_flyer_public_slug" as any, { _flyer_id: id });
+  }
 }
 
 // ---------- Photos ----------
