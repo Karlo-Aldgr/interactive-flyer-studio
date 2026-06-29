@@ -267,11 +267,20 @@ export function PhotoGalleryModule({ flyerId, ownerId, canDownload = true }: Pro
         <DialogContent className="max-w-[100vw] border-0 bg-black/95 p-0 sm:max-w-[100vw] sm:rounded-none [&>button]:hidden">
           {viewerIndex != null && filtered[viewerIndex] && (
             <div className="relative flex h-[100dvh] w-full items-center justify-center">
-              <img
-                src={filtered[viewerIndex].url}
-                alt={filtered[viewerIndex].caption ?? ""}
-                className="max-h-full max-w-full object-contain"
-              />
+              {filtered[viewerIndex].staged_url ? (
+                <BeforeAfter
+                  beforeUrl={filtered[viewerIndex].url}
+                  afterUrl={filtered[viewerIndex].staged_url!}
+                  alt={filtered[viewerIndex].caption ?? ""}
+                />
+              ) : (
+                <img
+                  src={filtered[viewerIndex].url}
+                  alt={filtered[viewerIndex].caption ?? ""}
+                  className="max-h-full max-w-full object-contain"
+                />
+              )}
+
               <Button size="icon" variant="ghost" onClick={closeViewer} className="absolute right-3 top-3 text-white hover:bg-white/10">
                 <X className="h-5 w-5" />
               </Button>
