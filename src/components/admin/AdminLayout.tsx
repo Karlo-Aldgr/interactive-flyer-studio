@@ -27,7 +27,7 @@ export function AdminLayout({ active, children }: AdminLayoutProps) {
   return (
     <div className="min-h-screen w-full min-w-0 bg-background">
       <header className="sticky top-0 z-40 border-b border-border/50 bg-background/95 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 w-full max-w-6xl min-w-0 items-center justify-between gap-2 px-4 sm:h-16 sm:px-6">
+      <div className="mx-auto flex min-h-14 w-full max-w-6xl min-w-0 items-center justify-between gap-2 px-4 py-2 sm:min-h-16 sm:px-6 sm:py-3">
           <div className="flex shrink-0 items-center gap-2">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
@@ -53,7 +53,7 @@ export function AdminLayout({ active, children }: AdminLayoutProps) {
             </Badge>
           </div>
 
-          <div className="hidden min-w-0 flex-1 justify-end overflow-x-auto lg:flex">
+          <div className="hidden min-w-0 flex-1 justify-end overflow-x-auto py-1 lg:flex">
             <AdminNav active={active} variant="bar" />
           </div>
 
