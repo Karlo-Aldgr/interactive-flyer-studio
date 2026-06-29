@@ -32,6 +32,7 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   menu_add_item: "Add menu item to cart",
   product_grid: "Multi-product shop",
   novel: "Novel / Story (paid chapters)",
+  realtor_gallery: "Realtor gallery (link to listing photos)",
 };
 
 /** Grouped action types for the editor dropdown (excludes internal menu_add_item). */
@@ -42,7 +43,7 @@ export const ACTION_TYPE_GROUPS: { label: string; types: ActionType[] }[] = [
   },
   {
     label: "Media & display",
-    types: ["popup", "video", "audio", "gallery", "reveal", "air_messages"],
+    types: ["popup", "video", "audio", "gallery", "realtor_gallery", "reveal", "air_messages"],
   },
   {
     label: "Contact",
