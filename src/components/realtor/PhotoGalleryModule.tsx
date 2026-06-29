@@ -3,7 +3,7 @@ import { DndContext, DragEndEvent, PointerSensor, closestCenter, useSensor, useS
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  ChevronLeft, ChevronRight, Download, Loader2, Pause, Play, Trash2, Upload, X,
+  ChevronLeft, ChevronRight, Download, Loader2, Pause, Play, Sparkles, Trash2, Upload, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,12 +16,15 @@ import {
   PHOTO_CATEGORIES,
   type ListingPhoto,
   type PhotoCategory,
+  clearStagedListingPhoto,
   deleteListingPhoto,
   loadListingPhotos,
   reorderListingPhotos,
   updateListingPhoto,
   uploadListingPhoto,
+  uploadStagedListingPhoto,
 } from "@/lib/realtor";
+
 
 type Props = {
   flyerId: string;
