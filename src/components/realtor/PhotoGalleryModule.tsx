@@ -331,12 +331,16 @@ function SortablePhotoTile({
   onDelete,
   onCategoryChange,
   onCaptionBlur,
+  onStagedUpload,
+  onStagedClear,
 }: {
   photo: ListingPhoto;
   onOpen: () => void;
   onDelete: () => void;
   onCategoryChange: (c: PhotoCategory) => void;
   onCaptionBlur: (c: string) => void;
+  onStagedUpload: (file: File) => void;
+  onStagedClear: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: photo.id });
   const style = {
@@ -345,6 +349,8 @@ function SortablePhotoTile({
     opacity: isDragging ? 0.6 : 1,
   };
   const [caption, setCaption] = useState(photo.caption ?? "");
+  const stagedInputRef = useRef<HTMLInputElement>(null);
+  const hasStaged = !!photo.staged_url;
 
   return (
     <Card ref={setNodeRef} style={style} className="overflow-hidden">
@@ -357,6 +363,11 @@ function SortablePhotoTile({
           className="absolute inset-0 cursor-zoom-in"
           aria-label="Open fullscreen"
         />
+        {hasStaged && (
+          <span className="pointer-events-none absolute left-1 top-1 flex items-center gap-1 rounded-full bg-primary/90 px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+            <Sparkles className="h-3 w-3" /> Staged
+          </span>
+        )}
         <Button
           size="icon"
           variant="ghost"
@@ -381,7 +392,76 @@ function SortablePhotoTile({
           placeholder="Caption"
           className="h-7 text-xs"
         />
+        <input
+          ref={stagedInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onStagedUpload(f);
+            if (stagedInputRef.current) stagedInputRef.current.value = "";
+          }}
+        />
+        {hasStaged ? (
+          <div className="flex gap-1">
+            <Button size="sm" variant="outline" className="h-7 flex-1 text-[11px]" onClick={() => stagedInputRef.current?.click()}>
+              <Upload className="mr-1 h-3 w-3" /> Replace staged
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 text-[11px] text-destructive" onClick={onStagedClear}>
+              Remove
+            </Button>
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 w-full text-[11px]"
+            onClick={() => stagedInputRef.current?.click()}
+          >
+            <Sparkles className="mr-1 h-3 w-3" /> Add staged (before/after)
+          </Button>
+        )}
       </div>
     </Card>
   );
 }
+
+function BeforeAfter({ beforeUrl, afterUrl, alt }: { beforeUrl: string; afterUrl: string; alt: string }) {
+  const [pct, setPct] = useState(50);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+
+  const move = (clientX: number) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    setPct((x / rect.width) * 100);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative h-full max-h-full w-full max-w-full select-none overflow-hidden"
+      onPointerDown={(e) => { dragging.current = true; (e.target as Element).setPointerCapture?.(e.pointerId); move(e.clientX); }}
+      onPointerMove={(e) => { if (dragging.current) move(e.clientX); }}
+      onPointerUp={() => { dragging.current = false; }}
+    >
+      <img src={beforeUrl} alt={alt} className="absolute inset-0 m-auto max-h-full max-w-full object-contain" draggable={false} />
+      <div className="absolute inset-0" style={{ clipPath: `inset(0 0 0 ${pct}%)` }}>
+        <img src={afterUrl} alt={alt} className="absolute inset-0 m-auto max-h-full max-w-full object-contain" draggable={false} />
+      </div>
+      <div className="pointer-events-none absolute inset-y-0" style={{ left: `${pct}%`, transform: "translateX(-50%)" }}>
+        <div className="h-full w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.6)]" />
+        <div className="absolute top-1/2 left-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-black shadow-lg">
+          <ChevronLeft className="h-4 w-4" />
+          <ChevronRight className="-ml-1 h-4 w-4" />
+        </div>
+      </div>
+      <div className="pointer-events-none absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 text-xs font-medium text-white">Before</div>
+      <div className="pointer-events-none absolute right-3 top-3 rounded bg-black/60 px-2 py-0.5 text-xs font-medium text-white">After</div>
+    </div>
+  );
+}
+
