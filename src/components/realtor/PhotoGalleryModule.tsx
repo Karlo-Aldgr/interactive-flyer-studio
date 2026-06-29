@@ -110,6 +110,26 @@ export function PhotoGalleryModule({ flyerId, ownerId, canDownload = true }: Pro
     try { await updateListingPhoto(id, { caption: caption || null as any }); } catch (e: any) { toast.error(e.message); }
   };
 
+  const handleStagedUpload = async (photoId: string, file: File) => {
+    try {
+      const url = await uploadStagedListingPhoto({ ownerId, flyerId, photoId, file });
+      setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, staged_url: url } : p)));
+      toast.success("Staged photo added");
+    } catch (e: any) {
+      toast.error(e.message || "Upload failed");
+    }
+  };
+
+  const handleStagedClear = async (photoId: string) => {
+    try {
+      await clearStagedListingPhoto(photoId);
+      setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, staged_url: null } : p)));
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const handleDragEnd = async (e: DragEndEvent) => {
