@@ -785,6 +785,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [showHitboxes, setShowHitboxes] = useState(false);
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
   const [gallery, setGallery] = useState<LayerAction | null>(null);
+  const [realtorGallery, setRealtorGallery] = useState<LayerAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
@@ -1371,6 +1372,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         break;
       case "gallery":
         setGallery(a);
+        break;
+      case "realtor_gallery":
+        setRealtorGallery(a);
         break;
       case "product_grid":
         setProductGrid(a);
@@ -2657,6 +2661,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         onClose={() => setGallery(null)}
         onZoom={(url) => setZoomImage(url)}
         onRunAction={(a) => { setGallery(null); executeAction(a, null); }}
+      />
+
+      {/* Realtor listing gallery */}
+      <RealtorGalleryDialog
+        action={realtorGallery}
+        onClose={() => setRealtorGallery(null)}
+        onZoom={(url) => setZoomImage(url)}
       />
 
       {/* Air messages render inline inside the stage wrapper above (no floating overlay). */}
