@@ -251,8 +251,11 @@ export function PhotoGalleryModule({ flyerId, ownerId, canDownload = true }: Pro
                     onDelete={() => handleDelete(p.id)}
                     onCategoryChange={(cat) => handleCategoryChange(p.id, cat)}
                     onCaptionBlur={(cap) => handleCaptionBlur(p.id, cap)}
+                    onStagedUpload={(file) => handleStagedUpload(p.id, file)}
+                    onStagedClear={() => handleStagedClear(p.id)}
                   />
                 ))}
+
               </div>
             </SortableContext>
           </DndContext>
