@@ -342,6 +342,27 @@ export function TopBar({ saving }: Props) {
   }
 
   function applyResize() {
+    if (mode === "fit") {
+      const pages = useEditorStore.getState().pages;
+      let best: { w: number; h: number; area: number } | null = null;
+      for (const p of pages) {
+        for (const l of p.layers) {
+          if (l.type !== "image") continue;
+          const w = Math.round(l.size.width);
+          const h = Math.round(l.size.height);
+          const area = w * h;
+          if (!best || area > best.area) best = { w, h, area };
+        }
+      }
+      if (!best) {
+        toast.error("No image layers found to fit to.");
+        return;
+      }
+      setCanvasSize(best.w, best.h, "resize");
+      toast.success(`Canvas fit to largest image: ${best.w} × ${best.h}`);
+      setResizeOpen(false);
+      return;
+    }
     const target = useCustom
       ? { w: Math.max(100, customW), h: Math.max(100, customH) }
       : { w: PRESETS[Number(presetIdx)].w, h: PRESETS[Number(presetIdx)].h };
@@ -566,6 +587,7 @@ export function TopBar({ saving }: Props) {
                   <SelectItem value="resize">Resize canvas only (keep layers in place)</SelectItem>
                   <SelectItem value="scale">Scale layers to fit new size</SelectItem>
                   <SelectItem value="crop">Crop — drag region on canvas</SelectItem>
+                  <SelectItem value="fit">Fit to media size (use largest image)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
