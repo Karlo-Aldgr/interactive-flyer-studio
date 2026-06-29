@@ -67,8 +67,25 @@ export default function AdminUsers() {
     { value: "all", label: "All", count: counts.all },
     { value: "customers", label: "Customers", count: counts.customers },
     { value: "editors", label: "Editors", count: counts.editors },
+    { value: "realtors", label: "Realtors", count: users.filter((u) => matchesFilter(u, "realtors")).length },
     { value: "admins", label: "Admins", count: counts.admins },
   ];
+
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const toggleRealtor = async (row: AdminUserRow) => {
+    const isRealtor = row.roles.includes("realtor");
+    setPendingId(row.user_id);
+    const rpc = isRealtor ? "revoke_realtor_by_email" : "grant_realtor_by_email";
+    const { data, error } = await supabase.rpc(rpc, { _email: row.email });
+    setPendingId(null);
+    if (error || (data as any)?.ok === false) {
+      toast.error((error?.message) || (data as any)?.error || "Failed");
+      return;
+    }
+    toast.success(isRealtor ? "Realtor role revoked" : "Realtor role granted");
+    refresh();
+  };
+
 
   if (authLoading || isAdmin === null) {
     return (
