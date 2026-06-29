@@ -37,7 +37,9 @@ export type ListingPhoto = {
   category: PhotoCategory;
   position: number;
   caption: string | null;
+  staged_url: string | null;
 };
+
 
 export const LISTING_STATUSES: { value: ListingStatus; label: string; className: string }[] = [
   { value: "active", label: "Active", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
