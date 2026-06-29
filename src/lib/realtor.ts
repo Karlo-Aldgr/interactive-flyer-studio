@@ -37,7 +37,9 @@ export type ListingPhoto = {
   category: PhotoCategory;
   position: number;
   caption: string | null;
+  staged_url: string | null;
 };
+
 
 export const LISTING_STATUSES: { value: ListingStatus; label: string; className: string }[] = [
   { value: "active", label: "Active", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
@@ -121,7 +123,7 @@ export async function setListingPublished(id: string, publish: boolean) {
 export async function loadListingPhotos(flyerId: string): Promise<ListingPhoto[]> {
   const { data, error } = await supabase
     .from("listing_photos" as any)
-    .select("id, flyer_id, url, category, position, caption")
+    .select("id, flyer_id, url, category, position, caption, staged_url")
     .eq("flyer_id", flyerId)
     .order("position", { ascending: true });
   if (error) {
@@ -148,7 +150,7 @@ export async function uploadListingPhoto(args: {
   const { data, error } = await supabase
     .from("listing_photos" as any)
     .insert([{ flyer_id: args.flyerId, url: pub.publicUrl, category: args.category, position: args.position }])
-    .select("id, flyer_id, url, category, position, caption")
+    .select("id, flyer_id, url, category, position, caption, staged_url")
     .single();
   if (error) throw error;
   return data as any as ListingPhoto;
@@ -159,8 +161,37 @@ export async function deleteListingPhoto(id: string) {
   if (error) throw error;
 }
 
-export async function updateListingPhoto(id: string, patch: Partial<Pick<ListingPhoto, "category" | "caption" | "position">>) {
+export async function updateListingPhoto(id: string, patch: Partial<Pick<ListingPhoto, "category" | "caption" | "position" | "staged_url">>) {
   const { error } = await supabase.from("listing_photos" as any).update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+export async function uploadStagedListingPhoto(args: {
+  ownerId: string;
+  flyerId: string;
+  photoId: string;
+  file: File;
+}): Promise<string> {
+  const ext = (args.file.name.split(".").pop() ?? "jpg").toLowerCase();
+  const path = `${args.ownerId}/listings/${args.flyerId}/staged-${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from("flyer-assets")
+    .upload(path, args.file, { cacheControl: "31536000", upsert: false });
+  if (upErr) throw upErr;
+  const { data: pub } = supabase.storage.from("flyer-assets").getPublicUrl(path);
+  const { error } = await supabase
+    .from("listing_photos" as any)
+    .update({ staged_url: pub.publicUrl })
+    .eq("id", args.photoId);
+  if (error) throw error;
+  return pub.publicUrl;
+}
+
+export async function clearStagedListingPhoto(id: string) {
+  const { error } = await supabase
+    .from("listing_photos" as any)
+    .update({ staged_url: null })
+    .eq("id", id);
   if (error) throw error;
 }
 

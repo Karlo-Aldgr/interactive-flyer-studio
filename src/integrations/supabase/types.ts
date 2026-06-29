@@ -579,6 +579,7 @@ export type Database = {
           flyer_id: string
           id: string
           position: number
+          staged_url: string | null
           updated_at: string
           url: string
         }
@@ -589,6 +590,7 @@ export type Database = {
           flyer_id: string
           id?: string
           position?: number
+          staged_url?: string | null
           updated_at?: string
           url: string
         }
@@ -599,6 +601,7 @@ export type Database = {
           flyer_id?: string
           id?: string
           position?: number
+          staged_url?: string | null
           updated_at?: string
           url?: string
         }
