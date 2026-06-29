@@ -587,6 +587,7 @@ export function TopBar({ saving }: Props) {
                   <SelectItem value="resize">Resize canvas only (keep layers in place)</SelectItem>
                   <SelectItem value="scale">Scale layers to fit new size</SelectItem>
                   <SelectItem value="crop">Crop — drag region on canvas</SelectItem>
+                  <SelectItem value="fit">Fit to media size (use largest image)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
