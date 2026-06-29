@@ -3274,12 +3274,13 @@ function RealtorGalleryDialog({
   const title = action?.payload.realtorGalleryTitle || "Property photos";
   const [photos, setPhotos] = useState<{ id: string; url: string; staged_url: string | null; caption: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [stagedPhoto, setStagedPhoto] = useState<{ url: string; staged_url: string; caption: string | null } | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!open || !listingId) return;
     setLoading(true);
     setPhotos([]);
+    setViewerIndex(null);
     (async () => {
       const { data } = await supabase
         .from("listing_photos" as any)
@@ -3290,6 +3291,10 @@ function RealtorGalleryDialog({
       setLoading(false);
     })();
   }, [open, listingId]);
+
+  const prev = () => setViewerIndex((i) => (i == null ? i : (i - 1 + photos.length) % photos.length));
+  const next = () => setViewerIndex((i) => (i == null ? i : (i + 1) % photos.length));
+  const current = viewerIndex != null ? photos[viewerIndex] : null;
 
   return (
     <>
@@ -3305,17 +3310,11 @@ function RealtorGalleryDialog({
             <p className="text-sm text-muted-foreground">No photos available for this listing yet.</p>
           ) : (
             <div className="grid max-h-[70vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
-              {photos.map((im) => (
+              {photos.map((im, idx) => (
                 <button
                   key={im.id}
                   type="button"
-                  onClick={() => {
-                    if (im.staged_url) {
-                      setStagedPhoto({ url: im.url, staged_url: im.staged_url, caption: im.caption });
-                    } else {
-                      onZoom(im.url);
-                    }
-                  }}
+                  onClick={() => setViewerIndex(idx)}
                   className="group relative overflow-hidden rounded border border-border bg-muted/30 text-left"
                 >
                   <img
@@ -3339,19 +3338,38 @@ function RealtorGalleryDialog({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!stagedPhoto} onOpenChange={(v) => { if (!v) setStagedPhoto(null); }}>
-        <DialogContent className="max-w-5xl p-2 sm:p-4">
-          <DialogHeader>
-            <DialogTitle>Before / After</DialogTitle>
-            <DialogDescription className="sr-only">Drag the slider to compare before and after staging</DialogDescription>
+      <Dialog open={viewerIndex != null} onOpenChange={(v) => { if (!v) setViewerIndex(null); }}>
+        <DialogContent className="max-w-[100vw] border-0 bg-black/95 p-0 sm:max-w-[100vw] sm:rounded-none [&>button]:hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>Property photo viewer</DialogDescription>
           </DialogHeader>
-          {stagedPhoto && (
-            <div className="relative h-[70vh] w-full overflow-hidden rounded bg-black">
-              <ViewerBeforeAfter beforeUrl={stagedPhoto.url} afterUrl={stagedPhoto.staged_url} alt={stagedPhoto.caption || ""} />
+          {current && (
+            <div className="relative flex h-[100dvh] w-full items-center justify-center">
+              {current.staged_url ? (
+                <ViewerBeforeAfter beforeUrl={current.url} afterUrl={current.staged_url} alt={current.caption || ""} />
+              ) : (
+                <img src={current.url} alt={current.caption || ""} className="max-h-full max-w-full object-contain" />
+              )}
+
+              <Button size="icon" variant="ghost" onClick={() => setViewerIndex(null)} className="absolute right-3 top-3 text-white hover:bg-white/10">
+                <LucideIcons.X className="h-5 w-5" />
+              </Button>
+              {photos.length > 1 && (
+                <>
+                  <Button size="icon" variant="ghost" onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 text-white hover:bg-white/10">
+                    <ChevronLeft className="h-6 w-6" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={next} className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:bg-white/10">
+                    <ChevronRight className="h-6 w-6" />
+                  </Button>
+                </>
+              )}
+              <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-sm text-white">
+                <span className="opacity-80">{(viewerIndex ?? 0) + 1} / {photos.length}</span>
+                {current.caption && <span className="ml-2 max-w-[40ch] truncate">{current.caption}</span>}
+              </div>
             </div>
-          )}
-          {stagedPhoto?.caption && (
-            <p className="text-center text-sm text-muted-foreground">{stagedPhoto.caption}</p>
           )}
         </DialogContent>
       </Dialog>
