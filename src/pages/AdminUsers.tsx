@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Link, Navigate } from "react-router-dom";
-import { Briefcase, FileText, Loader2, Users } from "lucide-react";
+import { Briefcase, FileText, Loader2, Users, Home } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,15 +11,17 @@ import { checkIsAdmin } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { supabase } from "@/integrations/supabase/client";
 
-type UserFilter = "all" | "customers" | "editors" | "admins";
+type UserFilter = "all" | "customers" | "editors" | "admins" | "realtors";
 
 function matchesFilter(user: AdminUserRow, filter: UserFilter) {
   const roles = user.roles ?? [];
   if (filter === "all") return true;
   if (filter === "admins") return roles.includes("admin");
   if (filter === "editors") return roles.includes("editor");
-  return !roles.includes("admin") && !roles.includes("editor");
+  if (filter === "realtors") return roles.includes("realtor");
+  return !roles.includes("admin") && !roles.includes("editor") && !roles.includes("realtor");
 }
 
 export default function AdminUsers() {
