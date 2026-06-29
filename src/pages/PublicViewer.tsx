@@ -3310,29 +3310,41 @@ function RealtorGalleryDialog({
             <p className="text-sm text-muted-foreground">No photos available for this listing yet.</p>
           ) : (
             <div className="grid max-h-[70vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
-              {photos.map((im, idx) => (
-                <button
-                  key={im.id}
-                  type="button"
-                  onClick={() => setViewerIndex(idx)}
-                  className="group relative overflow-hidden rounded border border-border bg-muted/30 text-left"
-                >
-                  <img
-                    src={im.url}
-                    alt={im.caption || ""}
-                    loading="lazy"
-                    className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
-                  />
-                  {im.staged_url && (
-                    <span className="absolute left-1 top-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
-                      Before / After
-                    </span>
-                  )}
-                  {im.caption && (
-                    <div className="px-2 py-1 text-xs text-muted-foreground">{im.caption}</div>
-                  )}
-                </button>
-              ))}
+              {photos.map((im, idx) => {
+                const staged = !!im.staged_url;
+                const onlyStaged = staged && photos.length === 1;
+                return (
+                  <button
+                    key={im.id}
+                    type="button"
+                    onClick={() => setViewerIndex(idx)}
+                    className={`group relative overflow-hidden rounded border bg-muted/30 text-left ${
+                      staged ? "border-primary/60 ring-2 ring-primary/60" : "border-border"
+                    } ${onlyStaged ? "animate-pulse" : ""}`}
+                  >
+                    <img
+                      src={im.url}
+                      alt={im.caption || ""}
+                      loading="lazy"
+                      className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
+                    />
+                    {staged && (
+                      <>
+                        <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground shadow">
+                          <span className="inline-block h-2.5 w-2.5 rounded-full bg-gradient-to-r from-white to-black ring-1 ring-white/60" />
+                          Before / After
+                        </span>
+                        <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 text-[11px] font-medium text-white">
+                          Tap to compare
+                        </span>
+                      </>
+                    )}
+                    {im.caption && !staged && (
+                      <div className="px-2 py-1 text-xs text-muted-foreground">{im.caption}</div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </DialogContent>
