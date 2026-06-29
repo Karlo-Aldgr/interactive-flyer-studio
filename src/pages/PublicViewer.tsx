@@ -3310,29 +3310,41 @@ function RealtorGalleryDialog({
             <p className="text-sm text-muted-foreground">No photos available for this listing yet.</p>
           ) : (
             <div className="grid max-h-[70vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
-              {photos.map((im, idx) => (
-                <button
-                  key={im.id}
-                  type="button"
-                  onClick={() => setViewerIndex(idx)}
-                  className="group relative overflow-hidden rounded border border-border bg-muted/30 text-left"
-                >
-                  <img
-                    src={im.url}
-                    alt={im.caption || ""}
-                    loading="lazy"
-                    className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
-                  />
-                  {im.staged_url && (
-                    <span className="absolute left-1 top-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
-                      Before / After
-                    </span>
-                  )}
-                  {im.caption && (
-                    <div className="px-2 py-1 text-xs text-muted-foreground">{im.caption}</div>
-                  )}
-                </button>
-              ))}
+              {photos.map((im, idx) => {
+                const staged = !!im.staged_url;
+                const onlyStaged = staged && photos.length === 1;
+                return (
+                  <button
+                    key={im.id}
+                    type="button"
+                    onClick={() => setViewerIndex(idx)}
+                    className={`group relative overflow-hidden rounded border bg-muted/30 text-left ${
+                      staged ? "border-primary/60 ring-2 ring-primary/60" : "border-border"
+                    } ${onlyStaged ? "animate-pulse" : ""}`}
+                  >
+                    <img
+                      src={im.url}
+                      alt={im.caption || ""}
+                      loading="lazy"
+                      className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
+                    />
+                    {staged && (
+                      <>
+                        <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground shadow">
+                          <span className="inline-block h-2.5 w-2.5 rounded-full bg-gradient-to-r from-white to-black ring-1 ring-white/60" />
+                          Before / After
+                        </span>
+                        <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 text-[11px] font-medium text-white">
+                          Tap to compare
+                        </span>
+                      </>
+                    )}
+                    {im.caption && !staged && (
+                      <div className="px-2 py-1 text-xs text-muted-foreground">{im.caption}</div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </DialogContent>
@@ -3347,7 +3359,14 @@ function RealtorGalleryDialog({
           {current && (
             <div className="relative flex h-[100dvh] w-full items-center justify-center">
               {current.staged_url ? (
-                <ViewerBeforeAfter beforeUrl={current.url} afterUrl={current.staged_url} alt={current.caption || ""} />
+                <>
+                  <ViewerBeforeAfter beforeUrl={current.url} afterUrl={current.staged_url} alt={current.caption || ""} />
+                  <span className="pointer-events-none absolute left-3 top-14 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white">Before</span>
+                  <span className="pointer-events-none absolute right-3 top-14 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white">After</span>
+                  <span className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-black shadow animate-in fade-in slide-in-from-top-2">
+                    Drag the handle to compare
+                  </span>
+                </>
               ) : (
                 <img src={current.url} alt={current.caption || ""} className="max-h-full max-w-full object-contain" />
               )}
