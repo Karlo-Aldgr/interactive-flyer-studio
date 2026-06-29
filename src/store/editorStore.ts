@@ -10,7 +10,7 @@ interface Snapshot {
   pages: FlyerPage[];
 }
 
-export type ResizeMode = "resize" | "scale" | "crop";
+export type ResizeMode = "resize" | "scale" | "crop" | "fit";
 export type DeviceFrame = "desktop" | "tablet" | "mobile";
 
 interface EditorState {
