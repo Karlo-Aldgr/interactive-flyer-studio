@@ -3274,6 +3274,7 @@ function RealtorGalleryDialog({
   const title = action?.payload.realtorGalleryTitle || "Property photos";
   const [photos, setPhotos] = useState<{ id: string; url: string; staged_url: string | null; caption: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [stagedPhoto, setStagedPhoto] = useState<{ url: string; staged_url: string; caption: string | null } | null>(null);
 
   useEffect(() => {
     if (!open || !listingId) return;
@@ -3291,46 +3292,112 @@ function RealtorGalleryDialog({
   }, [open, listingId]);
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading photos…</p>
-        ) : photos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No photos available for this listing yet.</p>
-        ) : (
-          <div className="grid max-h-[70vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
-            {photos.map((im) => (
-              <button
-                key={im.id}
-                type="button"
-                onClick={() => onZoom(im.url)}
-                className="group relative overflow-hidden rounded border border-border bg-muted/30 text-left"
-              >
-                <img
-                  src={im.url}
-                  alt={im.caption || ""}
-                  loading="lazy"
-                  className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
-                />
-                {im.staged_url && (
-                  <span className="absolute left-1 top-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
-                    Staged
-                  </span>
-                )}
-                {im.caption && (
-                  <div className="px-2 py-1 text-xs text-muted-foreground">{im.caption}</div>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription className="sr-only">Property photo gallery</DialogDescription>
+          </DialogHeader>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading photos…</p>
+          ) : photos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No photos available for this listing yet.</p>
+          ) : (
+            <div className="grid max-h-[70vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+              {photos.map((im) => (
+                <button
+                  key={im.id}
+                  type="button"
+                  onClick={() => {
+                    if (im.staged_url) {
+                      setStagedPhoto({ url: im.url, staged_url: im.staged_url, caption: im.caption });
+                    } else {
+                      onZoom(im.url);
+                    }
+                  }}
+                  className="group relative overflow-hidden rounded border border-border bg-muted/30 text-left"
+                >
+                  <img
+                    src={im.url}
+                    alt={im.caption || ""}
+                    loading="lazy"
+                    className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
+                  />
+                  {im.staged_url && (
+                    <span className="absolute left-1 top-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                      Before / After
+                    </span>
+                  )}
+                  {im.caption && (
+                    <div className="px-2 py-1 text-xs text-muted-foreground">{im.caption}</div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!stagedPhoto} onOpenChange={(v) => { if (!v) setStagedPhoto(null); }}>
+        <DialogContent className="max-w-5xl p-2 sm:p-4">
+          <DialogHeader>
+            <DialogTitle>Before / After</DialogTitle>
+            <DialogDescription className="sr-only">Drag the slider to compare before and after staging</DialogDescription>
+          </DialogHeader>
+          {stagedPhoto && (
+            <div className="relative h-[70vh] w-full overflow-hidden rounded bg-black">
+              <ViewerBeforeAfter beforeUrl={stagedPhoto.url} afterUrl={stagedPhoto.staged_url} alt={stagedPhoto.caption || ""} />
+            </div>
+          )}
+          {stagedPhoto?.caption && (
+            <p className="text-center text-sm text-muted-foreground">{stagedPhoto.caption}</p>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
+
+function ViewerBeforeAfter({ beforeUrl, afterUrl, alt }: { beforeUrl: string; afterUrl: string; alt: string }) {
+  const [pct, setPct] = useState(50);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+
+  const move = (clientX: number) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    setPct((x / rect.width) * 100);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative h-full w-full select-none overflow-hidden"
+      onPointerDown={(e) => { dragging.current = true; (e.target as Element).setPointerCapture?.(e.pointerId); move(e.clientX); }}
+      onPointerMove={(e) => { if (dragging.current) move(e.clientX); }}
+      onPointerUp={() => { dragging.current = false; }}
+      onPointerCancel={() => { dragging.current = false; }}
+    >
+      <img src={beforeUrl} alt={alt} className="absolute inset-0 m-auto max-h-full max-w-full object-contain" draggable={false} />
+      <div className="absolute inset-0" style={{ clipPath: `inset(0 0 0 ${pct}%)` }}>
+        <img src={afterUrl} alt={alt} className="absolute inset-0 m-auto max-h-full max-w-full object-contain" draggable={false} />
+      </div>
+      <div className="pointer-events-none absolute inset-y-0" style={{ left: `${pct}%`, transform: "translateX(-50%)" }}>
+        <div className="h-full w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.6)]" />
+        <div className="absolute top-1/2 left-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-black shadow-lg">
+          <ChevronLeft className="h-4 w-4" />
+          <ChevronRight className="-ml-1 h-4 w-4" />
+        </div>
+      </div>
+      <div className="pointer-events-none absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 text-xs font-medium text-white">Before</div>
+      <div className="pointer-events-none absolute right-3 top-3 rounded bg-black/60 px-2 py-0.5 text-xs font-medium text-white">After</div>
+    </div>
+  );
+}
+
 
 
 function CouponDialog({
