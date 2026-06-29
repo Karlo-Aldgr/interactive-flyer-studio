@@ -1,34 +1,23 @@
-## Goal
-Make the public flyer's **Realtor gallery** hotspot match the realtor portal's Photos button: open the grid, and tapping a staged tile launches the fullscreen Before / After slider.
+## Problem
+On the public realtor profile, the "234 Hidden Ridge Drive" tile is not clickable while "125 Maple Street" is. Cause: only listings with a `public_slug` render as a link. In the DB, Hidden Ridge has `public_slug = NULL` even though it's `published` + `active`, so its tile renders as a static card.
 
-## Diagnosis
-The data path is fine — the public anon API does return `staged_url`, and the `RealtorGalleryDialog` already renders a "Before / After" badge and routes tile clicks into the fullscreen viewer that wraps `ViewerBeforeAfter`. The problem is discoverability/UX:
-- The "Before / After" badge is small and easy to miss.
-- The tile looks identical to a non-staged photo, so users don't realize the tap will reveal staging.
-- The fullscreen slider has no explicit "Before / After" labels, so a first-time tap can feel like "it just showed the photo".
+## Fix
 
-## Changes (UI only, in `src/pages/PublicViewer.tsx` → `RealtorGalleryDialog`)
+1. **Backfill missing slugs** (DB migration)
+   - For every `flyers` row where `status = 'published'` AND `public_slug IS NULL`, call the existing `ensure_flyer_public_slug(id)` helper so a unique slug is generated from the title/address. This immediately makes Hidden Ridge clickable.
 
-1. **Tile affordance for staged photos**
-   - Replace the small corner pill with a clearer overlay on staged tiles:
-     - Bottom gradient strip with text: `Tap to compare · Before / After`.
-     - Keep the corner badge but enlarge it slightly and add a split-circle icon.
-   - Add a subtle ring (`ring-2 ring-primary/60`) around staged tiles so they stand out from regular ones.
+2. **Auto-generate slug on publish for realtor listings**
+   - In `src/lib/realtor.ts` (publish/toggle path), after setting `status = 'published'`, invoke the `ensure_flyer_public_slug` RPC if `public_slug` is null. Prevents this regression for new listings.
 
-2. **Auto-open the slider on tap (already wired)**
-   - Confirm `onClick={() => setViewerIndex(idx)}` opens fullscreen; for staged photos this already mounts `ViewerBeforeAfter`. No logic change, just verify.
+3. **Defensive UI fallback** in `src/pages/PublicRealtorProfile.tsx` `ListingTile`
+   - If `public_slug` is still missing, render the tile as a disabled card with a small "Link unavailable" hint instead of looking identical to clickable tiles. (Optional polish — primary fix is #1.)
 
-3. **Fullscreen Before / After clarity**
-   - Add fixed `Before` and `After` labels in the top-left and top-right of the slider container (white text, black/40 chip).
-   - Add a one-time hint toast on the slider: "Drag the handle to compare" that auto-dismisses after ~2.5s.
-   - Make the drag handle slightly larger and add a `↔` cursor on hover.
+## Technical notes
+- `ensure_flyer_public_slug` already exists (created during the earlier billing/activation work) and produces collision-safe slugs.
+- `loadPublicRealtorProfile` already filters to published listings and includes `public_slug`, so no query change needed.
+- No type changes required.
 
-4. **Single-photo convenience (small win)**
-   - If the listing has exactly one photo AND it has `staged_url`, still show the grid for consistency but pre-highlight that tile with a pulsing ring so the user immediately taps it.
-
-No DB, no RLS, no action-payload changes. Purely presentational tweaks to the existing dialog.
-
-## Out of scope
-- Changing the action payload schema.
-- Editing the realtor portal's `PhotoGalleryModule` (already works as the reference).
-- Making each tile an inline mini-slider (rejected option).
+## Files
+- `supabase/migrations/<new>.sql` — backfill loop
+- `src/lib/realtor.ts` — call `ensure_flyer_public_slug` on publish
+- `src/pages/PublicRealtorProfile.tsx` — tile fallback (optional)
