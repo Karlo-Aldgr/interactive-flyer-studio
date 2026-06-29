@@ -106,6 +106,8 @@ function isValid(draft: LayerAction | null): boolean {
       return !!(p.products && p.products.length > 0 && p.products.every((x) => x.name?.trim()));
     case "novel":
       return !!(p.novelChapters && p.novelChapters.length > 0);
+    case "realtor_gallery":
+      return !!p.realtorListingId;
     default: return true;
   }
 }
