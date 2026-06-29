@@ -3359,7 +3359,14 @@ function RealtorGalleryDialog({
           {current && (
             <div className="relative flex h-[100dvh] w-full items-center justify-center">
               {current.staged_url ? (
-                <ViewerBeforeAfter beforeUrl={current.url} afterUrl={current.staged_url} alt={current.caption || ""} />
+                <>
+                  <ViewerBeforeAfter beforeUrl={current.url} afterUrl={current.staged_url} alt={current.caption || ""} />
+                  <span className="pointer-events-none absolute left-3 top-14 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white">Before</span>
+                  <span className="pointer-events-none absolute right-3 top-14 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white">After</span>
+                  <span className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-black shadow animate-in fade-in slide-in-from-top-2">
+                    Drag the handle to compare
+                  </span>
+                </>
               ) : (
                 <img src={current.url} alt={current.caption || ""} className="max-h-full max-w-full object-contain" />
               )}
