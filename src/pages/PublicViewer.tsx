@@ -3266,6 +3266,73 @@ function GalleryDialog({
   );
 }
 
+function RealtorGalleryDialog({
+  action, onClose, onZoom,
+}: { action: LayerAction | null; onClose: () => void; onZoom: (url: string) => void }) {
+  const open = !!action;
+  const listingId = action?.payload.realtorListingId;
+  const title = action?.payload.realtorGalleryTitle || "Property photos";
+  const [photos, setPhotos] = useState<{ id: string; url: string; staged_url: string | null; caption: string | null }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !listingId) return;
+    setLoading(true);
+    setPhotos([]);
+    (async () => {
+      const { data } = await supabase
+        .from("listing_photos" as any)
+        .select("id, url, staged_url, caption, position")
+        .eq("flyer_id", listingId)
+        .order("position", { ascending: true });
+      setPhotos(((data as any[]) ?? []).map((p) => ({ id: p.id, url: p.url, staged_url: p.staged_url, caption: p.caption })));
+      setLoading(false);
+    })();
+  }, [open, listingId]);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading photos…</p>
+        ) : photos.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No photos available for this listing yet.</p>
+        ) : (
+          <div className="grid max-h-[70vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+            {photos.map((im) => (
+              <button
+                key={im.id}
+                type="button"
+                onClick={() => onZoom(im.url)}
+                className="group relative overflow-hidden rounded border border-border bg-muted/30 text-left"
+              >
+                <img
+                  src={im.url}
+                  alt={im.caption || ""}
+                  loading="lazy"
+                  className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
+                />
+                {im.staged_url && (
+                  <span className="absolute left-1 top-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                    Staged
+                  </span>
+                )}
+                {im.caption && (
+                  <div className="px-2 py-1 text-xs text-muted-foreground">{im.caption}</div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 function CouponDialog({
   action, onClose, onRedeem,
 }: { action: LayerAction | null; onClose: () => void; onRedeem: (url: string) => void }) {
