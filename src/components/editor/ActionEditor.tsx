@@ -2148,6 +2148,15 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
           />
         )}
 
+        {type === "realtor_gallery" && (
+          <RealtorGalleryPicker
+            listingId={p.realtorListingId}
+            title={p.realtorGalleryTitle || ""}
+            onChange={(id) => update({ realtorListingId: id })}
+            onTitleChange={(v) => update({ realtorGalleryTitle: v })}
+          />
+        )}
+
         {type === "survey" && (
           <>
             <p className="text-[11px] text-muted-foreground">Collect multi-question feedback. Responses appear in your dashboard.</p>
