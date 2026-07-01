@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Loader2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,13 +11,14 @@ import { CreateListingDialog } from "@/components/realtor/CreateListingDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   createListing, deleteListing, duplicateListing, loadListingStats, loadMyListings,
   setListingPublished, type Listing, type ListingStats, type ListingStatus, LISTING_STATUSES,
 } from "@/lib/realtor";
 import { loadMyRealtorProfile, type RealtorProfile } from "@/lib/realtorProfile";
 import { RealtorProfileCard } from "@/components/realtor/RealtorProfileCard";
-import { cn } from "@/lib/utils";
 
 export default function RealtorDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -60,7 +61,10 @@ export default function RealtorDashboard() {
   }, [listings, statusFilter, query]);
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: listings.length };
+    const c: Record<string, number> = {
+      all: listings.length,
+      published: listings.filter((l) => l.status === "published").length,
+    };
     for (const s of LISTING_STATUSES) c[s.value] = 0;
     for (const l of listings) c[l.listing_status] = (c[l.listing_status] ?? 0) + 1;
     return c;
@@ -113,9 +117,23 @@ export default function RealtorDashboard() {
     const next = l.status === "published" ? false : true;
     try {
       await setListingPublished(l.id, next);
-      setListings((prev) => prev.map((x) => (x.id === l.id ? { ...x, status: next ? "published" : "draft" } : x)));
-      toast.success(next ? "Published" : "Unpublished");
+      setListings((prev) =>
+        prev.map((x) => {
+          if (x.id !== l.id) return x;
+          const listing_status =
+            next && x.listing_status === "draft" ? "active" : x.listing_status;
+          return { ...x, status: next ? "published" : "draft", listing_status };
+        }),
+      );
+      toast.success(next ? "Published — flyer is live online" : "Unpublished");
     } catch (e: any) { toast.error(e.message); }
+  };
+
+  const statusTabLabel = (value: ListingStatus | "all") => {
+    if (value === "all") return `All (${counts.all})`;
+    const meta = LISTING_STATUSES.find((s) => s.value === value);
+    const label = meta?.shortLabel ?? meta?.label ?? value;
+    return `${label} (${counts[value] ?? 0})`;
   };
 
   return (
@@ -123,13 +141,19 @@ export default function RealtorDashboard() {
       <div className="space-y-6">
         <PageHeader
           title="My Listings"
-          description="Manage every property you market with TapThatFlyer."
+          description="Your property overview — filter by market status, publish flyers, and track views and leads."
           actions={
             <Button onClick={() => setCreateOpen(true)}>
               <Plus className="mr-1 h-4 w-4" />New listing
             </Button>
           }
         />
+
+        <Card className="border-dashed bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Flyer live</span> (Publish) is separate from{" "}
+          <span className="font-medium text-foreground">market status</span> (On market, Pending sale, Sold).
+          A listing can be live online and still show Pending sale if the property is under contract.
+        </Card>
 
         {profile && (
           <RealtorProfileCard
@@ -139,17 +163,17 @@ export default function RealtorDashboard() {
           />
         )}
 
-
-
-        <div className="grid gap-3 sm:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <SummaryCard label="Total listings" value={listings.length} />
-          <SummaryCard label="Active" value={counts.active ?? 0} />
+          <SummaryCard label="On market" value={counts.active ?? 0} />
+          <SummaryCard label="Pending sale" value={counts.pending ?? 0} highlight={counts.pending > 0} />
+          <SummaryCard label="Live online" value={counts.published ?? 0} />
           <SummaryCard label="Total views" value={totals.views} />
           <SummaryCard label="Total leads" value={totals.leads} />
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-3">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
@@ -158,27 +182,48 @@ export default function RealtorDashboard() {
               className="pl-9"
             />
           </div>
-          <div className="flex flex-wrap gap-2">
-            <FilterChip label={`All (${counts.all})`} active={statusFilter === "all"} onClick={() => setStatusFilter("all")} />
-            {LISTING_STATUSES.map((s) => (
-              <FilterChip
-                key={s.value}
-                label={`${s.label} (${counts[s.value] ?? 0})`}
-                active={statusFilter === s.value}
-                onClick={() => setStatusFilter(s.value)}
-              />
-            ))}
-          </div>
+
+          <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as ListingStatus | "all")}>
+            <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+              <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                {statusTabLabel("all")}
+              </TabsTrigger>
+              {LISTING_STATUSES.map((s) => (
+                <TabsTrigger
+                  key={s.value}
+                  value={s.value}
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  {statusTabLabel(s.value)}
+                  {s.value === "pending" && (counts.pending ?? 0) > 0 && statusFilter !== "pending" && (
+                    <Badge className="ml-2 bg-amber-500/20 text-amber-800 dark:text-amber-200" variant="secondary">
+                      {counts.pending}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
 
         {loading ? (
           <div className="flex h-40 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-        ) : filtered.length === 0 ? (
+        ) : listings.length === 0 ? (
           <Card className="p-12 text-center">
             <h3 className="font-display text-lg font-semibold">No listings yet</h3>
             <p className="mt-1 text-sm text-muted-foreground">Create your first listing to get started.</p>
             <Button className="mt-4" onClick={() => setCreateOpen(true)}>
               <Plus className="mr-1 h-4 w-4" />New listing
+            </Button>
+          </Card>
+        ) : filtered.length === 0 ? (
+          <Card className="p-12 text-center">
+            <h3 className="font-display text-lg font-semibold">No listings match this filter</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Try another tab or clear your search.
+            </p>
+            <Button className="mt-4" variant="outline" onClick={() => { setStatusFilter("all"); setQuery(""); }}>
+              Show all listings
             </Button>
           </Card>
         ) : (
@@ -203,26 +248,11 @@ export default function RealtorDashboard() {
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
+function SummaryCard({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
-    <Card className="p-4">
+    <Card className={highlight ? "border-amber-400/50 bg-amber-500/5 p-4" : "p-4"}>
       <div className="text-2xl font-bold">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </Card>
-  );
-}
-
-function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-full border px-3 py-1.5 text-sm font-medium transition",
-        active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-      )}
-    >
-      {label}
-    </button>
   );
 }

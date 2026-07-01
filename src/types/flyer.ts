@@ -323,6 +323,8 @@ export interface ActionPayload {
   novelSubscribeEnabled?: boolean;         // show paid subscribe option
   novelSubscribePrice?: number;            // monthly subscribe price
   novelSubscribeUrl?: string;              // PayPal subscription button URL (author-provided)
+  novelShowFlyerPrice?: boolean;           // floating price on flyer cover (default true)
+  novelFlyerPriceCorner?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
 }
 
 export type BubbleTextCase = "as-is" | "upper" | "lower";

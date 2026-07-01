@@ -41,9 +41,9 @@ export type ListingPhoto = {
 };
 
 
-export const LISTING_STATUSES: { value: ListingStatus; label: string; className: string }[] = [
-  { value: "active", label: "Active", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
-  { value: "pending", label: "Pending", className: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
+export const LISTING_STATUSES: { value: ListingStatus; label: string; className: string; shortLabel?: string }[] = [
+  { value: "active", label: "Active on market", shortLabel: "On market", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
+  { value: "pending", label: "Pending sale", shortLabel: "Pending", className: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
   { value: "sold", label: "Sold", className: "bg-rose-500/15 text-rose-700 dark:text-rose-300" },
   { value: "draft", label: "Draft", className: "bg-muted text-muted-foreground" },
 ];
@@ -114,7 +114,14 @@ export async function duplicateListing(listing: Listing, ownerId: string) {
 }
 
 export async function setListingPublished(id: string, publish: boolean) {
-  const { error } = await supabase.from("flyers").update({ status: publish ? "published" : "draft" } as any).eq("id", id);
+  const patch: Record<string, unknown> = { status: publish ? "published" : "draft" };
+  if (publish) {
+    const listing = await getListing(id);
+    if (listing?.listing_status === "draft") {
+      patch.listing_status = "active";
+    }
+  }
+  const { error } = await supabase.from("flyers").update(patch as any).eq("id", id);
   if (error) throw error;
   if (publish) {
     // Ensure a public slug exists so the listing is openable from the public profile.

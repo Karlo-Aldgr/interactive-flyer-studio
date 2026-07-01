@@ -3076,6 +3076,38 @@ function NovelEditor({ draft, update }: { draft: LayerAction; update: (patch: an
         </div>
       </div>
 
+      <div className="rounded-md border border-border p-3 space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wide">Reader price button</Label>
+        <p className="text-[11px] text-muted-foreground">
+          White PRICE button appears inside the novel reader (after the reader opens), on every novel.
+        </p>
+        <div className="flex items-center justify-between gap-2">
+          <Label className="text-xs">Show PRICE button in the novel reader</Label>
+          <Switch checked={p.novelShowFlyerPrice !== false} onCheckedChange={(v) => update({ novelShowFlyerPrice: v })} />
+        </div>
+        {p.novelShowFlyerPrice !== false && (
+          <div>
+            <Label className="text-xs">Sticker position</Label>
+            <Select
+              value={p.novelFlyerPriceCorner || "bottom-right"}
+              onValueChange={(v) =>
+                update({ novelFlyerPriceCorner: v as "top-left" | "top-right" | "bottom-left" | "bottom-right" })
+              }
+            >
+              <SelectTrigger className="mt-1 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bottom-right">Bottom right</SelectItem>
+                <SelectItem value="bottom-left">Bottom left</SelectItem>
+                <SelectItem value="top-right">Top right</SelectItem>
+                <SelectItem value="top-left">Top left</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label className="text-xs">PayPal.me handle</Label>

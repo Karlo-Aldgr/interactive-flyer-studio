@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, ChevronLeft, ChevronRight, Lock, Loader2, ExternalLink } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Check, Lock, Loader2, ExternalLink } from "lucide-react";
+import { NovelReaderPriceFab } from "@/components/viewer/NovelFlyerPriceBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { LayerAction, NovelChapter } from "@/types/flyer";
@@ -15,6 +16,7 @@ import {
   saveNovelUnlock,
   type NovelUnlockState,
 } from "@/lib/novelUnlock";
+import { resolveNovelCoverUrl } from "@/lib/novelCover";
 
 const READER_EMAIL_KEY = "novel_reader_email";
 const READER_NAME_KEY = "novel_reader_name";
@@ -22,11 +24,12 @@ const READER_NAME_KEY = "novel_reader_name";
 interface Props {
   action: LayerAction;
   flyerId: string;
+  coverFallbackUrl?: string | null;
   onClose: () => void;
   onLog?: (eventType: string, meta?: Record<string, unknown>) => void;
 }
 
-export function NovelReaderDialog({ action, flyerId, onClose, onLog }: Props) {
+export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, onLog }: Props) {
   const p = action.payload || {};
   const chapters: NovelChapter[] = p.novelChapters || [];
   const freeCount = typeof p.novelFreeCount === "number" ? p.novelFreeCount : 3;
@@ -36,6 +39,7 @@ export function NovelReaderDialog({ action, flyerId, onClose, onLog }: Props) {
   const paypalHandle = (p.novelPaypalHandle || "").trim();
   const bookTitle = p.novelBookTitle || "Story";
   const author = p.novelAuthor || "";
+  const coverUrl = resolveNovelCoverUrl(p.novelCoverUrl, coverFallbackUrl);
 
   const [email, setEmail] = useState(() => localStorage.getItem(READER_EMAIL_KEY) || "");
   const [name, setName] = useState(() => localStorage.getItem(READER_NAME_KEY) || "");
@@ -67,6 +71,20 @@ export function NovelReaderDialog({ action, flyerId, onClose, onLog }: Props) {
 
   function chapterIsFree(ch: NovelChapter, index: number): boolean {
     return ch.free === true || (ch.free !== false && index < freeCount);
+  }
+
+  function priceForChapter(ch: NovelChapter): number {
+    return ch.price ?? chapterPrice;
+  }
+
+  function formatMoney(amount: number): string {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+
+  function chapterPriceLabel(ch: NovelChapter, index: number, isFree: boolean, unlocked: boolean) {
+    if (unlocked) return { text: "Unlocked", kind: "unlocked" as const };
+    if (isFree) return { text: "Free", kind: "free" as const };
+    return { text: formatMoney(priceForChapter(ch)), kind: "paid" as const };
   }
 
   function openChapter(ch: NovelChapter, index: number) {
@@ -237,7 +255,8 @@ export function NovelReaderDialog({ action, flyerId, onClose, onLog }: Props) {
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-0 overflow-hidden p-0">
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5" /> {bookTitle}
@@ -245,33 +264,61 @@ export function NovelReaderDialog({ action, flyerId, onClose, onLog }: Props) {
           {author && <DialogDescription>by {author}</DialogDescription>}
         </DialogHeader>
 
-        {p.novelCoverUrl && view === "list" && (
-          <div className="text-center space-y-2">
-            {bundlePrice && (
-              <p className="text-sm font-semibold text-foreground">
-                Pay {currency} {bundlePrice.toFixed(2)} to access the complete story
+        {view === "list" && (
+          <>
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
+              <p className="font-semibold text-foreground">Pricing</p>
+              <p className="mt-0.5 text-foreground">
+                {formatMoney(chapterPrice)} per chapter
+                {bundlePrice != null && bundlePrice > 0 && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · Full book {formatMoney(bundlePrice)}
+                  </span>
+                )}
               </p>
+              {freeCount > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  First {freeCount} chapter{freeCount === 1 ? "" : "s"} free
+                </p>
+              )}
+            </div>
+
+            {coverUrl && (
+              <div className="mt-3 space-y-2 text-center">
+                {bundlePrice != null && bundlePrice > 0 && (
+                  <p className="text-sm font-semibold text-foreground">
+                    Pay {formatMoney(bundlePrice)} to access the complete story
+                  </p>
+                )}
+                <img
+                  src={coverUrl}
+                  alt={bookTitle}
+                  className="mx-auto max-h-52 w-full max-w-xs rounded-lg object-contain shadow-sm"
+                />
+              </div>
             )}
-            <img src={p.novelCoverUrl} alt="" className="mx-auto max-h-40 rounded-lg object-cover" />
-          </div>
+          </>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-xs">Your email (for unlocks)</Label>
-            <Input
-              type="email"
-              className="mt-1"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@email.com"
-            />
+        {(view === "list" || view === "unlock") && (
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Your email (for unlocks)</Label>
+              <Input
+                type="email"
+                className="mt-1"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@email.com"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Name (optional)</Label>
+              <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
           </div>
-          <div>
-            <Label className="text-xs">Name (optional)</Label>
-            <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-        </div>
+        )}
 
         {view === "list" && (
           <div className="space-y-2">
@@ -280,20 +327,34 @@ export function NovelReaderDialog({ action, flyerId, onClose, onLog }: Props) {
             </p>
             {chapters.map((ch, i) => {
               const { isFree, unlocked } = chapterAccess[i];
+              const price = chapterPriceLabel(ch, i, isFree, unlocked);
               return (
                 <button
                   key={ch.id}
                   type="button"
                   onClick={() => openChapter(ch, i)}
-                  className="flex w-full items-center justify-between rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted/50"
+                  className="flex w-full items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted/50"
                 >
-                  <span>
-                    <span className="font-medium">{ch.title || `Chapter ${ch.number}`}</span>
-                    {isFree && (
-                      <Badge variant="secondary" className="ml-2 text-[10px]">Free</Badge>
+                  <span className="min-w-0 font-medium truncate">
+                    {ch.title || `Chapter ${ch.number}`}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {price.kind === "unlocked" && (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+                        <span className="text-xs font-medium text-primary">{price.text}</span>
+                      </>
+                    )}
+                    {price.kind === "free" && (
+                      <Badge variant="secondary" className="text-[10px]">{price.text}</Badge>
+                    )}
+                    {price.kind === "paid" && (
+                      <>
+                        <span className="text-xs font-semibold tabular-nums text-foreground">{price.text}</span>
+                        <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                      </>
                     )}
                   </span>
-                  {!unlocked ? <Lock className="h-4 w-4 text-muted-foreground" /> : null}
                 </button>
               );
             })}
@@ -347,6 +408,13 @@ export function NovelReaderDialog({ action, flyerId, onClose, onLog }: Props) {
         )}
 
         {view === "unlock" && unlockPanel()}
+        </div>
+
+        {(view === "list" || view === "unlock") && (
+          <div className="shrink-0 border-t border-border bg-background px-4 pb-3 pt-1">
+            <NovelReaderPriceFab payload={p} />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -18,6 +18,7 @@ type Props = {
 export function ListingCard({ listing, stats, onEdit, onDuplicate, onDelete, onTogglePublish }: Props) {
   const statusMeta = LISTING_STATUSES.find((s) => s.value === listing.listing_status) ?? LISTING_STATUSES[3];
   const isPublished = listing.status === "published";
+  const marketLabel = statusMeta.shortLabel ?? statusMeta.label;
 
   return (
     <Card className="flex flex-col overflow-hidden">
@@ -29,9 +30,13 @@ export function ListingCard({ listing, stats, onEdit, onDuplicate, onDelete, onT
             <ImageIcon className="h-12 w-12 opacity-40" />
           </div>
         )}
-        <div className="absolute left-2 top-2 flex gap-2">
-          <Badge className={statusMeta.className}>{statusMeta.label}</Badge>
-          {!isPublished && <Badge variant="outline" className="bg-background/80">Unpublished</Badge>}
+        <div className="absolute left-2 top-2 flex flex-wrap gap-2">
+          <Badge className={statusMeta.className}>{marketLabel}</Badge>
+          {isPublished ? (
+            <Badge className="bg-sky-500/15 text-sky-800 dark:text-sky-200">Live online</Badge>
+          ) : (
+            <Badge variant="outline" className="bg-background/80">Flyer offline</Badge>
+          )}
         </div>
         <div className="absolute right-2 top-2 rounded-md bg-background/90 px-2 py-1 text-sm font-bold shadow">
           {formatPrice(listing.price_cents)}

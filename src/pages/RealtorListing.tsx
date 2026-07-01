@@ -90,8 +90,10 @@ export default function RealtorListing({ focusPhotos = false }: Props) {
     const next = listing.status !== "published";
     try {
       await setListingPublished(listing.id, next);
-      setListing({ ...listing, status: next ? "published" : "draft" });
-      toast.success(next ? "Published" : "Unpublished");
+      const listing_status =
+        next && listing.listing_status === "draft" ? "active" : listing.listing_status;
+      setListing({ ...listing, status: next ? "published" : "draft", listing_status });
+      toast.success(next ? "Published — flyer is live online" : "Unpublished");
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -143,7 +145,10 @@ export default function RealtorListing({ focusPhotos = false }: Props) {
                     <Input id="price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))} />
                   </div>
                   <div>
-                    <Label htmlFor="status">Listing status</Label>
+                    <Label htmlFor="status">Market status</Label>
+                    <p className="mb-1.5 text-xs text-muted-foreground">
+                      Where the property is in the sales process — separate from publishing the flyer.
+                    </p>
                     <Select value={listingStatus} onValueChange={(v) => setListingStatus(v as ListingStatus)}>
                       <SelectTrigger id="status"><SelectValue /></SelectTrigger>
                       <SelectContent>

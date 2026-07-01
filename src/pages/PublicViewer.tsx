@@ -120,6 +120,7 @@ import { getCurrentTrafficSource } from "@/lib/trafficSource";
 import { OrderStatusTracker, OrderTrackFloatingButton } from "@/components/viewer/OrderStatusTracker";
 import { saveOrderTrack } from "@/lib/customerOrderStatus";
 import { MiniAdBanner } from "@/components/viewer/MiniAdBanner";
+import { novelCoverFromPage } from "@/lib/novelCover";
 
 
 // Highlight ring shown around tappable layers in the viewer.
@@ -1714,6 +1715,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   // viewers see the image first, never naked rings on a blank background.
   // NOTE: hooks must be called before any early return.
   const currentPage = pages[pageIndex];
+  const novelCoverFallbackUrl = useMemo(() => {
+    if (newInteractionAction?.type !== "novel") return null;
+    return novelCoverFromPage(currentPage) ?? null;
+  }, [newInteractionAction?.type, currentPage]);
   const pageImageSrcs = useMemo(
     () =>
       (currentPage?.layers || [])
@@ -2571,6 +2576,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         action={newInteractionAction}
         flyerId={flyer?.id || null}
         sessionId={sessionId}
+        novelCoverFallbackUrl={novelCoverFallbackUrl}
         onClose={() => setNewInteractionAction(null)}
       />
 

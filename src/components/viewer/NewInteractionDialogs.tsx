@@ -19,6 +19,7 @@ interface Props {
   action: LayerAction | null;
   flyerId: string | null;
   sessionId: string;
+  novelCoverFallbackUrl?: string | null;
   onClose: () => void;
 }
 
@@ -37,7 +38,7 @@ function StarRow({ value, onChange, size = 28 }: { value: number; onChange: (n: 
   );
 }
 
-export default function NewInteractionDialogs({ action, flyerId, sessionId, onClose }: Props) {
+export default function NewInteractionDialogs({ action, flyerId, sessionId, novelCoverFallbackUrl, onClose }: Props) {
   if (!action || !flyerId) return null;
   const type = action.type;
 
@@ -53,6 +54,7 @@ export default function NewInteractionDialogs({ action, flyerId, sessionId, onCl
       <NovelReaderDialog
         action={action}
         flyerId={flyerId}
+        coverFallbackUrl={novelCoverFallbackUrl}
         onClose={onClose}
       />
     );
