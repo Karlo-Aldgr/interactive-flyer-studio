@@ -29,7 +29,7 @@ import { FoodOrdersPanel } from "@/components/portal/FoodOrdersPanel";
 import { DailyReportsPanel } from "@/components/portal/DailyReportsPanel";
 import { FormSubmissionsPanel } from "@/components/portal/FormSubmissionsPanel";
 
-import { buildPublicFlyerUrl } from "@/lib/utils";
+import { buildPublicFlyerUrl, buildSocialShareUrl } from "@/lib/utils";
 export type OrderStatus = "new" | "on_hold" | "pay_later" | "in_production" | "completed";
 const ORDER_STATUSES: { value: OrderStatus; label: string; cls: string; ring: string }[] = [
   { value: "new",            label: "Pending",        cls: "bg-slate-500 text-white",                         ring: "border-slate-500/50 bg-slate-500/5" },
@@ -426,7 +426,8 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
   const apptsForCalDate = calDate ? appointments.filter((a) => new Date(a.start_at).toDateString() === calDate.toDateString()) : [];
 
   const isPublished = flyer.status === "published" && !!flyer.public_slug;
-  const shareUrl = flyer.public_slug ? buildPublicFlyerUrl(flyer.public_slug) : "";
+  const displayUrl = flyer.public_slug ? buildPublicFlyerUrl(flyer.public_slug) : "";
+  const socialUrl = flyer.public_slug ? buildSocialShareUrl(flyer.public_slug) : "";
 
   return (
     <div className="container mx-auto max-w-6xl space-y-4 p-4 md:p-8">
@@ -503,8 +504,8 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
       <ShareDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
-        displayUrl={shareUrl}
-        socialUrl={shareUrl}
+        displayUrl={displayUrl}
+        socialUrl={socialUrl}
         title={flyer.title}
         thumbnailUrl={flyer.thumbnail_url ?? undefined}
         isPublished={isPublished}
