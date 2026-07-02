@@ -571,6 +571,77 @@ export type Database = {
           },
         ]
       }
+      listing_pending_details: {
+        Row: {
+          agreed_price_cents: number | null
+          buyer_agent_brokerage: string | null
+          buyer_agent_name: string | null
+          buyer_name: string | null
+          closing_costs_cents: number | null
+          closing_date: string | null
+          contingencies: string | null
+          contract_date: string | null
+          created_at: string
+          earnest_money_cents: number | null
+          financing_deadline: string | null
+          flyer_id: string
+          inspection_deadline: string | null
+          lender: string | null
+          notes: string | null
+          seller_name: string | null
+          title_company: string | null
+          updated_at: string
+        }
+        Insert: {
+          agreed_price_cents?: number | null
+          buyer_agent_brokerage?: string | null
+          buyer_agent_name?: string | null
+          buyer_name?: string | null
+          closing_costs_cents?: number | null
+          closing_date?: string | null
+          contingencies?: string | null
+          contract_date?: string | null
+          created_at?: string
+          earnest_money_cents?: number | null
+          financing_deadline?: string | null
+          flyer_id: string
+          inspection_deadline?: string | null
+          lender?: string | null
+          notes?: string | null
+          seller_name?: string | null
+          title_company?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agreed_price_cents?: number | null
+          buyer_agent_brokerage?: string | null
+          buyer_agent_name?: string | null
+          buyer_name?: string | null
+          closing_costs_cents?: number | null
+          closing_date?: string | null
+          contingencies?: string | null
+          contract_date?: string | null
+          created_at?: string
+          earnest_money_cents?: number | null
+          financing_deadline?: string | null
+          flyer_id?: string
+          inspection_deadline?: string | null
+          lender?: string | null
+          notes?: string | null
+          seller_name?: string | null
+          title_company?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_pending_details_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: true
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_photos: {
         Row: {
           caption: string | null
@@ -1486,6 +1557,10 @@ export type Database = {
       flyer_lead_count: { Args: { _flyer_id: string }; Returns: number }
       flyer_mini_ad_enabled: { Args: { _flyer_id: string }; Returns: boolean }
       flyer_view_count: { Args: { _flyer_id: string }; Returns: number }
+      get_listing_pending_details: {
+        Args: { _flyer_id: string }
+        Returns: Json
+      }
       get_realtor_public_profile: { Args: { _slug: string }; Returns: Json }
       grant_editor_by_email: { Args: { _email: string }; Returns: Json }
       grant_realtor_by_email: { Args: { _email: string }; Returns: Json }
@@ -1590,6 +1665,10 @@ export type Database = {
           _photo_url?: string
           _profile_slug?: string
         }
+        Returns: Json
+      }
+      upsert_listing_pending_details: {
+        Args: { _flyer_id: string; _payload: Json }
         Returns: Json
       }
       upsert_menu_daily_summary: {
