@@ -20,7 +20,7 @@ export const ADMIN_NAV_LINKS: { key: AdminNavKey; to: string; label: string }[] 
   { key: "users", to: "/admin/users", label: "Users" },
   { key: "jobs", to: "/admin/jobs", label: "Jobs" },
   { key: "editors", to: "/admin/editors", label: "Editors" },
-  { key: "realtor-applications", to: "/admin/realtor-applications", label: "Realtor apps" },
+  { key: "realtor-applications", to: "/admin/realtor-applications", label: "Listings overview" },
   { key: "realtor-portal", to: "/realtor", label: "Realtor portal" },
   { key: "examples", to: "/admin/examples", label: "Examples" },
   { key: "mini-ads", to: "/admin/mini-ads", label: "Mini-ads" },

@@ -65,6 +65,16 @@ export async function loadMyListings(): Promise<{ listings: Listing[]; error: an
   return { listings: ((data as any[]) ?? []) as Listing[], error };
 }
 
+export async function loadOwnerLabels(ownerIds: string[]): Promise<Record<string, string>> {
+  if (!ownerIds.length) return {};
+  const { data } = await supabase.from("profiles").select("id, email, full_name").in("id", ownerIds);
+  const map: Record<string, string> = {};
+  for (const row of data ?? []) {
+    map[row.id] = row.full_name?.trim() || row.email || row.id;
+  }
+  return map;
+}
+
 export async function getListing(id: string): Promise<Listing | null> {
   const { data } = await supabase.from("flyers").select(LISTING_FIELDS).eq("id", id).maybeSingle();
   return (data as any) ?? null;

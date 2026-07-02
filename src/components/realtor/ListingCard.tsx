@@ -9,13 +9,14 @@ import { buildPublicFlyerUrl } from "@/lib/utils";
 type Props = {
   listing: Listing;
   stats?: ListingStats;
+  ownerLabel?: string | null;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onTogglePublish: () => void;
 };
 
-export function ListingCard({ listing, stats, onEdit, onDuplicate, onDelete, onTogglePublish }: Props) {
+export function ListingCard({ listing, stats, ownerLabel, onEdit, onDuplicate, onDelete, onTogglePublish }: Props) {
   const statusMeta = LISTING_STATUSES.find((s) => s.value === listing.listing_status) ?? LISTING_STATUSES[3];
   const isPublished = listing.status === "published";
   const marketLabel = statusMeta.shortLabel ?? statusMeta.label;
@@ -46,6 +47,9 @@ export function ListingCard({ listing, stats, onEdit, onDuplicate, onDelete, onT
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="min-w-0">
           <div className="truncate font-semibold">{listing.address ?? listing.title}</div>
+          {ownerLabel && (
+            <div className="mt-0.5 truncate text-xs text-muted-foreground">Realtor: {ownerLabel}</div>
+          )}
           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
             {listing.beds != null && <span>{listing.beds} bd</span>}
             {listing.baths != null && <span>{listing.baths} ba</span>}
