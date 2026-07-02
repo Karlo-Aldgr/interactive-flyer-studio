@@ -1,59 +1,68 @@
-# Pending Sale Details
+## Goal
 
-Add a "Pending sale" info prompt that appears when a realtor (owner) or admin clicks a listing card whose market status is **Pending**.
+Let admins invite a realtor two ways:
+1. **Email invite** — enter name + email, system emails a branded invite with a one-click accept link.
+2. **Shareable link** — generate a tokenized URL to copy/paste anywhere (SMS, WhatsApp, DM). First person to open + sign up claims it.
 
-## Data model
-
-New table `public.listing_pending_details` (one row per flyer):
-
-- `flyer_id` (uuid, PK, FK → `flyers.id` on delete cascade)
-- `seller_name`, `buyer_name`, `buyer_agent_name`, `buyer_agent_brokerage`
-- `agreed_price_cents` (bigint)
-- `earnest_money_cents`, `closing_costs_cents` (bigint)
-- `contract_date`, `inspection_deadline`, `financing_deadline`, `closing_date` (date)
-- `title_company`, `lender`
-- `contingencies` (text)
-- `notes` (text)
-- `created_at`, `updated_at`
-
-RLS: owner of the parent flyer OR admin can select/insert/update/delete. Nobody else. GRANTs to `authenticated` + `service_role` only (no anon).
-
-Trigger to auto-update `updated_at`.
+Both paths auto-grant the `realtor` role on sign-up / sign-in and mark the invite consumed. Existing `/realtor/apply` flow stays as-is for realtors who find the site on their own.
 
 ## Backend
 
-Add two RPCs (SECURITY DEFINER, guard by owner-or-admin):
+Create `public.realtor_invites`:
+- `id`, `token` (uuid, unique, indexed), `email` (nullable — null = open shareable link), `invited_name` (nullable)
+- `invited_by` (admin uid), `note` (optional)
+- `status`: `pending` | `accepted` | `revoked` | `expired`
+- `accepted_by` (uid, nullable), `accepted_at`, `expires_at` (default now + 30 days)
+- standard timestamps
+- RLS: admins full access; anon can `SELECT` a single row only via RPC by token (no direct table read)
+- GRANTs to `authenticated` + `service_role` per project rules
 
-- `get_listing_pending_details(_flyer_id uuid) → jsonb` — returns the row plus the base listing fields (address, listed price, beds/baths/sqft, listing_status) so the dialog is a single fetch.
-- `upsert_listing_pending_details(_flyer_id uuid, _payload jsonb) → jsonb` — insert or update.
+RPCs (SECURITY DEFINER):
+- `admin_create_realtor_invite(_email text, _name text, _note text, _expires_days int)` → returns `{ id, token, accept_url }`. Admin-only.
+- `admin_list_realtor_invites()` → admin-only list.
+- `admin_revoke_realtor_invite(_id uuid)` → sets `status='revoked'`. Admin-only.
+- `resolve_realtor_invite(_token uuid)` → public; returns `{ ok, email, invited_name, status }` for the invite page to render (no PII beyond invited email/name).
+- `accept_realtor_invite(_token uuid)` → requires `auth.uid()`; verifies token pending + not expired + (if email set, matches user's email); grants `realtor` role via `user_roles`; marks accepted. Returns `{ ok }`.
+
+Extend `handle_new_user()` trigger: if a matching pending invite exists for this new user (open token stored in signup metadata OR email match), grant `realtor` role and mark accepted. This covers the "sign up first, then land on `/realtor/accept`" case cleanly via a fallback call from the accept page.
+
+## Email
+
+Uses Lovable's built-in app email (`send-transactional-email`). Add one new template `realtor-invite.tsx` in `supabase/functions/_shared/transactional-email-templates/` with:
+- Personalized greeting
+- Note from admin (if provided)
+- Big "Accept invite" CTA linking to `https://<site>/realtor/accept?token=…`
+- Fallback plain URL
+
+Prerequisite: email domain + `setup_email_infra` + `scaffold_transactional_email` must be in place. If not, run those first as part of implementation.
+
+Registered in `registry.ts`. `admin_create_realtor_invite` (or a thin edge wrapper) invokes `send-transactional-email` with `idempotencyKey = invite-<id>`.
 
 ## Frontend
 
-**`ListingCard.tsx`** — when `listing.listing_status === "pending"`, make the thumbnail/title area clickable (`role="button"`, keyboard-accessible). Non-pending cards are unchanged. Buttons (Edit/Photos/Publish/Duplicate/Open/Delete) keep their own click handlers with `stopPropagation`. Add a small "View pending details" affordance on hover.
+**Admin — new panel in `AdminUsers.tsx`** (or new `RealtorInvitesPanel.tsx` beside `RealtorAccessApplicationsPanel`):
+- "Invite realtor by email" form (name, email, optional note) → creates invite + sends email → toast confirms
+- "Generate shareable link" button → creates open invite (no email) → shows the URL with Copy button
+- Table of outstanding invites: recipient, type (Email / Link), status, expires, actions (Copy link, Resend email, Revoke)
 
-**New `src/components/realtor/PendingSaleDetailsDialog.tsx`**
-- Header: address + Pending badge
-- Read-only "Listing information" summary block: address, listed price, beds/baths/sqft, market status
-- "Sale information" form (edit-in-place, save button):
-  - Seller name, Buyer name, Buyer's agent + brokerage
-  - Agreed purchase price, Earnest money, Closing costs
-  - Contract date, Inspection deadline, Financing deadline, **Closing date**
-  - Title company, Lender
-  - Contingencies (textarea), Notes (textarea)
-- Save calls `upsert_listing_pending_details`, toasts, closes.
-- Admins can view/edit; owner realtor can view/edit; anyone else gets a permission error surfaced as toast (but they can't reach it because the card click gate is role-based via existing `RealtorDashboard` context, which only owners/admins see anyway).
+**Public — `/realtor/accept?token=…`** (`src/pages/RealtorAcceptInvite.tsx`):
+- Calls `resolve_realtor_invite` → shows invited name/email and branded "You're invited to the Realtor Portal" card
+- If not signed in: shows Sign-up (email prefilled + locked if invite was email-targeted) and Sign-in tabs; on success, calls `accept_realtor_invite` and redirects to `/realtor`
+- If signed in: single "Accept & enter portal" button
+- Error states: expired, revoked, already accepted, email mismatch
 
-**`RealtorDashboard.tsx`** — wires the dialog: track `pendingDetailsFor: Listing | null`, render `<PendingSaleDetailsDialog>` and pass the open handler down to `ListingCard`.
-
-**`src/lib/realtor.ts`** — add typed helpers `loadPendingDetails(flyerId)` and `savePendingDetails(flyerId, payload)` around the two RPCs.
+Route added in `src/App.tsx`. Link from `ForRealtors.tsx` unchanged (still points to `/realtor/apply`).
 
 ## Out of scope
 
-- No changes to the public realtor profile / public flyer view — pending-sale details stay private to the owner and admins.
-- No changes to non-pending listing cards' click behavior.
+- Bulk CSV invite upload
+- Public "nominate your realtor" page (Option C from the question)
+- Editing invite after creation (only revoke + create-new)
 
-## Technical notes
+## Notes for the user (non-technical)
 
-- Money stored as cents (bigint) to match existing `price_cents` convention.
-- All new columns nullable so an empty form can be saved progressively.
-- Dialog uses existing shadcn `Dialog`, `Input`, `Textarea`, `Label`, `Button`; date fields use `<Input type="date">` to stay consistent with the rest of the realtor forms.
+- You'll get a new "Invite realtors" section in Admin → Users.
+- Two buttons: **Invite by email** sends a branded email with an accept link; **Generate share link** gives you a URL you can text, DM, or paste anywhere.
+- The moment they accept (and sign up if needed), they're granted realtor access — no manual approval step.
+- Existing `/realtor/apply` public form stays for realtors who find you on their own.
+- Invites expire after 30 days by default and can be revoked at any time.
