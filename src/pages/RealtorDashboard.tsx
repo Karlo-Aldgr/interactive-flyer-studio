@@ -19,6 +19,7 @@ import {
 } from "@/lib/realtor";
 import { loadMyRealtorProfile, type RealtorProfile } from "@/lib/realtorProfile";
 import { RealtorProfileCard } from "@/components/realtor/RealtorProfileCard";
+import { PendingSaleDetailsDialog } from "@/components/realtor/PendingSaleDetailsDialog";
 
 export default function RealtorDashboard() {
   const { user, loading: authLoading } = useAuth();
