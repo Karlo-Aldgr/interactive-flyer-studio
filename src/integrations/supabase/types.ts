@@ -1198,6 +1198,51 @@ export type Database = {
         }
         Relationships: []
       }
+      realtor_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          invited_by: string
+          invited_name: string | null
+          note: string | null
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invited_by: string
+          invited_name?: string | null
+          note?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          invited_name?: string | null
+          note?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscribers: {
         Row: {
           created_at: string
@@ -1472,8 +1517,18 @@ export type Database = {
       }
     }
     Functions: {
+      accept_realtor_invite: { Args: { _token: string }; Returns: Json }
       admin_assign_job_editor: {
         Args: { _editor_id: string; _job_id: string }
+        Returns: Json
+      }
+      admin_create_realtor_invite: {
+        Args: {
+          _email?: string
+          _expires_days?: number
+          _name?: string
+          _note?: string
+        }
         Returns: Json
       }
       admin_list_realtor_applications: {
@@ -1502,10 +1557,34 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_list_realtor_invites: {
+        Args: never
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          invited_by: string
+          invited_name: string | null
+          note: string | null
+          status: string
+          token: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "realtor_invites"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_review_realtor_application: {
         Args: { _application_id: string; _decision: string; _notes?: string }
         Returns: Json
       }
+      admin_revoke_realtor_invite: { Args: { _id: string }; Returns: Json }
       admin_set_job_mini_ad: {
         Args: { _enabled: boolean; _job_id: string }
         Returns: Json
@@ -1651,6 +1730,7 @@ export type Database = {
           portal_token: string
         }[]
       }
+      resolve_realtor_invite: { Args: { _token: string }; Returns: Json }
       revoke_editor_by_email: { Args: { _email: string }; Returns: Json }
       revoke_realtor_by_email: { Args: { _email: string }; Returns: Json }
       staff_acknowledge_job: { Args: { _job_id: string }; Returns: Json }
