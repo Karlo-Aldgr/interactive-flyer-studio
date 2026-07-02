@@ -239,6 +239,7 @@ export default function RealtorDashboard() {
                 onDuplicate={() => handleDuplicate(l)}
                 onDelete={() => handleDelete(l)}
                 onTogglePublish={() => handleTogglePublish(l)}
+                onOpenPendingDetails={() => setPendingFor(l.id)}
               />
             ))}
           </div>
