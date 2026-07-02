@@ -38,6 +38,7 @@ const RealtorDashboard = lazy(() => import("./pages/RealtorDashboard"));
 const RealtorListing = lazy(() => import("./pages/RealtorListing"));
 const RealtorGalleryIndex = lazy(() => import("./pages/RealtorGalleryIndex"));
 const RealtorApply = lazy(() => import("./pages/RealtorApply"));
+const RealtorAcceptInvite = lazy(() => import("./pages/RealtorAcceptInvite"));
 const ForRealtors = lazy(() => import("./pages/ForRealtors"));
 const AdminRealtorApplications = lazy(() => import("./pages/AdminRealtorApplications"));
 const PublicRealtorProfile = lazy(() => import("./pages/PublicRealtorProfile"));
