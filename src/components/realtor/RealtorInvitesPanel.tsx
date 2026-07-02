@@ -38,8 +38,8 @@ import {
   type RealtorInvite,
 } from "@/lib/realtorInvites";
 
-export function RealtorInvitesPanel() {
-  const [open, setOpen] = useState(false);
+export function RealtorInvitesPanel({ defaultOpen = false }: { defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [invites, setInvites] = useState<RealtorInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailForm, setEmailForm] = useState({ name: "", email: "", note: "" });

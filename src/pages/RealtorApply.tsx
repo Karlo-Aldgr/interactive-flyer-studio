@@ -1,7 +1,10 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRealtorApplication } from "@/hooks/useRealtorApplication";
+import { useIsRealtor } from "@/hooks/useIsRealtor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,17 +25,28 @@ const schema = z.object({
 
 export default function RealtorApply() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isRealtor } = useIsRealtor();
+  const { application } = useRealtorApplication();
   const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
     full_name: "",
-    email: "",
+    email: user?.email ?? "",
     brokerage: "",
     license_number: "",
     phone: "",
     website: "",
     message: "",
   });
+
+  useEffect(() => {
+    if (user?.email && !form.email) {
+      setForm((f) => ({ ...f, email: user.email! }));
+    }
+  }, [user?.email, form.email]);
+
+  if (isRealtor) return <Navigate to="/realtor" replace />;
 
   const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -98,6 +112,22 @@ export default function RealtorApply() {
               Get a dedicated portal to manage your listings, photo galleries, and lead capture. We'll review your application and unlock your portal within 1 business day.
             </p>
           </div>
+
+          {application?.status === "pending" && (
+            <Card className="border-amber-400/50 bg-amber-500/5 p-4 text-sm">
+              Your application is pending review. We'll email you once a decision is made.
+            </Card>
+          )}
+
+          {application?.status === "rejected" && (
+            <Card className="border-destructive/40 bg-destructive/5 p-4 text-sm">
+              <p className="font-medium text-destructive">Your previous application was not approved.</p>
+              {application.review_notes?.trim() && (
+                <p className="mt-1 text-muted-foreground">{application.review_notes}</p>
+              )}
+              <p className="mt-2 text-muted-foreground">You may submit a new application below.</p>
+            </Card>
+          )}
 
           <form onSubmit={submit} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">

@@ -12,9 +12,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { RealtorInvitesPanel } from "@/components/realtor/RealtorInvitesPanel";
-import { RealtorAccessApplicationsPanel } from "@/components/realtor/RealtorAccessApplicationsPanel";
-
 type UserFilter = "all" | "customers" | "editors" | "admins" | "realtors";
 
 function matchesFilter(user: AdminUserRow, filter: UserFilter) {
@@ -131,9 +128,6 @@ export default function AdminUsers() {
             </div>
           </Card>
         </div>
-
-        <RealtorInvitesPanel />
-        <RealtorAccessApplicationsPanel />
 
         <div className="flex flex-wrap gap-2">
           {filters.map(({ value, label, count }) => (

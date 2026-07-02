@@ -21,6 +21,10 @@ import { loadMyRealtorProfile, type RealtorProfile } from "@/lib/realtorProfile"
 import { RealtorProfileCard } from "@/components/realtor/RealtorProfileCard";
 import { PendingSaleDetailsDialog } from "@/components/realtor/PendingSaleDetailsDialog";
 
+import { cn } from "@/lib/utils";
+
+type ListingFilter = ListingStatus | "all" | "published";
+
 export default function RealtorDashboard() {
   const { user, loading: authLoading } = useAuth();
   const { isRealtor, loading: roleLoading } = useIsRealtor();
@@ -30,7 +34,7 @@ export default function RealtorDashboard() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ListingStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<ListingFilter>("all");
   const [profile, setProfile] = useState<RealtorProfile | null>(null);
   const [pendingFor, setPendingFor] = useState<string | null>(null);
 
@@ -53,7 +57,11 @@ export default function RealtorDashboard() {
 
   const filtered = useMemo(() => {
     return listings.filter((l) => {
-      if (statusFilter !== "all" && l.listing_status !== statusFilter) return false;
+      if (statusFilter === "published") {
+        if (l.status !== "published") return false;
+      } else if (statusFilter !== "all" && l.listing_status !== statusFilter) {
+        return false;
+      }
       if (query) {
         const q = query.toLowerCase();
         if (!`${l.address ?? ""} ${l.title}`.toLowerCase().includes(q)) return false;
@@ -166,10 +174,31 @@ export default function RealtorDashboard() {
         )}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <SummaryCard label="Total listings" value={listings.length} />
-          <SummaryCard label="On market" value={counts.active ?? 0} />
-          <SummaryCard label="Pending sale" value={counts.pending ?? 0} highlight={counts.pending > 0} />
-          <SummaryCard label="Live online" value={counts.published ?? 0} />
+          <SummaryCard
+            label="Total listings"
+            value={listings.length}
+            active={statusFilter === "all"}
+            onClick={() => setStatusFilter("all")}
+          />
+          <SummaryCard
+            label="On market"
+            value={counts.active ?? 0}
+            active={statusFilter === "active"}
+            onClick={() => setStatusFilter("active")}
+          />
+          <SummaryCard
+            label="Pending sale"
+            value={counts.pending ?? 0}
+            highlight={counts.pending > 0}
+            active={statusFilter === "pending"}
+            onClick={() => setStatusFilter("pending")}
+          />
+          <SummaryCard
+            label="Live online"
+            value={counts.published ?? 0}
+            active={statusFilter === "published"}
+            onClick={() => setStatusFilter("published")}
+          />
           <SummaryCard label="Total views" value={totals.views} />
           <SummaryCard label="Total leads" value={totals.leads} />
         </div>
@@ -185,7 +214,10 @@ export default function RealtorDashboard() {
             />
           </div>
 
-          <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as ListingStatus | "all")}>
+          <Tabs
+            value={statusFilter === "published" ? "" : statusFilter}
+            onValueChange={(v) => { if (v) setStatusFilter(v as ListingStatus | "all"); }}
+          >
             <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
               <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 {statusTabLabel("all")}
@@ -256,9 +288,37 @@ export default function RealtorDashboard() {
   );
 }
 
-function SummaryCard({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
+function SummaryCard({
+  label,
+  value,
+  highlight,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  highlight?: boolean;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const className = cn(
+    "p-4 text-left transition",
+    highlight && "border-amber-400/50 bg-amber-500/5",
+    onClick && "cursor-pointer hover:border-primary/40 hover:bg-muted/30",
+    active && "border-primary ring-1 ring-primary/30",
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cn("w-full rounded-lg border border-border bg-card", className)}>
+        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-xs text-muted-foreground">{label}</div>
+      </button>
+    );
+  }
+
   return (
-    <Card className={highlight ? "border-amber-400/50 bg-amber-500/5 p-4" : "p-4"}>
+    <Card className={className}>
       <div className="text-2xl font-bold">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </Card>

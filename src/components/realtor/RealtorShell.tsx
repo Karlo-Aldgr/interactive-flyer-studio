@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Home, Image as ImageIcon, Eye } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Button } from "@/components/ui/button";
 import { displayFirstName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ function slugify(input: string): string {
 
 export function RealtorShell({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const location = useLocation();
   const navigate = useNavigate();
   const [slug, setSlug] = useState<string | null>(null);
@@ -68,11 +70,13 @@ export function RealtorShell({ children }: { children: React.ReactNode }) {
 
 
 
+  const logoHref = isAdmin ? "/admin/users" : "/dashboard";
+
   return (
     <div className="min-h-screen w-full bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-card">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <Link to="/realtor" className="flex items-center gap-3">
+          <Link to={logoHref} className="flex items-center gap-3">
             <img src={logo} alt="TapThatFlyer" className="h-8 w-auto sm:h-9" />
             <span className="hidden text-sm font-semibold text-muted-foreground sm:inline">Realtor Portal</span>
           </Link>

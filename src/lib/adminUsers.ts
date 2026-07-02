@@ -27,6 +27,8 @@ export function roleBadgeClass(role: string) {
       return "bg-rose-500/15 text-rose-700 dark:text-rose-300";
     case "editor":
       return "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300";
+    case "realtor":
+      return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
     default:
       return "bg-muted text-muted-foreground";
   }

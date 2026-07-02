@@ -29,13 +29,19 @@ type App = {
   created_at: string;
 };
 
-export function RealtorAccessApplicationsPanel() {
+export function RealtorAccessApplicationsPanel({
+  defaultOpen = false,
+  onReviewed,
+}: {
+  defaultOpen?: boolean;
+  onReviewed?: () => void;
+}) {
   const [apps, setApps] = useState<App[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   const load = async () => {
     setLoading(true);
@@ -62,6 +68,7 @@ export function RealtorAccessApplicationsPanel() {
       ? (res.granted ? "Approved — realtor role granted." : "Approved — will activate when they sign up.")
       : "Application rejected");
     load();
+    onReviewed?.();
   };
 
   const filtered = filter === "all" ? apps : apps.filter((a) => a.status === filter);
