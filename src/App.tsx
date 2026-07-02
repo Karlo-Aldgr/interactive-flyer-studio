@@ -112,6 +112,7 @@ const App = () => (
               <Route path="/admin/mini-ads" element={<ProtectedRoute><AdminMiniAds /></ProtectedRoute>} />
               <Route path="/realtor" element={<ProtectedRoute><RealtorDashboard /></ProtectedRoute>} />
               <Route path="/realtor/apply" element={<RealtorApply />} />
+              <Route path="/realtor/accept" element={<RealtorAcceptInvite />} />
               <Route path="/for-realtors" element={<ForRealtors />} />
               <Route path="/realtor/gallery" element={<ProtectedRoute><RealtorGalleryIndex /></ProtectedRoute>} />
               <Route path="/realtor/listing/:listingId" element={<ProtectedRoute><RealtorListing /></ProtectedRoute>} />
