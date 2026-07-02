@@ -19,6 +19,7 @@ import {
 } from "@/lib/realtor";
 import { loadMyRealtorProfile, type RealtorProfile } from "@/lib/realtorProfile";
 import { RealtorProfileCard } from "@/components/realtor/RealtorProfileCard";
+import { PendingSaleDetailsDialog } from "@/components/realtor/PendingSaleDetailsDialog";
 
 export default function RealtorDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -31,6 +32,7 @@ export default function RealtorDashboard() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ListingStatus | "all">("all");
   const [profile, setProfile] = useState<RealtorProfile | null>(null);
+  const [pendingFor, setPendingFor] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -237,6 +239,7 @@ export default function RealtorDashboard() {
                 onDuplicate={() => handleDuplicate(l)}
                 onDelete={() => handleDelete(l)}
                 onTogglePublish={() => handleTogglePublish(l)}
+                onOpenPendingDetails={() => setPendingFor(l.id)}
               />
             ))}
           </div>
@@ -244,6 +247,11 @@ export default function RealtorDashboard() {
       </div>
 
       <CreateListingDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={handleCreate} />
+      <PendingSaleDetailsDialog
+        flyerId={pendingFor}
+        open={pendingFor !== null}
+        onOpenChange={(v) => { if (!v) setPendingFor(null); }}
+      />
     </RealtorShell>
   );
 }

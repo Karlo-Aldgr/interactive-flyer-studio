@@ -14,35 +14,59 @@ type Props = {
   onDuplicate: () => void;
   onDelete: () => void;
   onTogglePublish: () => void;
+  onOpenPendingDetails?: () => void;
 };
 
-export function ListingCard({ listing, stats, ownerLabel, onEdit, onDuplicate, onDelete, onTogglePublish }: Props) {
+export function ListingCard({ listing, stats, ownerLabel, onEdit, onDuplicate, onDelete, onTogglePublish, onOpenPendingDetails }: Props) {
   const statusMeta = LISTING_STATUSES.find((s) => s.value === listing.listing_status) ?? LISTING_STATUSES[3];
   const isPublished = listing.status === "published";
+  const isPending = listing.listing_status === "pending";
   const marketLabel = statusMeta.shortLabel ?? statusMeta.label;
 
+  const stop = (e: React.MouseEvent | React.KeyboardEvent) => e.stopPropagation();
+  const handleCardClick = () => { if (isPending) onOpenPendingDetails?.(); };
+  const handleCardKey = (e: React.KeyboardEvent) => {
+    if (!isPending) return;
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenPendingDetails?.(); }
+  };
+
+
   return (
-    <Card className="flex flex-col overflow-hidden">
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
-        {listing.thumbnail_url ? (
-          <img src={listing.thumbnail_url} alt={listing.address ?? listing.title} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-            <ImageIcon className="h-12 w-12 opacity-40" />
-          </div>
-        )}
-        <div className="absolute left-2 top-2 flex flex-wrap gap-2">
-          <Badge className={statusMeta.className}>{marketLabel}</Badge>
-          {isPublished ? (
-            <Badge className="bg-sky-500/15 text-sky-800 dark:text-sky-200">Live online</Badge>
+    <Card className={`flex flex-col overflow-hidden ${isPending ? "cursor-pointer ring-1 ring-amber-500/30 transition hover:ring-2 hover:ring-amber-500/60" : ""}`}>
+      <div
+        role={isPending ? "button" : undefined}
+        tabIndex={isPending ? 0 : undefined}
+        onClick={handleCardClick}
+        onKeyDown={handleCardKey}
+        aria-label={isPending ? "View pending sale details" : undefined}
+      >
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+          {listing.thumbnail_url ? (
+            <img src={listing.thumbnail_url} alt={listing.address ?? listing.title} className="h-full w-full object-cover" />
           ) : (
-            <Badge variant="outline" className="bg-background/80">Flyer offline</Badge>
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+              <ImageIcon className="h-12 w-12 opacity-40" />
+            </div>
+          )}
+          <div className="absolute left-2 top-2 flex flex-wrap gap-2">
+            <Badge className={statusMeta.className}>{marketLabel}</Badge>
+            {isPublished ? (
+              <Badge className="bg-sky-500/15 text-sky-800 dark:text-sky-200">Live online</Badge>
+            ) : (
+              <Badge variant="outline" className="bg-background/80">Flyer offline</Badge>
+            )}
+          </div>
+          <div className="absolute right-2 top-2 rounded-md bg-background/90 px-2 py-1 text-sm font-bold shadow">
+            {formatPrice(listing.price_cents)}
+          </div>
+          {isPending && (
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-amber-900/80 to-transparent px-3 py-2 text-xs font-medium text-white">
+              Click for pending sale details →
+            </div>
           )}
         </div>
-        <div className="absolute right-2 top-2 rounded-md bg-background/90 px-2 py-1 text-sm font-bold shadow">
-          {formatPrice(listing.price_cents)}
-        </div>
       </div>
+
 
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="min-w-0">
