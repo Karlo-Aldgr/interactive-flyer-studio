@@ -132,6 +132,9 @@ export default function AdminUsers() {
           </Card>
         </div>
 
+        <RealtorInvitesPanel />
+        <RealtorAccessApplicationsPanel />
+
         <div className="flex flex-wrap gap-2">
           {filters.map(({ value, label, count }) => (
             <button
