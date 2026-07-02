@@ -32,6 +32,7 @@ export default function RealtorDashboard() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ListingStatus | "all">("all");
   const [profile, setProfile] = useState<RealtorProfile | null>(null);
+  const [pendingFor, setPendingFor] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
