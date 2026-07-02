@@ -374,7 +374,7 @@ export function ShareDialog({
 
             <div className="flex flex-col items-center gap-4">
               <div className="rounded-lg bg-white p-4 shadow-sm">
-                <QRCodeCanvas id="share-qr-canvas" value={safeDisplayUrl} size={160} level="M" includeMargin={false} />
+                <QRCodeCanvas id="share-qr-canvas" value={safeSocialUrl} size={160} level="M" includeMargin={false} />
               </div>
               <div className="flex w-full gap-2">
                 <Input readOnly value={safeSocialUrl} className="flex-1 text-xs" onFocus={(e) => e.target.select()} />

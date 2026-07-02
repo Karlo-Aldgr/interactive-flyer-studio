@@ -426,8 +426,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
   const apptsForCalDate = calDate ? appointments.filter((a) => new Date(a.start_at).toDateString() === calDate.toDateString()) : [];
 
   const isPublished = flyer.status === "published" && !!flyer.public_slug;
-  const displayUrl = flyer.public_slug ? buildPublicFlyerUrl(flyer.public_slug) : "";
-  const socialUrl = flyer.public_slug ? buildSocialShareUrl(flyer.public_slug) : "";
+  const shareUrl = flyer.public_slug ? buildSocialShareUrl(flyer.public_slug) : "";
 
   return (
     <div className="container mx-auto max-w-6xl space-y-4 p-4 md:p-8">
@@ -504,8 +503,8 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
       <ShareDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
-        displayUrl={displayUrl}
-        socialUrl={socialUrl}
+        displayUrl={shareUrl}
+        socialUrl={shareUrl}
         title={flyer.title}
         thumbnailUrl={flyer.thumbnail_url ?? undefined}
         isPublished={isPublished}

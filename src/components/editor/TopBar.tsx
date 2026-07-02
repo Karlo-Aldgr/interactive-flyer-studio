@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { buildPublicFlyerUrl, buildSocialShareUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
+import { buildPublicFlyerUrl, buildSocialLandingShareUrl, buildSocialShareUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -377,28 +377,26 @@ export function TopBar({ saving }: Props) {
   }
 
   const viewerUrl = flyer.public_slug ? buildPublicFlyerUrl(flyer.public_slug) : "";
-  const socialUrl = flyer.public_slug ? buildSocialShareUrl(flyer.public_slug) : "";
+  const directShareUrl = flyer.public_slug ? buildSocialShareUrl(flyer.public_slug) : "";
 
   // If any page is configured as a tap-anywhere landing page, build a second
-  // share link that opens the landing itself (?page=<landingId>). The primary
-  // socialUrl auto-skips landing → opens the flyer directly.
+  // share link that opens the landing itself (?page=<landingId>). Crawlers use
+  // the landing thumbnail; humans skip to the flyer via ?open=<flyerPageId>.
   const landingPage = pagesForLinks.find((p) => p.background?.linkPageId);
-  // Include &open=<flyerPageId> so when a human clicks the share link, the
-  // viewer jumps straight to the flyer page (bypassing the landing). Crawlers
-  // still see ?page=<landingPageId> and use the landing's social preview.
-  const landingDisplayUrl = (() => {
-    if (!landingPage || !viewerUrl) return "";
-    const sep = viewerUrl.includes("?") ? "&" : "?";
-    const openId = landingPage.background?.linkPageId;
-    const openParam = openId ? `&open=${openId}` : "";
-    return `${viewerUrl}${sep}page=${landingPage.id}${openParam}`;
-  })();
+  const landingShareUrl =
+    landingPage && directShareUrl
+      ? buildSocialLandingShareUrl(
+          flyer.public_slug!,
+          landingPage.id,
+          landingPage.background?.linkPageId,
+        )
+      : "";
   const flyerPreviewSection = landingPage
     ? {
         label: "Direct flyer link",
         description: "Skips the landing — opens the flyer.",
         thumbnailUrl: flyerPreviewThumb,
-        url: viewerUrl,
+        url: directShareUrl,
       }
     : undefined;
 
@@ -668,8 +666,8 @@ export function TopBar({ saving }: Props) {
       <ShareDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
-        displayUrl={landingDisplayUrl || viewerUrl}
-        socialUrl={socialUrl}
+        displayUrl={landingShareUrl || directShareUrl}
+        socialUrl={directShareUrl}
         title={flyer.title}
         thumbnailUrl={localThumbnail ?? flyer.thumbnail_url ?? undefined}
         onRegenerateThumbnail={() => ensureThumbnail(true)}

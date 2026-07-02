@@ -16,7 +16,7 @@ const CRAWLER_RE =
   /(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|skypeuripreview|pinterest|redditbot|applebot|bingbot|googlebot|embedly|quora|vkshare|w3c_validator|bot|crawler|spider|preview)/i;
 
 // Guaranteed absolute https URL — WhatsApp requires this for og:image.
-const FALLBACK_IMAGE = "https://interactive-flyer-studio.lovable.app/og.png";
+const FALLBACK_IMAGE = "https://tapthatflyer.com/favicon.png";
 
 function escapeHtml(s) {
   return String(s ?? "")

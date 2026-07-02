@@ -92,6 +92,18 @@ export function buildSocialShareUrl(slug: string): string {
   return `${getShareOrigin().replace(/\/$/, "")}/f/${slug}`;
 }
 
+/** Landing share link: crawlers see landing art; humans open the flyer via ?open=. */
+export function buildSocialLandingShareUrl(
+  slug: string,
+  landingPageId: string,
+  openPageId?: string | null,
+): string {
+  const params = new URLSearchParams();
+  params.set("page", landingPageId);
+  if (openPageId) params.set("open", openPageId);
+  return `${buildSocialShareUrl(slug)}?${params.toString()}`;
+}
+
 /** Rewrite legacy or preview-only URLs to the public app origin. */
 export function normalizeExampleFlyerUrl(url: string): string {
   if (typeof window === "undefined" || !url.trim()) return url;
