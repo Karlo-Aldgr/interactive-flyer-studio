@@ -14,12 +14,22 @@ type Props = {
   onDuplicate: () => void;
   onDelete: () => void;
   onTogglePublish: () => void;
+  onOpenPendingDetails?: () => void;
 };
 
-export function ListingCard({ listing, stats, ownerLabel, onEdit, onDuplicate, onDelete, onTogglePublish }: Props) {
+export function ListingCard({ listing, stats, ownerLabel, onEdit, onDuplicate, onDelete, onTogglePublish, onOpenPendingDetails }: Props) {
   const statusMeta = LISTING_STATUSES.find((s) => s.value === listing.listing_status) ?? LISTING_STATUSES[3];
   const isPublished = listing.status === "published";
+  const isPending = listing.listing_status === "pending";
   const marketLabel = statusMeta.shortLabel ?? statusMeta.label;
+
+  const stop = (e: React.MouseEvent | React.KeyboardEvent) => e.stopPropagation();
+  const handleCardClick = () => { if (isPending) onOpenPendingDetails?.(); };
+  const handleCardKey = (e: React.KeyboardEvent) => {
+    if (!isPending) return;
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenPendingDetails?.(); }
+  };
+
 
   return (
     <Card className="flex flex-col overflow-hidden">
