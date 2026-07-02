@@ -247,6 +247,11 @@ export default function RealtorDashboard() {
       </div>
 
       <CreateListingDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={handleCreate} />
+      <PendingSaleDetailsDialog
+        flyerId={pendingFor}
+        open={pendingFor !== null}
+        onOpenChange={(v) => { if (!v) setPendingFor(null); }}
+      />
     </RealtorShell>
   );
 }
