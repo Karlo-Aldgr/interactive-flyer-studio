@@ -228,6 +228,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, previewMo
     }
 
     const buyerEmail = email.trim().toLowerCase();
+    const isNewCheckout = !activePaymentRef;
     const paymentRef = activePaymentRef ?? crypto.randomUUID();
     const paypalUrl = buildNovelPaypalUrl(
       paypalOpts,
@@ -239,60 +240,61 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, previewMo
     );
     if (!paypalUrl) return toast.error("No valid PayPal link — check author PayPal settings");
 
-    if (!activePaymentRef) {
-      setBusy(true);
+    // Open PayPal immediately while the click is still a user gesture.
+    // Browsers block window.open after await (async insert), which made Step 2 look broken.
+    if (isNewCheckout) {
       pendingPurchaseRef.current = {
         purchaseType: args.purchaseType,
         chapterNumbers: args.chapterNumbers,
         amount: args.amount,
       };
-
-      const { error } = await supabase.from("novel_purchases").insert([{
-        flyer_id: flyerId,
-        action_id: action.id,
-        book_title: bookTitle,
-        buyer_email: buyerEmail,
-        buyer_name: name.trim() || null,
-        purchase_type: args.purchaseType,
-        chapter_numbers: args.chapterNumbers,
-        amount: args.amount,
-        currency,
-        status: "pending",
-        payment_ref: paymentRef,
-      }]);
-      setBusy(false);
-
-      if (error) {
-        console.error("[novel purchase]", error);
-        pendingPurchaseRef.current = null;
-        const msg = String(error.message || "");
-        if (msg.includes("row-level security") || msg.includes("policy")) {
-          const hint = previewMode
-            ? "Checkout is blocked for this flyer in preview. Publish the flyer, or run the latest novel_purchases migration in Supabase SQL."
-            : "Checkout blocked — publish the flyer first, then test on the live public URL.";
-          setCheckoutError(hint);
-          toast.error(hint);
-        } else if (msg.includes("payment_ref")) {
-          const hint = "Database not ready — run the novel payment migration in Supabase SQL editor.";
-          setCheckoutError(hint);
-          toast.error(hint);
-        } else {
-          const hint = `Could not start checkout: ${msg || "try again"}`;
-          setCheckoutError(hint);
-          toast.error(hint);
-        }
-        return;
-      }
-
-      persistReader();
+      setActivePaymentRef(paymentRef);
       setPaymentVerified(false);
       setPaymentTimedOut(false);
-      setActivePaymentRef(paymentRef);
+      persistReader();
     }
 
     onLog?.("novel_unlock_click", { ...args.logMeta, payment_ref: paymentRef });
     openExternalUrl(paypalUrl);
     toast.message("Opening PayPal…");
+
+    if (!isNewCheckout) return;
+
+    setBusy(true);
+    const { error } = await supabase.from("novel_purchases").insert([{
+      flyer_id: flyerId,
+      action_id: action.id,
+      book_title: bookTitle,
+      buyer_email: buyerEmail,
+      buyer_name: name.trim() || null,
+      purchase_type: args.purchaseType,
+      chapter_numbers: args.chapterNumbers,
+      amount: args.amount,
+      currency,
+      status: "pending",
+      payment_ref: paymentRef,
+    }]);
+    setBusy(false);
+
+    if (error) {
+      console.error("[novel purchase]", error);
+      const msg = String(error.message || "");
+      if (msg.includes("row-level security") || msg.includes("policy")) {
+        const hint = previewMode
+          ? "PayPal opened, but checkout was not recorded. Publish the flyer or run the novel_purchases SQL migration."
+          : "PayPal opened, but checkout was not recorded. Publish the flyer first.";
+        setCheckoutError(hint);
+        toast.error(hint);
+      } else if (msg.includes("payment_ref")) {
+        const hint = "PayPal opened, but database is missing payment_ref — run the novel payment migration in Supabase SQL.";
+        setCheckoutError(hint);
+        toast.error(hint);
+      } else {
+        const hint = `PayPal opened, but checkout was not recorded: ${msg || "try again"}`;
+        setCheckoutError(hint);
+        toast.error(hint);
+      }
+    }
   }
 
   async function recheckPayment() {
