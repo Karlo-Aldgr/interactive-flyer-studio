@@ -134,17 +134,7 @@ export function buildNovelPaypalUrl(
     return "";
   }
 
-  // Full book: optional fixed payment link, else email / PayPal.me with bundle amount.
-  const bundleLink = opts.bundleLink?.trim();
-  if (bundleLink && isDirectPaypalLink(bundleLink)) {
-    return normalizeUrl(bundleLink);
-  }
-
-  const rawHandle = opts.handle?.trim() ?? "";
-  if (rawHandle && isDirectPaypalLink(rawHandle)) {
-    return normalizeUrl(rawHandle);
-  }
-
+  // Full book: email checkout (verifiable) when email is set; else fixed link / handle / PayPal.me.
   if (email) {
     const params = new URLSearchParams({
       cmd: "_xclick",
@@ -157,6 +147,16 @@ export function buildNovelPaypalUrl(
     if (paymentRef) params.set("custom", paymentRef);
     if (notifyUrl) params.set("notify_url", notifyUrl);
     return `https://www.paypal.com/cgi-bin/webscr?${params.toString()}`;
+  }
+
+  const bundleLink = opts.bundleLink?.trim();
+  if (bundleLink && isDirectPaypalLink(bundleLink)) {
+    return normalizeUrl(bundleLink);
+  }
+
+  const rawHandle = opts.handle?.trim() ?? "";
+  if (rawHandle && isDirectPaypalLink(rawHandle)) {
+    return normalizeUrl(rawHandle);
   }
 
   const meHandle = rawHandle ? extractMeHandle(rawHandle) : null;

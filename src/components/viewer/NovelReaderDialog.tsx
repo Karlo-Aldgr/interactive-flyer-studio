@@ -66,6 +66,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
     chapterNumbers: number[];
     amount: number;
   } | null>(null);
+  const paymentVerifiableRef = useRef(true);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -133,6 +134,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
     setVerifyingPayment(false);
     setPaymentTimedOut(false);
     pendingPurchaseRef.current = null;
+    paymentVerifiableRef.current = true;
   }
 
   function completeVerifiedUnlock() {
@@ -160,7 +162,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
   }
 
   useEffect(() => {
-    if (!activePaymentRef || paymentVerified) return;
+    if (!activePaymentRef || paymentVerified || !paymentVerifiableRef.current) return;
 
     let cancelled = false;
     setVerifyingPayment(true);
@@ -203,6 +205,11 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
   }) {
     if (!email.trim()) return toast.error("Email is required");
 
+    paymentVerifiableRef.current = canVerifyNovelPayment(paypalOpts, args.purchaseType);
+    if (!paymentVerifiableRef.current) {
+      toast.message("PayPal will open, but automatic unlock needs the author’s PayPal email in book settings.");
+    }
+
     const buyerEmail = email.trim().toLowerCase();
     const paymentRef = activePaymentRef ?? crypto.randomUUID();
     const paypalUrl = buildNovelPaypalUrl(
@@ -241,7 +248,14 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
       if (error) {
         console.error("[novel purchase]", error);
         pendingPurchaseRef.current = null;
-        toast.error("Could not start checkout — try again");
+        const msg = String(error.message || "");
+        if (msg.includes("row-level security") || msg.includes("policy")) {
+          toast.error("Checkout only works on the published live flyer — publish first, then test on tapthatflyer.com");
+        } else if (msg.includes("payment_ref")) {
+          toast.error("Database not ready — run the novel payment migration in Supabase SQL editor");
+        } else {
+          toast.error("Could not start checkout — try again");
+        }
         return;
       }
 
@@ -347,11 +361,17 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
           </p>
         )}
 
+        {!paypalEmail && paypalConfigured && (
+          <p className="text-sm text-destructive">
+            Author setup: add <strong>PayPal email</strong> in book settings, save the flyer, then publish.
+          </p>
+        )}
+
         {paypalConfigured && !modeVerifiable && (
           <p className="text-sm text-amber-700 dark:text-amber-300">
             {unlockMode === "chapter"
-              ? "Per-chapter unlock requires the author’s PayPal email (not just a fixed payment link)."
-              : "This checkout cannot be verified automatically. Ask the author to add their PayPal email or use email checkout for the full book."}
+              ? "Per-chapter unlock needs the author’s PayPal email — fixed payment links don’t work for chapters."
+              : "For automatic unlock after payment, add the author’s PayPal email (not only a fixed payment link)."}
           </p>
         )}
 
@@ -387,9 +407,10 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Step 2 — Pay on PayPal</p>
           {activePaypalUrl ? (
             <Button
+              type="button"
               className="w-full"
               variant={payPalOpened ? "secondary" : "default"}
-              disabled={!paypalConfigured || !modeVerifiable || busy || verifyingPayment}
+              disabled={!activePaypalUrl || busy || verifyingPayment || !email.trim()}
               onClick={() =>
                 startPayPalCheckout({
                   purchaseType: unlockMode,
@@ -419,9 +440,14 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
                 : "No valid PayPal link — check author PayPal settings."}
             </p>
           )}
-          {payPalOpened && !paymentVerified && (
+          {payPalOpened && !paymentVerified && modeVerifiable && (
             <p className="text-center text-xs text-muted-foreground">
               Finish payment on PayPal — unlock happens automatically after PayPal confirms.
+            </p>
+          )}
+          {payPalOpened && !paymentVerified && !modeVerifiable && (
+            <p className="text-center text-xs text-amber-700 dark:text-amber-300">
+              Payment opened — automatic unlock only works after the author adds their PayPal email.
             </p>
           )}
         </div>
