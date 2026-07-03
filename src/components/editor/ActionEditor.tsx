@@ -3110,19 +3110,42 @@ function NovelEditor({ draft, update }: { draft: LayerAction; update: (patch: an
 
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="text-xs">PayPal.me handle</Label>
-          <Input className="mt-1" value={p.novelPaypalHandle || ""} onChange={(e) => update({ novelPaypalHandle: e.target.value })} placeholder="janedoe" />
+          <Label className="text-xs">PayPal username or link</Label>
+          <Input
+            className="mt-1"
+            value={p.novelPaypalHandle || ""}
+            onChange={(e) => update({ novelPaypalHandle: e.target.value })}
+            placeholder="janedoe or https://paypal.com/..."
+          />
           <p className="mt-1 text-[10px] text-muted-foreground">
-            From paypal.me/<strong>yourname</strong> — payments go to this PayPal account.
+            PayPal.me username only — not for per-chapter pricing. Use the email field below for chapters.
           </p>
         </div>
         <div>
-          <Label className="text-xs">PayPal email (fallback)</Label>
-          <Input className="mt-1" value={p.novelPaypalEmail || ""} onChange={(e) => update({ novelPaypalEmail: e.target.value })} placeholder="jane@example.com" />
+          <Label className="text-xs">PayPal email (required for chapters)</Label>
+          <Input
+            className="mt-1"
+            value={p.novelPaypalEmail || ""}
+            onChange={(e) => update({ novelPaypalEmail: e.target.value })}
+            placeholder="you@gmail.com"
+          />
           <p className="mt-1 text-[10px] text-muted-foreground">
-            Used if no .me handle. Use the email tied to your PayPal business account.
+            Required for per-chapter unlock verification. Payments are confirmed automatically via PayPal.
           </p>
         </div>
+      </div>
+
+      <div>
+        <Label className="text-xs">Full book PayPal link (optional)</Label>
+        <Input
+          className="mt-1"
+          value={p.novelPaypalBundleLink || ""}
+          onChange={(e) => update({ novelPaypalBundleLink: e.target.value })}
+          placeholder="https://paypal.com/ncp/payment/..."
+        />
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          Fixed-price link for the full book only. Per-chapter purchases always use the PayPal email above.
+        </p>
       </div>
 
       <div className="rounded-md border border-border p-3 space-y-3">

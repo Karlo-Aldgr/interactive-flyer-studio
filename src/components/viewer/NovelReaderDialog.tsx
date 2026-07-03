@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,12 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { LayerAction, NovelChapter } from "@/types/flyer";
 import {
+  applyVerifiedPurchase,
   buildNovelPaypalUrl,
+  canVerifyNovelPayment,
   formatNovelMoney,
   hasNovelPaypal,
   isChapterUnlocked,
   loadNovelUnlock,
-  saveNovelUnlock,
   type NovelUnlockState,
 } from "@/lib/novelUnlock";
 import { resolveNovelCoverUrl } from "@/lib/novelCover";
@@ -40,7 +41,12 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
   const bundlePrice = p.novelBundlePrice;
   const paypalHandle = (p.novelPaypalHandle || "").trim();
   const paypalEmail = (p.novelPaypalEmail || "").trim();
-  const paypalConfigured = hasNovelPaypal(paypalHandle, paypalEmail);
+  const paypalBundleLink = (p.novelPaypalBundleLink || "").trim();
+  const paypalOpts = useMemo(
+    () => ({ handle: paypalHandle, email: paypalEmail, bundleLink: paypalBundleLink }),
+    [paypalHandle, paypalEmail, paypalBundleLink],
+  );
+  const paypalConfigured = hasNovelPaypal(paypalOpts);
   const bookTitle = p.novelBookTitle || "Story";
   const author = p.novelAuthor || "";
   const coverUrl = resolveNovelCoverUrl(p.novelCoverUrl, coverFallbackUrl);
@@ -51,6 +57,15 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
   const [view, setView] = useState<"list" | "read" | "unlock">("list");
   const [activeChapter, setActiveChapter] = useState<NovelChapter | null>(null);
   const [unlockMode, setUnlockMode] = useState<"chapter" | "bundle">("chapter");
+  const [activePaymentRef, setActivePaymentRef] = useState<string | null>(null);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [paymentTimedOut, setPaymentTimedOut] = useState(false);
+  const pendingPurchaseRef = useRef<{
+    purchaseType: "chapter" | "bundle";
+    chapterNumbers: number[];
+    amount: number;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -108,66 +123,159 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
     }
     setActiveChapter(ch);
     setUnlockMode("chapter");
+    resetPaymentFlow();
     setView("unlock");
   }
 
-  async function recordPurchase(args: {
+  function resetPaymentFlow() {
+    setActivePaymentRef(null);
+    setPaymentVerified(false);
+    setVerifyingPayment(false);
+    setPaymentTimedOut(false);
+    pendingPurchaseRef.current = null;
+  }
+
+  function completeVerifiedUnlock() {
+    const pending = pendingPurchaseRef.current;
+    if (!pending || !email.trim()) return;
+
+    const buyerEmail = email.trim().toLowerCase();
+    const next = applyVerifiedPurchase(
+      flyerId,
+      action.id,
+      buyerEmail,
+      name.trim() || undefined,
+      pending.purchaseType,
+      pending.chapterNumbers,
+      chapters.map((c) => c.number),
+    );
+    setUnlock(next);
+    onLog?.(`novel_unlock_${pending.purchaseType}`, {
+      chapters: pending.chapterNumbers,
+      amount: pending.amount,
+      verified: true,
+    });
+    toast.success("Payment confirmed — enjoy your reading!");
+    setView("read");
+  }
+
+  useEffect(() => {
+    if (!activePaymentRef || paymentVerified) return;
+
+    let cancelled = false;
+    setVerifyingPayment(true);
+    setPaymentTimedOut(false);
+
+    const poll = async () => {
+      for (let attempt = 0; attempt < 120 && !cancelled; attempt++) {
+        const { data, error } = await supabase.rpc("check_novel_payment", {
+          _payment_ref: activePaymentRef,
+        });
+        if (cancelled) return;
+        if (error) {
+          console.error("[novel payment poll]", error);
+        } else if (data && typeof data === "object" && (data as { completed?: boolean }).completed) {
+          setPaymentVerified(true);
+          setVerifyingPayment(false);
+          completeVerifiedUnlock();
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+      if (!cancelled) {
+        setVerifyingPayment(false);
+        setPaymentTimedOut(true);
+      }
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [activePaymentRef, paymentVerified]);
+
+  async function startPayPalCheckout(args: {
     purchaseType: "chapter" | "bundle";
     chapterNumbers: number[];
     amount: number;
+    itemName: string;
+    logMeta: Record<string, unknown>;
   }) {
     if (!email.trim()) return toast.error("Email is required");
-    setBusy(true);
+
     const buyerEmail = email.trim().toLowerCase();
-    const { error } = await supabase.from("novel_purchases").insert([{
-      flyer_id: flyerId,
-      action_id: action.id,
-      book_title: bookTitle,
-      buyer_email: buyerEmail,
-      buyer_name: name.trim() || null,
-      purchase_type: args.purchaseType,
-      chapter_numbers: args.chapterNumbers,
-      amount: args.amount,
+    const paymentRef = activePaymentRef ?? crypto.randomUUID();
+    const paypalUrl = buildNovelPaypalUrl(
+      paypalOpts,
+      args.amount,
       currency,
-      status: "pending",
-    }]);
-    setBusy(false);
-    if (error) {
-      console.error("[novel purchase]", error);
-      toast.error("Could not record purchase — try again");
-      return;
+      args.itemName,
+      args.purchaseType,
+      paymentRef,
+    );
+    if (!paypalUrl) return toast.error("No valid PayPal link — check author PayPal settings");
+
+    if (!activePaymentRef) {
+      setBusy(true);
+      pendingPurchaseRef.current = {
+        purchaseType: args.purchaseType,
+        chapterNumbers: args.chapterNumbers,
+        amount: args.amount,
+      };
+
+      const { error } = await supabase.from("novel_purchases").insert([{
+        flyer_id: flyerId,
+        action_id: action.id,
+        book_title: bookTitle,
+        buyer_email: buyerEmail,
+        buyer_name: name.trim() || null,
+        purchase_type: args.purchaseType,
+        chapter_numbers: args.chapterNumbers,
+        amount: args.amount,
+        currency,
+        status: "pending",
+        payment_ref: paymentRef,
+      }]);
+      setBusy(false);
+
+      if (error) {
+        console.error("[novel purchase]", error);
+        pendingPurchaseRef.current = null;
+        toast.error("Could not start checkout — try again");
+        return;
+      }
+
+      persistReader();
+      setPaymentVerified(false);
+      setPaymentTimedOut(false);
+      setActivePaymentRef(paymentRef);
     }
 
-    const prev = loadNovelUnlock(flyerId, action.id, buyerEmail) || {
-      email: buyerEmail,
-      name: name.trim() || undefined,
-      chapters: [] as number[],
-    };
-    const next: NovelUnlockState =
-      args.purchaseType === "bundle"
-        ? {
-            ...prev,
-            email: buyerEmail,
-            name: name.trim() || prev.name,
-            bundle: true,
-            chapters: chapters.map((c) => c.number),
-          }
-        : {
-            ...prev,
-            email: buyerEmail,
-            name: name.trim() || prev.name,
-            bundle: false,
-            chapters: [...new Set([...prev.chapters, ...args.chapterNumbers])],
-          };
-    saveNovelUnlock(flyerId, action.id, next);
-    setUnlock(next);
-    onLog?.(`novel_unlock_${args.purchaseType}`, { chapters: args.chapterNumbers, amount: args.amount });
-    toast.success("Unlocked! Enjoy your reading.");
-    if (activeChapter) {
-      setView("read");
-    } else {
-      setView("list");
+    onLog?.("novel_unlock_click", { ...args.logMeta, payment_ref: paymentRef });
+    window.open(paypalUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function recheckPayment() {
+    if (!activePaymentRef) return;
+    setPaymentTimedOut(false);
+    setVerifyingPayment(true);
+    const { data, error } = await supabase.rpc("check_novel_payment", {
+      _payment_ref: activePaymentRef,
+    });
+    if (error) {
+      console.error("[novel payment recheck]", error);
+      toast.error("Could not check payment status");
+      setVerifyingPayment(false);
+      return;
     }
+    if (data && typeof data === "object" && (data as { completed?: boolean }).completed) {
+      setPaymentVerified(true);
+      setVerifyingPayment(false);
+      completeVerifiedUnlock();
+      return;
+    }
+    setVerifyingPayment(false);
+    toast.message("Payment not confirmed yet — finish on PayPal, then try again.");
   }
 
   async function followAuthor() {
@@ -196,16 +304,29 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
     if (!activeChapter) return null;
     const chapterAmount = activeChapter.price ?? chapterPrice;
     const hasBundle = bundlePrice != null && bundlePrice > 0;
-    const paypalOpts = { handle: paypalHandle, email: paypalEmail };
+    const chapterVerifiable = canVerifyNovelPayment(paypalOpts, "chapter");
+    const bundleVerifiable = canVerifyNovelPayment(paypalOpts, "bundle");
+    const modeVerifiable = unlockMode === "chapter" ? chapterVerifiable : bundleVerifiable;
+
     const chapterPaypalUrl = buildNovelPaypalUrl(
       paypalOpts,
       chapterAmount,
       currency,
       activeChapter.title || `Chapter ${activeChapter.number}`,
+      "chapter",
     );
     const bundlePaypalUrl = hasBundle
-      ? buildNovelPaypalUrl(paypalOpts, bundlePrice, currency, bookTitle)
+      ? buildNovelPaypalUrl(paypalOpts, bundlePrice, currency, bookTitle, "bundle")
       : "";
+
+    const switchMode = (mode: "chapter" | "bundle") => {
+      setUnlockMode(mode);
+      resetPaymentFlow();
+    };
+
+    const activeAmount = unlockMode === "chapter" ? chapterAmount : bundlePrice!;
+    const activePaypalUrl = unlockMode === "chapter" ? chapterPaypalUrl : bundlePaypalUrl;
+    const payPalOpened = !!activePaymentRef;
 
     return (
       <div className="space-y-4">
@@ -216,7 +337,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
           <Lock className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
           <p className="font-medium">{activeChapter.title}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            This chapter is locked. Pay via PayPal to unlock.
+            Choose what to buy, pay on PayPal, then wait for payment confirmation to unlock.
           </p>
         </div>
 
@@ -226,88 +347,117 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
           </p>
         )}
 
-        {hasBundle && paypalConfigured && (
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant={unlockMode === "chapter" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setUnlockMode("chapter")}
-            >
-              This chapter · {formatMoney(chapterAmount)}
-            </Button>
-            <Button
-              type="button"
-              variant={unlockMode === "bundle" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setUnlockMode("bundle")}
-            >
-              Full book · {formatMoney(bundlePrice)}
-            </Button>
-          </div>
+        {paypalConfigured && !modeVerifiable && (
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            {unlockMode === "chapter"
+              ? "Per-chapter unlock requires the author’s PayPal email (not just a fixed payment link)."
+              : "This checkout cannot be verified automatically. Ask the author to add their PayPal email or use email checkout for the full book."}
+          </p>
         )}
 
-        {unlockMode === "chapter" ? (
-          <>
-            {chapterPaypalUrl && (
-              <Button className="w-full" variant="outline" asChild>
-                <a
-                  href={chapterPaypalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => onLog?.("novel_unlock_click", { type: "chapter", chapter: activeChapter.number })}
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Pay {formatMoney(chapterAmount)} on PayPal
-                </a>
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Step 1 — Choose</p>
+          {hasBundle && paypalConfigured ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={unlockMode === "chapter" ? "default" : "outline"}
+                size="sm"
+                onClick={() => switchMode("chapter")}
+              >
+                This chapter · {formatMoney(chapterAmount)}
               </Button>
-            )}
+              <Button
+                type="button"
+                variant={unlockMode === "bundle" ? "default" : "outline"}
+                size="sm"
+                onClick={() => switchMode("bundle")}
+              >
+                Full book · {formatMoney(bundlePrice)}
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-foreground">
+              This chapter · <span className="font-semibold">{formatMoney(chapterAmount)}</span>
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Step 2 — Pay on PayPal</p>
+          {activePaypalUrl ? (
             <Button
               className="w-full"
-              disabled={busy || !paypalConfigured}
+              variant={payPalOpened ? "secondary" : "default"}
+              disabled={!paypalConfigured || !modeVerifiable || busy || verifyingPayment}
               onClick={() =>
-                recordPurchase({
-                  purchaseType: "chapter",
-                  chapterNumbers: [activeChapter.number],
-                  amount: chapterAmount,
+                startPayPalCheckout({
+                  purchaseType: unlockMode,
+                  chapterNumbers:
+                    unlockMode === "bundle"
+                      ? chapters.map((c) => c.number)
+                      : [activeChapter.number],
+                  amount: activeAmount,
+                  itemName:
+                    unlockMode === "chapter"
+                      ? activeChapter.title || `Chapter ${activeChapter.number}`
+                      : bookTitle,
+                  logMeta:
+                    unlockMode === "chapter"
+                      ? { type: "chapter", chapter: activeChapter.number, amount: chapterAmount }
+                      : { type: "bundle", amount: bundlePrice },
                 })
               }
             >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "I've paid — unlock this chapter"}
+              <ExternalLink className="mr-2 h-4 w-4" />
+              {payPalOpened ? "Open PayPal again" : `Pay ${formatMoney(activeAmount)} on PayPal`}
             </Button>
-          </>
-        ) : (
-          hasBundle && (
-            <>
-              {bundlePaypalUrl && (
-                <Button className="w-full" variant="outline" asChild>
-                  <a
-                    href={bundlePaypalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => onLog?.("novel_unlock_click", { type: "bundle" })}
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Pay {formatMoney(bundlePrice)} on PayPal
-                  </a>
-                </Button>
-              )}
-              <Button
-                className="w-full"
-                disabled={busy || !paypalConfigured}
-                onClick={() =>
-                  recordPurchase({
-                    purchaseType: "bundle",
-                    chapterNumbers: chapters.map((c) => c.number),
-                    amount: bundlePrice,
-                  })
-                }
-              >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "I've paid — unlock full book"}
-              </Button>
-            </>
-          )
-        )}
+          ) : (
+            <p className="text-sm text-destructive">
+              {unlockMode === "chapter"
+                ? "Add the author’s PayPal email in book settings for per-chapter purchases."
+                : "No valid PayPal link — check author PayPal settings."}
+            </p>
+          )}
+          {payPalOpened && !paymentVerified && (
+            <p className="text-center text-xs text-muted-foreground">
+              Finish payment on PayPal — unlock happens automatically after PayPal confirms.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Step 3 — Confirm unlock</p>
+          <Button className="w-full" disabled>
+            {paymentVerified ? (
+              "Unlocked"
+            ) : verifyingPayment ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Waiting for PayPal confirmation…
+              </>
+            ) : payPalOpened ? (
+              "Complete payment on PayPal to unlock"
+            ) : (
+              "Pay on PayPal first (Step 2)"
+            )}
+          </Button>
+          {paymentTimedOut && !paymentVerified && (
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={busy}
+              onClick={() => void recheckPayment()}
+            >
+              Check payment status again
+            </Button>
+          )}
+          {!payPalOpened && modeVerifiable && paypalConfigured && (
+            <p className="text-center text-xs text-muted-foreground">
+              This unlocks only after PayPal confirms your payment — not when you open the link.
+            </p>
+          )}
+        </div>
       </div>
     );
   }

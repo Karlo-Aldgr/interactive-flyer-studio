@@ -319,6 +319,7 @@ export interface ActionPayload {
   novelCurrency?: string;                  // "USD", "EUR", "$"
   novelPaypalHandle?: string;              // PayPal.me handle, no leading @
   novelPaypalEmail?: string;               // PayPal business email (fallback)
+  novelPaypalBundleLink?: string;          // fixed full-book PayPal payment link (optional)
   novelFollowEnabled?: boolean;            // show "Follow author (free)" button (default true)
   novelSubscribeEnabled?: boolean;         // show paid subscribe option
   novelSubscribePrice?: number;            // monthly subscribe price

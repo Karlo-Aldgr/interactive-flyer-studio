@@ -937,6 +937,7 @@ export type Database = {
           currency: string | null
           flyer_id: string
           id: string
+          payment_ref: string | null
           paypal_txn_id: string | null
           purchase_type: string
           status: string
@@ -953,6 +954,7 @@ export type Database = {
           currency?: string | null
           flyer_id: string
           id?: string
+          payment_ref?: string | null
           paypal_txn_id?: string | null
           purchase_type: string
           status?: string
@@ -969,6 +971,7 @@ export type Database = {
           currency?: string | null
           flyer_id?: string
           id?: string
+          payment_ref?: string | null
           paypal_txn_id?: string | null
           purchase_type?: string
           status?: string
@@ -1518,6 +1521,7 @@ export type Database = {
     }
     Functions: {
       accept_realtor_invite: { Args: { _token: string }; Returns: Json }
+      check_novel_payment: { Args: { _payment_ref: string }; Returns: Json }
       admin_assign_job_editor: {
         Args: { _editor_id: string; _job_id: string }
         Returns: Json
