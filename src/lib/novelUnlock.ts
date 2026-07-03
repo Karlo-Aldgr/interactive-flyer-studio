@@ -45,8 +45,37 @@ export function isChapterUnlocked(
   return state.chapters.includes(chapterNumber);
 }
 
-export function buildNovelPaypalUrl(handle: string, amount: number): string {
-  const h = handle.replace(/^@/, "").trim();
-  if (!h || amount <= 0) return "";
-  return `https://paypal.me/${encodeURIComponent(h)}/${encodeURIComponent(amount.toFixed(2))}`;
+/** Display amounts with $ for USD (client preference). */
+export function formatNovelMoney(amount: number, currency = "USD"): string {
+  if (currency === "USD" || currency === "$") return `$${amount.toFixed(2)}`;
+  return `${currency} ${amount.toFixed(2)}`;
+}
+
+export function hasNovelPaypal(handle?: string, email?: string): boolean {
+  return !!(handle?.replace(/^@/, "").trim() || email?.trim());
+}
+
+export function buildNovelPaypalUrl(
+  opts: { handle?: string; email?: string },
+  amount: number,
+  currency = "USD",
+  itemName = "Book chapter",
+): string {
+  if (amount <= 0) return "";
+  const handle = opts.handle?.replace(/^@/, "").trim();
+  if (handle) {
+    return `https://paypal.me/${encodeURIComponent(handle)}/${encodeURIComponent(amount.toFixed(2))}`;
+  }
+  const email = opts.email?.trim();
+  if (email) {
+    const params = new URLSearchParams({
+      cmd: "_xclick",
+      business: email,
+      amount: amount.toFixed(2),
+      currency_code: currency === "$" ? "USD" : currency,
+      item_name: itemName,
+    });
+    return `https://www.paypal.com/cgi-bin/webscr?${params.toString()}`;
+  }
+  return "";
 }

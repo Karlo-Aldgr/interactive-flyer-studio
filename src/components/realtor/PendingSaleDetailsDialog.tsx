@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { formatPrice } from "@/lib/realtor";
+import { formatPrice, LISTING_STATUSES, type ListingStatus } from "@/lib/realtor";
 
 type Props = {
   flyerId: string | null;
@@ -44,6 +44,32 @@ type Details = {
   lender: string;
   contingencies: string;
   notes: string;
+};
+
+const STATUS_COPY: Record<
+  ListingStatus,
+  { title: string; description: string; saveToast: string }
+> = {
+  active: {
+    title: "On market details",
+    description: "Private to you and admins. Track showings, seller info, and notes for this active listing.",
+    saveToast: "On market details saved",
+  },
+  pending: {
+    title: "Pending sale details",
+    description: "Private to you and admins. Track the buyer, contract, and closing info for this listing.",
+    saveToast: "Pending sale details saved",
+  },
+  sold: {
+    title: "Sold listing details",
+    description: "Private to you and admins. Record the final sale, parties, and closing information.",
+    saveToast: "Sold listing details saved",
+  },
+  draft: {
+    title: "Listing details",
+    description: "Private to you and admins. Notes and prep info before this listing goes live.",
+    saveToast: "Listing details saved",
+  },
 };
 
 const EMPTY: Details = {
@@ -130,23 +156,29 @@ export function PendingSaleDetailsDialog({ flyerId, open, onOpenChange }: Props)
       toast.error((data as any)?.error ?? error?.message ?? "Failed to save");
       return;
     }
-    toast.success("Pending sale details saved");
+    const status = (listing?.listing_status ?? "pending") as ListingStatus;
+    toast.success(STATUS_COPY[status]?.saveToast ?? "Details saved");
     onOpenChange(false);
   };
 
   const set = <K extends keyof Details>(k: K, v: string) => setD((p) => ({ ...p, [k]: v }));
+
+  const listingStatus = (listing?.listing_status ?? "pending") as ListingStatus;
+  const statusMeta = LISTING_STATUSES.find((s) => s.value === listingStatus) ?? LISTING_STATUSES[1];
+  const copy = STATUS_COPY[listingStatus] ?? STATUS_COPY.pending;
+  const showTransactionFields = listingStatus === "pending" || listingStatus === "sold";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
-            Pending sale details
-            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300">Pending</Badge>
+            {copy.title}
+            <Badge className={statusMeta.className}>
+              {statusMeta.shortLabel ?? statusMeta.label}
+            </Badge>
           </DialogTitle>
-          <DialogDescription>
-            Private to you and admins. Track the buyer, contract, and closing info for this listing.
-          </DialogDescription>
+          <DialogDescription>{copy.description}</DialogDescription>
         </DialogHeader>
 
         {loading || !listing ? (
@@ -169,55 +201,71 @@ export function PendingSaleDetailsDialog({ flyerId, open, onOpenChange }: Props)
               </div>
             </section>
 
-            <section className="space-y-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Parties</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
+            {showTransactionFields && (
+              <>
+                <section className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Parties</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Seller name" value={d.seller_name} onChange={(v) => set("seller_name", v)} />
+                    <Field label="Buyer name" value={d.buyer_name} onChange={(v) => set("buyer_name", v)} />
+                    <Field label="Buyer's agent" value={d.buyer_agent_name} onChange={(v) => set("buyer_agent_name", v)} />
+                    <Field label="Buyer's agent brokerage" value={d.buyer_agent_brokerage} onChange={(v) => set("buyer_agent_brokerage", v)} />
+                  </div>
+                </section>
+
+                <Separator />
+
+                <section className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Financials</h3>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Field label="Agreed purchase price ($)" value={d.agreed_price} onChange={(v) => set("agreed_price", v.replace(/[^0-9.]/g, ""))} inputMode="decimal" />
+                    <Field label="Earnest money ($)" value={d.earnest_money} onChange={(v) => set("earnest_money", v.replace(/[^0-9.]/g, ""))} inputMode="decimal" />
+                    <Field label="Closing costs ($)" value={d.closing_costs} onChange={(v) => set("closing_costs", v.replace(/[^0-9.]/g, ""))} inputMode="decimal" />
+                  </div>
+                </section>
+
+                <Separator />
+
+                <section className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Key dates</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Contract date" type="date" value={d.contract_date} onChange={(v) => set("contract_date", v)} />
+                    <Field label="Inspection deadline" type="date" value={d.inspection_deadline} onChange={(v) => set("inspection_deadline", v)} />
+                    <Field label="Financing deadline" type="date" value={d.financing_deadline} onChange={(v) => set("financing_deadline", v)} />
+                    <Field label="Closing date" type="date" value={d.closing_date} onChange={(v) => set("closing_date", v)} />
+                  </div>
+                </section>
+
+                <Separator />
+
+                <section className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Escrow & lending</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Title / escrow company" value={d.title_company} onChange={(v) => set("title_company", v)} />
+                    <Field label="Lender" value={d.lender} onChange={(v) => set("lender", v)} />
+                  </div>
+                  <div>
+                    <Label>Contingencies</Label>
+                    <Textarea rows={2} value={d.contingencies} onChange={(e) => set("contingencies", e.target.value)} placeholder="e.g. inspection, appraisal, financing" />
+                  </div>
+                </section>
+              </>
+            )}
+
+            {!showTransactionFields && (
+              <section className="space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Listing notes</h3>
                 <Field label="Seller name" value={d.seller_name} onChange={(v) => set("seller_name", v)} />
-                <Field label="Buyer name" value={d.buyer_name} onChange={(v) => set("buyer_name", v)} />
-                <Field label="Buyer's agent" value={d.buyer_agent_name} onChange={(v) => set("buyer_agent_name", v)} />
-                <Field label="Buyer's agent brokerage" value={d.buyer_agent_brokerage} onChange={(v) => set("buyer_agent_brokerage", v)} />
-              </div>
-            </section>
-
-            <Separator />
-
-            <section className="space-y-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Financials</h3>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Field label="Agreed purchase price (USD)" value={d.agreed_price} onChange={(v) => set("agreed_price", v.replace(/[^0-9.]/g, ""))} inputMode="decimal" />
-                <Field label="Earnest money (USD)" value={d.earnest_money} onChange={(v) => set("earnest_money", v.replace(/[^0-9.]/g, ""))} inputMode="decimal" />
-                <Field label="Closing costs (USD)" value={d.closing_costs} onChange={(v) => set("closing_costs", v.replace(/[^0-9.]/g, ""))} inputMode="decimal" />
-              </div>
-            </section>
-
-            <Separator />
+                <div>
+                  <Label>Showing / marketing notes</Label>
+                  <Textarea rows={2} value={d.contingencies} onChange={(e) => set("contingencies", e.target.value)} placeholder="Showing instructions, open house times, etc." />
+                </div>
+              </section>
+            )}
 
             <section className="space-y-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Key dates</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Contract date" type="date" value={d.contract_date} onChange={(v) => set("contract_date", v)} />
-                <Field label="Inspection deadline" type="date" value={d.inspection_deadline} onChange={(v) => set("inspection_deadline", v)} />
-                <Field label="Financing deadline" type="date" value={d.financing_deadline} onChange={(v) => set("financing_deadline", v)} />
-                <Field label="Closing date" type="date" value={d.closing_date} onChange={(v) => set("closing_date", v)} />
-              </div>
-            </section>
-
-            <Separator />
-
-            <section className="space-y-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Escrow & lending</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Title / escrow company" value={d.title_company} onChange={(v) => set("title_company", v)} />
-                <Field label="Lender" value={d.lender} onChange={(v) => set("lender", v)} />
-              </div>
-              <div>
-                <Label>Contingencies</Label>
-                <Textarea rows={2} value={d.contingencies} onChange={(e) => set("contingencies", e.target.value)} placeholder="e.g. inspection, appraisal, financing" />
-              </div>
-              <div>
-                <Label>Notes</Label>
-                <Textarea rows={3} value={d.notes} onChange={(e) => set("notes", e.target.value)} />
-              </div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Notes</h3>
+              <Textarea rows={3} value={d.notes} onChange={(e) => set("notes", e.target.value)} />
             </section>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -233,7 +281,6 @@ export function PendingSaleDetailsDialog({ flyerId, open, onOpenChange }: Props)
     </Dialog>
   );
 }
-
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">

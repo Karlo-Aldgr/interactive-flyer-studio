@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import type { ActionPayload } from "@/types/flyer";
-
-function formatMoney(currency: string, amount: number): string {
-  return `${currency} ${amount.toFixed(2)}`;
-}
+import { formatNovelMoney } from "@/lib/novelUnlock";
 
 interface Props {
   payload: ActionPayload;
@@ -66,16 +63,16 @@ export function NovelReaderPriceFab({ payload: p }: Props) {
             </button>
             {hasBundle ? (
               <div className="text-base font-extrabold leading-tight text-white">
-                {formatMoney(currency, bundlePrice!)}
+                {formatNovelMoney(bundlePrice!, currency)}
               </div>
             ) : (
               <div className="text-base font-extrabold leading-tight text-white">
-                {formatMoney(currency, chapterPrice)}
+                {formatNovelMoney(chapterPrice, currency)}
               </div>
             )}
             {hasBundle && hasChapter && (
               <div className="mt-1 text-[11px] font-medium text-slate-200">
-                or {formatMoney(currency, chapterPrice)}/chapter
+                or {formatNovelMoney(chapterPrice, currency)}/chapter
               </div>
             )}
             {!hasBundle && hasChapter && (

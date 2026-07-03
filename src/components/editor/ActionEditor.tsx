@@ -3112,10 +3112,16 @@ function NovelEditor({ draft, update }: { draft: LayerAction; update: (patch: an
         <div>
           <Label className="text-xs">PayPal.me handle</Label>
           <Input className="mt-1" value={p.novelPaypalHandle || ""} onChange={(e) => update({ novelPaypalHandle: e.target.value })} placeholder="janedoe" />
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            From paypal.me/<strong>yourname</strong> — payments go to this PayPal account.
+          </p>
         </div>
         <div>
           <Label className="text-xs">PayPal email (fallback)</Label>
           <Input className="mt-1" value={p.novelPaypalEmail || ""} onChange={(e) => update({ novelPaypalEmail: e.target.value })} placeholder="jane@example.com" />
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Used if no .me handle. Use the email tied to your PayPal business account.
+          </p>
         </div>
       </div>
 

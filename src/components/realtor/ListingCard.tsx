@@ -3,8 +3,16 @@ import { Eye, Users, Edit3, Copy, Trash2, ExternalLink, Image as ImageIcon, Send
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LISTING_STATUSES, type Listing, type ListingStats, formatPrice } from "@/lib/realtor";
+import {
+  LISTING_STATUSES,
+  listingDetailsCta,
+  listingDetailsOverlay,
+  type Listing,
+  type ListingStats,
+  formatPrice,
+} from "@/lib/realtor";
 import { buildPublicFlyerUrl } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Props = {
   listing: Listing;
@@ -14,31 +22,45 @@ type Props = {
   onDuplicate: () => void;
   onDelete: () => void;
   onTogglePublish: () => void;
-  onOpenPendingDetails?: () => void;
+  onOpenDetails?: () => void;
 };
 
-export function ListingCard({ listing, stats, ownerLabel, onEdit, onDuplicate, onDelete, onTogglePublish, onOpenPendingDetails }: Props) {
+export function ListingCard({
+  listing,
+  stats,
+  ownerLabel,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onTogglePublish,
+  onOpenDetails,
+}: Props) {
   const statusMeta = LISTING_STATUSES.find((s) => s.value === listing.listing_status) ?? LISTING_STATUSES[3];
   const isPublished = listing.status === "published";
-  const isPending = listing.listing_status === "pending";
   const marketLabel = statusMeta.shortLabel ?? statusMeta.label;
+  const ringClass = statusMeta.cardRingClass ?? "ring-primary/30 hover:ring-primary/60";
 
-  const stop = (e: React.MouseEvent | React.KeyboardEvent) => e.stopPropagation();
-  const handleCardClick = () => { if (isPending) onOpenPendingDetails?.(); };
+  const handleCardClick = () => onOpenDetails?.();
   const handleCardKey = (e: React.KeyboardEvent) => {
-    if (!isPending) return;
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenPendingDetails?.(); }
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onOpenDetails?.();
+    }
   };
 
-
   return (
-    <Card className={`flex flex-col overflow-hidden ${isPending ? "cursor-pointer ring-1 ring-amber-500/30 transition hover:ring-2 hover:ring-amber-500/60" : ""}`}>
+    <Card
+      className={cn(
+        "flex flex-col overflow-hidden cursor-pointer ring-1 transition hover:ring-2",
+        ringClass,
+      )}
+    >
       <div
-        role={isPending ? "button" : undefined}
-        tabIndex={isPending ? 0 : undefined}
+        role="button"
+        tabIndex={0}
         onClick={handleCardClick}
         onKeyDown={handleCardKey}
-        aria-label={isPending ? "View pending sale details" : undefined}
+        aria-label={`View ${marketLabel.toLowerCase()} listing details`}
       >
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
           {listing.thumbnail_url ? (
@@ -59,16 +81,18 @@ export function ListingCard({ listing, stats, ownerLabel, onEdit, onDuplicate, o
           <div className="absolute right-2 top-2 rounded-md bg-background/90 px-2 py-1 text-sm font-bold shadow">
             {formatPrice(listing.price_cents)}
           </div>
-          {isPending && (
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-amber-900/80 to-transparent px-3 py-2 text-xs font-medium text-white">
-              Click for pending sale details →
-            </div>
-          )}
+          <div
+            className={cn(
+              "absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent px-3 py-2 text-xs font-medium text-white",
+              listingDetailsOverlay(listing.listing_status),
+            )}
+          >
+            {listingDetailsCta(listing.listing_status)}
+          </div>
         </div>
       </div>
 
-
-      <div className="flex flex-1 flex-col gap-3 p-4">
+      <div className="flex flex-1 flex-col gap-3 p-4" onClick={(e) => e.stopPropagation()}>
         <div className="min-w-0">
           <div className="truncate font-semibold">{listing.address ?? listing.title}</div>
           {ownerLabel && (

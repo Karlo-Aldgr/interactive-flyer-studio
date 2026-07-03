@@ -41,12 +41,60 @@ export type ListingPhoto = {
 };
 
 
-export const LISTING_STATUSES: { value: ListingStatus; label: string; className: string; shortLabel?: string }[] = [
-  { value: "active", label: "Active on market", shortLabel: "On market", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
-  { value: "pending", label: "Pending sale", shortLabel: "Pending", className: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
-  { value: "sold", label: "Sold", className: "bg-rose-500/15 text-rose-700 dark:text-rose-300" },
-  { value: "draft", label: "Draft", className: "bg-muted text-muted-foreground" },
+export const LISTING_STATUSES: { value: ListingStatus; label: string; className: string; shortLabel?: string; tabBadgeClass?: string; cardRingClass?: string }[] = [
+  {
+    value: "active",
+    label: "Active on market",
+    shortLabel: "On market",
+    className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+    tabBadgeClass: "bg-emerald-500/20 text-emerald-800 dark:text-emerald-200",
+    cardRingClass: "ring-emerald-500/30 hover:ring-emerald-500/60",
+  },
+  {
+    value: "pending",
+    label: "Pending sale",
+    shortLabel: "Pending",
+    className: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+    tabBadgeClass: "bg-amber-500/20 text-amber-800 dark:text-amber-200",
+    cardRingClass: "ring-amber-500/30 hover:ring-amber-500/60",
+  },
+  {
+    value: "sold",
+    label: "Sold",
+    className: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
+    tabBadgeClass: "bg-rose-500/20 text-rose-800 dark:text-rose-200",
+    cardRingClass: "ring-rose-500/30 hover:ring-rose-500/60",
+  },
+  {
+    value: "draft",
+    label: "Draft",
+    className: "bg-muted text-muted-foreground",
+    tabBadgeClass: "bg-muted text-muted-foreground",
+    cardRingClass: "ring-slate-400/30 hover:ring-slate-400/60",
+  },
 ];
+
+const LISTING_DETAILS_CTA: Record<ListingStatus, string> = {
+  active: "Click for on market details →",
+  pending: "Click for pending sale details →",
+  sold: "Click for sold listing details →",
+  draft: "Click for listing details →",
+};
+
+const LISTING_DETAILS_OVERLAY: Record<ListingStatus, string> = {
+  active: "from-emerald-900/80",
+  pending: "from-amber-900/80",
+  sold: "from-rose-900/80",
+  draft: "from-slate-900/80",
+};
+
+export function listingDetailsCta(status: ListingStatus): string {
+  return LISTING_DETAILS_CTA[status];
+}
+
+export function listingDetailsOverlay(status: ListingStatus): string {
+  return LISTING_DETAILS_OVERLAY[status];
+}
 
 export function formatPrice(cents: number | null | undefined) {
   if (cents == null) return "—";

@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import type { LayerAction, NovelChapter } from "@/types/flyer";
 import {
   buildNovelPaypalUrl,
+  formatNovelMoney,
+  hasNovelPaypal,
   isChapterUnlocked,
   loadNovelUnlock,
   saveNovelUnlock,
@@ -37,6 +39,8 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
   const chapterPrice = p.novelChapterPrice ?? 0.99;
   const bundlePrice = p.novelBundlePrice;
   const paypalHandle = (p.novelPaypalHandle || "").trim();
+  const paypalEmail = (p.novelPaypalEmail || "").trim();
+  const paypalConfigured = hasNovelPaypal(paypalHandle, paypalEmail);
   const bookTitle = p.novelBookTitle || "Story";
   const author = p.novelAuthor || "";
   const coverUrl = resolveNovelCoverUrl(p.novelCoverUrl, coverFallbackUrl);
@@ -46,6 +50,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
   const [unlock, setUnlock] = useState<NovelUnlockState | null>(null);
   const [view, setView] = useState<"list" | "read" | "unlock">("list");
   const [activeChapter, setActiveChapter] = useState<NovelChapter | null>(null);
+  const [unlockMode, setUnlockMode] = useState<"chapter" | "bundle">("chapter");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -78,11 +83,11 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
   }
 
   function formatMoney(amount: number): string {
-    return `${currency} ${amount.toFixed(2)}`;
+    return formatNovelMoney(amount, currency);
   }
 
   function chapterPriceLabel(ch: NovelChapter, index: number, isFree: boolean, unlocked: boolean) {
-    if (unlocked) return { text: "Unlocked", kind: "unlocked" as const };
+    if (unlocked) return { text: "Free", kind: "unlocked" as const };
     if (isFree) return { text: "Free", kind: "free" as const };
     return { text: formatMoney(priceForChapter(ch)), kind: "paid" as const };
   }
@@ -102,6 +107,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
       return;
     }
     setActiveChapter(ch);
+    setUnlockMode("chapter");
     setView("unlock");
   }
 
@@ -137,16 +143,22 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
       name: name.trim() || undefined,
       chapters: [] as number[],
     };
-    const next: NovelUnlockState = {
-      ...prev,
-      email: buyerEmail,
-      name: name.trim() || prev.name,
-      bundle: args.purchaseType === "bundle" ? true : prev.bundle,
-      chapters:
-        args.purchaseType === "bundle"
-          ? chapters.map((c) => c.number)
-          : [...new Set([...prev.chapters, ...args.chapterNumbers])],
-    };
+    const next: NovelUnlockState =
+      args.purchaseType === "bundle"
+        ? {
+            ...prev,
+            email: buyerEmail,
+            name: name.trim() || prev.name,
+            bundle: true,
+            chapters: chapters.map((c) => c.number),
+          }
+        : {
+            ...prev,
+            email: buyerEmail,
+            name: name.trim() || prev.name,
+            bundle: false,
+            chapters: [...new Set([...prev.chapters, ...args.chapterNumbers])],
+          };
     saveNovelUnlock(flyerId, action.id, next);
     setUnlock(next);
     onLog?.(`novel_unlock_${args.purchaseType}`, { chapters: args.chapterNumbers, amount: args.amount });
@@ -182,10 +194,18 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
 
   function unlockPanel() {
     if (!activeChapter) return null;
-    const price = activeChapter.price ?? chapterPrice;
-    const paypalUrl = paypalHandle ? buildNovelPaypalUrl(paypalHandle, price) : "";
-    const bundleUrl =
-      bundlePrice && paypalHandle ? buildNovelPaypalUrl(paypalHandle, bundlePrice) : "";
+    const chapterAmount = activeChapter.price ?? chapterPrice;
+    const hasBundle = bundlePrice != null && bundlePrice > 0;
+    const paypalOpts = { handle: paypalHandle, email: paypalEmail };
+    const chapterPaypalUrl = buildNovelPaypalUrl(
+      paypalOpts,
+      chapterAmount,
+      currency,
+      activeChapter.title || `Chapter ${activeChapter.number}`,
+    );
+    const bundlePaypalUrl = hasBundle
+      ? buildNovelPaypalUrl(paypalOpts, bundlePrice, currency, bookTitle)
+      : "";
 
     return (
       <div className="space-y-4">
@@ -199,55 +219,94 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
             This chapter is locked. Pay via PayPal to unlock.
           </p>
         </div>
-        {!paypalHandle && (
+
+        {!paypalConfigured && (
           <p className="text-sm text-destructive">
             PayPal is not configured for this book — contact the author.
           </p>
         )}
-        {paypalUrl && (
-          <Button className="w-full" variant="outline" asChild>
-            <a href={paypalUrl} target="_blank" rel="noopener noreferrer" onClick={() => onLog?.("novel_unlock_click", { type: "chapter", chapter: activeChapter.number })}>
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Pay {currency} {price.toFixed(2)} on PayPal
-            </a>
-          </Button>
-        )}
-        <Button
-          className="w-full"
-          disabled={busy || !paypalHandle}
-          onClick={() =>
-            recordPurchase({
-              purchaseType: "chapter",
-              chapterNumbers: [activeChapter.number],
-              amount: price,
-            })
-          }
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "I've paid — unlock this chapter"}
-        </Button>
-        {bundlePrice && bundleUrl && (
-          <>
-            <div className="text-center text-xs text-muted-foreground">or unlock the full book</div>
-            <Button variant="secondary" className="w-full" asChild>
-              <a href={bundleUrl} target="_blank" rel="noopener noreferrer">
-                Full book · {currency} {bundlePrice.toFixed(2)}
-              </a>
+
+        {hasBundle && paypalConfigured && (
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={unlockMode === "chapter" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setUnlockMode("chapter")}
+            >
+              This chapter · {formatMoney(chapterAmount)}
             </Button>
             <Button
-              variant="outline"
+              type="button"
+              variant={unlockMode === "bundle" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setUnlockMode("bundle")}
+            >
+              Full book · {formatMoney(bundlePrice)}
+            </Button>
+          </div>
+        )}
+
+        {unlockMode === "chapter" ? (
+          <>
+            {chapterPaypalUrl && (
+              <Button className="w-full" variant="outline" asChild>
+                <a
+                  href={chapterPaypalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onLog?.("novel_unlock_click", { type: "chapter", chapter: activeChapter.number })}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Pay {formatMoney(chapterAmount)} on PayPal
+                </a>
+              </Button>
+            )}
+            <Button
               className="w-full"
-              disabled={busy}
+              disabled={busy || !paypalConfigured}
               onClick={() =>
                 recordPurchase({
-                  purchaseType: "bundle",
-                  chapterNumbers: chapters.map((c) => c.number),
-                  amount: bundlePrice,
+                  purchaseType: "chapter",
+                  chapterNumbers: [activeChapter.number],
+                  amount: chapterAmount,
                 })
               }
             >
-              I've paid for the full book
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "I've paid — unlock this chapter"}
             </Button>
           </>
+        ) : (
+          hasBundle && (
+            <>
+              {bundlePaypalUrl && (
+                <Button className="w-full" variant="outline" asChild>
+                  <a
+                    href={bundlePaypalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => onLog?.("novel_unlock_click", { type: "bundle" })}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Pay {formatMoney(bundlePrice)} on PayPal
+                  </a>
+                </Button>
+              )}
+              <Button
+                className="w-full"
+                disabled={busy || !paypalConfigured}
+                onClick={() =>
+                  recordPurchase({
+                    purchaseType: "bundle",
+                    chapterNumbers: chapters.map((c) => c.number),
+                    amount: bundlePrice,
+                  })
+                }
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "I've paid — unlock full book"}
+              </Button>
+            </>
+          )
         )}
       </div>
     );
@@ -266,37 +325,32 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
 
         {view === "list" && (
           <>
-            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
-              <p className="font-semibold text-foreground">Pricing</p>
-              <p className="mt-0.5 text-foreground">
-                {formatMoney(chapterPrice)} per chapter
-                {bundlePrice != null && bundlePrice > 0 && (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · Full book {formatMoney(bundlePrice)}
-                  </span>
-                )}
+            {bundlePrice != null && bundlePrice > 0 && (
+              <p className="text-sm font-semibold text-foreground">
+                Pay {formatMoney(bundlePrice)} to access the complete story
               </p>
-              {freeCount > 0 && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  First {freeCount} chapter{freeCount === 1 ? "" : "s"} free
-                </p>
-              )}
-            </div>
+            )}
 
             {coverUrl && (
-              <div className="mt-3 space-y-2 text-center">
-                {bundlePrice != null && bundlePrice > 0 && (
-                  <p className="text-sm font-semibold text-foreground">
-                    Pay {formatMoney(bundlePrice)} to access the complete story
-                  </p>
-                )}
+              <div className="mt-3 text-center">
                 <img
                   src={coverUrl}
                   alt={bookTitle}
                   className="mx-auto max-h-52 w-full max-w-xs rounded-lg object-contain shadow-sm"
                 />
               </div>
+            )}
+
+            {freeCount > 0 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                First {freeCount} chapter{freeCount === 1 ? "" : "s"} free
+                {chapterPrice > 0 && (
+                  <>
+                    {" "}
+                    · {formatMoney(chapterPrice)} per chapter
+                  </>
+                )}
+              </p>
             )}
           </>
         )}
@@ -368,7 +422,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
                 {p.novelSubscribeEnabled && p.novelSubscribeUrl && (
                   <Button size="sm" variant="outline" asChild>
                     <a href={p.novelSubscribeUrl} target="_blank" rel="noopener noreferrer">
-                      Subscribe{p.novelSubscribePrice ? ` · ${currency} ${p.novelSubscribePrice}` : ""}
+                      Subscribe{p.novelSubscribePrice ? ` · ${formatNovelMoney(p.novelSubscribePrice, currency)}` : ""}
                     </a>
                   </Button>
                 )}

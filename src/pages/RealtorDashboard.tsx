@@ -36,7 +36,7 @@ export default function RealtorDashboard() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ListingFilter>("all");
   const [profile, setProfile] = useState<RealtorProfile | null>(null);
-  const [pendingFor, setPendingFor] = useState<string | null>(null);
+  const [detailsFor, setDetailsFor] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -184,6 +184,7 @@ export default function RealtorDashboard() {
             label="On market"
             value={counts.active ?? 0}
             active={statusFilter === "active"}
+            highlight={(counts.active ?? 0) > 0}
             onClick={() => setStatusFilter("active")}
           />
           <SummaryCard
@@ -197,6 +198,7 @@ export default function RealtorDashboard() {
             label="Live online"
             value={counts.published ?? 0}
             active={statusFilter === "published"}
+            highlight={(counts.published ?? 0) > 0}
             onClick={() => setStatusFilter("published")}
           />
           <SummaryCard label="Total views" value={totals.views} />
@@ -229,9 +231,9 @@ export default function RealtorDashboard() {
                   className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
                   {statusTabLabel(s.value)}
-                  {s.value === "pending" && (counts.pending ?? 0) > 0 && statusFilter !== "pending" && (
-                    <Badge className="ml-2 bg-amber-500/20 text-amber-800 dark:text-amber-200" variant="secondary">
-                      {counts.pending}
+                  {(counts[s.value] ?? 0) > 0 && statusFilter !== s.value && (
+                    <Badge className={cn("ml-2", s.tabBadgeClass)} variant="secondary">
+                      {counts[s.value]}
                     </Badge>
                   )}
                 </TabsTrigger>
@@ -271,7 +273,7 @@ export default function RealtorDashboard() {
                 onDuplicate={() => handleDuplicate(l)}
                 onDelete={() => handleDelete(l)}
                 onTogglePublish={() => handleTogglePublish(l)}
-                onOpenPendingDetails={() => setPendingFor(l.id)}
+                onOpenDetails={() => setDetailsFor(l.id)}
               />
             ))}
           </div>
@@ -280,9 +282,9 @@ export default function RealtorDashboard() {
 
       <CreateListingDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={handleCreate} />
       <PendingSaleDetailsDialog
-        flyerId={pendingFor}
-        open={pendingFor !== null}
-        onOpenChange={(v) => { if (!v) setPendingFor(null); }}
+        flyerId={detailsFor}
+        open={detailsFor !== null}
+        onOpenChange={(v) => { if (!v) setDetailsFor(null); }}
       />
     </RealtorShell>
   );
