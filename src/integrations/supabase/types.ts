@@ -1521,7 +1521,6 @@ export type Database = {
     }
     Functions: {
       accept_realtor_invite: { Args: { _token: string }; Returns: Json }
-      check_novel_payment: { Args: { _payment_ref: string }; Returns: Json }
       admin_assign_job_editor: {
         Args: { _editor_id: string; _job_id: string }
         Returns: Json
@@ -1594,6 +1593,7 @@ export type Database = {
         Returns: Json
       }
       archive_menu_orders_daily: { Args: never; Returns: number }
+      check_novel_payment: { Args: { _payment_ref: string }; Returns: Json }
       current_user_can_edit: { Args: never; Returns: boolean }
       customer_delete_job: {
         Args: { _job_id: string; _reason: string }
