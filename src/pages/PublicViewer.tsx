@@ -2577,6 +2577,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         flyerId={flyer?.id || null}
         sessionId={sessionId}
         novelCoverFallbackUrl={novelCoverFallbackUrl}
+        previewMode={previewMode}
         onClose={() => setNewInteractionAction(null)}
       />
 

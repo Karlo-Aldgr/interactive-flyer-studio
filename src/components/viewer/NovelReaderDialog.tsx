@@ -28,11 +28,25 @@ interface Props {
   action: LayerAction;
   flyerId: string;
   coverFallbackUrl?: string | null;
+  previewMode?: boolean;
   onClose: () => void;
   onLog?: (eventType: string, meta?: Record<string, unknown>) => void;
 }
 
-export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, onLog }: Props) {
+function openExternalUrl(url: string): boolean {
+  const popup = window.open(url, "_blank", "noopener,noreferrer");
+  if (popup) return true;
+  const link = document.createElement("a");
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  return true;
+}
+
+export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, previewMode = false, onClose, onLog }: Props) {
   const p = action.payload || {};
   const chapters: NovelChapter[] = p.novelChapters || [];
   const freeCount = typeof p.novelFreeCount === "number" ? p.novelFreeCount : 3;
@@ -67,6 +81,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
     amount: number;
   } | null>(null);
   const paymentVerifiableRef = useRef(true);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -135,6 +150,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
     setPaymentTimedOut(false);
     pendingPurchaseRef.current = null;
     paymentVerifiableRef.current = true;
+    setCheckoutError(null);
   }
 
   function completeVerifiedUnlock() {
@@ -204,6 +220,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
     logMeta: Record<string, unknown>;
   }) {
     if (!email.trim()) return toast.error("Email is required");
+    setCheckoutError(null);
 
     paymentVerifiableRef.current = canVerifyNovelPayment(paypalOpts, args.purchaseType);
     if (!paymentVerifiableRef.current) {
@@ -250,11 +267,19 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
         pendingPurchaseRef.current = null;
         const msg = String(error.message || "");
         if (msg.includes("row-level security") || msg.includes("policy")) {
-          toast.error("Checkout only works on the published live flyer — publish first, then test on tapthatflyer.com");
+          const hint = previewMode
+            ? "Checkout is blocked for this flyer in preview. Publish the flyer, or run the latest novel_purchases migration in Supabase SQL."
+            : "Checkout blocked — publish the flyer first, then test on the live public URL.";
+          setCheckoutError(hint);
+          toast.error(hint);
         } else if (msg.includes("payment_ref")) {
-          toast.error("Database not ready — run the novel payment migration in Supabase SQL editor");
+          const hint = "Database not ready — run the novel payment migration in Supabase SQL editor.";
+          setCheckoutError(hint);
+          toast.error(hint);
         } else {
-          toast.error("Could not start checkout — try again");
+          const hint = `Could not start checkout: ${msg || "try again"}`;
+          setCheckoutError(hint);
+          toast.error(hint);
         }
         return;
       }
@@ -266,7 +291,8 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
     }
 
     onLog?.("novel_unlock_click", { ...args.logMeta, payment_ref: paymentRef });
-    window.open(paypalUrl, "_blank", "noopener,noreferrer");
+    openExternalUrl(paypalUrl);
+    toast.message("Opening PayPal…");
   }
 
   async function recheckPayment() {
@@ -355,6 +381,17 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, onClose, 
           </p>
         </div>
 
+        {previewMode && (
+          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+            Preview mode — for a real payment test, publish the flyer and open the live public link (not Preview).
+          </p>
+        )}
+
+        {checkoutError && (
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {checkoutError}
+          </p>
+        )}
         {!paypalConfigured && (
           <p className="text-sm text-destructive">
             PayPal is not configured for this book — contact the author.
