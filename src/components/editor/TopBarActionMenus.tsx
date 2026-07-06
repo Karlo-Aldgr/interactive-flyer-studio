@@ -35,6 +35,7 @@ export interface TopBarMenuActions {
   onOpenCheckout: () => void;
   onOpenPayLink: () => void;
   onOpenShare: () => void;
+  onOpenMarketing: () => void;
   onOpenResize: () => void;
 }
 
@@ -332,6 +333,9 @@ export function TopBarMobileMenu(actions: TopBarMenuActions) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={actions.onOpenShare}>
               <Share2 className="mr-2 h-4 w-4" /> Share
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={actions.onOpenMarketing}>
+              <Sparkles className="mr-2 h-4 w-4" /> AI posts
             </DropdownMenuItem>
           </>
         )}
