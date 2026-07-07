@@ -37,7 +37,21 @@ Deno.serve(async (req) => {
 
     if (draftErr) return json({ error: draftErr.message }, 500);
     if (!draft) return json({ error: "Draft not found" }, 404);
-    if (draft.owner_id !== user.id) return json({ error: "Forbidden" }, 403);
+
+    const isOwner = draft.owner_id === user.id;
+    let canTrigger = isOwner;
+    if (!canTrigger) {
+      const { data: isAdmin } = await supabase.rpc("has_role", {
+        _user_id: user.id,
+        _role: "admin",
+      });
+      const { data: isEditor } = await supabase.rpc("has_role", {
+        _user_id: user.id,
+        _role: "editor",
+      });
+      canTrigger = !!isAdmin || !!isEditor;
+    }
+    if (!canTrigger) return json({ error: "Forbidden" }, 403);
 
     const n8nUrl = Deno.env.get("N8N_MARKETING_WEBHOOK_URL")?.trim();
     if (!n8nUrl) {
