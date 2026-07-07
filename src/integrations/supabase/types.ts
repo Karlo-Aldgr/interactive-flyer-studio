@@ -686,6 +686,59 @@ export type Database = {
           },
         ]
       }
+      marketing_drafts: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          facebook_post: string | null
+          flyer_id: string
+          flyer_title: string | null
+          flyer_url: string | null
+          id: string
+          instagram_caption: string | null
+          owner_id: string
+          status: string
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          facebook_post?: string | null
+          flyer_id: string
+          flyer_title?: string | null
+          flyer_url?: string | null
+          id?: string
+          instagram_caption?: string | null
+          owner_id: string
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          facebook_post?: string | null
+          flyer_id?: string
+          flyer_title?: string | null
+          flyer_url?: string | null
+          id?: string
+          instagram_caption?: string | null
+          owner_id?: string
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_drafts_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_daily_summaries: {
         Row: {
           cancelled_orders: number
