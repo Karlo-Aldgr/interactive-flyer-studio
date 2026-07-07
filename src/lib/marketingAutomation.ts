@@ -44,6 +44,12 @@ export async function triggerMarketingOnPublish(args: {
 
   if (error) {
     console.error("[marketing] insert draft failed", error);
+    const msg = error.message || "";
+    if (/row-level security|rls|42501/i.test(msg)) {
+      toast.error("Could not save marketing draft — permission denied. Run the marketing_drafts RLS fix migration.");
+    } else {
+      toast.error("Could not save marketing draft: " + msg);
+    }
     return null;
   }
 
