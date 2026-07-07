@@ -3670,7 +3670,7 @@ function getPollSessionId(): string {
   try {
     let id = localStorage.getItem(POLL_SESSION_KEY);
     if (!id) {
-      id = crypto.randomUUID();
+      id = safeUUID();
       localStorage.setItem(POLL_SESSION_KEY, id);
     }
     return id;

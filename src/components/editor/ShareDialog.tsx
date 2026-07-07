@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Download, Share2, RefreshCw, Loader2, ImagePlus, Clipboard } from "lucide-react";
 import { getPublicAppOrigin, isLovablePreviewHost } from "@/lib/utils";
+import { safeCopyToClipboard } from "@/lib/safeBrowser";
 import { toast } from "sonner";
 
 interface ExtraLink {
@@ -88,8 +89,12 @@ export function ShareDialog({
 
   const twoColumn = !!safeFlyerPreview;
 
-  function copyText(key: string, url: string, msg = "Link copied") {
-    navigator.clipboard.writeText(url);
+  async function copyText(key: string, url: string, msg = "Link copied") {
+    const ok = await safeCopyToClipboard(url);
+    if (!ok) {
+      toast.error("Couldn't copy automatically — long-press or select the link to copy.");
+      return;
+    }
     setCopiedKey(key);
     toast.success(msg);
     setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1500);

@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.novel-paypal-ipn]
 verify_jwt = false
+
+[functions.marketing-trigger]
+verify_jwt = true
+
+[functions.marketing-draft-complete]
+verify_jwt = false

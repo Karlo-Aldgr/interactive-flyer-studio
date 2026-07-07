@@ -4,7 +4,7 @@ import { useEditorStore, ResizeMode } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  ChevronLeft, Undo2, Redo2, Globe, Loader2, ZoomIn, ZoomOut, Crop, Share2,
+  ChevronLeft, Undo2, Redo2, Globe, Loader2, ZoomIn, ZoomOut, Crop, Share2, Sparkles,
   Briefcase, PartyPopper, CalendarIcon,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareDialog } from "./ShareDialog";
+import { MarketingDraftsDialog } from "./MarketingDraftsDialog";
+import { triggerMarketingOnPublish } from "@/lib/marketingAutomation";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
 import { FlyerPaymentSettingsDialog } from "./FlyerPaymentSettingsDialog";
 import { IntroAudioDialog } from "./IntroAudioDialog";
@@ -70,6 +72,7 @@ export function TopBar({ saving }: Props) {
   const [useCustom, setUseCustom] = useState(false);
   const [mode, setMode] = useState<ResizeMode>("resize");
   const [shareOpen, setShareOpen] = useState(false);
+  const [marketingOpen, setMarketingOpen] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
   const [flyerPreviewThumb, setFlyerPreviewThumb] = useState<string | undefined>(undefined);
@@ -304,6 +307,7 @@ export function TopBar({ saving }: Props) {
 
     // On publish, capture a fresh social thumbnail (prefer landing page).
     if (newStatus === "published") {
+      let thumbnailForMarketing = localThumbnail ?? flyer.thumbnail_url ?? null;
       const store = useEditorStore.getState();
       const landingPage = store.pages.find((p) => p.background?.linkPageId);
       const sourcePage = landingPage ?? store.pages[0];
@@ -320,7 +324,8 @@ export function TopBar({ saving }: Props) {
             const captureW = sourcePage.background?.size?.width ?? flyer.settings.width;
             const captureH = sourcePage.background?.size?.height ?? flyer.settings.height;
             const bg = sourcePage.background?.color || flyer.settings.background || "#ffffff";
-            await generateAndUploadThumbnail(stage, flyer.id, captureW, captureH, bg);
+            const uploaded = await generateAndUploadThumbnail(stage, flyer.id, captureW, captureH, bg);
+            if (uploaded) thumbnailForMarketing = uploaded.split("?")[0];
             if (landingPage) {
               try {
                 const landingData = stageToSocialDataURL(stage, captureW, captureH, bg);
@@ -337,6 +342,16 @@ export function TopBar({ saving }: Props) {
             console.warn("[publish] thumbnail capture failed", e);
           }
         }
+      }
+
+      if (slug) {
+        void triggerMarketingOnPublish({
+          flyerId: flyer.id,
+          ownerId: flyer.owner_id,
+          title: titleIsReal ? titleNow : flyer.title,
+          slug,
+          thumbnailUrl: thumbnailForMarketing,
+        });
       }
     }
   }
@@ -424,6 +439,7 @@ export function TopBar({ saving }: Props) {
     onOpenCheckout: () => setPaySettingsOpen(true),
     onOpenPayLink: () => setPayOpen(true),
     onOpenShare: openShare,
+    onOpenMarketing: () => setMarketingOpen(true),
     onOpenResize: () => setResizeOpen(true),
   };
 
@@ -510,9 +526,14 @@ export function TopBar({ saving }: Props) {
       </div>
 
       {flyer.status === "published" && (
-        <Button size="sm" variant="outline" className="hidden h-8 lg:inline-flex" onClick={openShare}>
-          <Share2 className="mr-1 h-4 w-4" /> Share
-        </Button>
+        <>
+          <Button size="sm" variant="outline" className="hidden h-8 lg:inline-flex" onClick={openShare}>
+            <Share2 className="mr-1 h-4 w-4" /> Share
+          </Button>
+          <Button size="sm" variant="outline" className="hidden h-8 lg:inline-flex" onClick={() => setMarketingOpen(true)}>
+            <Sparkles className="mr-1 h-4 w-4" /> AI posts
+          </Button>
+        </>
       )}
 
       <Button
@@ -662,6 +683,14 @@ export function TopBar({ saving }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MarketingDraftsDialog
+        open={marketingOpen}
+        onOpenChange={setMarketingOpen}
+        flyerId={flyer.id}
+        ownerId={flyer.owner_id}
+        flyerTitle={flyer.title}
+      />
 
       <ShareDialog
         open={shareOpen}

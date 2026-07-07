@@ -20,6 +20,7 @@ import {
   type NovelUnlockState,
 } from "@/lib/novelUnlock";
 import { resolveNovelCoverUrl } from "@/lib/novelCover";
+import { safeUUID } from "@/lib/safeBrowser";
 
 const READER_EMAIL_KEY = "novel_reader_email";
 const READER_NAME_KEY = "novel_reader_name";
@@ -229,7 +230,7 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, previewMo
 
     const buyerEmail = email.trim().toLowerCase();
     const isNewCheckout = !activePaymentRef;
-    const paymentRef = activePaymentRef ?? crypto.randomUUID();
+    const paymentRef = activePaymentRef ?? safeUUID();
     const paypalUrl = buildNovelPaypalUrl(
       paypalOpts,
       args.amount,
