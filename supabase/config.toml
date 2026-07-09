@@ -11,3 +11,9 @@ verify_jwt = true
 
 [functions.marketing-draft-complete]
 verify_jwt = false
+
+[functions.meta-connect-start]
+verify_jwt = true
+
+[functions.meta-post-now]
+verify_jwt = true

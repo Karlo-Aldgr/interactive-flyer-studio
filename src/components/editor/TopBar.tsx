@@ -23,6 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareDialog } from "./ShareDialog";
+import { AutomationHubDialog } from "./AutomationHubDialog";
+import { FacebookPostDialog } from "./FacebookPostDialog";
 import { MarketingDraftsDialog } from "./MarketingDraftsDialog";
 import { triggerMarketingOnPublish } from "@/lib/marketingAutomation";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
@@ -72,6 +74,8 @@ export function TopBar({ saving }: Props) {
   const [useCustom, setUseCustom] = useState(false);
   const [mode, setMode] = useState<ResizeMode>("resize");
   const [shareOpen, setShareOpen] = useState(false);
+  const [automationOpen, setAutomationOpen] = useState(false);
+  const [facebookPostOpen, setFacebookPostOpen] = useState(false);
   const [marketingOpen, setMarketingOpen] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
@@ -439,7 +443,7 @@ export function TopBar({ saving }: Props) {
     onOpenCheckout: () => setPaySettingsOpen(true),
     onOpenPayLink: () => setPayOpen(true),
     onOpenShare: openShare,
-    onOpenMarketing: () => setMarketingOpen(true),
+    onOpenMarketing: () => setAutomationOpen(true),
     onOpenResize: () => setResizeOpen(true),
   };
 
@@ -530,8 +534,8 @@ export function TopBar({ saving }: Props) {
           <Button size="sm" variant="outline" className="hidden h-8 lg:inline-flex" onClick={openShare}>
             <Share2 className="mr-1 h-4 w-4" /> Share
           </Button>
-          <Button size="sm" variant="outline" className="hidden h-8 lg:inline-flex" onClick={() => setMarketingOpen(true)}>
-            <Sparkles className="mr-1 h-4 w-4" /> AI posts
+          <Button size="sm" variant="outline" className="hidden h-8 lg:inline-flex" onClick={() => setAutomationOpen(true)}>
+            <Sparkles className="mr-1 h-4 w-4" /> Add automations
           </Button>
         </>
       )}
@@ -684,6 +688,23 @@ export function TopBar({ saving }: Props) {
         </DialogContent>
       </Dialog>
 
+      <AutomationHubDialog
+        open={automationOpen}
+        onOpenChange={setAutomationOpen}
+        flyer={flyer}
+        onOpenMarketing={() => setMarketingOpen(true)}
+        onOpenFacebookPost={() => setFacebookPostOpen(true)}
+      />
+
+      <FacebookPostDialog
+        open={facebookPostOpen}
+        onOpenChange={setFacebookPostOpen}
+        flyerId={flyer.id}
+        ownerId={flyer.owner_id}
+        flyerTitle={flyer.title}
+        onOpenMarketing={() => setMarketingOpen(true)}
+      />
+
       <MarketingDraftsDialog
         open={marketingOpen}
         onOpenChange={setMarketingOpen}
@@ -784,3 +805,4 @@ export function TopBar({ saving }: Props) {
     </header>
   );
 }
+

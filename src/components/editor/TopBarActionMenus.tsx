@@ -335,7 +335,7 @@ export function TopBarMobileMenu(actions: TopBarMenuActions) {
               <Share2 className="mr-2 h-4 w-4" /> Share
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={actions.onOpenMarketing}>
-              <Sparkles className="mr-2 h-4 w-4" /> AI posts
+              <Sparkles className="mr-2 h-4 w-4" /> Add automations
             </DropdownMenuItem>
           </>
         )}
@@ -362,3 +362,4 @@ export function TopBarPreviewButton({ flyerId, compact }: { flyerId: string; com
     </Button>
   );
 }
+
