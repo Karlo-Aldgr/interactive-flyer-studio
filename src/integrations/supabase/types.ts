@@ -690,12 +690,24 @@ export type Database = {
         Row: {
           created_at: string
           error_message: string | null
+          facebook_error_message: string | null
+          facebook_last_attempt_at: string | null
+          facebook_last_error: string | null
           facebook_post: string | null
+          facebook_posted_at: string | null
+          facebook_provider_post_id: string | null
+          facebook_provider_status: string
+          facebook_scheduled_for: string | null
+          facebook_status: string
           flyer_id: string
           flyer_title: string | null
           flyer_url: string | null
           id: string
           instagram_caption: string | null
+          instagram_error_message: string | null
+          instagram_posted_at: string | null
+          instagram_scheduled_for: string | null
+          instagram_status: string
           owner_id: string
           status: string
           thumbnail_url: string | null
@@ -704,12 +716,24 @@ export type Database = {
         Insert: {
           created_at?: string
           error_message?: string | null
+          facebook_error_message?: string | null
+          facebook_last_attempt_at?: string | null
+          facebook_last_error?: string | null
           facebook_post?: string | null
+          facebook_posted_at?: string | null
+          facebook_provider_post_id?: string | null
+          facebook_provider_status?: string
+          facebook_scheduled_for?: string | null
+          facebook_status?: string
           flyer_id: string
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
           instagram_caption?: string | null
+          instagram_error_message?: string | null
+          instagram_posted_at?: string | null
+          instagram_scheduled_for?: string | null
+          instagram_status?: string
           owner_id: string
           status?: string
           thumbnail_url?: string | null
@@ -718,12 +742,24 @@ export type Database = {
         Update: {
           created_at?: string
           error_message?: string | null
+          facebook_error_message?: string | null
+          facebook_last_attempt_at?: string | null
+          facebook_last_error?: string | null
           facebook_post?: string | null
+          facebook_posted_at?: string | null
+          facebook_provider_post_id?: string | null
+          facebook_provider_status?: string
+          facebook_scheduled_for?: string | null
+          facebook_status?: string
           flyer_id?: string
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
           instagram_caption?: string | null
+          instagram_error_message?: string | null
+          instagram_posted_at?: string | null
+          instagram_scheduled_for?: string | null
+          instagram_status?: string
           owner_id?: string
           status?: string
           thumbnail_url?: string | null
@@ -894,6 +930,51 @@ export type Database = {
           id?: string
           sections?: Json
           updated_at?: string
+        }
+        Relationships: []
+      }
+      meta_connections: {
+        Row: {
+          connection_mode: string
+          created_at: string
+          facebook_page_id: string | null
+          facebook_page_name: string | null
+          id: string
+          last_error: string | null
+          meta_app_id: string | null
+          page_access_token_last4: string | null
+          provider: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_mode?: string
+          created_at?: string
+          facebook_page_id?: string | null
+          facebook_page_name?: string | null
+          id?: string
+          last_error?: string | null
+          meta_app_id?: string | null
+          page_access_token_last4?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_mode?: string
+          created_at?: string
+          facebook_page_id?: string | null
+          facebook_page_name?: string | null
+          id?: string
+          last_error?: string | null
+          meta_app_id?: string | null
+          page_access_token_last4?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
