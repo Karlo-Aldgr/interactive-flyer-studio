@@ -4,13 +4,23 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Copy, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Check, Copy, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { safeCopyToClipboard } from "@/lib/safeBrowser";
 import { toast } from "sonner";
 import {
+  formatScheduleLabel,
+  fromLocalInputValue,
   loadLatestMarketingDraft,
+  markMarketingChannelPosted,
   regenerateMarketingDraft,
+  scheduleMarketingChannel,
+  toLocalInputValue,
+  unscheduleMarketingChannel,
+  type MarketingChannel,
+  type MarketingChannelStatus,
   type MarketingDraft,
 } from "@/lib/marketingAutomation";
 
@@ -22,13 +32,188 @@ interface Props {
   flyerTitle: string;
 }
 
-function statusLabel(status: MarketingDraft["status"]): string {
+function genStatusLabel(status: MarketingDraft["status"]): string {
   switch (status) {
     case "pending": return "Queued";
     case "processing": return "Generating…";
     case "ready": return "Ready";
     case "failed": return "Failed";
   }
+}
+
+function channelStatusLabel(status: MarketingChannelStatus): string {
+  switch (status) {
+    case "draft": return "Draft";
+    case "scheduled": return "Scheduled";
+    case "posted": return "Posted";
+    case "failed": return "Failed";
+  }
+}
+
+function channelBadgeVariant(
+  status: MarketingChannelStatus,
+): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case "scheduled": return "default";
+    case "posted": return "secondary";
+    case "failed": return "destructive";
+    default: return "outline";
+  }
+}
+
+function defaultScheduleInput(): string {
+  const d = new Date(Date.now() + 60 * 60 * 1000);
+  return toLocalInputValue(d.toISOString());
+}
+
+function ChannelSchedulePanel({
+  channel,
+  label,
+  draft,
+  busy,
+  onUpdated,
+}: {
+  channel: MarketingChannel;
+  label: string;
+  draft: MarketingDraft;
+  busy: boolean;
+  onUpdated: (row: MarketingDraft) => void;
+}) {
+  const status = channel === "facebook" ? draft.facebook_status : draft.instagram_status;
+  const scheduledFor = channel === "facebook" ? draft.facebook_scheduled_for : draft.instagram_scheduled_for;
+  const postedAt = channel === "facebook" ? draft.facebook_posted_at : draft.instagram_posted_at;
+  const errorMessage = channel === "facebook" ? draft.facebook_error_message : draft.instagram_error_message;
+  const hasCopy = channel === "facebook" ? !!draft.facebook_post : !!draft.instagram_caption;
+
+  const [when, setWhen] = useState(() => toLocalInputValue(scheduledFor) || defaultScheduleInput());
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setWhen(toLocalInputValue(scheduledFor) || defaultScheduleInput());
+  }, [scheduledFor, draft.id]);
+
+  async function run(action: () => Promise<MarketingDraft | null>) {
+    setSaving(true);
+    try {
+      const updated = await action();
+      if (updated) onUpdated(updated);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border border-border/70 bg-muted/20 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">{label}</span>
+        <Badge variant={channelBadgeVariant(status)}>{channelStatusLabel(status)}</Badge>
+      </div>
+
+      {status === "scheduled" && scheduledFor && (
+        <p className="text-xs text-muted-foreground">
+          Scheduled for <span className="font-medium text-foreground">{formatScheduleLabel(scheduledFor)}</span>
+        </p>
+      )}
+      {status === "posted" && postedAt && (
+        <p className="text-xs text-muted-foreground">
+          Marked posted <span className="font-medium text-foreground">{formatScheduleLabel(postedAt)}</span>
+        </p>
+      )}
+      {status === "failed" && errorMessage && (
+        <p className="text-xs text-destructive">{errorMessage}</p>
+      )}
+
+      {(status === "draft" || status === "failed" || status === "scheduled") && (
+        <div className="space-y-2">
+          <Label htmlFor={`${channel}-when`} className="text-xs">
+            {status === "scheduled" ? "Change schedule" : "Schedule for"}
+          </Label>
+          <Input
+            id={`${channel}-when`}
+            type="datetime-local"
+            value={when}
+            onChange={(e) => setWhen(e.target.value)}
+            disabled={busy || saving || !hasCopy}
+          />
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {(status === "draft" || status === "failed") && (
+          <Button
+            type="button"
+            size="sm"
+            className="h-8"
+            disabled={busy || saving || !hasCopy || !when}
+            onClick={() => {
+              const iso = fromLocalInputValue(when);
+              if (!iso) {
+                toast.error("Pick a valid date and time");
+                return;
+              }
+              void run(() => scheduleMarketingChannel(draft.id, channel, iso));
+            }}
+          >
+            {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+            Schedule
+          </Button>
+        )}
+
+        {status === "scheduled" && (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8"
+              disabled={busy || saving || !hasCopy || !when}
+              onClick={() => {
+                const iso = fromLocalInputValue(when);
+                if (!iso) {
+                  toast.error("Pick a valid date and time");
+                  return;
+                }
+                void run(() => scheduleMarketingChannel(draft.id, channel, iso));
+              }}
+            >
+              {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+              Update schedule
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8"
+              disabled={busy || saving}
+              onClick={() => void run(() => unscheduleMarketingChannel(draft.id, channel))}
+            >
+              Unschedule
+            </Button>
+          </>
+        )}
+
+        {status !== "posted" && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-8"
+            disabled={busy || saving || !hasCopy}
+            onClick={() => void run(() => markMarketingChannelPosted(draft.id, channel))}
+          >
+            <Check className="mr-1 h-3.5 w-3.5" />
+            Mark posted
+          </Button>
+        )}
+      </div>
+
+      {!hasCopy && (
+        <p className="text-[11px] text-muted-foreground">Generate AI copy first, then schedule this channel.</p>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        App-only scheduling — nothing posts to social networks automatically in Phase 2.
+      </p>
+    </div>
+  );
 }
 
 export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, flyerTitle }: Props) {
@@ -76,6 +261,7 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
 
   const busy = loading && !draft;
   const working = draft?.status === "pending" || draft?.status === "processing";
+  const ready = draft?.status === "ready";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -86,8 +272,9 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
             AI marketing posts
           </DialogTitle>
           <DialogDescription>
-            Draft Facebook and Instagram copy for <span className="font-medium">{flyerTitle}</span>.
-            Review and paste into each platform — nothing is posted automatically in Phase 1.
+            Draft and schedule Facebook and Instagram copy for{" "}
+            <span className="font-medium">{flyerTitle}</span>.
+            Phase 2 tracks status in TapThatFlyer only — nothing posts automatically.
           </DialogDescription>
         </DialogHeader>
 
@@ -102,7 +289,9 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Status: <span className="font-medium text-foreground">{statusLabel(draft.status)}</span></span>
+              <span>
+                AI status: <span className="font-medium text-foreground">{genStatusLabel(draft.status)}</span>
+              </span>
               {working && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             </div>
 
@@ -129,10 +318,19 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
               <Textarea
                 id="fb-post"
                 readOnly
-                rows={6}
+                rows={5}
                 value={draft.facebook_post || (working ? "Generating…" : "")}
                 placeholder={working ? "Generating…" : "No Facebook draft yet"}
               />
+              {ready && (
+                <ChannelSchedulePanel
+                  channel="facebook"
+                  label="Facebook publishing"
+                  draft={draft}
+                  busy={working || regenerating}
+                  onUpdated={setDraft}
+                />
+              )}
             </div>
 
             <div className="space-y-2">
@@ -152,10 +350,19 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
               <Textarea
                 id="ig-caption"
                 readOnly
-                rows={5}
+                rows={4}
                 value={draft.instagram_caption || (working ? "Generating…" : "")}
                 placeholder={working ? "Generating…" : "No Instagram draft yet"}
               />
+              {ready && (
+                <ChannelSchedulePanel
+                  channel="instagram"
+                  label="Instagram publishing"
+                  draft={draft}
+                  busy={working || regenerating}
+                  onUpdated={setDraft}
+                />
+              )}
             </div>
 
             {draft.flyer_url && (

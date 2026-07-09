@@ -690,12 +690,20 @@ export type Database = {
         Row: {
           created_at: string
           error_message: string | null
+          facebook_error_message: string | null
           facebook_post: string | null
+          facebook_posted_at: string | null
+          facebook_scheduled_for: string | null
+          facebook_status: string
           flyer_id: string
           flyer_title: string | null
           flyer_url: string | null
           id: string
           instagram_caption: string | null
+          instagram_error_message: string | null
+          instagram_posted_at: string | null
+          instagram_scheduled_for: string | null
+          instagram_status: string
           owner_id: string
           status: string
           thumbnail_url: string | null
@@ -704,12 +712,20 @@ export type Database = {
         Insert: {
           created_at?: string
           error_message?: string | null
+          facebook_error_message?: string | null
           facebook_post?: string | null
+          facebook_posted_at?: string | null
+          facebook_scheduled_for?: string | null
+          facebook_status?: string
           flyer_id: string
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
           instagram_caption?: string | null
+          instagram_error_message?: string | null
+          instagram_posted_at?: string | null
+          instagram_scheduled_for?: string | null
+          instagram_status?: string
           owner_id: string
           status?: string
           thumbnail_url?: string | null
@@ -718,12 +734,20 @@ export type Database = {
         Update: {
           created_at?: string
           error_message?: string | null
+          facebook_error_message?: string | null
           facebook_post?: string | null
+          facebook_posted_at?: string | null
+          facebook_scheduled_for?: string | null
+          facebook_status?: string
           flyer_id?: string
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
           instagram_caption?: string | null
+          instagram_error_message?: string | null
+          instagram_posted_at?: string | null
+          instagram_scheduled_for?: string | null
+          instagram_status?: string
           owner_id?: string
           status?: string
           thumbnail_url?: string | null
