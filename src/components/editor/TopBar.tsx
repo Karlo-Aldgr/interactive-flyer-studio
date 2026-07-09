@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareDialog } from "./ShareDialog";
 import { AutomationHubDialog } from "./AutomationHubDialog";
+import { FacebookPostDialog } from "./FacebookPostDialog";
 import { MarketingDraftsDialog } from "./MarketingDraftsDialog";
 import { triggerMarketingOnPublish } from "@/lib/marketingAutomation";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
@@ -74,6 +75,7 @@ export function TopBar({ saving }: Props) {
   const [mode, setMode] = useState<ResizeMode>("resize");
   const [shareOpen, setShareOpen] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false);
+  const [facebookPostOpen, setFacebookPostOpen] = useState(false);
   const [marketingOpen, setMarketingOpen] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
@@ -690,6 +692,16 @@ export function TopBar({ saving }: Props) {
         open={automationOpen}
         onOpenChange={setAutomationOpen}
         flyer={flyer}
+        onOpenMarketing={() => setMarketingOpen(true)}
+        onOpenFacebookPost={() => setFacebookPostOpen(true)}
+      />
+
+      <FacebookPostDialog
+        open={facebookPostOpen}
+        onOpenChange={setFacebookPostOpen}
+        flyerId={flyer.id}
+        ownerId={flyer.owner_id}
+        flyerTitle={flyer.title}
         onOpenMarketing={() => setMarketingOpen(true)}
       />
 

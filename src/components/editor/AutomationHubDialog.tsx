@@ -12,6 +12,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   flyer: Flyer;
   onOpenMarketing: () => void;
+  onOpenFacebookPost: () => void;
 }
 
 function AutomationCard({
@@ -67,7 +68,7 @@ function AutomationCard({
   );
 }
 
-export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing }: Props) {
+export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing, onOpenFacebookPost }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -107,16 +108,19 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
 
             <AutomationCard
               title="Facebook Post Now"
-              description="Future direct posting to a connected Facebook business page."
-              badge="Next"
-              statusText="Phase 2B: not wired yet. Use this module as the future entry point for real posting."
+              description="Connect a test Facebook Page and send the latest AI-generated Facebook copy through the Meta dev app."
+              badge="Ready to test"
+              statusText="Phase 2B foundation: test-mode posting only. Keep the Meta app unpublished and use your own dev page."
               requirements={[
                 "Facebook business page",
                 "Meta Business Suite setup",
-                "Connected Meta app / account auth",
+                "Connected Meta app / page setup",
               ]}
-              actionLabel="Coming next"
-              actionDisabled
+              actionLabel="Open Facebook post"
+              onAction={() => {
+                onOpenChange(false);
+                onOpenFacebookPost();
+              }}
               icon={<Bot className="h-4 w-4" />}
             />
 

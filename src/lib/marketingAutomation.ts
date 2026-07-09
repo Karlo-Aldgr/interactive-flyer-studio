@@ -6,6 +6,22 @@ import { toast } from "sonner";
 export type MarketingGenStatus = "pending" | "processing" | "ready" | "failed";
 export type MarketingChannelStatus = "draft" | "scheduled" | "posted" | "failed";
 export type MarketingChannel = "facebook" | "instagram";
+export type MarketingProviderStatus = "not_connected" | "connected" | "ready" | "posting" | "posted" | "failed";
+
+export type MetaConnection = {
+  id: string;
+  user_id: string;
+  provider: string;
+  meta_app_id: string | null;
+  connection_mode: string;
+  status: "not_connected" | "connected" | "ready" | "error";
+  facebook_page_id: string | null;
+  facebook_page_name: string | null;
+  page_access_token_last4: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export type MarketingDraft = {
   id: string;
@@ -25,6 +41,10 @@ export type MarketingDraft = {
   facebook_posted_at: string | null;
   instagram_posted_at: string | null;
   facebook_error_message: string | null;
+  facebook_provider_status: MarketingProviderStatus;
+  facebook_provider_post_id: string | null;
+  facebook_last_attempt_at: string | null;
+  facebook_last_error: string | null;
   instagram_error_message: string | null;
   created_at: string;
   updated_at: string;
@@ -33,6 +53,30 @@ export type MarketingDraft = {
 function asChannelStatus(value: string | null | undefined): MarketingChannelStatus {
   if (value === "scheduled" || value === "posted" || value === "failed") return value;
   return "draft";
+}
+
+function asProviderStatus(value: string | null | undefined): MarketingProviderStatus {
+  if (value === "connected" || value === "ready" || value === "posting" || value === "posted" || value === "failed") {
+    return value;
+  }
+  return "not_connected";
+}
+
+function normalizeMetaConnection(row: Record<string, unknown>): MetaConnection {
+  return {
+    id: String(row.id),
+    user_id: String(row.user_id),
+    provider: String(row.provider ?? "meta"),
+    meta_app_id: (row.meta_app_id as string | null) ?? null,
+    connection_mode: String(row.connection_mode ?? "manual_test"),
+    status: (row.status as MetaConnection["status"]) || "not_connected",
+    facebook_page_id: (row.facebook_page_id as string | null) ?? null,
+    facebook_page_name: (row.facebook_page_name as string | null) ?? null,
+    page_access_token_last4: (row.page_access_token_last4 as string | null) ?? null,
+    last_error: (row.last_error as string | null) ?? null,
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at),
+  };
 }
 
 function normalizeDraft(row: Record<string, unknown>): MarketingDraft {
@@ -54,6 +98,10 @@ function normalizeDraft(row: Record<string, unknown>): MarketingDraft {
     facebook_posted_at: (row.facebook_posted_at as string | null) ?? null,
     instagram_posted_at: (row.instagram_posted_at as string | null) ?? null,
     facebook_error_message: (row.facebook_error_message as string | null) ?? null,
+    facebook_provider_status: asProviderStatus(row.facebook_provider_status as string | null),
+    facebook_provider_post_id: (row.facebook_provider_post_id as string | null) ?? null,
+    facebook_last_attempt_at: (row.facebook_last_attempt_at as string | null) ?? null,
+    facebook_last_error: (row.facebook_last_error as string | null) ?? null,
     instagram_error_message: (row.instagram_error_message as string | null) ?? null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
@@ -130,6 +178,53 @@ export async function loadLatestMarketingDraft(flyerId: string): Promise<Marketi
   }
   if (!data) return null;
   return normalizeDraft(data as Record<string, unknown>);
+}
+
+export async function loadMetaConnection(userId: string): Promise<MetaConnection | null> {
+  const { data, error } = await supabase
+    .from("meta_connections")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("provider", "meta")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[marketing] load meta connection failed", error);
+    toast.error("Could not load Facebook connection");
+    return null;
+  }
+  if (!data) return null;
+  return normalizeMetaConnection(data as Record<string, unknown>);
+}
+
+export async function saveMetaConnection(args: {
+  pageId: string;
+  pageName: string;
+}): Promise<MetaConnection | null> {
+  const pageId = args.pageId.trim();
+  const pageName = args.pageName.trim();
+  if (!pageId || !pageName) {
+    toast.error("Enter both Facebook page ID and page name");
+    return null;
+  }
+
+  try {
+    const result = await invokeEdgeFunction<{ connection: Record<string, unknown> }>(
+      "meta-connect-start",
+      {
+        provider: "meta",
+        facebook_page_id: pageId,
+        facebook_page_name: pageName,
+      },
+    );
+    const connection = normalizeMetaConnection(result.connection);
+    toast.success(connection.status === "ready" ? "Facebook test connection saved" : "Facebook page saved");
+    return connection;
+  } catch (err) {
+    console.error("[marketing] save meta connection failed", err);
+    toast.error(err instanceof Error ? err.message : "Could not save Facebook connection");
+    return null;
+  }
 }
 
 export async function regenerateMarketingDraft(flyerId: string, ownerId: string): Promise<void> {
@@ -270,6 +365,28 @@ export async function markMarketingChannelPosted(
     toast.success(channel === "facebook" ? "Facebook marked as posted" : "Instagram marked as posted");
   }
   return updated;
+}
+
+export async function postFacebookNow(
+  draftId: string,
+  messageOverride?: string,
+): Promise<MarketingDraft | null> {
+  try {
+    const result = await invokeEdgeFunction<{ draft: Record<string, unknown> }>(
+      "meta-post-now",
+      {
+        draft_id: draftId,
+        message: messageOverride?.trim() || undefined,
+      },
+    );
+    const updated = normalizeDraft(result.draft);
+    toast.success("Facebook post sent in test mode");
+    return updated;
+  } catch (err) {
+    console.error("[marketing] post facebook failed", err);
+    toast.error(err instanceof Error ? err.message : "Could not post to Facebook");
+    return null;
+  }
 }
 
 export function toLocalInputValue(iso?: string | null): string {

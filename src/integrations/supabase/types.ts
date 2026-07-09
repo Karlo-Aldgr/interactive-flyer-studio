@@ -686,13 +686,62 @@ export type Database = {
           },
         ]
       }
+      meta_connections: {
+        Row: {
+          connection_mode: string
+          created_at: string
+          facebook_page_id: string | null
+          facebook_page_name: string | null
+          id: string
+          last_error: string | null
+          meta_app_id: string | null
+          page_access_token_last4: string | null
+          provider: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_mode?: string
+          created_at?: string
+          facebook_page_id?: string | null
+          facebook_page_name?: string | null
+          id?: string
+          last_error?: string | null
+          meta_app_id?: string | null
+          page_access_token_last4?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_mode?: string
+          created_at?: string
+          facebook_page_id?: string | null
+          facebook_page_name?: string | null
+          id?: string
+          last_error?: string | null
+          meta_app_id?: string | null
+          page_access_token_last4?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       marketing_drafts: {
         Row: {
           created_at: string
           error_message: string | null
           facebook_error_message: string | null
+          facebook_last_attempt_at: string | null
+          facebook_last_error: string | null
           facebook_post: string | null
           facebook_posted_at: string | null
+          facebook_provider_post_id: string | null
+          facebook_provider_status: string
           facebook_scheduled_for: string | null
           facebook_status: string
           flyer_id: string
@@ -713,8 +762,12 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           facebook_error_message?: string | null
+          facebook_last_attempt_at?: string | null
+          facebook_last_error?: string | null
           facebook_post?: string | null
           facebook_posted_at?: string | null
+          facebook_provider_post_id?: string | null
+          facebook_provider_status?: string
           facebook_scheduled_for?: string | null
           facebook_status?: string
           flyer_id: string
@@ -735,8 +788,12 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           facebook_error_message?: string | null
+          facebook_last_attempt_at?: string | null
+          facebook_last_error?: string | null
           facebook_post?: string | null
           facebook_posted_at?: string | null
+          facebook_provider_post_id?: string | null
+          facebook_provider_status?: string
           facebook_scheduled_for?: string | null
           facebook_status?: string
           flyer_id?: string
