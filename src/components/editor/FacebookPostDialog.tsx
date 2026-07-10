@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Bot, ExternalLink, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   loadLatestMarketingDraft,
   loadMetaConnection,
@@ -50,10 +51,11 @@ export function FacebookPostDialog({
   open,
   onOpenChange,
   flyerId,
-  ownerId,
+  ownerId: _ownerId,
   flyerTitle,
   onOpenMarketing,
 }: Props) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [savingConnection, setSavingConnection] = useState(false);
   const [posting, setPosting] = useState(false);
@@ -64,11 +66,12 @@ export function FacebookPostDialog({
   const [message, setMessage] = useState("");
 
   const refresh = useCallback(async () => {
+    if (!user?.id) return;
     setLoading(true);
     try {
       const [latestDraft, metaConnection] = await Promise.all([
         loadLatestMarketingDraft(flyerId),
-        loadMetaConnection(ownerId),
+        loadMetaConnection(user.id),
       ]);
       setDraft(latestDraft);
       setConnection(metaConnection);
@@ -78,7 +81,7 @@ export function FacebookPostDialog({
     } finally {
       setLoading(false);
     }
-  }, [flyerId, ownerId]);
+  }, [flyerId, user?.id]);
 
   useEffect(() => {
     if (!open) return;
@@ -104,12 +107,12 @@ export function FacebookPostDialog({
   }
 
   async function handlePostNow() {
-    if (!draft) return;
+    if (!draft || !user?.id) return;
     setPosting(true);
     try {
       const updated = await postFacebookNow(draft.id, message);
       if (updated) setDraft(updated);
-      const latestConnection = await loadMetaConnection(ownerId);
+      const latestConnection = await loadMetaConnection(user.id);
       setConnection(latestConnection);
     } finally {
       setPosting(false);
