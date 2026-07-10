@@ -59,10 +59,11 @@ Deno.serve(async (req) => {
     const allowed = await canManageDraft(supabase, user.id, draft.owner_id as string);
     if (!allowed) return json({ error: "Forbidden" }, 403);
 
+    // Use the logged-in user's Meta connection (admin/editor may post for a client flyer).
     const { data: connection, error: connErr } = await supabase
       .from("meta_connections")
       .select("*")
-      .eq("user_id", draft.owner_id as string)
+      .eq("user_id", user.id)
       .eq("provider", "meta")
       .maybeSingle();
     if (connErr) return json({ error: connErr.message }, 500);
