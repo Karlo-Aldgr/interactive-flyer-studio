@@ -112,6 +112,8 @@ npm run dev
 ## Out of scope for this phase
 - full Meta OAuth flow
 - user-facing account linking
-- Instagram posting
 - automatic scheduled posting to Meta
 - Meta app review / production permissions
+
+## Follow-up
+See `docs/meta-instagram-post-now.md` for the Instagram Post Now + public marketing URL deadline slice.

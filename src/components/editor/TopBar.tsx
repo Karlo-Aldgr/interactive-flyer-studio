@@ -25,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ShareDialog } from "./ShareDialog";
 import { AutomationHubDialog } from "./AutomationHubDialog";
 import { FacebookPostDialog } from "./FacebookPostDialog";
+import { InstagramPostDialog } from "./InstagramPostDialog";
 import { MarketingDraftsDialog } from "./MarketingDraftsDialog";
 import { triggerMarketingOnPublish } from "@/lib/marketingAutomation";
 import { PaymentLinkDialog } from "./PaymentLinkDialog";
@@ -76,6 +77,7 @@ export function TopBar({ saving }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false);
   const [facebookPostOpen, setFacebookPostOpen] = useState(false);
+  const [instagramPostOpen, setInstagramPostOpen] = useState(false);
   const [marketingOpen, setMarketingOpen] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
@@ -694,6 +696,7 @@ export function TopBar({ saving }: Props) {
         flyer={flyer}
         onOpenMarketing={() => setMarketingOpen(true)}
         onOpenFacebookPost={() => setFacebookPostOpen(true)}
+        onOpenInstagramPost={() => setInstagramPostOpen(true)}
       />
 
       <FacebookPostDialog
@@ -703,6 +706,15 @@ export function TopBar({ saving }: Props) {
         ownerId={flyer.owner_id}
         flyerTitle={flyer.title}
         onOpenMarketing={() => setMarketingOpen(true)}
+      />
+
+      <InstagramPostDialog
+        open={instagramPostOpen}
+        onOpenChange={setInstagramPostOpen}
+        flyerId={flyer.id}
+        flyerTitle={flyer.title}
+        onOpenMarketing={() => setMarketingOpen(true)}
+        onOpenFacebookPost={() => setFacebookPostOpen(true)}
       />
 
       <MarketingDraftsDialog

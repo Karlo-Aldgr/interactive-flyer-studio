@@ -18,6 +18,31 @@ function tokenLast4(token: string | undefined) {
   return trimmed.slice(-4);
 }
 
+async function resolveInstagramAccount(pageId: string, pageAccessToken: string, graphVersion: string) {
+  const url = new URL(`https://graph.facebook.com/${graphVersion}/${pageId}`);
+  url.searchParams.set("fields", "instagram_business_account{id,username}");
+  url.searchParams.set("access_token", pageAccessToken);
+
+  const res = await fetch(url.toString());
+  const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+  if (!res.ok) {
+    const message = data.error && typeof data.error === "object"
+      ? String((data.error as Record<string, unknown>).message || "Could not resolve Instagram account")
+      : "Could not resolve Instagram account";
+    return { error: message };
+  }
+
+  const ig = data.instagram_business_account as Record<string, unknown> | undefined;
+  if (!ig?.id) {
+    return { error: "No Instagram Business/Creator account is linked to this Facebook Page" };
+  }
+
+  return {
+    instagram_user_id: String(ig.id),
+    instagram_username: typeof ig.username === "string" ? ig.username : null,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -46,7 +71,23 @@ Deno.serve(async (req) => {
 
     const metaAppId = Deno.env.get("META_APP_ID")?.trim() || null;
     const pageAccessToken = Deno.env.get("META_PAGE_ACCESS_TOKEN")?.trim();
-    const status = pageAccessToken ? "ready" : "connected";
+    const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
+
+    let instagramUserId: string | null = null;
+    let instagramUsername: string | null = null;
+    let lastError: string | null = null;
+    let status = pageAccessToken ? "ready" : "connected";
+
+    if (pageAccessToken) {
+      const ig = await resolveInstagramAccount(facebookPageId, pageAccessToken, graphVersion);
+      if ("error" in ig && ig.error) {
+        lastError = ig.error;
+        status = "connected";
+      } else {
+        instagramUserId = ig.instagram_user_id ?? null;
+        instagramUsername = ig.instagram_username ?? null;
+      }
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -61,8 +102,10 @@ Deno.serve(async (req) => {
       status,
       facebook_page_id: facebookPageId,
       facebook_page_name: facebookPageName,
+      instagram_user_id: instagramUserId,
+      instagram_username: instagramUsername,
       page_access_token_last4: tokenLast4(pageAccessToken),
-      last_error: null,
+      last_error: lastError,
     };
 
     const { data, error } = await supabase

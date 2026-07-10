@@ -13,6 +13,7 @@ interface Props {
   flyer: Flyer;
   onOpenMarketing: () => void;
   onOpenFacebookPost: () => void;
+  onOpenInstagramPost: () => void;
 }
 
 function AutomationCard({
@@ -68,7 +69,7 @@ function AutomationCard({
   );
 }
 
-export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing, onOpenFacebookPost }: Props) {
+export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing, onOpenFacebookPost, onOpenInstagramPost }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -126,16 +127,19 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
 
             <AutomationCard
               title="Instagram Post Now"
-              description="Future direct posting to a connected Instagram business or creator account."
-              badge="Next"
-              statusText="Phase 2B: not wired yet. This stays separate from AI copy so account connection can be handled cleanly."
+              description="Post the latest AI Instagram caption to the Instagram Business/Creator account linked to your Facebook Page."
+              badge="Ready to test"
+              statusText="Phase 2B Instagram: test-mode posting only. Reuses the same Meta page connection as Facebook Post Now."
               requirements={[
                 "Instagram Business or Creator account",
-                "Connected Facebook page / Meta Business Suite",
-                "Connected Meta app / account auth",
+                "Linked Facebook page / Meta Business Suite",
+                "Public flyer thumbnail URL",
               ]}
-              actionLabel="Coming next"
-              actionDisabled
+              actionLabel="Open Instagram post"
+              onAction={() => {
+                onOpenChange(false);
+                onOpenInstagramPost();
+              }}
               icon={<Instagram className="h-4 w-4" />}
             />
 
