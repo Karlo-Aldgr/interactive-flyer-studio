@@ -686,57 +686,6 @@ export type Database = {
           },
         ]
       }
-      meta_connections: {
-        Row: {
-          connection_mode: string
-          created_at: string
-          facebook_page_id: string | null
-          facebook_page_name: string | null
-          id: string
-          instagram_user_id: string | null
-          instagram_username: string | null
-          last_error: string | null
-          meta_app_id: string | null
-          page_access_token_last4: string | null
-          provider: string
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          connection_mode?: string
-          created_at?: string
-          facebook_page_id?: string | null
-          facebook_page_name?: string | null
-          id?: string
-          instagram_user_id?: string | null
-          instagram_username?: string | null
-          last_error?: string | null
-          meta_app_id?: string | null
-          page_access_token_last4?: string | null
-          provider?: string
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          connection_mode?: string
-          created_at?: string
-          facebook_page_id?: string | null
-          facebook_page_name?: string | null
-          id?: string
-          instagram_user_id?: string | null
-          instagram_username?: string | null
-          last_error?: string | null
-          meta_app_id?: string | null
-          page_access_token_last4?: string | null
-          provider?: string
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       marketing_drafts: {
         Row: {
           created_at: string
@@ -993,6 +942,57 @@ export type Database = {
           id?: string
           sections?: Json
           updated_at?: string
+        }
+        Relationships: []
+      }
+      meta_connections: {
+        Row: {
+          connection_mode: string
+          created_at: string
+          facebook_page_id: string | null
+          facebook_page_name: string | null
+          id: string
+          instagram_user_id: string | null
+          instagram_username: string | null
+          last_error: string | null
+          meta_app_id: string | null
+          page_access_token_last4: string | null
+          provider: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_mode?: string
+          created_at?: string
+          facebook_page_id?: string | null
+          facebook_page_name?: string | null
+          id?: string
+          instagram_user_id?: string | null
+          instagram_username?: string | null
+          last_error?: string | null
+          meta_app_id?: string | null
+          page_access_token_last4?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_mode?: string
+          created_at?: string
+          facebook_page_id?: string | null
+          facebook_page_name?: string | null
+          id?: string
+          instagram_user_id?: string | null
+          instagram_username?: string | null
+          last_error?: string | null
+          meta_app_id?: string | null
+          page_access_token_last4?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
