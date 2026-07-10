@@ -705,7 +705,11 @@ export type Database = {
           id: string
           instagram_caption: string | null
           instagram_error_message: string | null
+          instagram_last_attempt_at: string | null
+          instagram_last_error: string | null
           instagram_posted_at: string | null
+          instagram_provider_post_id: string | null
+          instagram_provider_status: string
           instagram_scheduled_for: string | null
           instagram_status: string
           owner_id: string
@@ -731,7 +735,11 @@ export type Database = {
           id?: string
           instagram_caption?: string | null
           instagram_error_message?: string | null
+          instagram_last_attempt_at?: string | null
+          instagram_last_error?: string | null
           instagram_posted_at?: string | null
+          instagram_provider_post_id?: string | null
+          instagram_provider_status?: string
           instagram_scheduled_for?: string | null
           instagram_status?: string
           owner_id: string
@@ -757,7 +765,11 @@ export type Database = {
           id?: string
           instagram_caption?: string | null
           instagram_error_message?: string | null
+          instagram_last_attempt_at?: string | null
+          instagram_last_error?: string | null
           instagram_posted_at?: string | null
+          instagram_provider_post_id?: string | null
+          instagram_provider_status?: string
           instagram_scheduled_for?: string | null
           instagram_status?: string
           owner_id?: string
@@ -940,6 +952,8 @@ export type Database = {
           facebook_page_id: string | null
           facebook_page_name: string | null
           id: string
+          instagram_user_id: string | null
+          instagram_username: string | null
           last_error: string | null
           meta_app_id: string | null
           page_access_token_last4: string | null
@@ -954,6 +968,8 @@ export type Database = {
           facebook_page_id?: string | null
           facebook_page_name?: string | null
           id?: string
+          instagram_user_id?: string | null
+          instagram_username?: string | null
           last_error?: string | null
           meta_app_id?: string | null
           page_access_token_last4?: string | null
@@ -968,6 +984,8 @@ export type Database = {
           facebook_page_id?: string | null
           facebook_page_name?: string | null
           id?: string
+          instagram_user_id?: string | null
+          instagram_username?: string | null
           last_error?: string | null
           meta_app_id?: string | null
           page_access_token_last4?: string | null
