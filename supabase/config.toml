@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.meta-post-now]
 verify_jwt = true
+
+[functions.meta-instagram-post-now]
+verify_jwt = true

@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
-import { buildPublicFlyerUrl } from "@/lib/utils";
+import { buildMarketingFlyerUrl } from "@/lib/utils";
 import { toast } from "sonner";
 
 export type MarketingGenStatus = "pending" | "processing" | "ready" | "failed";
@@ -17,6 +17,8 @@ export type MetaConnection = {
   status: "not_connected" | "connected" | "ready" | "error";
   facebook_page_id: string | null;
   facebook_page_name: string | null;
+  instagram_user_id: string | null;
+  instagram_username: string | null;
   page_access_token_last4: string | null;
   last_error: string | null;
   created_at: string;
@@ -46,6 +48,10 @@ export type MarketingDraft = {
   facebook_last_attempt_at: string | null;
   facebook_last_error: string | null;
   instagram_error_message: string | null;
+  instagram_provider_status: MarketingProviderStatus;
+  instagram_provider_post_id: string | null;
+  instagram_last_attempt_at: string | null;
+  instagram_last_error: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -72,6 +78,8 @@ function normalizeMetaConnection(row: Record<string, unknown>): MetaConnection {
     status: (row.status as MetaConnection["status"]) || "not_connected",
     facebook_page_id: (row.facebook_page_id as string | null) ?? null,
     facebook_page_name: (row.facebook_page_name as string | null) ?? null,
+    instagram_user_id: (row.instagram_user_id as string | null) ?? null,
+    instagram_username: (row.instagram_username as string | null) ?? null,
     page_access_token_last4: (row.page_access_token_last4 as string | null) ?? null,
     last_error: (row.last_error as string | null) ?? null,
     created_at: String(row.created_at),
@@ -103,6 +111,10 @@ function normalizeDraft(row: Record<string, unknown>): MarketingDraft {
     facebook_last_attempt_at: (row.facebook_last_attempt_at as string | null) ?? null,
     facebook_last_error: (row.facebook_last_error as string | null) ?? null,
     instagram_error_message: (row.instagram_error_message as string | null) ?? null,
+    instagram_provider_status: asProviderStatus(row.instagram_provider_status as string | null),
+    instagram_provider_post_id: (row.instagram_provider_post_id as string | null) ?? null,
+    instagram_last_attempt_at: (row.instagram_last_attempt_at as string | null) ?? null,
+    instagram_last_error: (row.instagram_last_error as string | null) ?? null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };
@@ -117,7 +129,7 @@ export async function triggerMarketingOnPublish(args: {
 }): Promise<MarketingDraft | null> {
   if (!args.slug?.trim()) return null;
 
-  const flyerUrl = buildPublicFlyerUrl(args.slug);
+  const flyerUrl = buildMarketingFlyerUrl(args.slug);
 
   const { data: draft, error } = await supabase
     .from("marketing_drafts")
@@ -385,6 +397,28 @@ export async function postFacebookNow(
   } catch (err) {
     console.error("[marketing] post facebook failed", err);
     toast.error(err instanceof Error ? err.message : "Could not post to Facebook");
+    return null;
+  }
+}
+
+export async function postInstagramNow(
+  draftId: string,
+  captionOverride?: string,
+): Promise<MarketingDraft | null> {
+  try {
+    const result = await invokeEdgeFunction<{ draft: Record<string, unknown> }>(
+      "meta-instagram-post-now",
+      {
+        draft_id: draftId,
+        caption: captionOverride?.trim() || undefined,
+      },
+    );
+    const updated = normalizeDraft(result.draft);
+    toast.success("Instagram post sent in test mode");
+    return updated;
+  } catch (err) {
+    console.error("[marketing] post instagram failed", err);
+    toast.error(err instanceof Error ? err.message : "Could not post to Instagram");
     return null;
   }
 }

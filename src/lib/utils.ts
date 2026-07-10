@@ -83,6 +83,20 @@ export function buildPublicFlyerUrl(slug: string): string {
   return `${getPublicAppOrigin().replace(/\/$/, "")}/f/${slug}`;
 }
 
+/**
+ * Marketing / social posts must always use the published public origin.
+ * Local LAN URLs break Facebook/Instagram link previews because Meta cannot crawl them.
+ */
+export function getMarketingAppOrigin(): string {
+  return String(
+    (import.meta as any).env?.VITE_APP_ORIGIN || DEFAULT_PUBLIC_APP_ORIGIN,
+  ).replace(/\/$/, "");
+}
+
+export function buildMarketingFlyerUrl(slug: string): string {
+  return `${getMarketingAppOrigin()}/f/${slug}`;
+}
+
 export function buildPublicPortalUrl(token: string, code?: string): string {
   const base = `${getPublicAppOrigin().replace(/\/$/, "")}/p/${token}`;
   return code ? `${base}?code=${encodeURIComponent(code)}` : base;
