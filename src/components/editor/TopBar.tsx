@@ -351,12 +351,17 @@ export function TopBar({ saving }: Props) {
       }
 
       if (slug) {
+        const landingForMarketing = useEditorStore
+          .getState()
+          .pages.find((p) => p.background?.linkPageId);
         void triggerMarketingOnPublish({
           flyerId: flyer.id,
           ownerId: flyer.owner_id,
           title: titleIsReal ? titleNow : flyer.title,
           slug,
           thumbnailUrl: thumbnailForMarketing,
+          landingPageId: landingForMarketing?.id ?? null,
+          openPageId: landingForMarketing?.background?.linkPageId ?? null,
         });
       }
     }

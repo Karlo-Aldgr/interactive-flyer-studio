@@ -5,10 +5,11 @@ This extends Phase 2B after Facebook Post Now worked in test mode.
 ## What changed
 
 ### 1. Public flyer URLs for marketing
-- Marketing drafts now use `buildMarketingFlyerUrl()` from `src/lib/utils.ts`
-- Always uses `VITE_APP_ORIGIN` (example: `https://tapthatflyer.com`)
+- Marketing drafts now use `buildMarketingPublicUrl()` from `src/lib/utils.ts`
+- Prefers the Share dialog **landing page link** (public share worker + `?page=` / `?open=`) when a landing page exists
+- Falls back to `VITE_APP_ORIGIN` flyer URL (`https://tapthatflyer.com/f/...`)
 - Local LAN URLs are no longer stored into `marketing_drafts.flyer_url`
-- This lets Facebook/Instagram crawl a public link for previews
+- This lets Facebook/Instagram crawl a public link for previews (landing art when available)
 
 ### 2. Instagram Post Now
 - Migration: `supabase/migrations/20260710224500_instagram_post_now_foundation.sql`

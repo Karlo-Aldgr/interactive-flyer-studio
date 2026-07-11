@@ -87,6 +87,13 @@ Deno.serve(async (req) => {
     const message = messageOverride || String(draft.facebook_post || "").trim();
     if (!message) return json({ error: "No Facebook copy is ready yet" }, 400);
 
+    const linkFromDraft = typeof draft.flyer_url === "string" ? draft.flyer_url.trim() : "";
+    const linkFromMessage = (() => {
+      const match = message.match(/https?:\/\/[^\s]+/i);
+      return match?.[0]?.replace(/[),.;!?]+$/g, "") || "";
+    })();
+    const link = linkFromDraft || linkFromMessage;
+
     const attemptAt = new Date().toISOString();
     await supabase
       .from("marketing_drafts")
@@ -102,6 +109,8 @@ Deno.serve(async (req) => {
       message,
       access_token: pageAccessToken,
     });
+    // Without `link`, Facebook often posts plain text and skips the OG preview card.
+    if (link) params.set("link", link);
 
     const graphRes = await fetch(`https://graph.facebook.com/${graphVersion}/${connection.facebook_page_id}/feed`, {
       method: "POST",
