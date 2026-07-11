@@ -1,7 +1,26 @@
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
-import { buildMarketingFlyerUrl } from "@/lib/utils";
+import { buildMarketingPublicUrl } from "@/lib/utils";
 import { toast } from "sonner";
+
+async function resolveMarketingLandingIds(flyerId: string): Promise<{
+  landingPageId: string | null;
+  openPageId: string | null;
+}> {
+  const { data: pages } = await supabase
+    .from("pages")
+    .select("id, background")
+    .eq("flyer_id", flyerId);
+
+  for (const page of pages ?? []) {
+    const background = page.background as { linkPageId?: string | null } | null;
+    const openPageId = background?.linkPageId ?? null;
+    if (openPageId) {
+      return { landingPageId: page.id, openPageId };
+    }
+  }
+  return { landingPageId: null, openPageId: null };
+}
 
 export type MarketingGenStatus = "pending" | "processing" | "ready" | "failed";
 export type MarketingChannelStatus = "draft" | "scheduled" | "posted" | "failed";
@@ -126,10 +145,24 @@ export async function triggerMarketingOnPublish(args: {
   title: string;
   slug: string | null;
   thumbnailUrl?: string | null;
+  landingPageId?: string | null;
+  openPageId?: string | null;
 }): Promise<MarketingDraft | null> {
   if (!args.slug?.trim()) return null;
 
-  const flyerUrl = buildMarketingFlyerUrl(args.slug);
+  let landingPageId = args.landingPageId ?? null;
+  let openPageId = args.openPageId ?? null;
+  if (!landingPageId) {
+    const resolved = await resolveMarketingLandingIds(args.flyerId);
+    landingPageId = resolved.landingPageId;
+    openPageId = resolved.openPageId;
+  }
+
+  const flyerUrl = buildMarketingPublicUrl({
+    slug: args.slug,
+    landingPageId,
+    openPageId,
+  });
 
   const { data: draft, error } = await supabase
     .from("marketing_drafts")

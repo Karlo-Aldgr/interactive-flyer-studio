@@ -97,6 +97,32 @@ export function buildMarketingFlyerUrl(slug: string): string {
   return `${getMarketingAppOrigin()}/f/${slug}`;
 }
 
+/** Always-public share worker origin (never local LAN). */
+export function getMarketingShareOrigin(): string {
+  return String(
+    (import.meta as any).env?.VITE_SHARE_ORIGIN ||
+      "https://tapthatflyer-share.showoffgrafixs.workers.dev",
+  ).replace(/\/$/, "");
+}
+
+/**
+ * Social/marketing link: prefer the Share dialog landing-page URL so Meta
+ * crawlers get landing art; fall back to the public flyer URL.
+ */
+export function buildMarketingPublicUrl(args: {
+  slug: string;
+  landingPageId?: string | null;
+  openPageId?: string | null;
+}): string {
+  if (args.landingPageId) {
+    const params = new URLSearchParams();
+    params.set("page", args.landingPageId);
+    if (args.openPageId) params.set("open", args.openPageId);
+    return `${getMarketingShareOrigin()}/f/${args.slug}?${params.toString()}`;
+  }
+  return buildMarketingFlyerUrl(args.slug);
+}
+
 export function buildPublicPortalUrl(token: string, code?: string): string {
   const base = `${getPublicAppOrigin().replace(/\/$/, "")}/p/${token}`;
   return code ? `${base}?code=${encodeURIComponent(code)}` : base;
