@@ -50,6 +50,24 @@ function channelStatusLabel(status: MarketingChannelStatus): string {
   }
 }
 
+function isMetaDelivered(channel: MarketingChannel, draft: MarketingDraft): boolean {
+  if (channel === "facebook") {
+    return draft.facebook_provider_status === "posted" && !!draft.facebook_provider_post_id;
+  }
+  return draft.instagram_provider_status === "posted" && !!draft.instagram_provider_post_id;
+}
+
+function postedHowLabel(channel: MarketingChannel, draft: MarketingDraft): string {
+  const postedAt = channel === "facebook" ? draft.facebook_posted_at : draft.instagram_posted_at;
+  const when = postedAt ? formatScheduleLabel(postedAt) : "";
+  if (isMetaDelivered(channel, draft)) {
+    return channel === "facebook"
+      ? `Posted to Facebook ${when}`
+      : `Posted to Instagram ${when}`;
+  }
+  return `Marked posted manually ${when}`;
+}
+
 function channelBadgeVariant(
   status: MarketingChannelStatus,
 ): "default" | "secondary" | "destructive" | "outline" {
@@ -84,6 +102,13 @@ function ChannelSchedulePanel({
   const postedAt = channel === "facebook" ? draft.facebook_posted_at : draft.instagram_posted_at;
   const errorMessage = channel === "facebook" ? draft.facebook_error_message : draft.instagram_error_message;
   const hasCopy = channel === "facebook" ? !!draft.facebook_post : !!draft.instagram_caption;
+  const metaDelivered = isMetaDelivered(channel, draft);
+  const statusBadge =
+    status === "posted"
+      ? metaDelivered
+        ? "Posted"
+        : "Marked"
+      : channelStatusLabel(status);
 
   const [when, setWhen] = useState(() => toLocalInputValue(scheduledFor) || defaultScheduleInput());
   const [saving, setSaving] = useState(false);
@@ -106,17 +131,24 @@ function ChannelSchedulePanel({
     <div className="space-y-2 rounded-md border border-border/70 bg-muted/20 p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium">{label}</span>
-        <Badge variant={channelBadgeVariant(status)}>{channelStatusLabel(status)}</Badge>
+        <Badge variant={channelBadgeVariant(status)}>{statusBadge}</Badge>
       </div>
 
       {status === "scheduled" && scheduledFor && (
         <p className="text-xs text-muted-foreground">
           Scheduled for <span className="font-medium text-foreground">{formatScheduleLabel(scheduledFor)}</span>
+          {channel === "facebook" ? " — will auto-post to Facebook" : ""}
         </p>
       )}
       {status === "posted" && postedAt && (
         <p className="text-xs text-muted-foreground">
-          Marked posted <span className="font-medium text-foreground">{formatScheduleLabel(postedAt)}</span>
+          {postedHowLabel(channel, draft)}
+          {metaDelivered && channel === "facebook" && draft.facebook_provider_post_id ? (
+            <>
+              {" "}
+              <span className="text-muted-foreground/80">(id {draft.facebook_provider_post_id})</span>
+            </>
+          ) : null}
         </p>
       )}
       {status === "failed" && errorMessage && (
@@ -201,7 +233,7 @@ function ChannelSchedulePanel({
             onClick={() => void run(() => markMarketingChannelPosted(draft.id, channel))}
           >
             <Check className="mr-1 h-3.5 w-3.5" />
-            Mark posted
+            Mark posted manually
           </Button>
         )}
       </div>
@@ -211,7 +243,7 @@ function ChannelSchedulePanel({
       )}
       <p className="text-[11px] text-muted-foreground">
         {channel === "facebook"
-          ? "Facebook: when the time arrives, TapThatFlyer auto-posts in Meta test mode (same as Post Now)."
+          ? "Schedule = auto-post to Facebook at that time. Mark posted manually = track only, no Meta send."
           : "Instagram: app-only scheduling for now — auto-post comes after Instagram linking."}
       </p>
     </div>
