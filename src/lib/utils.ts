@@ -106,8 +106,9 @@ export function getMarketingShareOrigin(): string {
 }
 
 /**
- * Social/marketing link: prefer the Share dialog landing-page URL so Meta
- * crawlers get landing art; fall back to the public flyer URL.
+ * Social/marketing link: prefer the Share dialog landing-page URL shape
+ * (`?page=` / `?open=`) on the public app origin so Meta can crawl it.
+ * The Cloudflare workers.dev share host often returns 403 to facebookexternalhit.
  */
 export function buildMarketingPublicUrl(args: {
   slug: string;
@@ -118,7 +119,7 @@ export function buildMarketingPublicUrl(args: {
     const params = new URLSearchParams();
     params.set("page", args.landingPageId);
     if (args.openPageId) params.set("open", args.openPageId);
-    return `${getMarketingShareOrigin()}/f/${args.slug}?${params.toString()}`;
+    return `${getMarketingAppOrigin()}/f/${args.slug}?${params.toString()}`;
   }
   return buildMarketingFlyerUrl(args.slug);
 }
