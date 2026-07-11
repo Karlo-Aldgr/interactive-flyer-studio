@@ -996,6 +996,24 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_cron_config: {
+        Row: {
+          cron_secret: string
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          cron_secret: string
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          cron_secret?: string
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mini_ad_events: {
         Row: {
           created_at: string
@@ -1806,6 +1824,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      invoke_meta_facebook_scheduled: { Args: never; Returns: number }
       job_assigned_editor_display: {
         Args: { _user_id: string }
         Returns: string
