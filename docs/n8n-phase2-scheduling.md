@@ -2,7 +2,7 @@
 
 Phase 1 generates AI copy. Phase 2 lets users **schedule** and **mark posted** per channel inside TapThatFlyer.
 
-**No Meta posting.** Scheduling is stored in the database only.
+**No Meta posting from the schedule buttons themselves.** Scheduling is stored in the database; a cron job (`meta-post-scheduled`) posts due Facebook drafts in Meta test mode. See `docs/meta-facebook-scheduled-autopost.md`.
 
 ## What was added
 
@@ -67,6 +67,5 @@ LIMIT 3;
 
 ## Out of scope (later)
 
-- Real Facebook/Instagram API posting
-- Background job that auto-posts at scheduled time
+- Instagram API auto-post at scheduled time
 - Email drafts

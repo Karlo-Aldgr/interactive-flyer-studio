@@ -210,7 +210,9 @@ function ChannelSchedulePanel({
         <p className="text-[11px] text-muted-foreground">Generate AI copy first, then schedule this channel.</p>
       )}
       <p className="text-[11px] text-muted-foreground">
-        App-only scheduling — nothing posts to social networks automatically in Phase 2.
+        {channel === "facebook"
+          ? "Facebook: when the time arrives, TapThatFlyer auto-posts in Meta test mode (same as Post Now)."
+          : "Instagram: app-only scheduling for now — auto-post comes after Instagram linking."}
       </p>
     </div>
   );
@@ -274,7 +276,7 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
           <DialogDescription>
             Draft and schedule Facebook and Instagram copy for{" "}
             <span className="font-medium">{flyerTitle}</span>.
-            Phase 2 tracks status in TapThatFlyer only — nothing posts automatically.
+            Facebook schedules auto-post in Meta test mode; Instagram stays app-only until linked.
           </DialogDescription>
         </DialogHeader>
 

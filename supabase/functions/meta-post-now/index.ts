@@ -1,4 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import {
+  extractLinkFromDraft,
+  facebookFailurePatch,
+  facebookSuccessPatch,
+  postFacebookToPage,
+} from "../_shared/metaFacebookPost.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +65,6 @@ Deno.serve(async (req) => {
     const allowed = await canManageDraft(supabase, user.id, draft.owner_id as string);
     if (!allowed) return json({ error: "Forbidden" }, 403);
 
-    // Use the logged-in user's Meta connection (admin/editor may post for a client flyer).
     const { data: connection, error: connErr } = await supabase
       .from("meta_connections")
       .select("*")
@@ -87,16 +92,10 @@ Deno.serve(async (req) => {
     const message = messageOverride || String(draft.facebook_post || "").trim();
     if (!message) return json({ error: "No Facebook copy is ready yet" }, 400);
 
-    const linkFromDraft = typeof draft.flyer_url === "string" ? draft.flyer_url.trim() : "";
-    const linkFromMessage = (() => {
-      const match = message.match(/https?:\/\/[^\s]+/i);
-      return match?.[0]?.replace(/[),.;!?]+$/g, "") || "";
-    })();
-    const link = linkFromDraft || linkFromMessage;
+    const link = extractLinkFromDraft(draft as Record<string, unknown>, message);
     const thumbnailUrl = typeof draft.thumbnail_url === "string" ? draft.thumbnail_url.trim() : "";
-    const canPostPhoto = /^https:\/\//i.test(thumbnailUrl);
-
     const attemptAt = new Date().toISOString();
+
     await supabase
       .from("marketing_drafts")
       .update({
@@ -107,78 +106,31 @@ Deno.serve(async (req) => {
       .eq("id", draftId);
 
     const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
-    const params = new URLSearchParams({
-      access_token: pageAccessToken,
+    const result = await postFacebookToPage({
+      pageId: String(connection.facebook_page_id),
+      pageAccessToken,
+      graphVersion,
+      message,
+      link,
+      thumbnailUrl,
     });
 
-    // Prefer a photo post so the flyer graphic always shows.
-    // Cloudflare workers.dev often returns 403 to facebookexternalhit, which
-    // breaks OG link previews even when the share worker itself is correct.
-    let graphEndpoint = `https://graph.facebook.com/${graphVersion}/${connection.facebook_page_id}/feed`;
-    if (canPostPhoto) {
-      graphEndpoint = `https://graph.facebook.com/${graphVersion}/${connection.facebook_page_id}/photos`;
-      params.set("url", thumbnailUrl);
-      params.set("caption", message);
-    } else {
-      params.set("message", message);
-      if (link) params.set("link", link);
-    }
-
-    const graphRes = await fetch(graphEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params.toString(),
-    });
-
-    let graphJson: Record<string, unknown> = {};
-    try {
-      graphJson = await graphRes.json();
-    } catch {
-      graphJson = {};
-    }
-
-    if (!graphRes.ok || typeof graphJson.id !== "string") {
-      const providerError = String(
-        graphJson.error && typeof graphJson.error === "object"
-          ? (graphJson.error as Record<string, unknown>).message || "Facebook API request failed"
-          : graphJson.error || "Facebook API request failed",
-      ).slice(0, 500);
-
-      const failurePatch = {
-        facebook_status: "failed",
-        facebook_error_message: providerError,
-        facebook_provider_status: "failed",
-        facebook_last_attempt_at: attemptAt,
-        facebook_last_error: providerError,
-      };
-
-      await supabase.from("marketing_drafts").update(failurePatch).eq("id", draftId);
+    if (!result.ok) {
+      await supabase.from("marketing_drafts").update(facebookFailurePatch(result.error, result.attemptAt)).eq("id", draftId);
       await supabase
         .from("meta_connections")
         .update({
           status: "error",
-          last_error: providerError,
+          last_error: result.error,
           page_access_token_last4: pageAccessToken.slice(-4),
         })
         .eq("id", connection.id);
-
-      return json({ error: providerError }, 502);
+      return json({ error: result.error }, 502);
     }
-
-    const successPatch = {
-      facebook_status: "posted",
-      facebook_posted_at: attemptAt,
-      facebook_scheduled_for: null,
-      facebook_error_message: null,
-      facebook_provider_status: "posted",
-      facebook_provider_post_id: graphJson.id,
-      facebook_last_attempt_at: attemptAt,
-      facebook_last_error: null,
-    };
 
     const { data: updatedDraft, error: updateErr } = await supabase
       .from("marketing_drafts")
-      .update(successPatch)
+      .update(facebookSuccessPatch(result.provider_post_id, result.attemptAt))
       .eq("id", draftId)
       .select("*")
       .single();
@@ -193,7 +145,7 @@ Deno.serve(async (req) => {
       })
       .eq("id", connection.id);
 
-    return json({ ok: true, provider_post_id: graphJson.id, draft: updatedDraft });
+    return json({ ok: true, provider_post_id: result.provider_post_id, draft: updatedDraft });
   } catch (err) {
     console.error("[meta-post-now]", err);
     return json({ error: String(err) }, 500);
