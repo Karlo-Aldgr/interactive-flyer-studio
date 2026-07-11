@@ -14,9 +14,11 @@ import {
   loadMetaConnection,
   postFacebookNow,
   saveMetaConnection,
+  startMetaOAuth,
   type MarketingDraft,
   type MetaConnection,
 } from "@/lib/marketingAutomation";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -70,6 +72,7 @@ export function FacebookPostDialog({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [savingConnection, setSavingConnection] = useState(false);
+  const [startingOAuth, setStartingOAuth] = useState(false);
   const [posting, setPosting] = useState(false);
   const [draft, setDraft] = useState<MarketingDraft | null>(null);
   const [connection, setConnection] = useState<MetaConnection | null>(null);
@@ -101,9 +104,37 @@ export function FacebookPostDialog({
   }, [open, refresh]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const oauth = params.get("meta_oauth");
+    if (!oauth) return;
+    if (oauth === "connected") {
+      toast.success(`Facebook connected${params.get("page") ? `: ${params.get("page")}` : ""}`);
+      void refresh();
+    } else if (oauth === "error") {
+      toast.error(params.get("reason") || "Facebook connect failed");
+    }
+    params.delete("meta_oauth");
+    params.delete("page");
+    params.delete("reason");
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", next);
+  }, [refresh]);
+
+  useEffect(() => {
     if (!open) return;
     setMessage(draft?.facebook_post ?? "");
   }, [draft?.id, draft?.facebook_post, open]);
+
+  async function handleConnectFacebook() {
+    setStartingOAuth(true);
+    try {
+      const url = await startMetaOAuth(typeof window !== "undefined" ? window.location.href : undefined);
+      if (url) window.location.assign(url);
+    } finally {
+      setStartingOAuth(false);
+    }
+  }
 
   async function handleSaveConnection() {
     setSavingConnection(true);
@@ -143,66 +174,97 @@ export function FacebookPostDialog({
             Facebook Post Now
           </DialogTitle>
           <DialogDescription>
-            Test-mode Facebook posting for {flyerTitle}. This uses your Meta dev app setup and stays separate from the AI Social Copy workflow.
+            Connect a Facebook Page for {flyerTitle}, then post the latest AI Facebook copy.
+            OAuth stores your page token securely; staff can still use the manual test-page fallback.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
-            Keep this local-first: the Meta app should stay unpublished, and this flow should only target your own test Facebook Page for now.
+            Meta app can stay unpublished for now. Add testers in the Meta app if Connect with Facebook fails for non-admin users.
           </div>
 
           <section className="space-y-3 rounded-md border border-border/70 p-4">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-medium">Meta connection</h3>
-                <p className="text-xs text-muted-foreground">Save the Facebook Page this test app should post to.</p>
+                <p className="text-xs text-muted-foreground">
+                  Preferred: Connect with Facebook. Manual page ID fields remain for staff test mode.
+                </p>
               </div>
               <Badge variant={connectionBadgeVariant(connectionStatus)}>
                 {connectionLabel(connectionStatus)}
               </Badge>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="facebook-page-id">Facebook page ID</Label>
-                <Input
-                  id="facebook-page-id"
-                  value={pageId}
-                  onChange={(e) => setPageId(e.target.value)}
-                  placeholder="Your Facebook page ID"
-                  disabled={loading || savingConnection || posting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="facebook-page-name">Facebook page name</Label>
-                <Input
-                  id="facebook-page-name"
-                  value={pageName}
-                  onChange={(e) => setPageName(e.target.value)}
-                  placeholder="True Animal Chronicles"
-                  disabled={loading || savingConnection || posting}
-                />
-              </div>
-            </div>
+            <Button
+              type="button"
+              onClick={() => void handleConnectFacebook()}
+              disabled={loading || savingConnection || posting || startingOAuth}
+            >
+              {startingOAuth ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+              Connect with Facebook
+            </Button>
 
+            {connection?.connection_mode === "oauth" && connection.facebook_page_name && (
+              <p className="text-xs text-muted-foreground">
+                Connected via OAuth:{" "}
+                <span className="font-medium text-foreground">{connection.facebook_page_name}</span>
+                {connection.page_access_token_last4
+                  ? ` (token …${connection.page_access_token_last4})`
+                  : ""}
+              </p>
+            )}
+            {connection?.connection_mode === "manual_test" && (
+              <p className="text-xs text-muted-foreground">Using manual test-page connection.</p>
+            )}
             {connection?.meta_app_id && (
               <p className="text-xs text-muted-foreground">
                 Meta app ID detected: <span className="font-medium text-foreground">{connection.meta_app_id}</span>
               </p>
             )}
-            {connection?.page_access_token_last4 && (
+            {connection?.page_access_token_last4 && connection.connection_mode !== "oauth" && (
               <p className="text-xs text-muted-foreground">
-                Test page token detected in backend secrets: ending in <span className="font-medium text-foreground">{connection.page_access_token_last4}</span>
+                Test page token detected in backend secrets: ending in{" "}
+                <span className="font-medium text-foreground">{connection.page_access_token_last4}</span>
               </p>
             )}
             {connection?.last_error && (
               <p className="text-xs text-destructive">{connection.last_error}</p>
             )}
 
-            <Button type="button" size="sm" onClick={() => void handleSaveConnection()} disabled={loading || savingConnection || posting}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="facebook-page-id">Facebook page ID (manual test)</Label>
+                <Input
+                  id="facebook-page-id"
+                  value={pageId}
+                  onChange={(e) => setPageId(e.target.value)}
+                  placeholder="Your Facebook page ID"
+                  disabled={loading || savingConnection || posting || startingOAuth}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="facebook-page-name">Facebook page name (manual test)</Label>
+                <Input
+                  id="facebook-page-name"
+                  value={pageName}
+                  onChange={(e) => setPageName(e.target.value)}
+                  placeholder="True Animal Chronicles"
+                  disabled={loading || savingConnection || posting || startingOAuth}
+                />
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleSaveConnection()}
+              disabled={loading || savingConnection || posting || startingOAuth}
+            >
               {savingConnection ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
-              Save Facebook page
+              Save Facebook page (manual test)
             </Button>
           </section>
 

@@ -5,6 +5,7 @@ import {
   facebookSuccessPatch,
   postFacebookToPage,
 } from "../_shared/metaFacebookPost.ts";
+import { resolveMetaPageCredentials, tokenLast4 } from "../_shared/metaCredentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,10 +41,6 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userErr } = await supabaseUser.auth.getUser();
     if (userErr || !user) return json({ error: "Unauthorized" }, 401);
 
-    if ((Deno.env.get("META_TEST_MODE_ENABLED") ?? "").toLowerCase() !== "true") {
-      return json({ error: "Meta test mode is not enabled yet. Add META_TEST_MODE_ENABLED=true in Supabase secrets first." }, 400);
-    }
-
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     const draftId = typeof body.draft_id === "string" ? body.draft_id : "";
     const messageOverride = typeof body.message === "string" ? body.message.trim() : "";
@@ -65,29 +62,8 @@ Deno.serve(async (req) => {
     const allowed = await canManageDraft(supabase, user.id, draft.owner_id as string);
     if (!allowed) return json({ error: "Forbidden" }, 403);
 
-    const { data: connection, error: connErr } = await supabase
-      .from("meta_connections")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("provider", "meta")
-      .maybeSingle();
-    if (connErr) return json({ error: connErr.message }, 500);
-    if (!connection?.facebook_page_id) {
-      return json({ error: "Facebook page is not connected yet" }, 400);
-    }
-
-    const pageAccessToken = Deno.env.get("META_PAGE_ACCESS_TOKEN")?.trim();
-    if (!pageAccessToken) {
-      await supabase
-        .from("meta_connections")
-        .update({
-          status: "connected",
-          last_error: "META_PAGE_ACCESS_TOKEN is missing",
-          page_access_token_last4: null,
-        })
-        .eq("id", connection.id);
-      return json({ error: "Missing META_PAGE_ACCESS_TOKEN secret" }, 400);
-    }
+    const creds = await resolveMetaPageCredentials(supabase, user.id);
+    if ("error" in creds) return json({ error: creds.error }, 400);
 
     const message = messageOverride || String(draft.facebook_post || "").trim();
     if (!message) return json({ error: "No Facebook copy is ready yet" }, 400);
@@ -107,8 +83,8 @@ Deno.serve(async (req) => {
 
     const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
     const result = await postFacebookToPage({
-      pageId: String(connection.facebook_page_id),
-      pageAccessToken,
+      pageId: creds.pageId,
+      pageAccessToken: creds.pageAccessToken,
       graphVersion,
       message,
       link,
@@ -117,14 +93,16 @@ Deno.serve(async (req) => {
 
     if (!result.ok) {
       await supabase.from("marketing_drafts").update(facebookFailurePatch(result.error, result.attemptAt)).eq("id", draftId);
-      await supabase
-        .from("meta_connections")
-        .update({
-          status: "error",
-          last_error: result.error,
-          page_access_token_last4: pageAccessToken.slice(-4),
-        })
-        .eq("id", connection.id);
+      if (creds.connectionId) {
+        await supabase
+          .from("meta_connections")
+          .update({
+            status: "error",
+            last_error: result.error,
+            page_access_token_last4: tokenLast4(creds.pageAccessToken),
+          })
+          .eq("id", creds.connectionId);
+      }
       return json({ error: result.error }, 502);
     }
 
@@ -136,16 +114,23 @@ Deno.serve(async (req) => {
       .single();
     if (updateErr) return json({ error: updateErr.message }, 500);
 
-    await supabase
-      .from("meta_connections")
-      .update({
-        status: "ready",
-        last_error: null,
-        page_access_token_last4: pageAccessToken.slice(-4),
-      })
-      .eq("id", connection.id);
+    if (creds.connectionId) {
+      await supabase
+        .from("meta_connections")
+        .update({
+          status: "ready",
+          last_error: null,
+          page_access_token_last4: tokenLast4(creds.pageAccessToken),
+        })
+        .eq("id", creds.connectionId);
+    }
 
-    return json({ ok: true, provider_post_id: result.provider_post_id, draft: updatedDraft });
+    return json({
+      ok: true,
+      provider_post_id: result.provider_post_id,
+      token_source: creds.source,
+      draft: updatedDraft,
+    });
   } catch (err) {
     console.error("[meta-post-now]", err);
     return json({ error: String(err) }, 500);

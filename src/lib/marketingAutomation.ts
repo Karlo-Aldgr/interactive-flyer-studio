@@ -228,7 +228,9 @@ export async function loadLatestMarketingDraft(flyerId: string): Promise<Marketi
 export async function loadMetaConnection(userId: string): Promise<MetaConnection | null> {
   const { data, error } = await supabase
     .from("meta_connections")
-    .select("*")
+    .select(
+      "id, user_id, provider, meta_app_id, connection_mode, status, facebook_page_id, facebook_page_name, instagram_user_id, instagram_username, page_access_token_last4, last_error, created_at, updated_at",
+    )
     .eq("user_id", userId)
     .eq("provider", "meta")
     .maybeSingle();
@@ -240,6 +242,24 @@ export async function loadMetaConnection(userId: string): Promise<MetaConnection
   }
   if (!data) return null;
   return normalizeMetaConnection(data as Record<string, unknown>);
+}
+
+export async function startMetaOAuth(returnTo?: string): Promise<string | null> {
+  try {
+    const result = await invokeEdgeFunction<{ authorize_url: string }>(
+      "meta-oauth-start",
+      { return_to: returnTo || (typeof window !== "undefined" ? window.location.href : undefined) },
+    );
+    if (!result.authorize_url) {
+      toast.error("Could not start Facebook connect");
+      return null;
+    }
+    return result.authorize_url;
+  } catch (err) {
+    console.error("[marketing] meta oauth start failed", err);
+    toast.error(err instanceof Error ? err.message : "Could not start Facebook connect");
+    return null;
+  }
 }
 
 export async function saveMetaConnection(args: {

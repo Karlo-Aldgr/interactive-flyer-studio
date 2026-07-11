@@ -55,10 +55,6 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userErr } = await supabaseUser.auth.getUser();
     if (userErr || !user) return json({ error: "Unauthorized" }, 401);
 
-    if ((Deno.env.get("META_TEST_MODE_ENABLED") ?? "").toLowerCase() !== "true") {
-      return json({ error: "Meta test mode is not enabled yet. Add META_TEST_MODE_ENABLED=true in Supabase secrets first." }, 400);
-    }
-
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     const draftId = typeof body.draft_id === "string" ? body.draft_id : "";
     const captionOverride = typeof body.caption === "string" ? body.caption.trim() : "";
@@ -80,6 +76,10 @@ Deno.serve(async (req) => {
     const allowed = await canManageDraft(supabase, user.id, draft.owner_id as string);
     if (!allowed) return json({ error: "Forbidden" }, 403);
 
+    const { resolveMetaPageCredentials, tokenLast4 } = await import("../_shared/metaCredentials.ts");
+    const creds = await resolveMetaPageCredentials(supabase, user.id);
+    if ("error" in creds) return json({ error: creds.error }, 400);
+
     const { data: connection, error: connErr } = await supabase
       .from("meta_connections")
       .select("*")
@@ -91,17 +91,13 @@ Deno.serve(async (req) => {
       return json({ error: "Facebook page is not connected yet" }, 400);
     }
 
-    const pageAccessToken = Deno.env.get("META_PAGE_ACCESS_TOKEN")?.trim();
-    if (!pageAccessToken) {
-      return json({ error: "Missing META_PAGE_ACCESS_TOKEN secret" }, 400);
-    }
-
+    const pageAccessToken = creds.pageAccessToken;
     const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
     let igUserId = typeof connection.instagram_user_id === "string" ? connection.instagram_user_id : "";
     let igUsername = typeof connection.instagram_username === "string" ? connection.instagram_username : null;
 
     if (!igUserId) {
-      const lookupUrl = new URL(`https://graph.facebook.com/${graphVersion}/${connection.facebook_page_id}`);
+      const lookupUrl = new URL(`https://graph.facebook.com/${graphVersion}/${creds.pageId}`);
       lookupUrl.searchParams.set("fields", "instagram_business_account{id,username}");
       lookupUrl.searchParams.set("access_token", pageAccessToken);
       const lookupRes = await fetch(lookupUrl.toString());
@@ -121,6 +117,7 @@ Deno.serve(async (req) => {
         .update({
           instagram_user_id: igUserId,
           instagram_username: igUsername,
+          page_access_token_last4: tokenLast4(pageAccessToken),
           last_error: null,
         })
         .eq("id", connection.id);
