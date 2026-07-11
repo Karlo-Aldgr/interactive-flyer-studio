@@ -47,6 +47,18 @@ function connectionLabel(status: MetaConnection["status"] | "missing") {
   }
 }
 
+function providerStatusLabel(status: string | null | undefined): string {
+  switch (status) {
+    case "posted": return "Sent to Facebook";
+    case "posting": return "Sending…";
+    case "failed": return "Send failed";
+    case "ready": return "Ready";
+    case "connected": return "Connected";
+    case "not_connected": return "Not sent yet";
+    default: return status || "Unknown";
+  }
+}
+
 export function FacebookPostDialog({
   open,
   onOpenChange,
@@ -202,7 +214,7 @@ export function FacebookPostDialog({
               </div>
               {draft?.facebook_provider_status ? (
                 <Badge variant={draft.facebook_provider_status === "failed" ? "destructive" : "outline"}>
-                  Provider: {draft.facebook_provider_status}
+                  {providerStatusLabel(draft.facebook_provider_status)}
                 </Badge>
               ) : null}
             </div>
@@ -239,7 +251,7 @@ export function FacebookPostDialog({
 
             {draft?.facebook_provider_post_id && (
               <p className="text-xs text-muted-foreground">
-                Last provider post ID: <span className="font-medium text-foreground">{draft.facebook_provider_post_id}</span>
+                Facebook post ID: <span className="font-medium text-foreground">{draft.facebook_provider_post_id}</span>
               </p>
             )}
             {draft?.facebook_last_error && (
@@ -247,7 +259,10 @@ export function FacebookPostDialog({
             )}
             {draft?.facebook_posted_at && (
               <p className="text-xs text-muted-foreground">
-                Last successful test post: <span className="font-medium text-foreground">{new Date(draft.facebook_posted_at).toLocaleString()}</span>
+                {draft.facebook_provider_status === "posted" && draft.facebook_provider_post_id
+                  ? "Last Meta send:"
+                  : "Last channel update:"}{" "}
+                <span className="font-medium text-foreground">{new Date(draft.facebook_posted_at).toLocaleString()}</span>
               </p>
             )}
           </section>

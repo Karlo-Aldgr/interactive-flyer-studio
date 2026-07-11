@@ -46,6 +46,18 @@ function connectionLabel(status: MetaConnection["status"] | "missing") {
   }
 }
 
+function providerStatusLabel(status: string | null | undefined): string {
+  switch (status) {
+    case "posted": return "Sent to Instagram";
+    case "posting": return "Sending…";
+    case "failed": return "Send failed";
+    case "ready": return "Ready";
+    case "connected": return "Connected";
+    case "not_connected": return "Not sent yet";
+    default: return status || "Unknown";
+  }
+}
+
 export function InstagramPostDialog({
   open,
   onOpenChange,
@@ -206,7 +218,7 @@ export function InstagramPostDialog({
               </div>
               {draft?.instagram_provider_status ? (
                 <Badge variant={draft.instagram_provider_status === "failed" ? "destructive" : "outline"}>
-                  Provider: {draft.instagram_provider_status}
+                  {providerStatusLabel(draft.instagram_provider_status)}
                 </Badge>
               ) : null}
             </div>
