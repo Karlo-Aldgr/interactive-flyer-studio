@@ -945,6 +945,24 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_connection_secrets: {
+        Row: {
+          page_access_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          page_access_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          page_access_token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meta_connections: {
         Row: {
           connection_mode: string
@@ -1011,6 +1029,30 @@ export type Database = {
           cron_secret?: string
           id?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      meta_oauth_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          return_to: string | null
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          return_to?: string | null
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          return_to?: string | null
+          state?: string
+          user_id?: string
         }
         Relationships: []
       }
