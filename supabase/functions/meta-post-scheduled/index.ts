@@ -1,5 +1,5 @@
 /**
- * Cron/worker entry: post due Facebook marketing drafts (test mode).
+ * Cron/worker entry: post due Facebook marketing drafts.
  * Auth: header x-meta-cron-secret must match META_CRON_SECRET.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
@@ -9,6 +9,7 @@ import {
   facebookSuccessPatch,
   postFacebookToPage,
 } from "../_shared/metaFacebookPost.ts";
+import { resolveMetaPageCredentials, tokenLast4 } from "../_shared/metaCredentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,15 +38,6 @@ Deno.serve(async (req) => {
       return json({ error: "Unauthorized" }, 401);
     }
 
-    if ((Deno.env.get("META_TEST_MODE_ENABLED") ?? "").toLowerCase() !== "true") {
-      return json({ error: "Meta test mode is not enabled" }, 400);
-    }
-
-    const pageAccessToken = Deno.env.get("META_PAGE_ACCESS_TOKEN")?.trim();
-    if (!pageAccessToken) {
-      return json({ error: "Missing META_PAGE_ACCESS_TOKEN secret" }, 400);
-    }
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -69,7 +61,6 @@ Deno.serve(async (req) => {
       const draftId = String(draft.id);
       const claimAt = new Date().toISOString();
 
-      // Claim row so overlapping cron ticks do not double-post.
       const { data: claimed, error: claimErr } = await supabase
         .from("marketing_drafts")
         .update({
@@ -100,30 +91,13 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Prefer flyer owner connection; fall back to any connected page (test-mode single page).
-      let { data: connection } = await supabase
-        .from("meta_connections")
-        .select("*")
-        .eq("user_id", claimed.owner_id)
-        .eq("provider", "meta")
-        .maybeSingle();
-
-      if (!connection?.facebook_page_id) {
-        const { data: fallback } = await supabase
-          .from("meta_connections")
-          .select("*")
-          .eq("provider", "meta")
-          .not("facebook_page_id", "is", null)
-          .order("updated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        connection = fallback;
-      }
-
-      if (!connection?.facebook_page_id) {
-        const err = "Facebook page is not connected yet";
-        await supabase.from("marketing_drafts").update(facebookFailurePatch(err, claimAt)).eq("id", draftId);
-        results.push({ draft_id: draftId, ok: false, error: err });
+      // Prefer flyer owner's OAuth token; fall back to global test token.
+      const creds = await resolveMetaPageCredentials(supabase, String(claimed.owner_id));
+      if ("error" in creds) {
+        // Staff may schedule client flyers while logged in with their own Meta connection.
+        // Try any ready oauth secret? For v1 keep owner-only + test fallback already in resolver.
+        await supabase.from("marketing_drafts").update(facebookFailurePatch(creds.error, claimAt)).eq("id", draftId);
+        results.push({ draft_id: draftId, ok: false, error: creds.error });
         continue;
       }
 
@@ -131,8 +105,8 @@ Deno.serve(async (req) => {
       const thumbnailUrl = typeof claimed.thumbnail_url === "string" ? claimed.thumbnail_url.trim() : "";
 
       const result = await postFacebookToPage({
-        pageId: String(connection.facebook_page_id),
-        pageAccessToken,
+        pageId: creds.pageId,
+        pageAccessToken: creds.pageAccessToken,
         graphVersion,
         message,
         link,
@@ -141,15 +115,17 @@ Deno.serve(async (req) => {
 
       if (!result.ok) {
         await supabase.from("marketing_drafts").update(facebookFailurePatch(result.error, result.attemptAt)).eq("id", draftId);
-        await supabase
-          .from("meta_connections")
-          .update({
-            status: "error",
-            last_error: result.error,
-            page_access_token_last4: pageAccessToken.slice(-4),
-          })
-          .eq("id", connection.id);
-        results.push({ draft_id: draftId, ok: false, error: result.error });
+        if (creds.connectionId) {
+          await supabase
+            .from("meta_connections")
+            .update({
+              status: "error",
+              last_error: result.error,
+              page_access_token_last4: tokenLast4(creds.pageAccessToken),
+            })
+            .eq("id", creds.connectionId);
+        }
+        results.push({ draft_id: draftId, ok: false, error: result.error, token_source: creds.source });
         continue;
       }
 
@@ -157,16 +133,23 @@ Deno.serve(async (req) => {
         .from("marketing_drafts")
         .update(facebookSuccessPatch(result.provider_post_id, result.attemptAt))
         .eq("id", draftId);
-      await supabase
-        .from("meta_connections")
-        .update({
-          status: "ready",
-          last_error: null,
-          page_access_token_last4: pageAccessToken.slice(-4),
-        })
-        .eq("id", connection.id);
+      if (creds.connectionId) {
+        await supabase
+          .from("meta_connections")
+          .update({
+            status: "ready",
+            last_error: null,
+            page_access_token_last4: tokenLast4(creds.pageAccessToken),
+          })
+          .eq("id", creds.connectionId);
+      }
 
-      results.push({ draft_id: draftId, ok: true, provider_post_id: result.provider_post_id });
+      results.push({
+        draft_id: draftId,
+        ok: true,
+        provider_post_id: result.provider_post_id,
+        token_source: creds.source,
+      });
     }
 
     return json({
