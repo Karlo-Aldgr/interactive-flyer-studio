@@ -39,3 +39,15 @@ If you own a domain you can attach a subdomain like `share.yourdomain.com`:
 1. In the Worker's **Settings** → **Triggers** → **Custom Domains** → **Add Custom Domain**.
 2. Enter `share.yourdomain.com`. Cloudflare walks you through the DNS step.
 3. Update the share origin in the app to use the new domain.
+
+## Facebook 403 / no link preview
+
+If the Sharing Debugger shows **Response Code 403** for `*.workers.dev`, Cloudflare Bot Fight Mode is blocking `facebookexternalhit`.
+
+Fix in Cloudflare dashboard:
+1. Open the account that owns the share Worker
+2. **Security** → **Bots** (or **Security** → **Settings**)
+3. Turn **Bot Fight Mode** / aggressive bot blocking **Off** for that zone, or allowlist Facebook crawlers
+4. Re-run Sharing Debugger → **Scrape Again**
+
+Until that is fixed, Facebook Post Now attaches the flyer thumbnail as a photo so the graphic still appears.

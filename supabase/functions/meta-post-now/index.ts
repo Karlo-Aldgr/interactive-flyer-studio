@@ -93,6 +93,8 @@ Deno.serve(async (req) => {
       return match?.[0]?.replace(/[),.;!?]+$/g, "") || "";
     })();
     const link = linkFromDraft || linkFromMessage;
+    const thumbnailUrl = typeof draft.thumbnail_url === "string" ? draft.thumbnail_url.trim() : "";
+    const canPostPhoto = /^https:\/\//i.test(thumbnailUrl);
 
     const attemptAt = new Date().toISOString();
     await supabase
@@ -106,13 +108,23 @@ Deno.serve(async (req) => {
 
     const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
     const params = new URLSearchParams({
-      message,
       access_token: pageAccessToken,
     });
-    // Without `link`, Facebook often posts plain text and skips the OG preview card.
-    if (link) params.set("link", link);
 
-    const graphRes = await fetch(`https://graph.facebook.com/${graphVersion}/${connection.facebook_page_id}/feed`, {
+    // Prefer a photo post so the flyer graphic always shows.
+    // Cloudflare workers.dev often returns 403 to facebookexternalhit, which
+    // breaks OG link previews even when the share worker itself is correct.
+    let graphEndpoint = `https://graph.facebook.com/${graphVersion}/${connection.facebook_page_id}/feed`;
+    if (canPostPhoto) {
+      graphEndpoint = `https://graph.facebook.com/${graphVersion}/${connection.facebook_page_id}/photos`;
+      params.set("url", thumbnailUrl);
+      params.set("caption", message);
+    } else {
+      params.set("message", message);
+      if (link) params.set("link", link);
+    }
+
+    const graphRes = await fetch(graphEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
