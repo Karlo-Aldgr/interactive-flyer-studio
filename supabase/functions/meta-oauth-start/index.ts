@@ -70,6 +70,8 @@ Deno.serve(async (req) => {
       "pages_manage_posts",
       "instagram_basic",
       "instagram_content_publish",
+      // Needed when Page access is via Business Manager (common for Business Suite pages).
+      "ads_read",
     ].join(",");
 
     const url = new URL(`https://www.facebook.com/${graphVersion}/dialog/oauth`);

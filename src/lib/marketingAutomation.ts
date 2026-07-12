@@ -225,6 +225,41 @@ export async function loadLatestMarketingDraft(flyerId: string): Promise<Marketi
   return normalizeDraft(data as Record<string, unknown>);
 }
 
+/** Manual save when n8n callback is stuck — marks draft ready with typed copy. */
+export async function saveManualMarketingCopy(args: {
+  draftId: string;
+  facebookPost: string;
+  instagramCaption: string;
+}): Promise<MarketingDraft | null> {
+  const facebookPost = args.facebookPost.trim();
+  const instagramCaption = args.instagramCaption.trim();
+  if (!facebookPost && !instagramCaption) {
+    toast.error("Type a Facebook post or Instagram caption first");
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("marketing_drafts")
+    .update({
+      status: "ready",
+      facebook_post: facebookPost || null,
+      instagram_caption: instagramCaption || null,
+      error_message: null,
+    })
+    .eq("id", args.draftId)
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    console.error("[marketing] save manual copy failed", error);
+    toast.error(error?.message || "Could not save marketing copy");
+    return null;
+  }
+
+  toast.success("Marketing copy saved");
+  return normalizeDraft(data as Record<string, unknown>);
+}
+
 export async function loadMetaConnection(userId: string): Promise<MetaConnection | null> {
   const { data, error } = await supabase
     .from("meta_connections")
@@ -290,6 +325,46 @@ export async function saveMetaConnection(args: {
     toast.error(err instanceof Error ? err.message : "Could not save Facebook connection");
     return null;
   }
+}
+
+/** Manual Instagram IG User ID save when Graph auto-detect fails (Business Manager pages). */
+export async function saveInstagramManualLink(args: {
+  userId: string;
+  instagramUserId: string;
+  instagramUsername?: string;
+}): Promise<MetaConnection | null> {
+  const igId = args.instagramUserId.trim();
+  if (!/^\d{5,}$/.test(igId)) {
+    toast.error("Instagram User ID must be a numeric ID from Graph API Explorer");
+    return null;
+  }
+  const username = (args.instagramUsername || "").trim().replace(/^@/, "") || null;
+
+  const { data, error } = await supabase
+    .from("meta_connections")
+    .update({
+      instagram_user_id: igId,
+      instagram_username: username,
+      last_error: null,
+      status: "ready",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", args.userId)
+    .eq("provider", "meta")
+    .select(
+      "id, user_id, provider, meta_app_id, connection_mode, status, facebook_page_id, facebook_page_name, instagram_user_id, instagram_username, page_access_token_last4, last_error, created_at, updated_at",
+    )
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error("[marketing] save instagram manual link failed", error);
+    toast.error(error?.message || "Could not save Instagram link — connect Facebook Page first");
+    return null;
+  }
+
+  const connection = normalizeMetaConnection(data as Record<string, unknown>);
+  toast.success(`Instagram saved: @${connection.instagram_username || connection.instagram_user_id}`);
+  return connection;
 }
 
 export async function regenerateMarketingDraft(flyerId: string, ownerId: string): Promise<void> {

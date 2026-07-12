@@ -13,10 +13,28 @@ function json(body: unknown, status = 200) {
   });
 }
 
-async function resolveInstagramAccount(pageId: string, pageAccessToken: string, graphVersion: string) {
-  const url = new URL(`https://graph.facebook.com/${graphVersion}/${pageId}`);
-  url.searchParams.set("fields", "instagram_business_account{id,username}");
-  url.searchParams.set("access_token", pageAccessToken);
+function pickIg(data: Record<string, unknown>) {
+  const igBiz = data.instagram_business_account as Record<string, unknown> | undefined;
+  const igConnected = data.connected_instagram_account as Record<string, unknown> | undefined;
+  const ig = igBiz?.id ? igBiz : (igConnected?.id ? igConnected : undefined);
+  if (!ig?.id) return null;
+  return {
+    instagram_user_id: String(ig.id),
+    instagram_username: typeof ig.username === "string" ? ig.username : null,
+  };
+}
+
+async function resolveInstagramAccount(args: {
+  pageId: string;
+  accessToken: string;
+  graphVersion: string;
+}) {
+  const url = new URL(`https://graph.facebook.com/${args.graphVersion}/${args.pageId}`);
+  url.searchParams.set(
+    "fields",
+    "instagram_business_account{id,username},connected_instagram_account{id,username}",
+  );
+  url.searchParams.set("access_token", args.accessToken);
 
   const res = await fetch(url.toString());
   const data = await res.json().catch(() => ({})) as Record<string, unknown>;
@@ -27,15 +45,11 @@ async function resolveInstagramAccount(pageId: string, pageAccessToken: string, 
     return { error: message };
   }
 
-  const ig = data.instagram_business_account as Record<string, unknown> | undefined;
-  if (!ig?.id) {
+  const ig = pickIg(data);
+  if (!ig) {
     return { error: "No Instagram Business/Creator account is linked to this Facebook Page" };
   }
-
-  return {
-    instagram_user_id: String(ig.id),
-    instagram_username: typeof ig.username === "string" ? ig.username : null,
-  };
+  return ig;
 }
 
 Deno.serve(async (req) => {
@@ -82,37 +96,54 @@ Deno.serve(async (req) => {
 
     const { data: secretRow } = await supabase
       .from("meta_connection_secrets")
-      .select("page_access_token")
+      .select("page_access_token, user_access_token")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const oauthToken = typeof secretRow?.page_access_token === "string"
+    const oauthPageToken = typeof secretRow?.page_access_token === "string"
       ? secretRow.page_access_token.trim()
       : "";
+    const oauthUserToken = typeof secretRow?.user_access_token === "string"
+      ? secretRow.user_access_token.trim()
+      : "";
 
-    // Prefer the user's OAuth page token (matches Connect with Facebook).
-    // Global test token is fallback only — it often cannot see Instagram.
-    const pageAccessToken = oauthToken || globalToken;
-    const tokenSource = oauthToken ? "oauth" : (globalToken ? "test_fallback" : "none");
-    const preserveOauth = existing?.connection_mode === "oauth" || !!oauthToken;
+    // Meta often requires a User token (not Page token) to read IG on Business Manager pages.
+    const tokenCandidates: Array<{ token: string; source: string }> = [];
+    if (oauthUserToken) tokenCandidates.push({ token: oauthUserToken, source: "oauth_user" });
+    if (oauthPageToken) tokenCandidates.push({ token: oauthPageToken, source: "oauth_page" });
+    if (globalToken) tokenCandidates.push({ token: globalToken, source: "test_fallback" });
+
+    const preserveOauth = existing?.connection_mode === "oauth" || !!oauthPageToken || !!oauthUserToken;
 
     let instagramUserId: string | null = null;
     let instagramUsername: string | null = null;
     let lastError: string | null = null;
-    let status = pageAccessToken ? "ready" : "connected";
+    let tokenSource = "none";
+    let pageAccessTokenForLast4 = oauthPageToken || globalToken;
 
-    if (pageAccessToken) {
-      const ig = await resolveInstagramAccount(facebookPageId, pageAccessToken, graphVersion);
-      if ("error" in ig && ig.error) {
-        lastError = `${ig.error} (token: ${tokenSource})`;
-        status = "connected";
-      } else {
-        instagramUserId = ig.instagram_user_id ?? null;
-        instagramUsername = ig.instagram_username ?? null;
-      }
-    } else {
+    if (!tokenCandidates.length) {
       lastError = "No page access token available. Use Connect with Facebook first.";
+    } else {
+      for (const candidate of tokenCandidates) {
+        const ig = await resolveInstagramAccount({
+          pageId: facebookPageId,
+          accessToken: candidate.token,
+          graphVersion,
+        });
+        tokenSource = candidate.source;
+        if (!("error" in ig)) {
+          instagramUserId = ig.instagram_user_id;
+          instagramUsername = ig.instagram_username;
+          lastError = null;
+          break;
+        }
+        lastError = `${ig.error} (token: ${candidate.source})`;
+      }
     }
+
+    const status = (pageAccessTokenForLast4 || oauthUserToken)
+      ? (instagramUserId ? "ready" : "connected")
+      : "connected";
 
     const row = {
       user_id: user.id,
@@ -124,7 +155,7 @@ Deno.serve(async (req) => {
       facebook_page_name: facebookPageName,
       instagram_user_id: instagramUserId,
       instagram_username: instagramUsername,
-      page_access_token_last4: pageAccessToken ? tokenLast4(pageAccessToken) : null,
+      page_access_token_last4: pageAccessTokenForLast4 ? tokenLast4(pageAccessTokenForLast4) : null,
       last_error: lastError,
       updated_at: new Date().toISOString(),
     };

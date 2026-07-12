@@ -16,6 +16,7 @@ import {
   loadLatestMarketingDraft,
   markMarketingChannelPosted,
   regenerateMarketingDraft,
+  saveManualMarketingCopy,
   scheduleMarketingChannel,
   toLocalInputValue,
   unscheduleMarketingChannel,
@@ -254,12 +255,19 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
   const [draft, setDraft] = useState<MarketingDraft | null>(null);
   const [loading, setLoading] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [savingManual, setSavingManual] = useState(false);
+  const [facebookPost, setFacebookPost] = useState("");
+  const [instagramCaption, setInstagramCaption] = useState("");
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
       const row = await loadLatestMarketingDraft(flyerId);
       setDraft(row);
+      if (row) {
+        setFacebookPost(row.facebook_post || "");
+        setInstagramCaption(row.instagram_caption || "");
+      }
     } finally {
       setLoading(false);
     }
@@ -290,6 +298,21 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
       await refresh();
     } finally {
       setRegenerating(false);
+    }
+  }
+
+  async function handleSaveManual() {
+    if (!draft) return;
+    setSavingManual(true);
+    try {
+      const saved = await saveManualMarketingCopy({
+        draftId: draft.id,
+        facebookPost,
+        instagramCaption,
+      });
+      if (saved) setDraft(saved);
+    } finally {
+      setSavingManual(false);
     }
   }
 
@@ -329,6 +352,12 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
               {working && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             </div>
 
+            {working && (
+              <p className="rounded-md border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                AI is stuck or slow. Type your posts below and click <span className="font-medium text-foreground">Save copy</span> to continue.
+              </p>
+            )}
+
             {draft.status === "failed" && draft.error_message && (
               <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 {draft.error_message}
@@ -343,25 +372,26 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
                   variant="ghost"
                   size="sm"
                   className="h-7 px-2"
-                  disabled={!draft.facebook_post}
-                  onClick={() => void copyText("Facebook post", draft.facebook_post || "")}
+                  disabled={!facebookPost.trim()}
+                  onClick={() => void copyText("Facebook post", facebookPost)}
                 >
                   <Copy className="mr-1 h-3.5 w-3.5" /> Copy
                 </Button>
               </div>
               <Textarea
                 id="fb-post"
-                readOnly
                 rows={5}
-                value={draft.facebook_post || (working ? "Generating…" : "")}
-                placeholder={working ? "Generating…" : "No Facebook draft yet"}
+                value={facebookPost}
+                onChange={(e) => setFacebookPost(e.target.value)}
+                placeholder="Type Facebook post here…"
+                disabled={savingManual || regenerating}
               />
               {ready && (
                 <ChannelSchedulePanel
                   channel="facebook"
                   label="Facebook publishing"
                   draft={draft}
-                  busy={working || regenerating}
+                  busy={working || regenerating || savingManual}
                   onUpdated={setDraft}
                 />
               )}
@@ -375,25 +405,26 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
                   variant="ghost"
                   size="sm"
                   className="h-7 px-2"
-                  disabled={!draft.instagram_caption}
-                  onClick={() => void copyText("Instagram caption", draft.instagram_caption || "")}
+                  disabled={!instagramCaption.trim()}
+                  onClick={() => void copyText("Instagram caption", instagramCaption)}
                 >
                   <Copy className="mr-1 h-3.5 w-3.5" /> Copy
                 </Button>
               </div>
               <Textarea
                 id="ig-caption"
-                readOnly
                 rows={4}
-                value={draft.instagram_caption || (working ? "Generating…" : "")}
-                placeholder={working ? "Generating…" : "No Instagram draft yet"}
+                value={instagramCaption}
+                onChange={(e) => setInstagramCaption(e.target.value)}
+                placeholder="Type Instagram caption here…"
+                disabled={savingManual || regenerating}
               />
               {ready && (
                 <ChannelSchedulePanel
                   channel="instagram"
                   label="Instagram publishing"
                   draft={draft}
-                  busy={working || regenerating}
+                  busy={working || regenerating || savingManual}
                   onUpdated={setDraft}
                 />
               )}
@@ -410,11 +441,22 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button type="button" onClick={() => void handleRegenerate()} disabled={regenerating || working}>
+          {draft && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void handleSaveManual()}
+              disabled={savingManual || regenerating || (!facebookPost.trim() && !instagramCaption.trim())}
+            >
+              {savingManual ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+              Save copy
+            </Button>
+          )}
+          <Button type="button" onClick={() => void handleRegenerate()} disabled={regenerating || savingManual}>
             {regenerating ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (

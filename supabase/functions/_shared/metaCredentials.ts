@@ -75,13 +75,18 @@ export async function upsertMetaPageSecret(
   supabase: SupabaseClient,
   userId: string,
   pageAccessToken: string,
+  userAccessToken?: string | null,
 ) {
+  const row: Record<string, unknown> = {
+    user_id: userId,
+    page_access_token: pageAccessToken,
+    updated_at: new Date().toISOString(),
+  };
+  if (typeof userAccessToken === "string" && userAccessToken.trim()) {
+    row.user_access_token = userAccessToken.trim();
+  }
   const { error } = await supabase
     .from("meta_connection_secrets")
-    .upsert({
-      user_id: userId,
-      page_access_token: pageAccessToken,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" });
+    .upsert(row, { onConflict: "user_id" });
   if (error) throw new Error(error.message);
 }
