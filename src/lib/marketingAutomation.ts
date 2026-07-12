@@ -292,6 +292,46 @@ export async function saveMetaConnection(args: {
   }
 }
 
+/** Manual Instagram IG User ID save when Graph auto-detect fails (Business Manager pages). */
+export async function saveInstagramManualLink(args: {
+  userId: string;
+  instagramUserId: string;
+  instagramUsername?: string;
+}): Promise<MetaConnection | null> {
+  const igId = args.instagramUserId.trim();
+  if (!/^\d{5,}$/.test(igId)) {
+    toast.error("Instagram User ID must be a numeric ID from Graph API Explorer");
+    return null;
+  }
+  const username = (args.instagramUsername || "").trim().replace(/^@/, "") || null;
+
+  const { data, error } = await supabase
+    .from("meta_connections")
+    .update({
+      instagram_user_id: igId,
+      instagram_username: username,
+      last_error: null,
+      status: "ready",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", args.userId)
+    .eq("provider", "meta")
+    .select(
+      "id, user_id, provider, meta_app_id, connection_mode, status, facebook_page_id, facebook_page_name, instagram_user_id, instagram_username, page_access_token_last4, last_error, created_at, updated_at",
+    )
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error("[marketing] save instagram manual link failed", error);
+    toast.error(error?.message || "Could not save Instagram link — connect Facebook Page first");
+    return null;
+  }
+
+  const connection = normalizeMetaConnection(data as Record<string, unknown>);
+  toast.success(`Instagram saved: @${connection.instagram_username || connection.instagram_user_id}`);
+  return connection;
+}
+
 export async function regenerateMarketingDraft(flyerId: string, ownerId: string): Promise<void> {
   const { data: flyer, error } = await supabase
     .from("flyers")

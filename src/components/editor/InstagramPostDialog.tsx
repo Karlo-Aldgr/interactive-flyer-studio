@@ -3,6 +3,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import {
   loadLatestMarketingDraft,
   loadMetaConnection,
   postInstagramNow,
+  saveInstagramManualLink,
   saveMetaConnection,
   startMetaOAuth,
   type MarketingDraft,
@@ -76,6 +78,9 @@ export function InstagramPostDialog({
   const [draft, setDraft] = useState<MarketingDraft | null>(null);
   const [connection, setConnection] = useState<MetaConnection | null>(null);
   const [caption, setCaption] = useState("");
+  const [manualIgId, setManualIgId] = useState("");
+  const [manualIgUsername, setManualIgUsername] = useState("carlojay.algordo");
+  const [savingManualIg, setSavingManualIg] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user?.id) return;
@@ -131,6 +136,21 @@ export function InstagramPostDialog({
       if (url) window.location.assign(url);
     } finally {
       setStartingOAuth(false);
+    }
+  }
+
+  async function handleSaveManualInstagram() {
+    if (!user?.id) return;
+    setSavingManualIg(true);
+    try {
+      const saved = await saveInstagramManualLink({
+        userId: user.id,
+        instagramUserId: manualIgId,
+        instagramUsername: manualIgUsername,
+      });
+      if (saved) setConnection(saved);
+    } finally {
+      setSavingManualIg(false);
     }
   }
 
@@ -238,6 +258,42 @@ export function InstagramPostDialog({
                     Connect with Facebook
                   </Button>
                 </div>
+                {!hasInstagram && (
+                  <div className="space-y-2 rounded-md border border-dashed border-border/70 bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground">
+                      Auto-detect failed. Get the numeric Instagram User ID from Graph API Explorer, paste it here, then Save.
+                    </p>
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-ig-id">Instagram User ID (numbers only)</Label>
+                      <Input
+                        id="manual-ig-id"
+                        value={manualIgId}
+                        onChange={(e) => setManualIgId(e.target.value)}
+                        placeholder="1784140xxxxxxxxxx"
+                        disabled={loading || savingManualIg || posting}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-ig-username">Instagram username</Label>
+                      <Input
+                        id="manual-ig-username"
+                        value={manualIgUsername}
+                        onChange={(e) => setManualIgUsername(e.target.value)}
+                        placeholder="carlojay.algordo"
+                        disabled={loading || savingManualIg || posting}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void handleSaveManualInstagram()}
+                      disabled={loading || savingManualIg || posting || !manualIgId.trim()}
+                    >
+                      {savingManualIg ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                      Save Instagram ID
+                    </Button>
+                  </div>
+                )}
                 {!hasInstagram && (
                   <p className="text-xs text-muted-foreground">
                     If refresh fails, click <span className="font-medium text-foreground">Connect with Facebook</span> again so Meta re-reads the Instagram link with Instagram permissions.

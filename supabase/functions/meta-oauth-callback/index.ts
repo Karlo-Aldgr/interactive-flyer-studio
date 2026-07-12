@@ -67,7 +67,10 @@ async function resolvePageFromUserToken(args: {
   preferredPageId?: string | null;
 }) {
   const url = new URL(`https://graph.facebook.com/${args.graphVersion}/me/accounts`);
-  url.searchParams.set("fields", "id,name,access_token,instagram_business_account{id,username}");
+  url.searchParams.set(
+    "fields",
+    "id,name,access_token,instagram_business_account{id,username},connected_instagram_account{id,username}",
+  );
   url.searchParams.set("access_token", args.userToken);
   const res = await fetch(url.toString());
   const data = await res.json().catch(() => ({})) as Record<string, unknown>;
@@ -88,7 +91,9 @@ async function resolvePageFromUserToken(args: {
     throw new Error("Page token missing from Meta response");
   }
 
-  const ig = page.instagram_business_account as Record<string, unknown> | undefined;
+  const igBiz = page.instagram_business_account as Record<string, unknown> | undefined;
+  const igConnected = page.connected_instagram_account as Record<string, unknown> | undefined;
+  const ig = igBiz?.id ? igBiz : (igConnected?.id ? igConnected : undefined);
   return {
     facebook_page_id: String(page.id),
     facebook_page_name: typeof page.name === "string" ? page.name : "Facebook Page",
@@ -179,7 +184,7 @@ Deno.serve(async (req) => {
       preferredPageId: existing?.facebook_page_id ? String(existing.facebook_page_id) : null,
     });
 
-    await upsertMetaPageSecret(supabase, userId, page.page_access_token);
+    await upsertMetaPageSecret(supabase, userId, page.page_access_token, longUserToken);
 
     const { error: upsertErr } = await supabase.from("meta_connections").upsert({
       user_id: userId,
@@ -192,7 +197,9 @@ Deno.serve(async (req) => {
       instagram_user_id: page.instagram_user_id,
       instagram_username: page.instagram_username,
       page_access_token_last4: tokenLast4(page.page_access_token),
-      last_error: null,
+      last_error: page.instagram_user_id
+        ? null
+        : "Instagram not returned by Meta yet. Paste Instagram User ID manually in Instagram Post Now, or reconnect after linking a Professional Instagram account.",
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id,provider" });
 
