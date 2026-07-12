@@ -68,6 +68,8 @@ Deno.serve(async (req) => {
       "pages_show_list",
       "pages_read_engagement",
       "pages_manage_posts",
+      "instagram_basic",
+      "instagram_content_publish",
     ].join(",");
 
     const url = new URL(`https://www.facebook.com/${graphVersion}/dialog/oauth`);
