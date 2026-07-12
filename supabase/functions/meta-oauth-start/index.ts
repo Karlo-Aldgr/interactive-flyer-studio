@@ -70,7 +70,8 @@ Deno.serve(async (req) => {
       "pages_manage_posts",
       "instagram_basic",
       "instagram_content_publish",
-      // Needed when Page access is via Business Manager (common for Business Suite pages).
+      "instagram_business_basic",
+      "instagram_business_content_publish",
       "ads_read",
     ].join(",");
 
