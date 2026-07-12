@@ -13,9 +13,11 @@ import {
   loadMetaConnection,
   postInstagramNow,
   saveMetaConnection,
+  startMetaOAuth,
   type MarketingDraft,
   type MetaConnection,
 } from "@/lib/marketingAutomation";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -69,6 +71,7 @@ export function InstagramPostDialog({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [savingConnection, setSavingConnection] = useState(false);
+  const [startingOAuth, setStartingOAuth] = useState(false);
   const [posting, setPosting] = useState(false);
   const [draft, setDraft] = useState<MarketingDraft | null>(null);
   const [connection, setConnection] = useState<MetaConnection | null>(null);
@@ -108,9 +111,26 @@ export function InstagramPostDialog({
         pageId: connection.facebook_page_id,
         pageName: connection.facebook_page_name,
       });
-      if (saved) setConnection(saved);
+      if (saved) {
+        setConnection(saved);
+        if (saved.instagram_user_id) {
+          toast.success(`Instagram linked: @${saved.instagram_username || saved.instagram_user_id}`);
+        } else {
+          toast.error(saved.last_error || "Instagram still not detected — use Connect with Facebook");
+        }
+      }
     } finally {
       setSavingConnection(false);
+    }
+  }
+
+  async function handleConnectFacebook() {
+    setStartingOAuth(true);
+    try {
+      const url = await startMetaOAuth(typeof window !== "undefined" ? window.location.href : undefined);
+      if (url) window.location.assign(url);
+    } finally {
+      setStartingOAuth(false);
     }
   }
 
@@ -128,7 +148,8 @@ export function InstagramPostDialog({
   }
 
   const connectionStatus = connection?.status ?? "missing";
-  const hasCaption = !!draft?.instagram_caption?.trim();
+  const hasDraft = !!draft;
+  const hasAiCaption = !!draft?.instagram_caption?.trim();
   const hasPage = !!connection?.facebook_page_id;
   const hasInstagram = !!connection?.instagram_user_id;
 
@@ -196,16 +217,32 @@ export function InstagramPostDialog({
                 {connection?.last_error && (
                   <p className="text-xs text-destructive">{connection.last_error}</p>
                 )}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void handleRefreshConnection()}
-                  disabled={loading || savingConnection || posting}
-                >
-                  {savingConnection ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
-                  Refresh Instagram link
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleRefreshConnection()}
+                    disabled={loading || savingConnection || posting || startingOAuth}
+                  >
+                    {savingConnection ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                    Refresh Instagram link
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => void handleConnectFacebook()}
+                    disabled={loading || savingConnection || posting || startingOAuth}
+                  >
+                    {startingOAuth ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                    Connect with Facebook
+                  </Button>
+                </div>
+                {!hasInstagram && (
+                  <p className="text-xs text-muted-foreground">
+                    If refresh fails, click <span className="font-medium text-foreground">Connect with Facebook</span> again so Meta re-reads the Instagram link with Instagram permissions.
+                  </p>
+                )}
               </>
             )}
           </section>
@@ -214,7 +251,7 @@ export function InstagramPostDialog({
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-medium">Instagram caption</h3>
-                <p className="text-xs text-muted-foreground">Reuse the latest AI-generated Instagram caption, then post it in Meta test mode.</p>
+                <p className="text-xs text-muted-foreground">Reuse AI caption, or type one manually for this test post.</p>
               </div>
               {draft?.instagram_provider_status ? (
                 <Badge variant={draft.instagram_provider_status === "failed" ? "destructive" : "outline"}>
@@ -223,9 +260,9 @@ export function InstagramPostDialog({
               ) : null}
             </div>
 
-            {!hasCaption && (
+            {!hasDraft && (
               <div className="rounded-md border border-dashed border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
-                No Instagram caption is ready yet. Generate AI Social Copy first, then come back here.
+                No marketing draft yet. Generate AI Social Copy first (or publish to create drafts), then come back here.
                 <div className="mt-3">
                   <Button
                     type="button"
@@ -242,6 +279,12 @@ export function InstagramPostDialog({
               </div>
             )}
 
+            {hasDraft && !hasAiCaption && (
+              <p className="text-xs text-muted-foreground">
+                No AI Instagram caption yet — type a test caption below (OpenAI regenerate can wait).
+              </p>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="instagram-caption-copy">Caption to post</Label>
               <Textarea
@@ -249,7 +292,8 @@ export function InstagramPostDialog({
                 rows={8}
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                disabled={loading || posting || !hasCaption}
+                disabled={loading || posting || !hasDraft}
+                placeholder={hasDraft ? "Type an Instagram caption for this test post…" : undefined}
               />
             </div>
 
