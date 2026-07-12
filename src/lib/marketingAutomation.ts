@@ -225,6 +225,41 @@ export async function loadLatestMarketingDraft(flyerId: string): Promise<Marketi
   return normalizeDraft(data as Record<string, unknown>);
 }
 
+/** Manual save when n8n callback is stuck — marks draft ready with typed copy. */
+export async function saveManualMarketingCopy(args: {
+  draftId: string;
+  facebookPost: string;
+  instagramCaption: string;
+}): Promise<MarketingDraft | null> {
+  const facebookPost = args.facebookPost.trim();
+  const instagramCaption = args.instagramCaption.trim();
+  if (!facebookPost && !instagramCaption) {
+    toast.error("Type a Facebook post or Instagram caption first");
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("marketing_drafts")
+    .update({
+      status: "ready",
+      facebook_post: facebookPost || null,
+      instagram_caption: instagramCaption || null,
+      error_message: null,
+    })
+    .eq("id", args.draftId)
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    console.error("[marketing] save manual copy failed", error);
+    toast.error(error?.message || "Could not save marketing copy");
+    return null;
+  }
+
+  toast.success("Marketing copy saved");
+  return normalizeDraft(data as Record<string, unknown>);
+}
+
 export async function loadMetaConnection(userId: string): Promise<MetaConnection | null> {
   const { data, error } = await supabase
     .from("meta_connections")
