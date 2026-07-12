@@ -73,16 +73,18 @@ Parse the model output as JSON in a **Code** node if needed.
 
 ### Node 3 — HTTP Request (callback)
 
+After OpenAI/Code, `$json` is no longer the Webhook payload. Use Webhook expressions:
+
 - Method: `POST`
-- URL: `{{ $json.callback_url }}` (from webhook payload)
-- Headers: `x-marketing-secret: {{ $json.callback_secret }}`
+- URL: `{{ $('Webhook').item.json.callback_url }}`
+- Headers: `x-marketing-secret` = `{{ $('Webhook').item.json.callback_secret }}`
 - Body (JSON):
 
 ```json
 {
   "draft_id": "{{ $('Webhook').item.json.draft_id }}",
-  "facebook_post": "...",
-  "instagram_caption": "..."
+  "facebook_post": "{{ $json.facebook_post }}",
+  "instagram_caption": "{{ $json.instagram_caption }}"
 }
 ```
 
@@ -95,6 +97,8 @@ On failure, POST the same URL with:
   "error_message": "OpenAI timeout"
 }
 ```
+
+Prefer skipping n8n entirely: set `OPENAI_API_KEY` and deploy `marketing-trigger` (see `docs/fix-marketing-openai-direct.md`).
 
 ## 5. Test end-to-end
 

@@ -261,7 +261,12 @@ export function InstagramPostDialog({
                 {!hasInstagram && (
                   <div className="space-y-2 rounded-md border border-dashed border-border/70 bg-muted/20 p-3">
                     <p className="text-xs text-muted-foreground">
-                      Auto-detect failed. Get the numeric Instagram User ID from Graph API Explorer, paste it here, then Save.
+                      Auto-detect failed. In Graph API Explorer, paste this exact path, Submit, then copy the Instagram <span className="font-medium text-foreground">id</span> number here.
+                    </p>
+                    <p className="break-all rounded bg-background/80 px-2 py-1 font-mono text-[11px] text-foreground">
+                      {connection?.facebook_page_id
+                        ? `${connection.facebook_page_id}?fields=instagram_business_account{id,username},connected_instagram_account{id,username}`
+                        : ""}
                     </p>
                     <div className="space-y-1">
                       <Label htmlFor="manual-ig-id">Instagram User ID (numbers only)</Label>
