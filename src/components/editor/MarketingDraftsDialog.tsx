@@ -245,7 +245,7 @@ function ChannelSchedulePanel({
       <p className="text-[11px] text-muted-foreground">
         {channel === "facebook"
           ? "Schedule = auto-post to Facebook at that time. Mark posted manually = track only, no Meta send."
-          : "Instagram: app-only scheduling for now — auto-post comes after Instagram linking."}
+          : "Schedule = auto-post to Instagram at that time (needs Instagram User ID + META_INSTAGRAM_USER_ACCESS_TOKEN). Mark posted manually = track only."}
       </p>
     </div>
   );

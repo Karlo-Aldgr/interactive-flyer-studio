@@ -2,7 +2,7 @@
 
 When a marketing draft has `facebook_status = scheduled` and `facebook_scheduled_for` is due, a cron job calls `meta-post-scheduled`, which posts with the same Graph logic as **Post Now** (photo + caption when a public thumbnail exists).
 
-Instagram scheduled auto-post is still out of scope until Instagram linking works.
+Instagram scheduled auto-post uses the same `meta-post-scheduled` cron — see `docs/meta-instagram-scheduled-autopost.md`.
 
 ## What was added
 

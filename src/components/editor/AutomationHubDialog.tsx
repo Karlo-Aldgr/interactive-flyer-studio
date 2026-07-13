@@ -129,7 +129,7 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
               title="Instagram Post Now"
               description="Post the latest AI Instagram caption to the Instagram Business/Creator account linked to your Facebook Page."
               badge="Ready to test"
-              statusText="Phase 2B Instagram: test-mode posting only. Reuses the same Meta page connection as Facebook Post Now."
+              statusText="Test-mode Instagram Post Now + scheduled auto-post via Instagram Login token."
               requirements={[
                 "Instagram Business or Creator account",
                 "Linked Facebook page / Meta Business Suite",

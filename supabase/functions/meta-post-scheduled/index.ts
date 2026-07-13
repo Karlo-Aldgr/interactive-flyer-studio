@@ -1,5 +1,5 @@
 /**
- * Cron/worker entry: post due Facebook marketing drafts.
+ * Cron/worker entry: post due Facebook + Instagram marketing drafts.
  * Auth: header x-meta-cron-secret must match META_CRON_SECRET.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
@@ -9,6 +9,12 @@ import {
   facebookSuccessPatch,
   postFacebookToPage,
 } from "../_shared/metaFacebookPost.ts";
+import {
+  instagramFailurePatch,
+  instagramSuccessPatch,
+  postInstagramImage,
+  resolveInstagramAccess,
+} from "../_shared/metaInstagramPost.ts";
 import { resolveMetaPageCredentials, tokenLast4 } from "../_shared/metaCredentials.ts";
 
 const corsHeaders = {
@@ -44,20 +50,19 @@ Deno.serve(async (req) => {
     );
 
     const nowIso = new Date().toISOString();
-    const { data: dueDrafts, error: dueErr } = await supabase
+    const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
+    const results: Array<Record<string, unknown>> = [];
+
+    const { data: dueFacebook, error: fbDueErr } = await supabase
       .from("marketing_drafts")
       .select("*")
       .eq("facebook_status", "scheduled")
       .lte("facebook_scheduled_for", nowIso)
       .order("facebook_scheduled_for", { ascending: true })
       .limit(10);
+    if (fbDueErr) return json({ error: fbDueErr.message }, 500);
 
-    if (dueErr) return json({ error: dueErr.message }, 500);
-
-    const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
-    const results: Array<Record<string, unknown>> = [];
-
-    for (const draft of dueDrafts ?? []) {
+    for (const draft of dueFacebook ?? []) {
       const draftId = String(draft.id);
       const claimAt = new Date().toISOString();
 
@@ -75,11 +80,11 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (claimErr) {
-        results.push({ draft_id: draftId, ok: false, error: claimErr.message });
+        results.push({ channel: "facebook", draft_id: draftId, ok: false, error: claimErr.message });
         continue;
       }
       if (!claimed) {
-        results.push({ draft_id: draftId, ok: false, skipped: true, reason: "already_claimed_or_not_due" });
+        results.push({ channel: "facebook", draft_id: draftId, ok: false, skipped: true, reason: "already_claimed_or_not_due" });
         continue;
       }
 
@@ -87,17 +92,14 @@ Deno.serve(async (req) => {
       if (!message) {
         const err = "No Facebook copy is ready yet";
         await supabase.from("marketing_drafts").update(facebookFailurePatch(err, claimAt)).eq("id", draftId);
-        results.push({ draft_id: draftId, ok: false, error: err });
+        results.push({ channel: "facebook", draft_id: draftId, ok: false, error: err });
         continue;
       }
 
-      // Prefer flyer owner's OAuth token; fall back to global test token.
       const creds = await resolveMetaPageCredentials(supabase, String(claimed.owner_id));
       if ("error" in creds) {
-        // Staff may schedule client flyers while logged in with their own Meta connection.
-        // Try any ready oauth secret? For v1 keep owner-only + test fallback already in resolver.
         await supabase.from("marketing_drafts").update(facebookFailurePatch(creds.error, claimAt)).eq("id", draftId);
-        results.push({ draft_id: draftId, ok: false, error: creds.error });
+        results.push({ channel: "facebook", draft_id: draftId, ok: false, error: creds.error });
         continue;
       }
 
@@ -125,7 +127,7 @@ Deno.serve(async (req) => {
             })
             .eq("id", creds.connectionId);
         }
-        results.push({ draft_id: draftId, ok: false, error: result.error, token_source: creds.source });
+        results.push({ channel: "facebook", draft_id: draftId, ok: false, error: result.error, token_source: creds.source });
         continue;
       }
 
@@ -145,6 +147,7 @@ Deno.serve(async (req) => {
       }
 
       results.push({
+        channel: "facebook",
         draft_id: draftId,
         ok: true,
         provider_post_id: result.provider_post_id,
@@ -152,10 +155,124 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { data: dueInstagram, error: igDueErr } = await supabase
+      .from("marketing_drafts")
+      .select("*")
+      .eq("instagram_status", "scheduled")
+      .lte("instagram_scheduled_for", nowIso)
+      .order("instagram_scheduled_for", { ascending: true })
+      .limit(5);
+    if (igDueErr) return json({ error: igDueErr.message }, 500);
+
+    for (const draft of dueInstagram ?? []) {
+      const draftId = String(draft.id);
+      const claimAt = new Date().toISOString();
+
+      const { data: claimed, error: claimErr } = await supabase
+        .from("marketing_drafts")
+        .update({
+          instagram_provider_status: "posting",
+          instagram_last_attempt_at: claimAt,
+          instagram_last_error: null,
+        })
+        .eq("id", draftId)
+        .eq("instagram_status", "scheduled")
+        .neq("instagram_provider_status", "posting")
+        .select("*")
+        .maybeSingle();
+
+      if (claimErr) {
+        results.push({ channel: "instagram", draft_id: draftId, ok: false, error: claimErr.message });
+        continue;
+      }
+      if (!claimed) {
+        results.push({ channel: "instagram", draft_id: draftId, ok: false, skipped: true, reason: "already_claimed_or_not_due" });
+        continue;
+      }
+
+      const caption = String(claimed.instagram_caption || "").trim();
+      const imageUrl = typeof claimed.thumbnail_url === "string" ? claimed.thumbnail_url.trim() : "";
+
+      const { data: connection } = await supabase
+        .from("meta_connections")
+        .select("id, instagram_user_id, instagram_username")
+        .eq("user_id", String(claimed.owner_id))
+        .eq("provider", "meta")
+        .maybeSingle();
+
+      let igUserId = typeof connection?.instagram_user_id === "string" ? connection.instagram_user_id.trim() : "";
+
+      // Staff often schedule client flyers while the IG ID lives on the staff Meta connection.
+      if (!igUserId) {
+        const { data: anyIg } = await supabase
+          .from("meta_connections")
+          .select("id, user_id, instagram_user_id, instagram_username")
+          .eq("provider", "meta")
+          .not("instagram_user_id", "is", null)
+          .limit(5);
+        const match = (anyIg ?? []).find((row) => typeof row.instagram_user_id === "string" && row.instagram_user_id.trim());
+        if (match?.instagram_user_id) {
+          igUserId = String(match.instagram_user_id).trim();
+        }
+      }
+
+      const pageCreds = await resolveMetaPageCredentials(supabase, String(claimed.owner_id));
+      const pageToken = !("error" in pageCreds) ? pageCreds.pageAccessToken : null;
+      const access = resolveInstagramAccess({ pageAccessToken: pageToken });
+      if ("error" in access) {
+        await supabase.from("marketing_drafts").update(instagramFailurePatch(access.error, claimAt)).eq("id", draftId);
+        results.push({ channel: "instagram", draft_id: draftId, ok: false, error: access.error });
+        continue;
+      }
+
+      if (!igUserId) {
+        const err = "Instagram User ID is missing on meta_connections — save it in Instagram Post Now first";
+        await supabase.from("marketing_drafts").update(instagramFailurePatch(err, claimAt)).eq("id", draftId);
+        results.push({ channel: "instagram", draft_id: draftId, ok: false, error: err });
+        continue;
+      }
+
+      const result = await postInstagramImage({
+        igUserId,
+        caption,
+        imageUrl,
+        graphVersion,
+        accessToken: access.accessToken,
+        apiHost: access.apiHost,
+        tokenSource: access.tokenSource,
+      });
+
+      if (!result.ok) {
+        await supabase.from("marketing_drafts").update(instagramFailurePatch(result.error, result.attemptAt)).eq("id", draftId);
+        results.push({
+          channel: "instagram",
+          draft_id: draftId,
+          ok: false,
+          error: result.error,
+          token_source: result.token_source,
+        });
+        continue;
+      }
+
+      await supabase
+        .from("marketing_drafts")
+        .update(instagramSuccessPatch(result.provider_post_id, result.attemptAt))
+        .eq("id", draftId);
+
+      results.push({
+        channel: "instagram",
+        draft_id: draftId,
+        ok: true,
+        provider_post_id: result.provider_post_id,
+        token_source: result.token_source,
+      });
+    }
+
     return json({
       ok: true,
       checked_at: nowIso,
-      due_count: (dueDrafts ?? []).length,
+      facebook_due_count: (dueFacebook ?? []).length,
+      instagram_due_count: (dueInstagram ?? []).length,
       results,
     });
   } catch (err) {
