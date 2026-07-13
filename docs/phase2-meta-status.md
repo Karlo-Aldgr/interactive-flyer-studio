@@ -12,7 +12,7 @@ Use this to keep the roadmap board honest. Do **not** start Phase 3 until this c
 | 2C | Real Meta OAuth (users connect their own accounts) | **Partial** — Facebook Login OAuth works per user. Instagram still uses staff Instagram Login token (`META_INSTAGRAM_USER_ACCESS_TOKEN` / DB long-lived), not full per-customer Instagram Login OAuth |
 | 2D | Auto-post at scheduled time | **Done** — Facebook + Instagram via `meta-post-scheduled` cron |
 | 2E | Instagram Post Now | **Done** — Post Now + container wait + Extend token (~60 days) |
-| 3 | Track clicks/engagement, suggest improvements | **Not started** |
+| 3 | Track clicks/engagement, suggest improvements | **Done (MVP)** — portal Suggestions card + view beacon dedupe; see `docs/phase3-insights.md` |
 | 4 | More channels (TikTok, email, SMS, etc.) | **Not started** |
 | 5 | Full AutoPilot dashboard, subscriptions, agency tools | **Not started** |
 

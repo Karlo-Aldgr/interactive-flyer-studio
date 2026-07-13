@@ -147,10 +147,10 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
               title="Automation Framework"
               description="This flyer-level hub is the foundation for future automations like TikTok, email, SMS, AI coach, and audience tools."
               badge="Foundation"
-              statusText="Phase 3+ (analytics, more channels, AutoPilot) builds on this hub — not started yet."
+              statusText="Phase 3 insights live in the flyer portal (Suggestions). Phase 4+ channels and AutoPilot are next."
               requirements={[
                 "Per-flyer automation entry point",
-                "Per-automation setup requirements",
+                "Portal Suggestions for engagement tips",
                 "Future account linking modules",
               ]}
               actionLabel="Framework active"

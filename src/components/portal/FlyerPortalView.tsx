@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, ChevronLeft, Download, RefreshCw, Share2, Link as LinkIcon, Package, RotateCcw } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Download, Lightbulb, RefreshCw, Share2, Link as LinkIcon, Package, RotateCcw } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -28,6 +28,7 @@ import { OrdersArchivePanel } from "@/components/portal/OrdersArchivePanel";
 import { FoodOrdersPanel } from "@/components/portal/FoodOrdersPanel";
 import { DailyReportsPanel } from "@/components/portal/DailyReportsPanel";
 import { FormSubmissionsPanel } from "@/components/portal/FormSubmissionsPanel";
+import { buildFlyerInsights, type FlyerInsight } from "@/lib/flyerInsights";
 
 import { buildPublicFlyerUrl, buildSocialShareUrl } from "@/lib/utils";
 export type OrderStatus = "new" | "on_hold" | "pay_later" | "in_production" | "completed";
@@ -374,6 +375,55 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
     .slice(-12)
     .map(([w, c]) => ({ week: w.replace(/^\d{4}-/, ""), ...c }));
 
+  const formLeadSubmissions = submissions.filter((s) => {
+    const kind = s?.data?.kind;
+    return kind !== "cart_order" && kind !== "cart_pay_later";
+  });
+  const leadCount = formLeadSubmissions.length + subscribers.length + appointments.length;
+  const hasLeadCapture = useMemo(() => {
+    const leadTypes = new Set([
+      "form", "subscribe", "schedule_consultation", "poll", "rsvp", "contact",
+    ]);
+    return actions.some((a) => leadTypes.has(a.type)) || submissions.length > 0 || subscribers.length > 0;
+  }, [actions, submissions.length, subscribers.length]);
+
+  const interactiveLayers = useMemo(() => {
+    return layers
+      .filter((l) => l.type === "hotspot" || (layerActions[l.id] || []).length > 0)
+      .map((l) => ({
+        id: l.id,
+        label: layerLabel[l.id]?.label || l.type,
+        clicks: layerClicks[l.id]?.clicks || 0,
+      }));
+  }, [layers, layerActions, layerLabel, layerClicks]);
+
+  const suggestions: FlyerInsight[] = useMemo(
+    () =>
+      buildFlyerInsights({
+        views: viewEvents.length,
+        clicks: clickEvents.length,
+        uniqueVisitors,
+        leadCount,
+        hasLeadCapture,
+        interactiveLayers,
+        trafficSources,
+      }),
+    [
+      viewEvents.length,
+      clickEvents.length,
+      uniqueVisitors,
+      leadCount,
+      hasLeadCapture,
+      interactiveLayers,
+      trafficSources,
+    ],
+  );
+
+  const severityBadge = (s: FlyerInsight["severity"]) => {
+    if (s === "critical") return "destructive" as const;
+    if (s === "warning") return "outline" as const;
+    return "secondary" as const;
+  };
 
   const payLaterOrderIds = new Set(
     submissions.filter((s) => s?.data?.kind === "cart_pay_later" && s?.data?.order_id).map((s) => s.data.order_id as string)
@@ -567,6 +617,36 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
           </CardContent></Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Lightbulb className="h-4 w-4 text-amber-500" />
+            Suggestions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {suggestions.map((insight) => (
+            <div
+              key={insight.id}
+              className="flex flex-col gap-1 rounded-md border border-border/70 bg-muted/20 p-3 sm:flex-row sm:items-start sm:justify-between"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={severityBadge(insight.severity)}>{insight.severity}</Badge>
+                  <span className="text-sm font-medium">{insight.title}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">{insight.detail}</p>
+              </div>
+              {insight.metric ? (
+                <div className="shrink-0 font-mono text-[11px] text-muted-foreground sm:text-right">
+                  {insight.metric}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="w-full overflow-x-auto pb-1">
