@@ -703,6 +703,8 @@ export type Database = {
           flyer_title: string | null
           flyer_url: string | null
           id: string
+          email_body: string | null
+          email_subject: string | null
           instagram_caption: string | null
           instagram_error_message: string | null
           instagram_last_attempt_at: string | null
@@ -733,6 +735,8 @@ export type Database = {
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
+          email_body?: string | null
+          email_subject?: string | null
           instagram_caption?: string | null
           instagram_error_message?: string | null
           instagram_last_attempt_at?: string | null
@@ -763,6 +767,8 @@ export type Database = {
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
+          email_body?: string | null
+          email_subject?: string | null
           instagram_caption?: string | null
           instagram_error_message?: string | null
           instagram_last_attempt_at?: string | null

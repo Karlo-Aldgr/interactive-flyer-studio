@@ -884,6 +884,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const stageWrapRef = useRef<HTMLDivElement | null>(null);
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
   const introPlayedRef = useRef(false);
+  const didLogViewRef = useRef(false);
+  const pageViewReadyRef = useRef(false);
+
+  useEffect(() => {
+    didLogViewRef.current = false;
+    pageViewReadyRef.current = false;
+  }, [flyer?.id]);
   const [introNeedsTap, setIntroNeedsTap] = useState(false);
   // Background audio (separate from intro audio)
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -995,6 +1002,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           .from("analytics_events")
           .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: ts.referrer, source: ts.source, utm: ts.utm, device: getViewerDevice() } } as any]);
         if (trackErr) console.warn("[analytics] view insert failed", trackErr);
+        else didLogViewRef.current = true;
       }
     })();
   }, [slug, flyerId, previewMode]);
@@ -1233,10 +1241,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     });
   }
 
-  // Best-effort beacon on tab close so a quick visit still records a view.
+  // Best-effort beacon on tab close only if the primary view insert never landed
+  // (avoids double-counting views on normal visits).
   useEffect(() => {
     if (!flyer || previewMode) return;
     const onHide = () => {
+      if (didLogViewRef.current) return;
       try {
         const url = `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/analytics_events`;
         const apikey = (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -1247,11 +1257,6 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           session_id: getViewerSessionId(),
           metadata: { beacon: true, referrer: ts.referrer, source: ts.source, utm: ts.utm, device: getViewerDevice() },
         });
-        const blob = new Blob(
-          [JSON.stringify({ apikey, authorization: `Bearer ${apikey}`, body })],
-          { type: "application/json" },
-        );
-        // Primary: keepalive fetch (carries headers properly)
         fetch(url, {
           method: "POST",
           keepalive: true,
@@ -1263,13 +1268,35 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           },
           body,
         }).catch(() => {});
-        void blob;
       } catch {}
     };
     window.addEventListener("pagehide", onHide);
     return () => window.removeEventListener("pagehide", onHide);
   }, [flyer, previewMode]);
 
+  // Log a page-level view when the visitor navigates between flyer pages.
+  useEffect(() => {
+    if (!flyer || previewMode || loading || pages.length === 0) return;
+    if (!pageViewReadyRef.current) {
+      pageViewReadyRef.current = true;
+      return;
+    }
+    const page = pages[pageIndex];
+    if (!page?.id) return;
+    const ts = getCurrentTrafficSource();
+    logAnalyticsEvent({
+      event_type: "view",
+      page_id: page.id,
+      metadata: {
+        page_change: true,
+        referrer: ts.referrer,
+        source: ts.source,
+        utm: ts.utm,
+        device: getViewerDevice(),
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when page index changes
+  }, [pageIndex, flyer?.id, loading, previewMode, pages.length]);
   function triggerClickPing(x: number, y: number, color?: string) {
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     setClickPings((prev) => [...prev, { id, x, y, color: color || "#7c3aed" }]);

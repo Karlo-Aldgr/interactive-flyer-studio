@@ -150,6 +150,18 @@ export default function Analytics() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-6 p-6">
+        {isValidId && (
+          <div className="rounded-lg border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">Full performance & suggestions</p>
+            <p className="mt-1">
+              Views, clicks, traffic sources, and improvement suggestions live in the flyer portal.
+            </p>
+            <Button asChild size="sm" className="mt-3" variant="secondary">
+              <Link to={`/flyer/${flyerId}/portal`}>Open flyer portal</Link>
+            </Button>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex h-64 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />

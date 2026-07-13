@@ -2,7 +2,7 @@
 
 Last updated: 2026-07-13
 
-Use this to keep the roadmap board honest. Do **not** start Phase 3 until this cleanup checklist is done.
+Use this to keep the roadmap board honest.
 
 ## Roadmap vs reality
 
@@ -12,25 +12,27 @@ Use this to keep the roadmap board honest. Do **not** start Phase 3 until this c
 | 2C | Real Meta OAuth (users connect their own accounts) | **Partial** — Facebook Login OAuth works per user. Instagram still uses staff Instagram Login token (`META_INSTAGRAM_USER_ACCESS_TOKEN` / DB long-lived), not full per-customer Instagram Login OAuth |
 | 2D | Auto-post at scheduled time | **Done** — Facebook + Instagram via `meta-post-scheduled` cron |
 | 2E | Instagram Post Now | **Done** — Post Now + container wait + Extend token (~60 days) |
-| 3 | Track clicks/engagement, suggest improvements | **Not started** |
-| 4 | More channels (TikTok, email, SMS, etc.) | **Not started** |
+| 3 | Track clicks/engagement, suggest improvements | **Done (MVP)** — portal Suggestions card + view beacon dedupe; see `docs/phase3-insights.md` |
+| 4 | More channels (TikTok, email, SMS, etc.) | **Partial** — email draft MVP (copy-only); see `docs/phase4-email-draft.md`. TikTok/SMS not started |
 | 5 | Full AutoPilot dashboard, subscriptions, agency tools | **Not started** |
 
 ## What works in test mode (today)
 
-- AI Social Copy (OpenAI direct in `marketing-trigger`; n8n optional fallback)
+- AI Social Copy (OpenAI direct in `marketing-trigger`; n8n optional fallback) — Facebook, Instagram, **email draft**
 - Manual Save copy if AI is stuck
 - Facebook Connect with Facebook → Post Now → Schedule auto-post
 - Instagram User ID save → Post Now → Schedule auto-post
 - Instagram **Extend Instagram token (60 days)** + auto-refresh near expiry
 - Public marketing flyer URLs (`tapthatflyer.com`)
+- Portal **Suggestions** (Phase 3)
 
 ## Not production-ready yet
 
 - Meta app is **unpublished** (testers/roles only)
 - Instagram Content Publishing needs **App Review** for live customers
 - Instagram token is **staff/global**, not each customer’s own IG OAuth
-- No analytics / Phase 3 engagement tracking
+- Email is **copy/paste only** (no send)
+- Do **not** publish the live website until explicitly asked
 
 ## Operator checklist (keep green)
 
@@ -41,6 +43,7 @@ Use this to keep the roadmap board honest. Do **not** start Phase 3 until this c
 | `META_INSTAGRAM_USER_ACCESS_TOKEN` | Lovable Secrets (seed) |
 | `META_INSTAGRAM_APP_SECRET` | Lovable Secrets (Instagram app secret) |
 | `META_CRON_SECRET` + `meta_cron_config` | Secrets + SQL |
+| Email draft columns | Run `20260713223000_marketing_email_draft.sql` |
 | Extend Instagram token | Instagram Post Now button |
 | Cron jobs | `meta-post-scheduled` JWT OFF |
 
@@ -54,9 +57,10 @@ Use this to keep the roadmap board honest. Do **not** start Phase 3 until this c
 | Instagram schedule | `docs/meta-instagram-scheduled-autopost.md` |
 | Instagram 60-day token | `docs/meta-instagram-long-lived-token.md` |
 | OpenAI direct AI | `docs/fix-marketing-openai-direct.md` |
+| Phase 3 insights | `docs/phase3-insights.md` |
+| Phase 4 email draft | `docs/phase4-email-draft.md` |
 
-## Recommended next (after cleanup)
+## Recommended next
 
-1. Client demo of FB + IG Post Now + one scheduled post each  
-2. Decide: per-customer Instagram Login OAuth **or** Phase 3 analytics  
-3. Only then Meta App Review for live mode
+1. Finish Phase 4 channel expansion (MassEmail prefill, TikTok/SMS stubs) **or** Phase 5 planning
+2. Defer per-customer Instagram Login OAuth + Meta App Review until after roadmap phases

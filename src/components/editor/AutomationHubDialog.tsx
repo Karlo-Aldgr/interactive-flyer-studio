@@ -91,9 +91,9 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
           <div className="grid gap-4 md:grid-cols-2">
             <AutomationCard
               title="AI Social Copy"
-              description="Generate Facebook and Instagram copy, then schedule auto-post or mark posted."
+              description="Generate Facebook, Instagram, and email draft copy, then schedule social auto-post or mark posted."
               badge="Ready now"
-              statusText="Phase 1 + 2: AI copy, schedule, and Meta auto-post for Facebook and Instagram (test mode)."
+              statusText="Phase 1–2 Meta + Phase 4 email draft (copy/paste). Facebook/Instagram auto-post in Meta test mode."
               requirements={[
                 "Flyer must be published (public thumbnail + link)",
                 "OPENAI_API_KEY secret (or n8n fallback)",
@@ -145,13 +145,13 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
 
             <AutomationCard
               title="Automation Framework"
-              description="This flyer-level hub is the foundation for future automations like TikTok, email, SMS, AI coach, and audience tools."
+              description="This flyer-level hub is the foundation for future automations like TikTok, SMS, AI coach, and audience tools."
               badge="Foundation"
-              statusText="Phase 3+ (analytics, more channels, AutoPilot) builds on this hub — not started yet."
+              statusText="Phase 3 insights + Phase 4 email draft are live. TikTok/SMS and Phase 5 AutoPilot are next."
               requirements={[
                 "Per-flyer automation entry point",
-                "Per-automation setup requirements",
-                "Future account linking modules",
+                "Portal Suggestions for engagement tips",
+                "Email draft via AI Social Copy (no send yet)",
               ]}
               actionLabel="Framework active"
               actionDisabled
