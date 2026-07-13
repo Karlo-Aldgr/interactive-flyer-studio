@@ -64,12 +64,14 @@ Deno.serve(async (req) => {
     if (stateErr) return json({ error: stateErr.message }, 500);
 
     const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
+    // Facebook Login scopes only. Do NOT use instagram_business_* here —
+    // those belong to Instagram Login (instagram.com/oauth), not facebook.com/dialog/oauth.
     const scope = [
       "pages_show_list",
       "pages_read_engagement",
       "pages_manage_posts",
-      "instagram_business_basic",
-      "instagram_business_content_publish",
+      "instagram_basic",
+      "instagram_content_publish",
       "ads_read",
     ].join(",");
 
