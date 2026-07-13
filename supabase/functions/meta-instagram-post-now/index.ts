@@ -77,8 +77,6 @@ Deno.serve(async (req) => {
     if (!allowed) return json({ error: "Forbidden" }, 403);
 
     const { resolveMetaPageCredentials, tokenLast4 } = await import("../_shared/metaCredentials.ts");
-    const creds = await resolveMetaPageCredentials(supabase, user.id);
-    if ("error" in creds) return json({ error: creds.error }, 400);
 
     const { data: connection, error: connErr } = await supabase
       .from("meta_connections")
@@ -87,40 +85,67 @@ Deno.serve(async (req) => {
       .eq("provider", "meta")
       .maybeSingle();
     if (connErr) return json({ error: connErr.message }, 500);
-    if (!connection?.facebook_page_id) {
-      return json({ error: "Facebook page is not connected yet" }, 400);
+    if (!connection) {
+      return json({ error: "Meta connection not found. Connect Facebook first, then save Instagram User ID." }, 400);
     }
 
-    const pageAccessToken = creds.pageAccessToken;
+    // Prefer Instagram Login user token (required for this app's Instagram Business use case).
+    // Facebook Page OAuth tokens cannot request instagram_business_* scopes on facebook.com/dialog/oauth.
+    const igLoginToken = Deno.env.get("META_INSTAGRAM_USER_ACCESS_TOKEN")?.trim() || "";
+    let accessToken = igLoginToken;
+    let apiHost = "graph.instagram.com";
+    let tokenSource: "instagram_login" | "facebook_page" = "instagram_login";
+
+    if (!accessToken) {
+      const creds = await resolveMetaPageCredentials(supabase, user.id);
+      if ("error" in creds) {
+        return json({
+          error:
+            "Missing META_INSTAGRAM_USER_ACCESS_TOKEN. In Meta → API setup with Instagram login → Generate token for @carlojay.algordo, then add that token as the Lovable secret META_INSTAGRAM_USER_ACCESS_TOKEN.",
+        }, 400);
+      }
+      accessToken = creds.pageAccessToken;
+      apiHost = "graph.facebook.com";
+      tokenSource = "facebook_page";
+    }
+
     const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
-    let igUserId = typeof connection.instagram_user_id === "string" ? connection.instagram_user_id : "";
+    let igUserId = typeof connection.instagram_user_id === "string" ? connection.instagram_user_id.trim() : "";
     let igUsername = typeof connection.instagram_username === "string" ? connection.instagram_username : null;
 
-    if (!igUserId) {
-      const lookupUrl = new URL(`https://graph.facebook.com/${graphVersion}/${creds.pageId}`);
-      lookupUrl.searchParams.set("fields", "instagram_business_account{id,username}");
-      lookupUrl.searchParams.set("access_token", pageAccessToken);
-      const lookupRes = await fetch(lookupUrl.toString());
-      const lookupJson = await lookupRes.json().catch(() => ({})) as Record<string, unknown>;
-      const ig = lookupJson.instagram_business_account as Record<string, unknown> | undefined;
-      if (!lookupRes.ok || !ig?.id) {
-        const message = providerErrorMessage(
-          lookupJson,
-          "No Instagram Business/Creator account is linked to this Facebook Page",
+    if (!igUserId && tokenSource === "facebook_page") {
+      const creds = await resolveMetaPageCredentials(supabase, user.id);
+      if (!("error" in creds)) {
+        const lookupUrl = new URL(`https://graph.facebook.com/${graphVersion}/${creds.pageId}`);
+        lookupUrl.searchParams.set(
+          "fields",
+          "instagram_business_account{id,username},connected_instagram_account{id,username}",
         );
-        return json({ error: message }, 400);
+        lookupUrl.searchParams.set("access_token", accessToken);
+        const lookupRes = await fetch(lookupUrl.toString());
+        const lookupJson = await lookupRes.json().catch(() => ({})) as Record<string, unknown>;
+        const igBiz = lookupJson.instagram_business_account as Record<string, unknown> | undefined;
+        const igConnected = lookupJson.connected_instagram_account as Record<string, unknown> | undefined;
+        const ig = igBiz?.id ? igBiz : (igConnected?.id ? igConnected : undefined);
+        if (lookupRes.ok && ig?.id) {
+          igUserId = String(ig.id);
+          igUsername = typeof ig.username === "string" ? ig.username : null;
+          await supabase
+            .from("meta_connections")
+            .update({
+              instagram_user_id: igUserId,
+              instagram_username: igUsername,
+              last_error: null,
+            })
+            .eq("id", connection.id);
+        }
       }
-      igUserId = String(ig.id);
-      igUsername = typeof ig.username === "string" ? ig.username : null;
-      await supabase
-        .from("meta_connections")
-        .update({
-          instagram_user_id: igUserId,
-          instagram_username: igUsername,
-          page_access_token_last4: tokenLast4(pageAccessToken),
-          last_error: null,
-        })
-        .eq("id", connection.id);
+    }
+
+    if (!igUserId) {
+      return json({
+        error: "Instagram User ID is missing. Paste the numeric ID from Meta → Generate access tokens (under @carlojay.algordo).",
+      }, 400);
     }
 
     const caption = captionOverride || String(draft.instagram_caption || "").trim();
@@ -143,17 +168,34 @@ Deno.serve(async (req) => {
       })
       .eq("id", draftId);
 
-    const createParams = new URLSearchParams({
+    async function igPost(path: string, body: Record<string, string>) {
+      const url = `https://${apiHost}/${graphVersion}/${path}`;
+      if (tokenSource === "instagram_login") {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+        return { res, data };
+      }
+      const params = new URLSearchParams({ ...body, access_token: accessToken });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString(),
+      });
+      const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+      return { res, data };
+    }
+
+    const { res: createRes, data: createJson } = await igPost(`${igUserId}/media`, {
       image_url: imageUrl,
       caption,
-      access_token: pageAccessToken,
     });
-    const createRes = await fetch(`https://graph.facebook.com/${graphVersion}/${igUserId}/media`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: createParams.toString(),
-    });
-    const createJson = await createRes.json().catch(() => ({})) as Record<string, unknown>;
     if (!createRes.ok || typeof createJson.id !== "string") {
       const message = providerErrorMessage(createJson, "Instagram media create failed");
       await supabase.from("marketing_drafts").update({
@@ -166,21 +208,14 @@ Deno.serve(async (req) => {
       await supabase.from("meta_connections").update({
         status: "error",
         last_error: message,
-        page_access_token_last4: pageAccessToken.slice(-4),
+        page_access_token_last4: tokenLast4(accessToken),
       }).eq("id", connection.id);
       return json({ error: message }, 502);
     }
 
-    const publishParams = new URLSearchParams({
+    const { res: publishRes, data: publishJson } = await igPost(`${igUserId}/media_publish`, {
       creation_id: createJson.id,
-      access_token: pageAccessToken,
     });
-    const publishRes = await fetch(`https://graph.facebook.com/${graphVersion}/${igUserId}/media_publish`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: publishParams.toString(),
-    });
-    const publishJson = await publishRes.json().catch(() => ({})) as Record<string, unknown>;
     if (!publishRes.ok || typeof publishJson.id !== "string") {
       const message = providerErrorMessage(publishJson, "Instagram media publish failed");
       await supabase.from("marketing_drafts").update({
@@ -193,7 +228,7 @@ Deno.serve(async (req) => {
       await supabase.from("meta_connections").update({
         status: "error",
         last_error: message,
-        page_access_token_last4: pageAccessToken.slice(-4),
+        page_access_token_last4: tokenLast4(accessToken),
       }).eq("id", connection.id);
       return json({ error: message }, 502);
     }
@@ -224,11 +259,16 @@ Deno.serve(async (req) => {
         last_error: null,
         instagram_user_id: igUserId,
         instagram_username: igUsername,
-        page_access_token_last4: pageAccessToken.slice(-4),
+        page_access_token_last4: tokenLast4(accessToken),
       })
       .eq("id", connection.id);
 
-    return json({ ok: true, provider_post_id: publishJson.id, draft: updatedDraft });
+    return json({
+      ok: true,
+      provider_post_id: publishJson.id,
+      draft: updatedDraft,
+      token_source: tokenSource,
+    });
   } catch (err) {
     console.error("[meta-instagram-post-now]", err);
     return json({ error: String(err) }, 500);
