@@ -5,13 +5,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot, CheckCircle2, Clock3, Instagram, PlusCircle, Sparkles } from "lucide-react";
+import { Bot, CheckCircle2, Clock3, Instagram, PlusCircle, Rocket, Sparkles } from "lucide-react";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   flyer: Flyer;
   onOpenMarketing: () => void;
+  onOpenAutoPilot: () => void;
   onOpenFacebookPost: () => void;
   onOpenInstagramPost: () => void;
 }
@@ -69,7 +70,15 @@ function AutomationCard({
   );
 }
 
-export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing, onOpenFacebookPost, onOpenInstagramPost }: Props) {
+export function AutomationHubDialog({
+  open,
+  onOpenChange,
+  flyer,
+  onOpenMarketing,
+  onOpenAutoPilot,
+  onOpenFacebookPost,
+  onOpenInstagramPost,
+}: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -89,6 +98,24 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
+            <AutomationCard
+              title="AutoPilot Marketing"
+              description="One place to check channels and hit START — Facebook, Instagram, email draft, and analytics tips."
+              badge="Ready now"
+              statusText="Phase 5 shell: live channels run; TikTok/SMS/chatbot/agency stay Coming soon."
+              requirements={[
+                "Flyer must be published",
+                "OPENAI_API_KEY for AI copy",
+                "Meta connected for real social Post Now",
+              ]}
+              actionLabel="Open AutoPilot"
+              onAction={() => {
+                onOpenChange(false);
+                onOpenAutoPilot();
+              }}
+              icon={<Rocket className="h-4 w-4" />}
+            />
+
             <AutomationCard
               title="AI Social Copy"
               description="Generate Facebook, Instagram, and email draft copy, then schedule social auto-post or mark posted."
@@ -147,10 +174,10 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
               title="Automation Framework"
               description="This flyer-level hub is the foundation for future automations like TikTok, SMS, AI coach, and audience tools."
               badge="Foundation"
-              statusText="Phase 3 insights + Phase 4 email draft are live. TikTok/SMS and Phase 5 AutoPilot are next."
+              statusText="Phases 1–5 MVP live (AutoPilot shell). Remaining: TikTok/SMS, subscriptions, agency white-label."
               requirements={[
                 "Per-flyer automation entry point",
-                "Portal Suggestions for engagement tips",
+                "Portal Suggestions + AutoPilot status strip",
                 "Email draft via AI Social Copy (no send yet)",
               ]}
               actionLabel="Framework active"

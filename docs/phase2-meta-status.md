@@ -14,7 +14,7 @@ Use this to keep the roadmap board honest.
 | 2E | Instagram Post Now | **Done** — Post Now + container wait + Extend token (~60 days) |
 | 3 | Track clicks/engagement, suggest improvements | **Done (MVP)** — portal Suggestions card + view beacon dedupe; see `docs/phase3-insights.md` |
 | 4 | More channels (TikTok, email, SMS, etc.) | **Partial** — email draft MVP (copy-only); see `docs/phase4-email-draft.md`. TikTok/SMS not started |
-| 5 | Full AutoPilot dashboard, subscriptions, agency tools | **Not started** |
+| 5 | Full AutoPilot dashboard, subscriptions, agency tools | **Partial (shell MVP)** — checkboxes + START for FB/IG/email/analytics; see `docs/phase5-autopilot.md`. Subscriptions / agency / chatbot deferred |
 
 ## What works in test mode (today)
 
@@ -25,6 +25,7 @@ Use this to keep the roadmap board honest.
 - Instagram **Extend Instagram token (60 days)** + auto-refresh near expiry
 - Public marketing flyer URLs (`tapthatflyer.com`)
 - Portal **Suggestions** (Phase 3)
+- **AutoPilot** shell (Phase 5) — checkboxes + START for live channels
 
 ## Not production-ready yet
 
@@ -32,6 +33,7 @@ Use this to keep the roadmap board honest.
 - Instagram Content Publishing needs **App Review** for live customers
 - Instagram token is **staff/global**, not each customer’s own IG OAuth
 - Email is **copy/paste only** (no send)
+- AutoPilot does **not** run TikTok/SMS/chatbot/agency yet
 - Do **not** publish the live website until explicitly asked
 
 ## Operator checklist (keep green)
@@ -59,8 +61,10 @@ Use this to keep the roadmap board honest.
 | OpenAI direct AI | `docs/fix-marketing-openai-direct.md` |
 | Phase 3 insights | `docs/phase3-insights.md` |
 | Phase 4 email draft | `docs/phase4-email-draft.md` |
+| Phase 5 AutoPilot | `docs/phase5-autopilot.md` |
 
 ## Recommended next
 
-1. Finish Phase 4 channel expansion (MassEmail prefill, TikTok/SMS stubs) **or** Phase 5 planning
-2. Defer per-customer Instagram Login OAuth + Meta App Review until after roadmap phases
+1. Finish Phase 4 channel expansion (MassEmail prefill, TikTok/SMS stubs)
+2. Phase 5+: subscriptions, agency white-label, chatbot, unattended AutoPilot
+3. Defer per-customer Instagram Login OAuth + Meta App Review until after roadmap polish
