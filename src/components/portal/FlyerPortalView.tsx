@@ -19,6 +19,7 @@ import { ShareDialog } from "@/components/editor/ShareDialog";
 import { PortalLinkDialog } from "@/components/editor/PortalLinkDialog";
 import { InteractionsModerationPanel } from "@/components/portal/InteractionsModerationPanel";
 import { NovelsPanel } from "@/components/portal/NovelsPanel";
+import { AutoPilotPortalStrip } from "@/components/portal/AutoPilotPortalStrip";
 import { sourceFromEventMetadata } from "@/lib/trafficSource";
 import { flyerHasFoodOrdering } from "@/lib/flyerCapabilities";
 import { cartStatusToCustomerPhase } from "@/lib/customerOrderStatus";
@@ -617,6 +618,11 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
           </CardContent></Card>
         ))}
       </div>
+
+      <AutoPilotPortalStrip
+        flyerId={flyer.id}
+        insightTip={suggestions[0]?.title ?? null}
+      />
 
       <Card>
         <CardHeader className="pb-2">

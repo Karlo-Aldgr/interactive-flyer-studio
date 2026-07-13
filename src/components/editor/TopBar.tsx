@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareDialog } from "./ShareDialog";
 import { AutomationHubDialog } from "./AutomationHubDialog";
+import { AutoPilotDialog } from "./AutoPilotDialog";
 import { FacebookPostDialog } from "./FacebookPostDialog";
 import { InstagramPostDialog } from "./InstagramPostDialog";
 import { MarketingDraftsDialog } from "./MarketingDraftsDialog";
@@ -76,6 +77,7 @@ export function TopBar({ saving }: Props) {
   const [mode, setMode] = useState<ResizeMode>("resize");
   const [shareOpen, setShareOpen] = useState(false);
   const [automationOpen, setAutomationOpen] = useState(false);
+  const [autoPilotOpen, setAutoPilotOpen] = useState(false);
   const [facebookPostOpen, setFacebookPostOpen] = useState(false);
   const [instagramPostOpen, setInstagramPostOpen] = useState(false);
   const [marketingOpen, setMarketingOpen] = useState(false);
@@ -700,8 +702,19 @@ export function TopBar({ saving }: Props) {
         onOpenChange={setAutomationOpen}
         flyer={flyer}
         onOpenMarketing={() => setMarketingOpen(true)}
+        onOpenAutoPilot={() => setAutoPilotOpen(true)}
         onOpenFacebookPost={() => setFacebookPostOpen(true)}
         onOpenInstagramPost={() => setInstagramPostOpen(true)}
+      />
+
+      <AutoPilotDialog
+        open={autoPilotOpen}
+        onOpenChange={setAutoPilotOpen}
+        flyerId={flyer.id}
+        ownerId={flyer.owner_id}
+        flyerTitle={flyer.title}
+        onOpenMarketing={() => setMarketingOpen(true)}
+        portalPath={`/flyer/${flyer.id}/portal`}
       />
 
       <FacebookPostDialog
