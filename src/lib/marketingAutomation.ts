@@ -433,7 +433,7 @@ async function updateChannel(
 ): Promise<MarketingDraft | null> {
   const { data, error } = await supabase
     .from("marketing_drafts")
-    .update(channelPatch(channel, patch))
+    .update(channelPatch(channel, patch) as never)
     .eq("id", draftId)
     .select()
     .single();
