@@ -14,11 +14,20 @@ import { useIsRealtor } from "@/hooks/useIsRealtor";
 import { useRealtorApplication } from "@/hooks/useRealtorApplication";
 import { cn } from "@/lib/utils";
 
-const baseItems = [
-  { title: "Overview", url: "/dashboard", icon: LayoutDashboard, match: "exact" as const },
-  { title: "My projects", url: "/my-jobs", icon: FolderKanban, match: "prefix" as const },
-  { title: "New project", url: "/submit-job", icon: Plus, match: "exact" as const },
-  { title: "Examples", url: "/examples", icon: Sparkles, match: "exact" as const },
+type NavItem = {
+  title: string;
+  url: string;
+  icon: typeof LayoutDashboard;
+  match: "exact" | "prefix";
+  subtitle?: string;
+  muted?: boolean;
+};
+
+const baseItems: NavItem[] = [
+  { title: "Overview", url: "/dashboard", icon: LayoutDashboard, match: "exact" },
+  { title: "My projects", url: "/my-jobs", icon: FolderKanban, match: "prefix" },
+  { title: "New project", url: "/submit-job", icon: Plus, match: "exact" },
+  { title: "Examples", url: "/examples", icon: Sparkles, match: "exact" },
 ];
 
 export function CustomerPortalSidebar() {
@@ -28,13 +37,13 @@ export function CustomerPortalSidebar() {
   const isActive = (url: string, match: "exact" | "prefix") =>
     match === "exact" ? pathname === url : pathname === url || pathname.startsWith(`${url}/`);
 
-  const realtorPortalItem = isRealtor
-    ? { title: "Realtor portal", url: "/realtor", icon: Home, match: "prefix" as const }
+  const realtorPortalItem: NavItem = isRealtor
+    ? { title: "Realtor portal", url: "/realtor", icon: Home, match: "prefix" }
     : {
         title: "Realtor portal",
         url: "/realtor/apply",
         icon: Home,
-        match: "prefix" as const,
+        match: "prefix",
         subtitle:
           application?.status === "rejected"
             ? application.review_notes?.trim() || "Application not approved"
@@ -44,7 +53,7 @@ export function CustomerPortalSidebar() {
         muted: application?.status === "rejected",
       };
 
-  const items = [...baseItems, realtorPortalItem];
+  const items: NavItem[] = [...baseItems, realtorPortalItem];
 
   return (
     <Sidebar collapsible="icon">
