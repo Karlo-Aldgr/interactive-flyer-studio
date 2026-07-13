@@ -156,10 +156,10 @@ function ChannelSchedulePanel({
         <p className="text-xs text-destructive">{errorMessage}</p>
       )}
 
-      {(status === "draft" || status === "failed" || status === "scheduled") && (
+      {(status === "draft" || status === "failed" || status === "scheduled" || status === "posted") && (
         <div className="space-y-2">
           <Label htmlFor={`${channel}-when`} className="text-xs">
-            {status === "scheduled" ? "Change schedule" : "Schedule for"}
+            {status === "scheduled" ? "Change schedule" : status === "posted" ? "Schedule again" : "Schedule for"}
           </Label>
           <Input
             id={`${channel}-when`}
@@ -172,7 +172,7 @@ function ChannelSchedulePanel({
       )}
 
       <div className="flex flex-wrap gap-2">
-        {(status === "draft" || status === "failed") && (
+        {(status === "draft" || status === "failed" || status === "posted") && (
           <Button
             type="button"
             size="sm"
@@ -188,7 +188,7 @@ function ChannelSchedulePanel({
             }}
           >
             {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
-            Schedule
+            {status === "posted" ? "Schedule again" : "Schedule"}
           </Button>
         )}
 
