@@ -689,6 +689,8 @@ export type Database = {
       marketing_drafts: {
         Row: {
           created_at: string
+          email_body: string | null
+          email_subject: string | null
           error_message: string | null
           facebook_error_message: string | null
           facebook_last_attempt_at: string | null
@@ -703,8 +705,6 @@ export type Database = {
           flyer_title: string | null
           flyer_url: string | null
           id: string
-          email_body: string | null
-          email_subject: string | null
           instagram_caption: string | null
           instagram_error_message: string | null
           instagram_last_attempt_at: string | null
@@ -721,6 +721,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email_body?: string | null
+          email_subject?: string | null
           error_message?: string | null
           facebook_error_message?: string | null
           facebook_last_attempt_at?: string | null
@@ -735,8 +737,6 @@ export type Database = {
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
-          email_body?: string | null
-          email_subject?: string | null
           instagram_caption?: string | null
           instagram_error_message?: string | null
           instagram_last_attempt_at?: string | null
@@ -753,6 +753,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email_body?: string | null
+          email_subject?: string | null
           error_message?: string | null
           facebook_error_message?: string | null
           facebook_last_attempt_at?: string | null
@@ -767,8 +769,6 @@ export type Database = {
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
-          email_body?: string | null
-          email_subject?: string | null
           instagram_caption?: string | null
           instagram_error_message?: string | null
           instagram_last_attempt_at?: string | null
