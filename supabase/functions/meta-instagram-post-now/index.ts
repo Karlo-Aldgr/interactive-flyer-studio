@@ -192,45 +192,107 @@ Deno.serve(async (req) => {
       return { res, data };
     }
 
+    async function igGet(path: string, fields?: string) {
+      const url = new URL(`https://${apiHost}/${graphVersion}/${path}`);
+      if (fields) url.searchParams.set("fields", fields);
+      if (tokenSource === "instagram_login") {
+        const res = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+        return { res, data };
+      }
+      url.searchParams.set("access_token", accessToken);
+      const res = await fetch(url.toString());
+      const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+      return { res, data };
+    }
+
+    function sleep(ms: number) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    /** Instagram often needs the container FINISHED before media_publish, or returns "Media ID is not available". */
+    async function waitForContainerReady(containerId: string) {
+      let lastStatus = "UNKNOWN";
+      for (let i = 0; i < 20; i++) {
+        if (i > 0) await sleep(2500);
+        const { res, data } = await igGet(containerId, "status_code,status");
+        lastStatus = String(data.status_code || data.status || "UNKNOWN");
+        if (!res.ok) {
+          return { ok: false as const, status: lastStatus, error: providerErrorMessage(data, "Container status check failed") };
+        }
+        if (lastStatus === "FINISHED") return { ok: true as const, status: lastStatus };
+        if (lastStatus === "ERROR" || lastStatus === "EXPIRED") {
+          return {
+            ok: false as const,
+            status: lastStatus,
+            error: providerErrorMessage(data, `Instagram media container ${lastStatus}. Check image is a public JPEG URL.`),
+          };
+        }
+      }
+      return {
+        ok: false as const,
+        status: lastStatus,
+        error: `Instagram media container not ready (last status: ${lastStatus}). Try Post now again in a few seconds.`,
+      };
+    }
+
+    async function markFailed(message: string) {
+      await supabase.from("marketing_drafts").update({
+        instagram_status: "failed",
+        instagram_error_message: message,
+        instagram_provider_status: "failed",
+        instagram_last_attempt_at: attemptAt,
+        instagram_last_error: message,
+      }).eq("id", draftId);
+      await supabase.from("meta_connections").update({
+        status: "error",
+        last_error: message,
+        page_access_token_last4: tokenLast4(accessToken),
+      }).eq("id", connection.id);
+    }
+
+    // Instagram Content Publishing only supports JPEG images.
+    if (!/\.jpe?g(\?|#|$)/i.test(imageUrl) && !/image\/jpeg/i.test(imageUrl)) {
+      console.warn("[meta-instagram-post-now] image URL may not be JPEG:", imageUrl);
+    }
+
     const { res: createRes, data: createJson } = await igPost(`${igUserId}/media`, {
       image_url: imageUrl,
       caption,
     });
     if (!createRes.ok || typeof createJson.id !== "string") {
       const message = providerErrorMessage(createJson, "Instagram media create failed");
-      await supabase.from("marketing_drafts").update({
-        instagram_status: "failed",
-        instagram_error_message: message,
-        instagram_provider_status: "failed",
-        instagram_last_attempt_at: attemptAt,
-        instagram_last_error: message,
-      }).eq("id", draftId);
-      await supabase.from("meta_connections").update({
-        status: "error",
-        last_error: message,
-        page_access_token_last4: tokenLast4(accessToken),
-      }).eq("id", connection.id);
-      return json({ error: message }, 502);
+      await markFailed(message);
+      return json({ error: message, image_url: imageUrl }, 502);
     }
 
-    const { res: publishRes, data: publishJson } = await igPost(`${igUserId}/media_publish`, {
-      creation_id: createJson.id,
-    });
-    if (!publishRes.ok || typeof publishJson.id !== "string") {
+    const ready = await waitForContainerReady(createJson.id);
+    if (!ready.ok) {
+      await markFailed(ready.error);
+      return json({ error: ready.error, container_id: createJson.id, status: ready.status }, 502);
+    }
+
+    let publishJson: Record<string, unknown> = {};
+    let publishRes: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await sleep(2000);
+      const result = await igPost(`${igUserId}/media_publish`, {
+        creation_id: createJson.id,
+      });
+      publishRes = result.res;
+      publishJson = result.data;
+      if (publishRes.ok && typeof publishJson.id === "string") break;
+      const msg = providerErrorMessage(publishJson, "");
+      // Retry briefly when Meta hasn't finished wiring the media ID yet.
+      if (!/media id is not available/i.test(msg)) break;
+    }
+
+    if (!publishRes?.ok || typeof publishJson.id !== "string") {
       const message = providerErrorMessage(publishJson, "Instagram media publish failed");
-      await supabase.from("marketing_drafts").update({
-        instagram_status: "failed",
-        instagram_error_message: message,
-        instagram_provider_status: "failed",
-        instagram_last_attempt_at: attemptAt,
-        instagram_last_error: message,
-      }).eq("id", draftId);
-      await supabase.from("meta_connections").update({
-        status: "error",
-        last_error: message,
-        page_access_token_last4: tokenLast4(accessToken),
-      }).eq("id", connection.id);
-      return json({ error: message }, 502);
+      await markFailed(message);
+      return json({ error: message, container_id: createJson.id }, 502);
     }
 
     const successPatch = {
