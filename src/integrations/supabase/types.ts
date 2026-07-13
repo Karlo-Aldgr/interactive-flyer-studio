@@ -947,16 +947,22 @@ export type Database = {
       }
       meta_connection_secrets: {
         Row: {
+          instagram_token_expires_at: string | null
+          instagram_user_access_token: string | null
           page_access_token: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          instagram_token_expires_at?: string | null
+          instagram_user_access_token?: string | null
           page_access_token: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          instagram_token_expires_at?: string | null
+          instagram_user_access_token?: string | null
           page_access_token?: string
           updated_at?: string
           user_id?: string
