@@ -54,6 +54,8 @@ export type MarketingDraft = {
   thumbnail_url: string | null;
   facebook_post: string | null;
   instagram_caption: string | null;
+  email_subject: string | null;
+  email_body: string | null;
   error_message: string | null;
   facebook_status: MarketingChannelStatus;
   instagram_status: MarketingChannelStatus;
@@ -117,6 +119,8 @@ function normalizeDraft(row: Record<string, unknown>): MarketingDraft {
     thumbnail_url: (row.thumbnail_url as string | null) ?? null,
     facebook_post: (row.facebook_post as string | null) ?? null,
     instagram_caption: (row.instagram_caption as string | null) ?? null,
+    email_subject: (row.email_subject as string | null) ?? null,
+    email_body: (row.email_body as string | null) ?? null,
     error_message: (row.error_message as string | null) ?? null,
     facebook_status: asChannelStatus(row.facebook_status as string | null),
     instagram_status: asChannelStatus(row.instagram_status as string | null),
@@ -230,11 +234,15 @@ export async function saveManualMarketingCopy(args: {
   draftId: string;
   facebookPost: string;
   instagramCaption: string;
+  emailSubject?: string;
+  emailBody?: string;
 }): Promise<MarketingDraft | null> {
   const facebookPost = args.facebookPost.trim();
   const instagramCaption = args.instagramCaption.trim();
-  if (!facebookPost && !instagramCaption) {
-    toast.error("Type a Facebook post or Instagram caption first");
+  const emailSubject = (args.emailSubject || "").trim();
+  const emailBody = (args.emailBody || "").trim();
+  if (!facebookPost && !instagramCaption && !emailSubject && !emailBody) {
+    toast.error("Type Facebook, Instagram, or email copy first");
     return null;
   }
 
@@ -244,6 +252,8 @@ export async function saveManualMarketingCopy(args: {
       status: "ready",
       facebook_post: facebookPost || null,
       instagram_caption: instagramCaption || null,
+      email_subject: emailSubject || null,
+      email_body: emailBody || null,
       error_message: null,
     })
     .eq("id", args.draftId)

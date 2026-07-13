@@ -258,6 +258,8 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
   const [savingManual, setSavingManual] = useState(false);
   const [facebookPost, setFacebookPost] = useState("");
   const [instagramCaption, setInstagramCaption] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -267,6 +269,8 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
       if (row) {
         setFacebookPost(row.facebook_post || "");
         setInstagramCaption(row.instagram_caption || "");
+        setEmailSubject(row.email_subject || "");
+        setEmailBody(row.email_body || "");
       }
     } finally {
       setLoading(false);
@@ -309,6 +313,8 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
         draftId: draft.id,
         facebookPost,
         instagramCaption,
+        emailSubject,
+        emailBody,
       });
       if (saved) setDraft(saved);
     } finally {
@@ -329,9 +335,9 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
             AI marketing posts
           </DialogTitle>
           <DialogDescription>
-            Draft and schedule Facebook and Instagram copy for{" "}
+            Draft Facebook, Instagram, and email copy for{" "}
             <span className="font-medium">{flyerTitle}</span>.
-            Facebook and Instagram schedules auto-post in Meta test mode when due (cron). Mark posted manually = track only.
+            Facebook and Instagram can schedule auto-post in Meta test mode. Email is copy/paste only (no auto-send yet).
           </DialogDescription>
         </DialogHeader>
 
@@ -430,6 +436,57 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
               )}
             </div>
 
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="email-subject">Email subject</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  disabled={!emailSubject.trim()}
+                  onClick={() => void copyText("Email subject", emailSubject)}
+                >
+                  <Copy className="mr-1 h-3.5 w-3.5" /> Copy
+                </Button>
+              </div>
+              <Input
+                id="email-subject"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                placeholder="Subject line…"
+                disabled={savingManual || regenerating}
+                maxLength={200}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="email-body">Email body</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  disabled={!emailBody.trim()}
+                  onClick={() => void copyText("Email body", emailBody)}
+                >
+                  <Copy className="mr-1 h-3.5 w-3.5" /> Copy
+                </Button>
+              </div>
+              <Textarea
+                id="email-body"
+                rows={5}
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                placeholder="Plain-text email draft…"
+                disabled={savingManual || regenerating}
+              />
+              <p className="text-xs text-muted-foreground">
+                Copy/paste only — no email send in this version.
+              </p>
+            </div>
+
             {draft.flyer_url && (
               <p className="text-xs text-muted-foreground">
                 Link included in drafts:{" "}
@@ -450,7 +507,11 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
               type="button"
               variant="secondary"
               onClick={() => void handleSaveManual()}
-              disabled={savingManual || regenerating || (!facebookPost.trim() && !instagramCaption.trim())}
+              disabled={
+                savingManual ||
+                regenerating ||
+                (!facebookPost.trim() && !instagramCaption.trim() && !emailSubject.trim() && !emailBody.trim())
+              }
             >
               {savingManual ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
               Save copy

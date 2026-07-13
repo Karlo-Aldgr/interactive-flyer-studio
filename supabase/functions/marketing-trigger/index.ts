@@ -17,7 +17,7 @@ async function generateWithOpenAI(args: {
   apiKey: string;
   title: string;
   flyerUrl: string;
-}): Promise<{ facebook_post: string; instagram_caption: string }> {
+}): Promise<{ facebook_post: string; instagram_caption: string; email_subject: string; email_body: string }> {
   const model = Deno.env.get("OPENAI_MARKETING_MODEL")?.trim() || "gpt-4o-mini";
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -33,11 +33,11 @@ async function generateWithOpenAI(args: {
         {
           role: "system",
           content:
-            "You write short social posts for interactive digital flyers. Always include the exact flyer URL. Return ONLY JSON with keys facebook_post and instagram_caption. Do not invent prices or offers not in the title.",
+            "You write short social posts and a simple marketing email for interactive digital flyers. Always include the exact flyer URL in posts and the email body. Return ONLY JSON with keys facebook_post, instagram_caption, email_subject, email_body. Do not invent prices or offers not in the title.",
         },
         {
           role: "user",
-          content: `Flyer title: ${args.title}\nPublic link: ${args.flyerUrl}\n\nWrite:\n1) facebook_post: 2-4 short paragraphs, friendly, end with the link\n2) instagram_caption: shorter, hashtags ok, end with the link`,
+          content: `Flyer title: ${args.title}\nPublic link: ${args.flyerUrl}\n\nWrite:\n1) facebook_post: 2-4 short paragraphs, friendly, end with the link\n2) instagram_caption: shorter, hashtags ok, end with the link\n3) email_subject: under 60 characters, no clickbait\n4) email_body: short friendly email (3-6 sentences), include the link once, plain text only`,
         },
       ],
     }),
@@ -68,10 +68,12 @@ async function generateWithOpenAI(args: {
 
   const facebook_post = String(parsed.facebook_post || "").trim();
   const instagram_caption = String(parsed.instagram_caption || "").trim();
-  if (!facebook_post && !instagram_caption) {
-    throw new Error("OpenAI returned empty facebook_post and instagram_caption");
+  const email_subject = String(parsed.email_subject || "").trim();
+  const email_body = String(parsed.email_body || "").trim();
+  if (!facebook_post && !instagram_caption && !email_subject && !email_body) {
+    throw new Error("OpenAI returned empty marketing copy");
   }
-  return { facebook_post, instagram_caption };
+  return { facebook_post, instagram_caption, email_subject, email_body };
 }
 
 Deno.serve(async (req) => {
@@ -151,6 +153,8 @@ Deno.serve(async (req) => {
             status: "ready",
             facebook_post: copy.facebook_post.slice(0, 4000) || null,
             instagram_caption: copy.instagram_caption.slice(0, 4000) || null,
+            email_subject: copy.email_subject.slice(0, 200) || null,
+            email_body: copy.email_body.slice(0, 4000) || null,
             error_message: null,
           })
           .eq("id", draft_id);
