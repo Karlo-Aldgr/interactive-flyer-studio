@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Instagram, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
+  extendInstagramToken,
   loadLatestMarketingDraft,
   loadMetaConnection,
   postInstagramNow,
@@ -81,6 +82,7 @@ export function InstagramPostDialog({
   const [manualIgId, setManualIgId] = useState("");
   const [manualIgUsername, setManualIgUsername] = useState("carlojay.algordo");
   const [savingManualIg, setSavingManualIg] = useState(false);
+  const [extendingToken, setExtendingToken] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user?.id) return;
@@ -136,6 +138,15 @@ export function InstagramPostDialog({
       if (url) window.location.assign(url);
     } finally {
       setStartingOAuth(false);
+    }
+  }
+
+  async function handleExtendInstagramToken() {
+    setExtendingToken(true);
+    try {
+      await extendInstagramToken();
+    } finally {
+      setExtendingToken(false);
     }
   }
 
@@ -243,7 +254,7 @@ export function InstagramPostDialog({
                     size="sm"
                     variant="outline"
                     onClick={() => void handleRefreshConnection()}
-                    disabled={loading || savingConnection || posting || startingOAuth}
+                    disabled={loading || savingConnection || posting || startingOAuth || extendingToken}
                   >
                     {savingConnection ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
                     Refresh Instagram link
@@ -252,12 +263,25 @@ export function InstagramPostDialog({
                     type="button"
                     size="sm"
                     onClick={() => void handleConnectFacebook()}
-                    disabled={loading || savingConnection || posting || startingOAuth}
+                    disabled={loading || savingConnection || posting || startingOAuth || extendingToken}
                   >
                     {startingOAuth ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
                     Connect with Facebook
                   </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void handleExtendInstagramToken()}
+                    disabled={loading || savingConnection || posting || startingOAuth || extendingToken}
+                  >
+                    {extendingToken ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                    Extend Instagram token (60 days)
+                  </Button>
                 </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Extend Instagram token turns your Meta Generate-token into a ~60-day token and stores it (auto-refreshes when near expiry).
+                </p>
                 {!hasInstagram && (
                   <div className="space-y-2 rounded-md border border-dashed border-border/70 bg-muted/20 p-3">
                     <p className="text-xs text-muted-foreground">

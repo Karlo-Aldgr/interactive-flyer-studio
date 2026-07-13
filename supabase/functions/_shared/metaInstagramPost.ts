@@ -1,4 +1,5 @@
-/** Shared Instagram Content Publishing for Post Now + scheduled cron. */
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import { resolveStoredInstagramToken } from "./metaInstagramToken.ts";
 
 export type InstagramTokenSource = "instagram_login" | "facebook_page";
 
@@ -41,35 +42,38 @@ function isPublicHttpUrl(value: string | null | undefined) {
   }
 }
 
-export function resolveInstagramAccess(args?: {
+/** Prefer stored/refreshed Instagram Login token; fall back to Facebook Page token. */
+export async function resolveInstagramAccess(args: {
+  supabase: SupabaseClient;
+  userId?: string | null;
   pageAccessToken?: string | null;
-}): {
+}): Promise<{
   accessToken: string;
   apiHost: string;
   tokenSource: InstagramTokenSource;
-} | { error: string } {
-  const igLoginToken = Deno.env.get("META_INSTAGRAM_USER_ACCESS_TOKEN")?.trim() || "";
-  if (igLoginToken) {
+  expiresAt: string | null;
+} | { error: string }> {
+  const stored = await resolveStoredInstagramToken(args.supabase, args.userId);
+  if (!("error" in stored)) {
     return {
-      accessToken: igLoginToken,
+      accessToken: stored.accessToken,
       apiHost: "graph.instagram.com",
       tokenSource: "instagram_login",
+      expiresAt: stored.expiresAt,
     };
   }
 
-  const pageToken = args?.pageAccessToken?.trim() || "";
+  const pageToken = args.pageAccessToken?.trim() || "";
   if (pageToken) {
     return {
       accessToken: pageToken,
       apiHost: "graph.facebook.com",
       tokenSource: "facebook_page",
+      expiresAt: null,
     };
   }
 
-  return {
-    error:
-      "Missing META_INSTAGRAM_USER_ACCESS_TOKEN. Generate a token in Meta → API setup with Instagram login, then add it as a Lovable secret.",
-  };
+  return { error: stored.error };
 }
 
 export async function postInstagramImage(args: {
