@@ -1,5 +1,8 @@
 # Phase 2B: Meta foundation (test mode)
 
+> **Status:** Phase 2 Meta publish loop is complete in test mode.  
+> See **`docs/phase2-meta-status.md`** for the live roadmap vs reality (2B–2E done/partial).
+
 This phase adds the first real `Facebook Post Now` path while keeping everything local-first.
 
 ## What changed

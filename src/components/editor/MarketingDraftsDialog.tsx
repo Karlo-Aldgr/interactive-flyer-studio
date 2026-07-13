@@ -331,7 +331,7 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
           <DialogDescription>
             Draft and schedule Facebook and Instagram copy for{" "}
             <span className="font-medium">{flyerTitle}</span>.
-            Facebook schedules auto-post in Meta test mode; Instagram stays app-only until linked.
+            Facebook and Instagram schedules auto-post in Meta test mode when due (cron). Mark posted manually = track only.
           </DialogDescription>
         </DialogHeader>
 

@@ -446,7 +446,7 @@ async function updateChannel(
   return normalizeDraft(data as Record<string, unknown>);
 }
 
-/** Schedule Facebook or Instagram for a future time (app-only — does not post). */
+/** Schedule Facebook or Instagram for a future time (cron auto-posts when due). */
 export async function scheduleMarketingChannel(
   draftId: string,
   channel: MarketingChannel,
