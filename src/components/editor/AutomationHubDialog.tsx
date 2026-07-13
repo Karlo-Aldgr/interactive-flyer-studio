@@ -91,13 +91,13 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
           <div className="grid gap-4 md:grid-cols-2">
             <AutomationCard
               title="AI Social Copy"
-              description="Generate Facebook and Instagram copy, then schedule or mark it posted inside the app."
+              description="Generate Facebook and Instagram copy, then schedule auto-post or mark posted."
               badge="Ready now"
-              statusText="This is the existing Phase 1 + 2 marketing module."
+              statusText="Phase 1 + 2: AI copy, schedule, and Meta auto-post for Facebook and Instagram (test mode)."
               requirements={[
-                "Flyer must be published",
-                "n8n + OpenAI must stay connected",
-                "No social account linking required yet",
+                "Flyer must be published (public thumbnail + link)",
+                "OPENAI_API_KEY secret (or n8n fallback)",
+                "Meta connected for real Post Now / schedule send",
               ]}
               actionLabel="Open AI posts"
               onAction={() => {
@@ -109,13 +109,13 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
 
             <AutomationCard
               title="Facebook Post Now"
-              description="Connect a test Facebook Page and send the latest AI-generated Facebook copy through the Meta dev app."
+              description="Connect your Facebook Page with OAuth and send the latest AI Facebook copy."
               badge="Ready to test"
-              statusText="Phase 2B foundation: test-mode posting only. Keep the Meta app unpublished and use your own dev page."
+              statusText="Working in Meta test mode. Keep the Meta app unpublished until App Review."
               requirements={[
-                "Facebook business page",
-                "Meta Business Suite setup",
-                "Connected Meta app / page setup",
+                "Facebook Page you admin",
+                "Connect with Facebook (OAuth)",
+                "META_APP_ID / META_APP_SECRET configured",
               ]}
               actionLabel="Open Facebook post"
               onAction={() => {
@@ -127,13 +127,13 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
 
             <AutomationCard
               title="Instagram Post Now"
-              description="Post the latest AI Instagram caption to the Instagram Business/Creator account linked to your Facebook Page."
+              description="Post the latest AI Instagram caption to your Instagram Business/Creator account."
               badge="Ready to test"
-              statusText="Test-mode Instagram Post Now + scheduled auto-post via Instagram Login token."
+              statusText="Working in test mode with Instagram Login token (Extend token for ~60 days)."
               requirements={[
                 "Instagram Business or Creator account",
-                "Linked Facebook page / Meta Business Suite",
-                "Public flyer thumbnail URL",
+                "Instagram User ID saved + Extend Instagram token",
+                "Public flyer thumbnail JPEG URL",
               ]}
               actionLabel="Open Instagram post"
               onAction={() => {
@@ -147,7 +147,7 @@ export function AutomationHubDialog({ open, onOpenChange, flyer, onOpenMarketing
               title="Automation Framework"
               description="This flyer-level hub is the foundation for future automations like TikTok, email, SMS, AI coach, and audience tools."
               badge="Foundation"
-              statusText="Framework v1 is local-only right now so structure can be refined before anything goes live."
+              statusText="Phase 3+ (analytics, more channels, AutoPilot) builds on this hub — not started yet."
               requirements={[
                 "Per-flyer automation entry point",
                 "Per-automation setup requirements",

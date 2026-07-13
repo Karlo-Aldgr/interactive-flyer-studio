@@ -193,7 +193,7 @@ export function InstagramPostDialog({
             Instagram Post Now
           </DialogTitle>
           <DialogDescription>
-            Test-mode Instagram posting for {flyerTitle}. Reuses the same Meta page connection as Facebook Post Now.
+            Test-mode Instagram posting for {flyerTitle}. Uses Instagram Login token (Extend for ~60 days).
           </DialogDescription>
         </DialogHeader>
 
