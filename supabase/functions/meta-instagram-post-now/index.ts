@@ -75,7 +75,11 @@ Deno.serve(async (req) => {
 
     const creds = await resolveMetaPageCredentials(supabase, user.id);
     const pageToken = !("error" in creds) ? creds.pageAccessToken : null;
-    const access = resolveInstagramAccess({ pageAccessToken: pageToken });
+    const access = await resolveInstagramAccess({
+      supabase,
+      userId: user.id,
+      pageAccessToken: pageToken,
+    });
     if ("error" in access) return json({ error: access.error }, 400);
 
     const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";

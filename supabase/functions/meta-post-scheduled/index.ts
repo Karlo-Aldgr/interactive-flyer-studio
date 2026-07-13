@@ -218,7 +218,11 @@ Deno.serve(async (req) => {
 
       const pageCreds = await resolveMetaPageCredentials(supabase, String(claimed.owner_id));
       const pageToken = !("error" in pageCreds) ? pageCreds.pageAccessToken : null;
-      const access = resolveInstagramAccess({ pageAccessToken: pageToken });
+      const access = await resolveInstagramAccess({
+        supabase,
+        userId: String(claimed.owner_id),
+        pageAccessToken: pageToken,
+      });
       if ("error" in access) {
         await supabase.from("marketing_drafts").update(instagramFailurePatch(access.error, claimAt)).eq("id", draftId);
         results.push({ channel: "instagram", draft_id: draftId, ok: false, error: access.error });

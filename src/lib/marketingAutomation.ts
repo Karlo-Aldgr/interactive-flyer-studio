@@ -551,6 +551,36 @@ export async function postInstagramNow(
   }
 }
 
+/** Exchange/refresh Instagram Login token to ~60 days and store in meta_connection_secrets. */
+export async function extendInstagramToken(accessToken?: string): Promise<{
+  expires_at?: string;
+  expires_in_days?: number;
+  mode?: string;
+} | null> {
+  try {
+    const result = await invokeEdgeFunction<{
+      ok?: boolean;
+      expires_at?: string;
+      expires_in_days?: number;
+      mode?: string;
+      message?: string;
+    }>("meta-instagram-token-extend", {
+      access_token: accessToken?.trim() || undefined,
+    });
+    toast.success(
+      result.message
+        || (result.expires_in_days
+          ? `Instagram token saved (~${result.expires_in_days} days)`
+          : "Instagram token extended"),
+    );
+    return result;
+  } catch (err) {
+    console.error("[marketing] extend instagram token failed", err);
+    toast.error(err instanceof Error ? err.message : "Could not extend Instagram token");
+    return null;
+  }
+}
+
 export function toLocalInputValue(iso?: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
