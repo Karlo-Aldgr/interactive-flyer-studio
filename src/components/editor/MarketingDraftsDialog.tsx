@@ -260,6 +260,8 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
   const [instagramCaption, setInstagramCaption] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
+  const [tiktokCaption, setTiktokCaption] = useState("");
+  const [smsBody, setSmsBody] = useState("");
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -271,6 +273,8 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
         setInstagramCaption(row.instagram_caption || "");
         setEmailSubject(row.email_subject || "");
         setEmailBody(row.email_body || "");
+        setTiktokCaption(row.tiktok_caption || "");
+        setSmsBody(row.sms_body || "");
       }
     } finally {
       setLoading(false);
@@ -315,6 +319,8 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
         instagramCaption,
         emailSubject,
         emailBody,
+        tiktokCaption,
+        smsBody,
       });
       if (saved) setDraft(saved);
     } finally {
@@ -335,9 +341,9 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
             AI marketing posts
           </DialogTitle>
           <DialogDescription>
-            Draft Facebook, Instagram, and email copy for{" "}
+            Draft Facebook, Instagram, email, TikTok, and SMS copy for{" "}
             <span className="font-medium">{flyerTitle}</span>.
-            Facebook and Instagram can schedule auto-post in Meta test mode. Email is copy/paste only (no auto-send yet).
+            Facebook and Instagram can schedule auto-post in Meta test mode. Email, TikTok, and SMS are copy/paste only (no auto-send yet).
           </DialogDescription>
         </DialogHeader>
 
@@ -488,6 +494,59 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
               </p>
             </div>
 
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="tiktok-caption">TikTok caption</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  disabled={!tiktokCaption.trim()}
+                  onClick={() => void copyText("TikTok caption", tiktokCaption)}
+                >
+                  <Copy className="mr-1 h-3.5 w-3.5" /> Copy
+                </Button>
+              </div>
+              <Textarea
+                id="tiktok-caption"
+                rows={3}
+                value={tiktokCaption}
+                onChange={(e) => setTiktokCaption(e.target.value)}
+                placeholder="Short TikTok caption…"
+                disabled={savingManual || regenerating}
+              />
+              <p className="text-xs text-muted-foreground">Copy/paste only — no TikTok post in this version.</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sms-body">SMS text</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  disabled={!smsBody.trim()}
+                  onClick={() => void copyText("SMS text", smsBody)}
+                >
+                  <Copy className="mr-1 h-3.5 w-3.5" /> Copy
+                </Button>
+              </div>
+              <Textarea
+                id="sms-body"
+                rows={2}
+                value={smsBody}
+                maxLength={320}
+                onChange={(e) => setSmsBody(e.target.value)}
+                placeholder="Short SMS…"
+                disabled={savingManual || regenerating}
+              />
+              <p className="text-xs text-muted-foreground">
+                Copy/paste only — no SMS send ({smsBody.length}/320).
+              </p>
+            </div>
+
             {draft.flyer_url && (
               <p className="text-xs text-muted-foreground">
                 Link included in drafts:{" "}
@@ -511,7 +570,12 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
               disabled={
                 savingManual ||
                 regenerating ||
-                (!facebookPost.trim() && !instagramCaption.trim() && !emailSubject.trim() && !emailBody.trim())
+                (!facebookPost.trim() &&
+                  !instagramCaption.trim() &&
+                  !emailSubject.trim() &&
+                  !emailBody.trim() &&
+                  !tiktokCaption.trim() &&
+                  !smsBody.trim())
               }
             >
               {savingManual ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}

@@ -13,7 +13,7 @@ Use this to keep the roadmap board honest.
 | 2D | Auto-post at scheduled time | **Done** — Facebook + Instagram via `meta-post-scheduled` cron |
 | 2E | Instagram Post Now | **Done** — Post Now + container wait + Extend token (~60 days) |
 | 3 | Track clicks/engagement, suggest improvements | **Done (MVP)** — portal Suggestions card + view beacon dedupe; see `docs/phase3-insights.md` |
-| 4 | More channels (TikTok, email, SMS, etc.) | **Partial** — email draft + MassEmail prefill; see `docs/phase4-email-draft.md`. TikTok/SMS not started |
+| 4 | More channels (TikTok, email, SMS, etc.) | **Partial** — email + TikTok + SMS AI drafts (copy-only) + MassEmail prefill; see `docs/phase4-email-draft.md`. Real TikTok/SMS/Google Ads APIs not started |
 | 5 | Full AutoPilot dashboard, subscriptions, agency tools | **Partial (shell MVP)** — checkboxes + START for FB/IG/email/analytics; see `docs/phase5-autopilot.md`. Subscriptions / agency / chatbot deferred |
 
 ## What works in test mode (today)
@@ -65,6 +65,6 @@ Use this to keep the roadmap board honest.
 
 ## Recommended next
 
-1. Finish Phase 4 channel expansion (MassEmail prefill, TikTok/SMS stubs)
+1. Finish Phase 4 API send paths (real TikTok/SMS/Google Ads or Resend) when ready
 2. Phase 5+: subscriptions, agency white-label, chatbot, unattended AutoPilot
 3. Defer per-customer Instagram Login OAuth + Meta App Review until after roadmap polish

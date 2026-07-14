@@ -17,7 +17,14 @@ async function generateWithOpenAI(args: {
   apiKey: string;
   title: string;
   flyerUrl: string;
-}): Promise<{ facebook_post: string; instagram_caption: string; email_subject: string; email_body: string }> {
+}): Promise<{
+  facebook_post: string;
+  instagram_caption: string;
+  email_subject: string;
+  email_body: string;
+  tiktok_caption: string;
+  sms_body: string;
+}> {
   const model = Deno.env.get("OPENAI_MARKETING_MODEL")?.trim() || "gpt-4o-mini";
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -33,11 +40,11 @@ async function generateWithOpenAI(args: {
         {
           role: "system",
           content:
-            "You write short social posts and a simple marketing email for interactive digital flyers. Always include the exact flyer URL in posts and the email body. Return ONLY JSON with keys facebook_post, instagram_caption, email_subject, email_body. Do not invent prices or offers not in the title.",
+            "You write short social posts, a marketing email, a TikTok caption, and an SMS for interactive digital flyers. Always include the exact flyer URL in posts, email body, TikTok caption, and SMS. Return ONLY JSON with keys facebook_post, instagram_caption, email_subject, email_body, tiktok_caption, sms_body. Do not invent prices or offers not in the title.",
         },
         {
           role: "user",
-          content: `Flyer title: ${args.title}\nPublic link: ${args.flyerUrl}\n\nWrite:\n1) facebook_post: 2-4 short paragraphs, friendly, end with the link\n2) instagram_caption: shorter, hashtags ok, end with the link\n3) email_subject: under 60 characters, no clickbait\n4) email_body: short friendly email (3-6 sentences), include the link once, plain text only`,
+          content: `Flyer title: ${args.title}\nPublic link: ${args.flyerUrl}\n\nWrite:\n1) facebook_post: 2-4 short paragraphs, friendly, end with the link\n2) instagram_caption: shorter, hashtags ok, end with the link\n3) email_subject: under 60 characters, no clickbait\n4) email_body: short friendly email (3-6 sentences), include the link once, plain text only\n5) tiktok_caption: punchy short caption with 2-5 hashtags, include the link\n6) sms_body: under 160 characters if possible (hard max 320), include the link, no emoji spam`,
         },
       ],
     }),
@@ -70,10 +77,12 @@ async function generateWithOpenAI(args: {
   const instagram_caption = String(parsed.instagram_caption || "").trim();
   const email_subject = String(parsed.email_subject || "").trim();
   const email_body = String(parsed.email_body || "").trim();
-  if (!facebook_post && !instagram_caption && !email_subject && !email_body) {
+  const tiktok_caption = String(parsed.tiktok_caption || "").trim();
+  const sms_body = String(parsed.sms_body || "").trim();
+  if (!facebook_post && !instagram_caption && !email_subject && !email_body && !tiktok_caption && !sms_body) {
     throw new Error("OpenAI returned empty marketing copy");
   }
-  return { facebook_post, instagram_caption, email_subject, email_body };
+  return { facebook_post, instagram_caption, email_subject, email_body, tiktok_caption, sms_body };
 }
 
 Deno.serve(async (req) => {
@@ -155,6 +164,8 @@ Deno.serve(async (req) => {
             instagram_caption: copy.instagram_caption.slice(0, 4000) || null,
             email_subject: copy.email_subject.slice(0, 200) || null,
             email_body: copy.email_body.slice(0, 4000) || null,
+            tiktok_caption: copy.tiktok_caption.slice(0, 4000) || null,
+            sms_body: copy.sms_body.slice(0, 320) || null,
             error_message: null,
           })
           .eq("id", draft_id);

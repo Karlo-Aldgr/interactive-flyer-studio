@@ -38,10 +38,10 @@ const OPTIONS: AutoPilotOption[] = [
   { id: "facebook", label: "Create Facebook Campaign", enabled: true, hint: "AI post + schedule / Post Now" },
   { id: "instagram", label: "Create Instagram Campaign", enabled: true, hint: "AI caption + schedule / Post Now" },
   { id: "email", label: "Create Email Campaign", enabled: true, hint: "Subject + body (copy/paste only)" },
+  { id: "tiktok", label: "Create TikTok Video", enabled: true, hint: "Caption draft (copy/paste only)" },
+  { id: "sms", label: "Create SMS Campaign", enabled: true, hint: "SMS draft (copy/paste only)" },
   { id: "analytics", label: "AI Analytics", enabled: true, hint: "Uses portal Suggestions (Phase 3)" },
-  { id: "tiktok", label: "Create TikTok Video", enabled: false },
   { id: "google_ads", label: "Create Google Ads", enabled: false },
-  { id: "sms", label: "Create SMS Campaign", enabled: false },
   { id: "chatbot", label: "AI Chatbot", enabled: false },
   { id: "qr", label: "AI QR Code", enabled: false },
   { id: "autopilot_all", label: "AutoPilot Marketing (everything)", enabled: false },
@@ -62,6 +62,14 @@ function channelLabel(status: MarketingChannelStatus): string {
 
 function emailReady(draft: MarketingDraft | null): boolean {
   return !!(draft?.email_subject?.trim() || draft?.email_body?.trim());
+}
+
+function tiktokReady(draft: MarketingDraft | null): boolean {
+  return !!draft?.tiktok_caption?.trim();
+}
+
+function smsReady(draft: MarketingDraft | null): boolean {
+  return !!draft?.sms_body?.trim();
 }
 
 interface Props {
@@ -87,6 +95,8 @@ export function AutoPilotDialog({
     facebook: true,
     instagram: true,
     email: true,
+    tiktok: true,
+    sms: true,
     analytics: true,
   });
   const [draft, setDraft] = useState<MarketingDraft | null>(null);
@@ -115,7 +125,11 @@ export function AutoPilotDialog({
 
   async function handleStart() {
     const wantsCopy =
-      !!selected.facebook || !!selected.instagram || !!selected.email;
+      !!selected.facebook ||
+      !!selected.instagram ||
+      !!selected.email ||
+      !!selected.tiktok ||
+      !!selected.sms;
     const wantsAnalytics = !!selected.analytics;
 
     if (!wantsCopy && !wantsAnalytics) {
@@ -149,6 +163,12 @@ export function AutoPilotDialog({
         }
         if (selected.email) {
           parts.push(emailReady(row) ? "Email: copy ready" : "Email: generating…");
+        }
+        if (selected.tiktok) {
+          parts.push(tiktokReady(row) ? "TikTok: copy ready" : "TikTok: generating…");
+        }
+        if (selected.sms) {
+          parts.push(smsReady(row) ? "SMS: copy ready" : "SMS: generating…");
         }
         toast.success(parts.join(" · ") || "AutoPilot started");
       }
@@ -197,6 +217,8 @@ export function AutoPilotDialog({
                 <Badge variant="outline">FB {channelLabel(draft.facebook_status)}</Badge>
                 <Badge variant="outline">IG {channelLabel(draft.instagram_status)}</Badge>
                 <Badge variant="outline">{emailReady(draft) ? "Email ready" : "Email empty"}</Badge>
+                <Badge variant="outline">{tiktokReady(draft) ? "TikTok ready" : "TikTok empty"}</Badge>
+                <Badge variant="outline">{smsReady(draft) ? "SMS ready" : "SMS empty"}</Badge>
                 {draft.status === "processing" || draft.status === "pending" ? (
                   <Badge variant="secondary">AI {draft.status}</Badge>
                 ) : null}

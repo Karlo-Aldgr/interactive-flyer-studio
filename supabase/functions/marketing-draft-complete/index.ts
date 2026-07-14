@@ -33,6 +33,8 @@ Deno.serve(async (req) => {
           instagram_caption: String(body.instagram_caption || "").slice(0, 4000),
           email_subject: String(body.email_subject || "").slice(0, 200) || null,
           email_body: String(body.email_body || "").slice(0, 4000) || null,
+          tiktok_caption: String(body.tiktok_caption || "").slice(0, 4000) || null,
+          sms_body: String(body.sms_body || "").slice(0, 320) || null,
           error_message: null,
         };
 
