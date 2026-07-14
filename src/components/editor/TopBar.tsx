@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareDialog } from "./ShareDialog";
 import { AutomationHubDialog } from "./AutomationHubDialog";
+import { MarketingCoachDialog } from "./MarketingCoachDialog";
 import { AutoPilotDialog } from "./AutoPilotDialog";
 import { FacebookPostDialog } from "./FacebookPostDialog";
 import { InstagramPostDialog } from "./InstagramPostDialog";
@@ -81,6 +82,7 @@ export function TopBar({ saving }: Props) {
   const [facebookPostOpen, setFacebookPostOpen] = useState(false);
   const [instagramPostOpen, setInstagramPostOpen] = useState(false);
   const [marketingOpen, setMarketingOpen] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [localThumbnail, setLocalThumbnail] = useState<string | undefined>(undefined);
   const [flyerPreviewThumb, setFlyerPreviewThumb] = useState<string | undefined>(undefined);
@@ -703,8 +705,16 @@ export function TopBar({ saving }: Props) {
         flyer={flyer}
         onOpenMarketing={() => setMarketingOpen(true)}
         onOpenAutoPilot={() => setAutoPilotOpen(true)}
+        onOpenCoach={() => setCoachOpen(true)}
         onOpenFacebookPost={() => setFacebookPostOpen(true)}
         onOpenInstagramPost={() => setInstagramPostOpen(true)}
+      />
+
+      <MarketingCoachDialog
+        open={coachOpen}
+        onOpenChange={setCoachOpen}
+        flyerId={flyer.id}
+        flyerTitle={flyer.title}
       />
 
       <AutoPilotDialog
