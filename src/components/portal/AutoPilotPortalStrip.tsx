@@ -35,6 +35,10 @@ function smsReady(draft: MarketingDraft): boolean {
   return !!draft.sms_body?.trim();
 }
 
+function googleAdsReady(draft: MarketingDraft): boolean {
+  return !!(draft.google_ads_headline?.trim() || draft.google_ads_description?.trim());
+}
+
 /** Compact AutoPilot status for the flyer portal (Phase 5). */
 export function AutoPilotPortalStrip({
   flyerId,
@@ -73,6 +77,7 @@ export function AutoPilotPortalStrip({
               <Badge variant="outline">{emailReady(draft) ? "Email ready" : "Email empty"}</Badge>
               <Badge variant="outline">{tiktokReady(draft) ? "TikTok ready" : "TikTok empty"}</Badge>
               <Badge variant="outline">{smsReady(draft) ? "SMS ready" : "SMS empty"}</Badge>
+              <Badge variant="outline">{googleAdsReady(draft) ? "Ads ready" : "Ads empty"}</Badge>
             </>
           ) : (
             <span className="text-xs text-muted-foreground">No marketing draft yet — start AutoPilot from the editor.</span>

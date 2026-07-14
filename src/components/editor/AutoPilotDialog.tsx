@@ -40,8 +40,8 @@ const OPTIONS: AutoPilotOption[] = [
   { id: "email", label: "Create Email Campaign", enabled: true, hint: "Subject + body (copy/paste only)" },
   { id: "tiktok", label: "Create TikTok Video", enabled: true, hint: "Caption draft (copy/paste only)" },
   { id: "sms", label: "Create SMS Campaign", enabled: true, hint: "SMS draft (copy/paste only)" },
+  { id: "google_ads", label: "Create Google Ads", enabled: true, hint: "Headline + description (copy/paste only)" },
   { id: "analytics", label: "AI Analytics", enabled: true, hint: "Uses portal Suggestions (Phase 3)" },
-  { id: "google_ads", label: "Create Google Ads", enabled: false },
   { id: "chatbot", label: "AI Chatbot", enabled: false },
   { id: "qr", label: "AI QR Code", enabled: false },
   { id: "autopilot_all", label: "AutoPilot Marketing (everything)", enabled: false },
@@ -72,6 +72,10 @@ function smsReady(draft: MarketingDraft | null): boolean {
   return !!draft?.sms_body?.trim();
 }
 
+function googleAdsReady(draft: MarketingDraft | null): boolean {
+  return !!(draft?.google_ads_headline?.trim() || draft?.google_ads_description?.trim());
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -97,6 +101,7 @@ export function AutoPilotDialog({
     email: true,
     tiktok: true,
     sms: true,
+    google_ads: true,
     analytics: true,
   });
   const [draft, setDraft] = useState<MarketingDraft | null>(null);
@@ -129,7 +134,8 @@ export function AutoPilotDialog({
       !!selected.instagram ||
       !!selected.email ||
       !!selected.tiktok ||
-      !!selected.sms;
+      !!selected.sms ||
+      !!selected.google_ads;
     const wantsAnalytics = !!selected.analytics;
 
     if (!wantsCopy && !wantsAnalytics) {
@@ -169,6 +175,9 @@ export function AutoPilotDialog({
         }
         if (selected.sms) {
           parts.push(smsReady(row) ? "SMS: copy ready" : "SMS: generating…");
+        }
+        if (selected.google_ads) {
+          parts.push(googleAdsReady(row) ? "Google Ads: copy ready" : "Google Ads: generating…");
         }
         toast.success(parts.join(" · ") || "AutoPilot started");
       }
@@ -219,6 +228,7 @@ export function AutoPilotDialog({
                 <Badge variant="outline">{emailReady(draft) ? "Email ready" : "Email empty"}</Badge>
                 <Badge variant="outline">{tiktokReady(draft) ? "TikTok ready" : "TikTok empty"}</Badge>
                 <Badge variant="outline">{smsReady(draft) ? "SMS ready" : "SMS empty"}</Badge>
+                <Badge variant="outline">{googleAdsReady(draft) ? "Ads ready" : "Ads empty"}</Badge>
                 {draft.status === "processing" || draft.status === "pending" ? (
                   <Badge variant="secondary">AI {draft.status}</Badge>
                 ) : null}

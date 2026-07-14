@@ -24,6 +24,8 @@ async function generateWithOpenAI(args: {
   email_body: string;
   tiktok_caption: string;
   sms_body: string;
+  google_ads_headline: string;
+  google_ads_description: string;
 }> {
   const model = Deno.env.get("OPENAI_MARKETING_MODEL")?.trim() || "gpt-4o-mini";
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -40,11 +42,11 @@ async function generateWithOpenAI(args: {
         {
           role: "system",
           content:
-            "You write short social posts, a marketing email, a TikTok caption, and an SMS for interactive digital flyers. Always include the exact flyer URL in posts, email body, TikTok caption, and SMS. Return ONLY JSON with keys facebook_post, instagram_caption, email_subject, email_body, tiktok_caption, sms_body. Do not invent prices or offers not in the title.",
+            "You write short social posts, a marketing email, a TikTok caption, an SMS, and Google Ads copy for interactive digital flyers. Always include the exact flyer URL in posts, email body, TikTok caption, and SMS. For Google Ads, put the URL in the description only. Return ONLY JSON with keys facebook_post, instagram_caption, email_subject, email_body, tiktok_caption, sms_body, google_ads_headline, google_ads_description. Do not invent prices or offers not in the title.",
         },
         {
           role: "user",
-          content: `Flyer title: ${args.title}\nPublic link: ${args.flyerUrl}\n\nWrite:\n1) facebook_post: 2-4 short paragraphs, friendly, end with the link\n2) instagram_caption: shorter, hashtags ok, end with the link\n3) email_subject: under 60 characters, no clickbait\n4) email_body: short friendly email (3-6 sentences), include the link once, plain text only\n5) tiktok_caption: punchy short caption with 2-5 hashtags, include the link\n6) sms_body: under 160 characters if possible (hard max 320), include the link, no emoji spam`,
+          content: `Flyer title: ${args.title}\nPublic link: ${args.flyerUrl}\n\nWrite:\n1) facebook_post: 2-4 short paragraphs, friendly, end with the link\n2) instagram_caption: shorter, hashtags ok, end with the link\n3) email_subject: under 60 characters, no clickbait\n4) email_body: short friendly email (3-6 sentences), include the link once, plain text only\n5) tiktok_caption: punchy short caption with 2-5 hashtags, include the link\n6) sms_body: under 160 characters if possible (hard max 320), include the link, no emoji spam\n7) google_ads_headline: max 30 characters, benefit-focused, no URL\n8) google_ads_description: max 90 characters, include a soft CTA and the link`,
         },
       ],
     }),
@@ -79,10 +81,24 @@ async function generateWithOpenAI(args: {
   const email_body = String(parsed.email_body || "").trim();
   const tiktok_caption = String(parsed.tiktok_caption || "").trim();
   const sms_body = String(parsed.sms_body || "").trim();
-  if (!facebook_post && !instagram_caption && !email_subject && !email_body && !tiktok_caption && !sms_body) {
+  const google_ads_headline = String(parsed.google_ads_headline || "").trim();
+  const google_ads_description = String(parsed.google_ads_description || "").trim();
+  if (
+    !facebook_post && !instagram_caption && !email_subject && !email_body &&
+    !tiktok_caption && !sms_body && !google_ads_headline && !google_ads_description
+  ) {
     throw new Error("OpenAI returned empty marketing copy");
   }
-  return { facebook_post, instagram_caption, email_subject, email_body, tiktok_caption, sms_body };
+  return {
+    facebook_post,
+    instagram_caption,
+    email_subject,
+    email_body,
+    tiktok_caption,
+    sms_body,
+    google_ads_headline,
+    google_ads_description,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -166,6 +182,8 @@ Deno.serve(async (req) => {
             email_body: copy.email_body.slice(0, 4000) || null,
             tiktok_caption: copy.tiktok_caption.slice(0, 4000) || null,
             sms_body: copy.sms_body.slice(0, 320) || null,
+            google_ads_headline: copy.google_ads_headline.slice(0, 30) || null,
+            google_ads_description: copy.google_ads_description.slice(0, 90) || null,
             error_message: null,
           })
           .eq("id", draft_id);

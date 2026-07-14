@@ -1,34 +1,31 @@
-# Phase 4: Multi-channel drafts (email, TikTok, SMS)
+# Phase 4: Multi-channel drafts
 
-AI generates marketing copy for several channels from one flyer. Facebook/Instagram can auto-post (Meta test mode). Email / TikTok / SMS are **copy-only** (no send APIs yet). Mass email prefills AI email into Gmail / Mail app.
+AI generates marketing copy for several channels from one flyer.
 
-## What shipped
+| Channel | Behavior |
+|---------|----------|
+| Facebook / Instagram | Draft + Meta schedule / Post Now (test mode) |
+| Email | Draft + MassEmail prefill (Gmail / Mail app) |
+| TikTok / SMS / Google Ads | Draft copy/paste only |
 
-| Piece | Location |
-|-------|----------|
-| DB columns | `email_subject`, `email_body`, `tiktok_caption`, `sms_body` |
-| AI generation | `marketing-trigger` OpenAI JSON keys |
-| n8n callback | `marketing-draft-complete` |
-| UI drafts | AI Social Copy dialog |
-| MassEmail prefill | Subscribers → Compose mass email |
-| AutoPilot | TikTok + SMS checkboxes enabled (copy draft) |
+## DB columns
+
+`email_subject`, `email_body`, `tiktok_caption`, `sms_body`, `google_ads_headline`, `google_ads_description`
 
 ## Migrations
 
 - `20260713223000_marketing_email_draft.sql`
 - `20260714203000_marketing_tiktok_sms_draft.sql`
+- `20260714210000_marketing_google_ads_draft.sql`
 
-## How to verify
+## Verify Google Ads
 
-1. Run both SQL migrations in Lovable
-2. Redeploy `marketing-trigger` (+ `marketing-draft-complete` if using n8n)
-3. Regenerate AI copy → Facebook, Instagram, Email, TikTok, SMS appear
-4. AutoPilot: TikTok + SMS are selectable (not Coming soon)
-5. Mass email still prefills email fields
-6. Do **not** publish the live website unless asked
+1. Run `20260714210000_marketing_google_ads_draft.sql`
+2. Redeploy `marketing-trigger` (+ `marketing-draft-complete` if n8n)
+3. Regenerate AI copy → headline + description appear
+4. AutoPilot: Google Ads enabled
+5. Do **not** publish website unless asked
 
-## Out of scope (later)
+## Out of scope
 
-- TikTok / SMS / Google Ads real APIs
-- Server email send (Resend etc.)
-- Unattended full AutoPilot
+Real Ads / TikTok / SMS APIs and server email send.
