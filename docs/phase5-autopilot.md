@@ -25,10 +25,11 @@ Sherman Bowen Option 2 vision: flyer → AI content → schedule → track → i
 | AI Chatbot | Opens published flyer; **Ask AI** button (bottom-left) |
 | AutoPilot Marketing (everything) | Selects all live options |
 
-### AI Chatbot MVP (v1)
+### AI Chatbot MVP (v1 → v1.1 context)
 
-- Public Q&A using flyer title + public URL only (OpenAI via `flyer-chat`).
-- Not a full CRM / support desk; does not invent prices or policies.
+- Public Q&A on published flyers (`flyer-chat` + **Ask AI** widget).
+- **v1.1:** Answers use page/layer text + action links/menus/products from the flyer (not title-only).
+- Not a full CRM / support desk; does not invent prices or policies missing from flyer content.
 - Requires published flyer + `OPENAI_API_KEY` on the edge function.
 
 **Deploy:** Redeploy `flyer-chat` in Lovable (or Supabase). `verify_jwt = false` so anonymous visitors can chat. No SQL migration.
@@ -43,6 +44,6 @@ Sherman Bowen Option 2 vision: flyer → AI content → schedule → track → i
 
 ## Deferred
 
+- Richer chatbot: lead handoff to business inbox / CRM
 - Real channel send APIs beyond Meta (TikTok/SMS/Google Ads post APIs)
 - Phase 5+: subscriptions, agency white-label, unattended full AutoPilot
-- Richer chatbot context (layer text, menus, hours) + handoff to business inbox
