@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEditorStore } from "@/store/editorStore";
-import { Flyer, FlyerPage, Layer } from "@/types/flyer";
+import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import { toast } from "sonner";
 import { generateAndUploadThumbnail } from "@/lib/thumbnail";
 import { ensureUuid, isUuid } from "@/lib/safeBrowser";
