@@ -46,7 +46,11 @@ export function FlyerChatbot({ flyerId, flyerTitle }: Props) {
       });
       setTurns((prev) => [...prev, { role: "assistant", content: data.reply }]);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Chat failed";
+      const raw = e instanceof Error ? e.message : "Chat failed";
+      const msg =
+        /failed to fetch|networkerror|load failed/i.test(raw)
+          ? "Chat service unreachable — redeploy the flyer-chat edge function in Lovable/Supabase."
+          : raw;
       setError(msg);
       setTurns((prev) => [
         ...prev,
