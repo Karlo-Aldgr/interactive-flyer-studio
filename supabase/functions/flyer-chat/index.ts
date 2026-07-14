@@ -25,21 +25,68 @@ function pushUnique(out: string[], value: string, maxLen = 280) {
 }
 
 function extractActionHints(payload: Record<string, unknown> | null, actionType: string): string[] {
-  if (!payload) return [];
+  if (!payload) return [`action: ${actionType}`];
   const hints: string[] = [];
-  const url = String(payload.url || "").trim();
-  const phone = String(payload.phone || payload.phoneNumber || "").trim();
-  const title = String(
-    payload.title || payload.popupTitle || payload.formTitle || payload.videoTitle || "",
-  ).trim();
-  const message = String(payload.message || payload.smsBody || "").trim();
-  const label = String(payload.label || payload.buttonLabel || "").trim();
 
-  if (title) hints.push(`${actionType}: ${title}`);
-  if (label && label !== title) hints.push(`label: ${label}`);
+  const pick = (...keys: string[]) => {
+    for (const k of keys) {
+      const v = String(payload[k] ?? "").trim();
+      if (v) return v;
+    }
+    return "";
+  };
+
+  const title = pick(
+    "title",
+    "popupTitle",
+    "formTitle",
+    "videoTitle",
+    "subscribeTitle",
+    "galleryTitle",
+    "apptTitle",
+    "eventTitle",
+    "productName",
+    "pollQuestion",
+  );
+  const body = pick(
+    "body",
+    "subscribeBody",
+    "productDescription",
+    "eventDescription",
+    "apptDescription",
+    "successMessage",
+    "subscribeSuccessMessage",
+  );
+  const cta = pick(
+    "label",
+    "buttonLabel",
+    "ticketCtaLabel",
+    "productCtaLabel",
+    "subscribeButtonLabel",
+  );
+  const url = pick("url", "checkoutUrl", "productPaymentUrl", "couponRedeemUrl", "videoUrl");
+  const phone = pick("phone", "phoneNumber");
+  const message = pick("message", "smsBody");
+  const address = pick("mapAddress", "eventLocation", "apptLocation");
+  const coupon = pick("couponCode");
+
+  hints.push(`action type: ${actionType}`);
+  if (title) hints.push(`action title: ${title}`);
+  if (body) hints.push(`action details: ${body.slice(0, 240)}`);
+  if (cta) hints.push(`button/CTA: ${cta}`);
   if (url) hints.push(`link: ${url}`);
   if (phone) hints.push(`phone: ${phone}`);
   if (message) hints.push(`message: ${message.slice(0, 160)}`);
+  if (address) hints.push(`location: ${address}`);
+  if (coupon) hints.push(`coupon: ${coupon}`);
+
+  const buttons = Array.isArray(payload.buttons) ? payload.buttons : [];
+  for (const b of buttons.slice(0, 8)) {
+    if (!b || typeof b !== "object") continue;
+    const btn = b as Record<string, unknown>;
+    const bl = String(btn.label || "").trim();
+    if (bl) hints.push(`popup button: ${bl}`);
+  }
 
   // Common structured content
   const menu = payload.menuSections;
@@ -172,6 +219,7 @@ Deno.serve(async (req) => {
     }
 
     const category = flyer.category ? String(flyer.category) : "";
+    const hasActions = /action type:|link:/i.test(flyerContext);
     const system =
       `You are a friendly helper on an interactive flyer called "${flyer.title || "Flyer"}"` +
       (category ? ` (category: ${category})` : "") +
@@ -179,9 +227,13 @@ Deno.serve(async (req) => {
       (flyerContext
         ? `Use ONLY the flyer facts below. Prefer them over guesses.\n\n${flyerContext}\n\n`
         : "No layer text was available; answer cautiously from the title only.\n\n") +
-      "Answer briefly (1-4 short sentences). Help visitors understand the flyer and next steps. " +
-      "If a link/phone/action is listed, you may point visitors to it. " +
-      "If something is not in the flyer facts (prices, times, policies), say you don't know and point them to the flyer link. " +
+      "This flyer is interactive: purple/glowing hotspots and buttons on the flyer are tappable. " +
+      (hasActions
+        ? "When visitors ask how to start, sign up, register, or what to do next, tell them to tap the main hotspot/CTA on the flyer and mention specific action titles/links from the facts. "
+        : "When visitors ask how to start, tell them to tap the hotspots on the flyer for next steps. ") +
+      "Answer briefly (1-4 short sentences). " +
+      "You only know THIS flyer — do not invent other sample flyers or a gallery. " +
+      "If something is not in the flyer facts (prices, times, policies), say you don't know and point them to the flyer link or hotspots. " +
       "Do not invent offers, prices, or guarantees. No markdown tables.";
 
     const model = Deno.env.get("OPENAI_MARKETING_MODEL")?.trim() || "gpt-4o-mini";
