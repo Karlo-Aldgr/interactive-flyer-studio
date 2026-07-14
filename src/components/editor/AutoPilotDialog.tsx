@@ -42,10 +42,12 @@ const OPTIONS: AutoPilotOption[] = [
   { id: "sms", label: "Create SMS Campaign", enabled: true, hint: "SMS draft (copy/paste only)" },
   { id: "google_ads", label: "Create Google Ads", enabled: true, hint: "Headline + description (copy/paste only)" },
   { id: "analytics", label: "AI Analytics", enabled: true, hint: "Uses portal Suggestions (Phase 3)" },
+  { id: "qr", label: "AI QR Code", enabled: true, hint: "Opens Share + QR for this flyer" },
+  { id: "autopilot_all", label: "AutoPilot Marketing (everything)", enabled: true, hint: "Selects all live options above" },
   { id: "chatbot", label: "AI Chatbot", enabled: false },
-  { id: "qr", label: "AI QR Code", enabled: false },
-  { id: "autopilot_all", label: "AutoPilot Marketing (everything)", enabled: false },
 ];
+
+const LIVE_CHANNEL_IDS = OPTIONS.filter((o) => o.enabled && o.id !== "autopilot_all").map((o) => o.id);
 
 function channelLabel(status: MarketingChannelStatus): string {
   switch (status) {
@@ -83,6 +85,7 @@ interface Props {
   ownerId: string;
   flyerTitle: string;
   onOpenMarketing: () => void;
+  onOpenShare: () => void;
   portalPath?: string;
 }
 
@@ -93,6 +96,7 @@ export function AutoPilotDialog({
   ownerId,
   flyerTitle,
   onOpenMarketing,
+  onOpenShare,
   portalPath,
 }: Props) {
   const [selected, setSelected] = useState<Record<string, boolean>>({
@@ -103,6 +107,8 @@ export function AutoPilotDialog({
     sms: true,
     google_ads: true,
     analytics: true,
+    qr: false,
+    autopilot_all: false,
   });
   const [draft, setDraft] = useState<MarketingDraft | null>(null);
   const [loading, setLoading] = useState(false);
@@ -125,7 +131,25 @@ export function AutoPilotDialog({
 
   function toggle(id: string, enabled: boolean) {
     if (!enabled) return;
-    setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
+
+    if (id === "autopilot_all") {
+      setSelected((prev) => {
+        const turningOn = !prev.autopilot_all;
+        const next: Record<string, boolean> = { ...prev, autopilot_all: turningOn };
+        for (const channelId of LIVE_CHANNEL_IDS) {
+          next[channelId] = turningOn;
+        }
+        return next;
+      });
+      return;
+    }
+
+    setSelected((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      const allLiveOn = LIVE_CHANNEL_IDS.every((channelId) => !!next[channelId]);
+      next.autopilot_all = allLiveOn;
+      return next;
+    });
   }
 
   async function handleStart() {
@@ -137,8 +161,9 @@ export function AutoPilotDialog({
       !!selected.sms ||
       !!selected.google_ads;
     const wantsAnalytics = !!selected.analytics;
+    const wantsQr = !!selected.qr;
 
-    if (!wantsCopy && !wantsAnalytics) {
+    if (!wantsCopy && !wantsAnalytics && !wantsQr) {
       toast.error("Select at least one available option");
       return;
     }
@@ -147,7 +172,6 @@ export function AutoPilotDialog({
     try {
       if (wantsCopy) {
         await regenerateMarketingDraft(flyerId, ownerId);
-        // Give the edge function a moment, then reload
         await new Promise((r) => window.setTimeout(r, 1500));
         const row = await loadLatestMarketingDraft(flyerId);
         setDraft(row);
@@ -185,7 +209,7 @@ export function AutoPilotDialog({
       if (wantsAnalytics) {
         const path = portalPath || `/flyer/${flyerId}/portal`;
         toast.message("Analytics", {
-          description: `Open Suggestions on the flyer portal for improvement tips.`,
+          description: "Open Suggestions on the flyer portal for improvement tips.",
           action: {
             label: "Open portal",
             onClick: () => {
@@ -195,9 +219,26 @@ export function AutoPilotDialog({
         });
       }
 
+      onOpenChange(false);
+
       if (wantsCopy) {
-        onOpenChange(false);
         onOpenMarketing();
+      } else if (wantsQr) {
+        onOpenShare();
+        toast.message("QR ready", { description: "Use Share → QR for this flyer." });
+      } else if (wantsAnalytics) {
+        // Analytics toast already shown; stay in editor.
+      }
+
+      // If copy + QR both selected, open marketing first; offer share via toast action.
+      if (wantsCopy && wantsQr) {
+        toast.message("QR / Share", {
+          description: "AI copy is open. Open Share when you’re ready for the QR.",
+          action: {
+            label: "Open Share",
+            onClick: () => onOpenShare(),
+          },
+        });
       }
     } finally {
       setStarting(false);
