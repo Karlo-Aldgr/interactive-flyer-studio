@@ -1,9 +1,42 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEditorStore } from "@/store/editorStore";
-import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
+import { Flyer, FlyerPage, Layer } from "@/types/flyer";
 import { toast } from "sonner";
 import { generateAndUploadThumbnail } from "@/lib/thumbnail";
+import { ensureUuid, isUuid } from "@/lib/safeBrowser";
+
+/** Rewrite any non-UUID page/layer/action ids created on HTTP/LAN before DB upsert. */
+function normalizePageIds(pages: FlyerPage[]): { pages: FlyerPage[]; changed: boolean } {
+  let changed = false;
+  const next = pages.map((page) => {
+    const pageId = ensureUuid(page.id);
+    if (pageId !== page.id) changed = true;
+
+    const layers = page.layers.map((layer) => {
+      const layerId = ensureUuid(layer.id);
+      let action = layer.action;
+      if (action) {
+        const actionId = ensureUuid(action.id);
+        if (actionId !== action.id) {
+          action = { ...action, id: actionId };
+          changed = true;
+        }
+      }
+      if (layerId !== layer.id || pageId !== layer.page_id || action !== layer.action) {
+        changed = true;
+        return { ...layer, id: layerId, page_id: pageId, action };
+      }
+      return layer;
+    });
+
+    if (pageId !== page.id) return { ...page, id: pageId, layers };
+    const layersChanged = layers.some((l, i) => l !== page.layers[i]);
+    if (layersChanged) return { ...page, layers };
+    return page;
+  });
+  return { pages: next, changed };
+}
 
 export function useFlyerData(flyerId: string | undefined) {
   const [loading, setLoading] = useState(true);
@@ -119,6 +152,21 @@ export function useFlyerData(flyerId: string | undefined) {
   async function save(f: Flyer, currentPages: FlyerPage[]) {
     setSaving(true);
     try {
+      const { pages: normalizedPages, changed } = normalizePageIds(currentPages);
+      if (changed) {
+        useEditorStore.setState((s) => {
+          const selectedPageId = isUuid(s.selectedPageId)
+            ? s.selectedPageId
+            : normalizedPages[0]?.id || s.selectedPageId;
+          const selectedLayerId =
+            s.selectedLayerId && isUuid(s.selectedLayerId)
+              ? s.selectedLayerId
+              : null;
+          return { pages: normalizedPages, selectedPageId, selectedLayerId };
+        });
+      }
+      const pagesToSave = changed ? normalizedPages : currentPages;
+
       // 1. Update flyer meta
       await supabase
         .from("flyers")
@@ -138,8 +186,8 @@ export function useFlyerData(flyerId: string | undefined) {
 
       const dbPageIds = new Set((dbPages ?? []).map((p: any) => p.id));
       const dbLayerIds = new Set((dbPages ?? []).flatMap((p: any) => (p.layers ?? []).map((l: any) => l.id)));
-      const currentPageIds = new Set(currentPages.map((p) => p.id));
-      const currentLayerIds = new Set(currentPages.flatMap((p) => p.layers.map((l) => l.id)));
+      const currentPageIds = new Set(pagesToSave.map((p) => p.id));
+      const currentLayerIds = new Set(pagesToSave.flatMap((p) => p.layers.map((l) => l.id)));
 
       // 3. Delete removed pages (cascade not assumed → also delete layers manually)
       const pagesToDelete = [...dbPageIds].filter((id) => !currentPageIds.has(id));
@@ -156,7 +204,7 @@ export function useFlyerData(flyerId: string | undefined) {
       }
 
       // 5. Upsert pages
-      const pageRows = currentPages.map((p) => ({
+      const pageRows = pagesToSave.map((p) => ({
         id: p.id,
         flyer_id: f.id,
         index: p.index,
@@ -169,7 +217,7 @@ export function useFlyerData(flyerId: string | undefined) {
       }
 
       // 6. Upsert layers
-      const allLayers: Layer[] = currentPages.flatMap((p) => p.layers);
+      const allLayers: Layer[] = pagesToSave.flatMap((p) => p.layers);
       if (allLayers.length) {
         const layerRows = allLayers.map((l) => ({
           id: l.id,

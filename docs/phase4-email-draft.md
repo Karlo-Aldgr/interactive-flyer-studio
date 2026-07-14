@@ -1,6 +1,6 @@
-# Phase 4 MVP: Email draft (copy-only)
+# Phase 4: Email draft + MassEmail prefill
 
-Shipped: AI generates an email subject + body alongside Facebook/Instagram copy. Operators copy/paste into their mail tool. **No auto-send** in v1.
+Shipped: AI generates email subject + body; **Subscribers → Compose mass email** prefills that draft into Gmail / Mail app (BCC). Still no server-side email API send.
 
 ## What shipped
 
@@ -9,18 +9,20 @@ Shipped: AI generates an email subject + body alongside Facebook/Instagram copy.
 | DB columns | `marketing_drafts.email_subject`, `email_body` |
 | AI generation | `marketing-trigger` OpenAI JSON keys |
 | n8n callback | `marketing-draft-complete` accepts email fields |
-| UI | AI Social Copy dialog — Email subject/body + Copy/Save |
+| UI draft | AI Social Copy dialog — Email subject/body + Copy/Save |
+| MassEmail prefill | `MassEmailDialog` loads latest marketing draft on open |
 
 ## How to verify
 
-1. Run SQL migration `20260713223000_marketing_email_draft.sql` in Lovable/Supabase
-2. Redeploy `marketing-trigger` (and `marketing-draft-complete` if using n8n)
-3. Open a published flyer → Automation Hub → **Open AI posts** → **Regenerate**
-4. Confirm Email subject + body appear; Copy and Save work
-5. Confirm there is **no** Send button
+1. AI Social Copy has Email subject + body (Regenerate if needed)
+2. Flyer has ≥1 subscriber
+3. **Subscribers → Compose mass email**
+4. Subject/body should show AI text (banner: “Prefilled from AI Social Copy”)
+5. **Gmail** / **Mail app** opens with BCC + draft
+6. Do **not** publish the live website for this change alone unless asked
 
 ## Out of scope (later)
 
-- Actual email send / MassEmail prefill
-- TikTok, SMS, and other channels
-- Phase 5 AutoPilot dashboard
+- Server send via Resend / Mailchimp / etc.
+- TikTok, SMS, Google Ads
+- Unattended AutoPilot email send

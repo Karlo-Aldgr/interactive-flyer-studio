@@ -29,6 +29,17 @@ export function safeUUID(): string {
   });
 }
 
+/** True when `id` is a Postgres-compatible UUID string. */
+export function isUuid(id: string | null | undefined): boolean {
+  if (!id) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+/** Return `id` if already a UUID, otherwise generate a new one. */
+export function ensureUuid(id: string | null | undefined): string {
+  return isUuid(id) ? (id as string) : safeUUID();
+}
+
 /**
  * Copy text to the clipboard. Uses the async Clipboard API when available
  * (secure context), otherwise falls back to a hidden textarea + execCommand

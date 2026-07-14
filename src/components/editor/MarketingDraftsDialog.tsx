@@ -483,7 +483,8 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
                 disabled={savingManual || regenerating}
               />
               <p className="text-xs text-muted-foreground">
-                Copy/paste only — no email send in this version.
+                Copy/paste works here. To send to subscribers: Portal menu → Subscribers → Compose mass email
+                (prefills this draft).
               </p>
             </div>
 

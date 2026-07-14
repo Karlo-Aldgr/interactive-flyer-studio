@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useParams } from "react-router-dom";
 import { ACTION_LABELS, ACTION_TYPE_GROUPS } from "@/lib/actionCategories";
+import { safeUUID } from "@/lib/safeBrowser";
 
 interface Props {
   action: LayerAction | null;
@@ -32,7 +33,7 @@ function initialDraft(action: LayerAction | null, initialType?: ActionType): Lay
   if (action) return action;
   if (!initialType) return null;
   return {
-    id: crypto.randomUUID(),
+    id: safeUUID(),
     type: initialType,
     payload: initialType === "open_url" ? { newTab: true } : {},
   };
@@ -277,7 +278,7 @@ function GalleryEditor({
         continue;
       }
       const { data } = supabase.storage.from("flyer-assets").getPublicUrl(path);
-      uploaded.push({ id: crypto.randomUUID(), url: data.publicUrl });
+      uploaded.push({ id: safeUUID(), url: data.publicUrl });
     }
     setBusy(false);
     if (uploaded.length) {
@@ -417,10 +418,10 @@ function PopupButtonsEditor({
 
   function add() {
     const next: PopupButton = {
-      id: crypto.randomUUID(),
+      id: safeUUID(),
       label: "Button",
       style: "primary",
-      action: { id: crypto.randomUUID(), type: "open_url", payload: {} },
+      action: { id: safeUUID(), type: "open_url", payload: {} },
     };
     onChange([...buttons, next]);
     setOpenIdx(buttons.length);
@@ -595,13 +596,13 @@ function PopupHotspotsEditor({
   function onPointerUp() {
     if (draft && draft.w > 0.01 && draft.h > 0.01) {
       const next: PopupHotspot = {
-        id: crypto.randomUUID(),
+        id: safeUUID(),
         x: draft.x,
         y: draft.y,
         width: draft.w,
         height: draft.h,
         shape: "rect",
-        action: { id: crypto.randomUUID(), type: "open_url", payload: {} },
+        action: { id: safeUUID(), type: "open_url", payload: {} },
       };
       onChange([...hotspots, next]);
       setOpenIdx(hotspots.length);
@@ -833,7 +834,7 @@ function AirMessagesEditor({
 
   function defaultBubble(): AirMessageBubble {
     return {
-      id: crypto.randomUUID(),
+      id: safeUUID(),
       text: "",
       action: null,
       bgColor: "#1d9bf0",
@@ -1084,7 +1085,7 @@ function PollEditor({
 }) {
   function setOpts(opts: PollOption[]) { onChange({ pollOptions: opts }); }
   function addOpt() {
-    setOpts([...(options || []), { id: crypto.randomUUID(), label: "" }]);
+    setOpts([...(options || []), { id: safeUUID(), label: "" }]);
   }
   function updateOpt(i: number, label: string) {
     setOpts(options.map((o, idx) => (idx === i ? { ...o, label } : o)));
@@ -1175,7 +1176,7 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
 
   const update = (patch: any) =>
     setDraft({
-      id: draft?.id || crypto.randomUUID(),
+      id: draft?.id || safeUUID(),
       type: type as ActionType,
       payload: { ...p, ...patch },
       ...(draft?.highlight ? { highlight: draft.highlight } : {}),
@@ -1211,7 +1212,7 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
             value={draft ? type : "none"}
             onValueChange={(v) => {
               if (v === "none") setDraft(null);
-              else setDraft({ id: draft?.id || crypto.randomUUID(), type: v as ActionType, payload: {} });
+              else setDraft({ id: draft?.id || safeUUID(), type: v as ActionType, payload: {} });
             }}
           >
             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
@@ -1369,7 +1370,7 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
                   if (!embedded) {
                     // Commit current draft (with latest hotspots) to parent immediately
                     onChange({
-                      id: draft?.id || crypto.randomUUID(),
+                      id: draft?.id || safeUUID(),
                       type: type as ActionType,
                       payload: { ...p },
                       ...(draft?.highlight ? { highlight: draft.highlight } : {}),
@@ -1962,11 +1963,11 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
             onStartDelayChange={(ms) => update({ bubbleStartDelayMs: ms })}
             onAddAsLayer={embedded ? undefined : () => {
               const newAction: LayerAction = {
-                id: crypto.randomUUID(),
+                id: safeUUID(),
                 type: "air_messages",
                 payload: {
                   bubbles: [{
-                    id: crypto.randomUUID(),
+                    id: safeUUID(),
                     text: "",
                     action: null,
                     bgColor: "#1d9bf0",
@@ -2274,7 +2275,7 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
                 )}
               </div>
             ))}
-            <Button size="sm" variant="outline" onClick={() => update({ surveyQuestions: [...(p.surveyQuestions || []), { id: crypto.randomUUID(), label: "", type: "text" }] })}>
+            <Button size="sm" variant="outline" onClick={() => update({ surveyQuestions: [...(p.surveyQuestions || []), { id: safeUUID(), label: "", type: "text" }] })}>
               <Plus className="mr-1 h-3.5 w-3.5" /> Add question
             </Button>
             <div>
@@ -2685,7 +2686,7 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
         <div className="flex items-center justify-between">
           <Label className="text-xs font-medium">Specials & coupons popup</Label>
           <Button size="sm" variant="outline" onClick={() => {
-            const next = [...(p.menuSpecials || []), { id: crypto.randomUUID(), title: "", description: "", code: "", imageUrl: "" }];
+            const next = [...(p.menuSpecials || []), { id: safeUUID(), title: "", description: "", code: "", imageUrl: "" }];
             update({ menuSpecials: next });
           }}><Plus className="mr-1 h-3.5 w-3.5" /> Add special</Button>
         </div>
@@ -2762,12 +2763,12 @@ function MenuSectionsEditor({ action, update }: { action: LayerAction | null; up
                   </div>
                 ))}
                 <Button size="sm" variant="outline" onClick={() => {
-                  const next = [...sections]; next[sIdx] = { ...sec, items: [...(sec.items || []), { id: crypto.randomUUID(), name: "", price: 0, category: "main", color: "", upsell: false }] }; updateSections(next);
+                  const next = [...sections]; next[sIdx] = { ...sec, items: [...(sec.items || []), { id: safeUUID(), name: "", price: 0, category: "main", color: "", upsell: false }] }; updateSections(next);
                 }}><Plus className="mr-1 h-3.5 w-3.5" /> Add item</Button>
               </div>
             ))}
           </div>
-          <Button size="sm" variant="outline" onClick={() => updateSections([...sections, { id: crypto.randomUUID(), name: "", items: [] }])}>
+          <Button size="sm" variant="outline" onClick={() => updateSections([...sections, { id: safeUUID(), name: "", items: [] }])}>
             <Plus className="mr-1 h-3.5 w-3.5" /> Add section
           </Button>
           {saving && <p className="text-[11px] text-muted-foreground">Saving…</p>}
@@ -2796,7 +2797,7 @@ function ProductGridEditor({
       toast.error("Maximum 12 products");
       return;
     }
-    setProducts([...products, { id: crypto.randomUUID(), name: "", price: "", currency: "$", sizesEnabled: false, sizes: [] }]);
+    setProducts([...products, { id: safeUUID(), name: "", price: "", currency: "$", sizesEnabled: false, sizes: [] }]);
   };
 
   return (
@@ -2925,7 +2926,7 @@ function NovelEditor({ draft, update }: { draft: LayerAction; update: (patch: an
         return toast.error("No chapters found.");
       }
       const built: NovelChapter[] = raw.map((c, i) => ({
-        id: crypto.randomUUID(),
+        id: safeUUID(),
         number: c.number || i + 1,
         title: c.title || `Chapter ${i + 1}`,
         body: c.body || "",
