@@ -689,6 +689,8 @@ export type Database = {
       marketing_drafts: {
         Row: {
           created_at: string
+          email_body: string | null
+          email_subject: string | null
           error_message: string | null
           facebook_error_message: string | null
           facebook_last_attempt_at: string | null
@@ -703,8 +705,6 @@ export type Database = {
           flyer_title: string | null
           flyer_url: string | null
           id: string
-          email_body: string | null
-          email_subject: string | null
           tiktok_caption: string | null
           sms_body: string | null
           instagram_caption: string | null
@@ -723,6 +723,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email_body?: string | null
+          email_subject?: string | null
           error_message?: string | null
           facebook_error_message?: string | null
           facebook_last_attempt_at?: string | null
@@ -737,8 +739,6 @@ export type Database = {
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
-          email_body?: string | null
-          email_subject?: string | null
           tiktok_caption?: string | null
           sms_body?: string | null
           instagram_caption?: string | null
@@ -757,6 +757,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email_body?: string | null
+          email_subject?: string | null
           error_message?: string | null
           facebook_error_message?: string | null
           facebook_last_attempt_at?: string | null
@@ -771,8 +773,6 @@ export type Database = {
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
-          email_body?: string | null
-          email_subject?: string | null
           tiktok_caption?: string | null
           sms_body?: string | null
           instagram_caption?: string | null
@@ -957,6 +957,30 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_connection_secrets: {
+        Row: {
+          instagram_token_expires_at: string | null
+          instagram_user_access_token: string | null
+          page_access_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          instagram_token_expires_at?: string | null
+          instagram_user_access_token?: string | null
+          page_access_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          instagram_token_expires_at?: string | null
+          instagram_user_access_token?: string | null
+          page_access_token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meta_connections: {
         Row: {
           connection_mode: string
@@ -1004,6 +1028,48 @@ export type Database = {
           provider?: string
           status?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meta_cron_config: {
+        Row: {
+          cron_secret: string
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          cron_secret: string
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          cron_secret?: string
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meta_oauth_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          return_to: string | null
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          return_to?: string | null
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          return_to?: string | null
+          state?: string
           user_id?: string
         }
         Relationships: []
@@ -1818,6 +1884,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      invoke_meta_facebook_scheduled: { Args: never; Returns: number }
       job_assigned_editor_display: {
         Args: { _user_id: string }
         Returns: string

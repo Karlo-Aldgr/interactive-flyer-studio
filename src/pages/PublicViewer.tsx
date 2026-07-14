@@ -3697,7 +3697,9 @@ function getPollSessionId(): string {
   try {
     let id = localStorage.getItem(POLL_SESSION_KEY);
     if (!id) {
-      id = safeUUID();
+      id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+        ? crypto.randomUUID()
+        : "anon-" + Math.random().toString(36).slice(2);
       localStorage.setItem(POLL_SESSION_KEY, id);
     }
     return id;
