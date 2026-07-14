@@ -713,6 +713,7 @@ export function TopBar({ saving }: Props) {
         flyerId={flyer.id}
         ownerId={flyer.owner_id}
         flyerTitle={flyer.title}
+        publicSlug={flyer.public_slug}
         onOpenMarketing={() => setMarketingOpen(true)}
         onOpenShare={() => setShareOpen(true)}
         portalPath={`/flyer/${flyer.id}/portal`}

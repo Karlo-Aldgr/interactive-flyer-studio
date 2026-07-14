@@ -102,7 +102,7 @@ export function AutomationHubDialog({
               title="AutoPilot Marketing"
               description="One place to check channels and hit START — Facebook, Instagram, email draft, and analytics tips."
               badge="Ready now"
-              statusText="Phase 5 shell: live channels run; TikTok/SMS/chatbot/agency stay Coming soon."
+              statusText="Phase 5 shell: live channels + AI chatbot on published flyers; agency white-label later."
               requirements={[
                 "Flyer must be published",
                 "OPENAI_API_KEY for AI copy",

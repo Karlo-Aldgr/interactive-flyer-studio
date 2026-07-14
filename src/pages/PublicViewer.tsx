@@ -120,6 +120,7 @@ import { getCurrentTrafficSource } from "@/lib/trafficSource";
 import { OrderStatusTracker, OrderTrackFloatingButton } from "@/components/viewer/OrderStatusTracker";
 import { saveOrderTrack } from "@/lib/customerOrderStatus";
 import { MiniAdBanner } from "@/components/viewer/MiniAdBanner";
+import { FlyerChatbot } from "@/components/viewer/FlyerChatbot";
 import { novelCoverFromPage } from "@/lib/novelCover";
 
 
@@ -3255,6 +3256,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         />
       )}
       {flyer && <MiniAdBanner flyerId={flyer.id} previewMode={previewMode} />}
+      {flyer && !previewMode && (
+        <FlyerChatbot flyerId={flyer.id} flyerTitle={flyer.title || "Flyer"} />
+      )}
     </div>
   );
 }

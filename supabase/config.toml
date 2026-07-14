@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.meta-instagram-token-extend]
 verify_jwt = true
+
+[functions.flyer-chat]
+verify_jwt = false
