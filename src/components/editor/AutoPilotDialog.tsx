@@ -44,7 +44,7 @@ const OPTIONS: AutoPilotOption[] = [
   { id: "google_ads", label: "Create Google Ads", enabled: true, hint: "Headline + description (copy/paste only)" },
   { id: "analytics", label: "AI Analytics", enabled: true, hint: "Uses portal Suggestions (Phase 3)" },
   { id: "qr", label: "AI QR Code", enabled: true, hint: "Opens Share + QR for this flyer" },
-  { id: "chatbot", label: "AI Chatbot", enabled: true, hint: "Ask AI on the published flyer (opens /f/…)" },
+  { id: "chatbot", label: "AI Chatbot", enabled: true, hint: "Opens published /f/… — look for Ask AI (bottom-left)" },
   { id: "autopilot_all", label: "AutoPilot Marketing (everything)", enabled: true, hint: "Selects all live options above" },
 ];
 
@@ -175,6 +175,30 @@ export function AutoPilotDialog({
 
     setStarting(true);
     try {
+      // Open published flyer synchronously (before awaits) so the browser allows the popup.
+      let chatbotOpened = false;
+      if (wantsChatbot) {
+        if (publicSlug) {
+          const url = buildPublicFlyerUrl(publicSlug);
+          const win = window.open(url, "_blank", "noopener,noreferrer");
+          chatbotOpened = !!win;
+          toast.message("AI Chatbot", {
+            description: chatbotOpened
+              ? "Look for Ask AI (bottom-left) on the published flyer tab."
+              : "Popup blocked — use Open flyer, then click Ask AI (bottom-left).",
+            action: {
+              label: "Open flyer",
+              onClick: () => {
+                window.open(url, "_blank", "noopener,noreferrer");
+              },
+            },
+            duration: 12000,
+          });
+        } else {
+          toast.error("Publish the flyer first to use the AI Chatbot");
+        }
+      }
+
       if (wantsCopy) {
         await regenerateMarketingDraft(flyerId, ownerId);
         await new Promise((r) => window.setTimeout(r, 1500));
@@ -224,24 +248,6 @@ export function AutoPilotDialog({
         });
       }
 
-      if (wantsChatbot) {
-        if (publicSlug) {
-          const url = buildPublicFlyerUrl(publicSlug);
-          toast.message("AI Chatbot", {
-            description: "Ask AI appears on the published flyer (bottom-left).",
-            action: {
-              label: "Open flyer",
-              onClick: () => {
-                window.open(url, "_blank", "noopener,noreferrer");
-              },
-            },
-          });
-          window.open(url, "_blank", "noopener,noreferrer");
-        } else {
-          toast.error("Publish the flyer first to use the AI Chatbot");
-        }
-      }
-
       onOpenChange(false);
 
       if (wantsCopy) {
@@ -249,8 +255,6 @@ export function AutoPilotDialog({
       } else if (wantsQr) {
         onOpenShare();
         toast.message("QR ready", { description: "Use Share → QR for this flyer." });
-      } else if (wantsAnalytics || wantsChatbot) {
-        // Analytics / chatbot toasts already shown; stay in editor unless copy/QR opened something.
       }
 
       // If copy + QR both selected, open marketing first; offer share via toast action.
