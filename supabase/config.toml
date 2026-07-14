@@ -35,3 +35,6 @@ verify_jwt = true
 
 [functions.flyer-chat]
 verify_jwt = false
+
+[functions.flyer-coach]
+verify_jwt = true

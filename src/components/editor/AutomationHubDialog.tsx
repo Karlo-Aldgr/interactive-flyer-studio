@@ -13,6 +13,7 @@ interface Props {
   flyer: Flyer;
   onOpenMarketing: () => void;
   onOpenAutoPilot: () => void;
+  onOpenCoach: () => void;
   onOpenFacebookPost: () => void;
   onOpenInstagramPost: () => void;
 }
@@ -76,6 +77,7 @@ export function AutomationHubDialog({
   flyer,
   onOpenMarketing,
   onOpenAutoPilot,
+  onOpenCoach,
   onOpenFacebookPost,
   onOpenInstagramPost,
 }: Props) {
@@ -135,6 +137,24 @@ export function AutomationHubDialog({
             />
 
             <AutomationCard
+              title="AI Marketing Coach"
+              description="Score headline, CTA, readability, and conversion likelihood — with fix tips before you promote."
+              badge="Ready now"
+              statusText="PDF roadmap #1 MVP: uses flyer text layers + interactive actions (image-only copy is limited)."
+              requirements={[
+                "Signed-in owner/editor",
+                "OPENAI_API_KEY on flyer-coach",
+                "Works on draft or published flyers",
+              ]}
+              actionLabel="Open coach"
+              onAction={() => {
+                onOpenChange(false);
+                onOpenCoach();
+              }}
+              icon={<Sparkles className="h-4 w-4" />}
+            />
+
+            <AutomationCard
               title="Facebook Post Now"
               description="Connect your Facebook Page with OAuth and send the latest AI Facebook copy."
               badge="Ready to test"
@@ -172,13 +192,13 @@ export function AutomationHubDialog({
 
             <AutomationCard
               title="Automation Framework"
-              description="This flyer-level hub is the foundation for future automations like TikTok, SMS, AI coach, and audience tools."
+              description="This flyer-level hub is the foundation for future automations like audience tools and agency white-label."
               badge="Foundation"
-              statusText="Phases 1–5 MVP live (AutoPilot shell). Remaining: TikTok/SMS, subscriptions, agency white-label."
+              statusText="Phases 1–5 MVP + Marketing Coach. Remaining: paid email send, subscriptions, agency."
               requirements={[
                 "Per-flyer automation entry point",
                 "Portal Suggestions + AutoPilot status strip",
-                "Email draft via AI Social Copy (no send yet)",
+                "AI Marketing Coach scores",
               ]}
               actionLabel="Framework active"
               actionDisabled
