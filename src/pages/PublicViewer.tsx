@@ -3256,7 +3256,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         />
       )}
       {flyer && <MiniAdBanner flyerId={flyer.id} previewMode={previewMode} />}
-      {flyer && !previewMode && (
+      {flyer && flyer.status === "published" && (
         <FlyerChatbot flyerId={flyer.id} flyerTitle={flyer.title || "Flyer"} />
       )}
     </div>
