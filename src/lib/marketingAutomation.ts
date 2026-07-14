@@ -56,6 +56,8 @@ export type MarketingDraft = {
   instagram_caption: string | null;
   email_subject: string | null;
   email_body: string | null;
+  tiktok_caption: string | null;
+  sms_body: string | null;
   error_message: string | null;
   facebook_status: MarketingChannelStatus;
   instagram_status: MarketingChannelStatus;
@@ -121,6 +123,8 @@ function normalizeDraft(row: Record<string, unknown>): MarketingDraft {
     instagram_caption: (row.instagram_caption as string | null) ?? null,
     email_subject: (row.email_subject as string | null) ?? null,
     email_body: (row.email_body as string | null) ?? null,
+    tiktok_caption: (row.tiktok_caption as string | null) ?? null,
+    sms_body: (row.sms_body as string | null) ?? null,
     error_message: (row.error_message as string | null) ?? null,
     facebook_status: asChannelStatus(row.facebook_status as string | null),
     instagram_status: asChannelStatus(row.instagram_status as string | null),
@@ -236,13 +240,17 @@ export async function saveManualMarketingCopy(args: {
   instagramCaption: string;
   emailSubject?: string;
   emailBody?: string;
+  tiktokCaption?: string;
+  smsBody?: string;
 }): Promise<MarketingDraft | null> {
   const facebookPost = args.facebookPost.trim();
   const instagramCaption = args.instagramCaption.trim();
   const emailSubject = (args.emailSubject || "").trim();
   const emailBody = (args.emailBody || "").trim();
-  if (!facebookPost && !instagramCaption && !emailSubject && !emailBody) {
-    toast.error("Type Facebook, Instagram, or email copy first");
+  const tiktokCaption = (args.tiktokCaption || "").trim();
+  const smsBody = (args.smsBody || "").trim();
+  if (!facebookPost && !instagramCaption && !emailSubject && !emailBody && !tiktokCaption && !smsBody) {
+    toast.error("Type Facebook, Instagram, email, TikTok, or SMS copy first");
     return null;
   }
 
@@ -254,6 +262,8 @@ export async function saveManualMarketingCopy(args: {
       instagram_caption: instagramCaption || null,
       email_subject: emailSubject || null,
       email_body: emailBody || null,
+      tiktok_caption: tiktokCaption || null,
+      sms_body: smsBody || null,
       error_message: null,
     })
     .eq("id", args.draftId)
