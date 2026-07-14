@@ -58,6 +58,8 @@ export type MarketingDraft = {
   email_body: string | null;
   tiktok_caption: string | null;
   sms_body: string | null;
+  google_ads_headline: string | null;
+  google_ads_description: string | null;
   error_message: string | null;
   facebook_status: MarketingChannelStatus;
   instagram_status: MarketingChannelStatus;
@@ -125,6 +127,8 @@ function normalizeDraft(row: Record<string, unknown>): MarketingDraft {
     email_body: (row.email_body as string | null) ?? null,
     tiktok_caption: (row.tiktok_caption as string | null) ?? null,
     sms_body: (row.sms_body as string | null) ?? null,
+    google_ads_headline: (row.google_ads_headline as string | null) ?? null,
+    google_ads_description: (row.google_ads_description as string | null) ?? null,
     error_message: (row.error_message as string | null) ?? null,
     facebook_status: asChannelStatus(row.facebook_status as string | null),
     instagram_status: asChannelStatus(row.instagram_status as string | null),
@@ -242,6 +246,8 @@ export async function saveManualMarketingCopy(args: {
   emailBody?: string;
   tiktokCaption?: string;
   smsBody?: string;
+  googleAdsHeadline?: string;
+  googleAdsDescription?: string;
 }): Promise<MarketingDraft | null> {
   const facebookPost = args.facebookPost.trim();
   const instagramCaption = args.instagramCaption.trim();
@@ -249,8 +255,13 @@ export async function saveManualMarketingCopy(args: {
   const emailBody = (args.emailBody || "").trim();
   const tiktokCaption = (args.tiktokCaption || "").trim();
   const smsBody = (args.smsBody || "").trim();
-  if (!facebookPost && !instagramCaption && !emailSubject && !emailBody && !tiktokCaption && !smsBody) {
-    toast.error("Type Facebook, Instagram, email, TikTok, or SMS copy first");
+  const googleAdsHeadline = (args.googleAdsHeadline || "").trim();
+  const googleAdsDescription = (args.googleAdsDescription || "").trim();
+  if (
+    !facebookPost && !instagramCaption && !emailSubject && !emailBody &&
+    !tiktokCaption && !smsBody && !googleAdsHeadline && !googleAdsDescription
+  ) {
+    toast.error("Type marketing copy for at least one channel first");
     return null;
   }
 
@@ -264,6 +275,8 @@ export async function saveManualMarketingCopy(args: {
       email_body: emailBody || null,
       tiktok_caption: tiktokCaption || null,
       sms_body: smsBody || null,
+      google_ads_headline: googleAdsHeadline || null,
+      google_ads_description: googleAdsDescription || null,
       error_message: null,
     })
     .eq("id", args.draftId)

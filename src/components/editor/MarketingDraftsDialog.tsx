@@ -262,6 +262,8 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
   const [emailBody, setEmailBody] = useState("");
   const [tiktokCaption, setTiktokCaption] = useState("");
   const [smsBody, setSmsBody] = useState("");
+  const [googleAdsHeadline, setGoogleAdsHeadline] = useState("");
+  const [googleAdsDescription, setGoogleAdsDescription] = useState("");
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -275,6 +277,8 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
         setEmailBody(row.email_body || "");
         setTiktokCaption(row.tiktok_caption || "");
         setSmsBody(row.sms_body || "");
+        setGoogleAdsHeadline(row.google_ads_headline || "");
+        setGoogleAdsDescription(row.google_ads_description || "");
       }
     } finally {
       setLoading(false);
@@ -321,6 +325,8 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
         emailBody,
         tiktokCaption,
         smsBody,
+        googleAdsHeadline,
+        googleAdsDescription,
       });
       if (saved) setDraft(saved);
     } finally {
@@ -341,9 +347,9 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
             AI marketing posts
           </DialogTitle>
           <DialogDescription>
-            Draft Facebook, Instagram, email, TikTok, and SMS copy for{" "}
+            Draft Facebook, Instagram, email, TikTok, SMS, and Google Ads copy for{" "}
             <span className="font-medium">{flyerTitle}</span>.
-            Facebook and Instagram can schedule auto-post in Meta test mode. Email, TikTok, and SMS are copy/paste only (no auto-send yet).
+            Facebook and Instagram can schedule auto-post in Meta test mode. Email, TikTok, SMS, and Google Ads are copy/paste only (no auto-send yet).
           </DialogDescription>
         </DialogHeader>
 
@@ -547,6 +553,59 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
               </p>
             </div>
 
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="gads-headline">Google Ads headline</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  disabled={!googleAdsHeadline.trim()}
+                  onClick={() => void copyText("Google Ads headline", googleAdsHeadline)}
+                >
+                  <Copy className="mr-1 h-3.5 w-3.5" /> Copy
+                </Button>
+              </div>
+              <Input
+                id="gads-headline"
+                value={googleAdsHeadline}
+                maxLength={30}
+                onChange={(e) => setGoogleAdsHeadline(e.target.value)}
+                placeholder="Headline (max 30)…"
+                disabled={savingManual || regenerating}
+              />
+              <p className="text-xs text-muted-foreground">{googleAdsHeadline.length}/30</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="gads-description">Google Ads description</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  disabled={!googleAdsDescription.trim()}
+                  onClick={() => void copyText("Google Ads description", googleAdsDescription)}
+                >
+                  <Copy className="mr-1 h-3.5 w-3.5" /> Copy
+                </Button>
+              </div>
+              <Textarea
+                id="gads-description"
+                rows={2}
+                value={googleAdsDescription}
+                maxLength={90}
+                onChange={(e) => setGoogleAdsDescription(e.target.value)}
+                placeholder="Description (max 90)…"
+                disabled={savingManual || regenerating}
+              />
+              <p className="text-xs text-muted-foreground">
+                Copy/paste only — no Google Ads publish ({googleAdsDescription.length}/90).
+              </p>
+            </div>
+
             {draft.flyer_url && (
               <p className="text-xs text-muted-foreground">
                 Link included in drafts:{" "}
@@ -575,7 +634,9 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
                   !emailSubject.trim() &&
                   !emailBody.trim() &&
                   !tiktokCaption.trim() &&
-                  !smsBody.trim())
+                  !smsBody.trim() &&
+                  !googleAdsHeadline.trim() &&
+                  !googleAdsDescription.trim())
               }
             >
               {savingManual ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}

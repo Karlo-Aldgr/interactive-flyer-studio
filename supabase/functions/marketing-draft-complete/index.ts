@@ -35,6 +35,8 @@ Deno.serve(async (req) => {
           email_body: String(body.email_body || "").slice(0, 4000) || null,
           tiktok_caption: String(body.tiktok_caption || "").slice(0, 4000) || null,
           sms_body: String(body.sms_body || "").slice(0, 320) || null,
+          google_ads_headline: String(body.google_ads_headline || "").slice(0, 30) || null,
+          google_ads_description: String(body.google_ads_description || "").slice(0, 90) || null,
           error_message: null,
         };
 

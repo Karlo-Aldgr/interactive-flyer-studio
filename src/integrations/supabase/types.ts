@@ -704,6 +704,8 @@ export type Database = {
           flyer_id: string
           flyer_title: string | null
           flyer_url: string | null
+          google_ads_description: string | null
+          google_ads_headline: string | null
           id: string
           instagram_caption: string | null
           instagram_error_message: string | null
@@ -738,6 +740,8 @@ export type Database = {
           flyer_id: string
           flyer_title?: string | null
           flyer_url?: string | null
+          google_ads_description?: string | null
+          google_ads_headline?: string | null
           id?: string
           instagram_caption?: string | null
           instagram_error_message?: string | null
@@ -772,6 +776,8 @@ export type Database = {
           flyer_id?: string
           flyer_title?: string | null
           flyer_url?: string | null
+          google_ads_description?: string | null
+          google_ads_headline?: string | null
           id?: string
           instagram_caption?: string | null
           instagram_error_message?: string | null
