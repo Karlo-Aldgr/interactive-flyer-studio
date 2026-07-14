@@ -89,11 +89,13 @@ export function MassEmailDialog({
   }, [body, includeLink, flyerUrl]);
 
   function buildMailto(bcc: string[]) {
-    const params = new URLSearchParams();
-    if (subject) params.set("subject", subject);
-    if (finalBody) params.set("body", finalBody);
-    params.set("bcc", bcc.join(","));
-    return `mailto:?${params.toString()}`;
+    // Prefer encodeURIComponent (%20) over URLSearchParams (+) — Outlook/Mail app
+    // often shows literal "+" for spaces when using form-urlencoded style.
+    const parts: string[] = [];
+    if (subject) parts.push(`subject=${encodeURIComponent(subject)}`);
+    if (finalBody) parts.push(`body=${encodeURIComponent(finalBody)}`);
+    if (bcc.length) parts.push(`bcc=${encodeURIComponent(bcc.join(","))}`);
+    return `mailto:?${parts.join("&")}`;
   }
 
   function buildGmail(bcc: string[]) {
