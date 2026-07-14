@@ -257,6 +257,7 @@ export function SubscribersPanel({ open, onOpenChange, flyerId, flyerTitle, flye
           open={composeOpen}
           onOpenChange={setComposeOpen}
           recipients={recipients}
+          flyerId={flyerId}
           flyerTitle={flyerTitle}
           flyerUrl={flyerUrl}
         />

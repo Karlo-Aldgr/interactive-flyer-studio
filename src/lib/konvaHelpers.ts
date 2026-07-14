@@ -1,7 +1,8 @@
 import { Layer, LayerType, FlyerPage } from "@/types/flyer";
+import { safeUUID } from "@/lib/safeBrowser";
 
-export const uid = () =>
-  (crypto as any).randomUUID ? (crypto as any).randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
+/** Always returns a real UUID (works on HTTP / LAN IP, not only localhost). */
+export const uid = () => safeUUID();
 
 export const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 

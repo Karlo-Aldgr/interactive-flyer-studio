@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Flyer, FlyerPage, Layer, LayerAction, LayerContent, LayerStyle, PageIntro } from "@/types/flyer";
 import { defaultLayer, emptyPage, uid } from "@/lib/konvaHelpers";
+import { ensureUuid } from "@/lib/safeBrowser";
 import type { SubjectDetection, NormalizedPoint } from "@/lib/subjectDetect";
 import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant } from "@/lib/editorToolPresets";
 
@@ -679,7 +680,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setLayerAction: (id, action) => {
     const s = get();
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
-    const next = action ? { ...action, id: action.id || uid() } : null;
+    const next = action ? { ...action, id: ensureUuid(action.id) } : null;
     set({
       pages: s.pages.map((p) => ({
         ...p,
