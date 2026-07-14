@@ -81,6 +81,12 @@ export function AutomationHubDialog({
   onOpenFacebookPost,
   onOpenInstagramPost,
 }: Props) {
+  // Closing this Dialog and opening another in the same tick often drops the second modal (Radix).
+  function openAfterClose(next: () => void) {
+    onOpenChange(false);
+    window.setTimeout(next, 50);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -102,7 +108,7 @@ export function AutomationHubDialog({
           <div className="grid gap-4 md:grid-cols-2">
             <AutomationCard
               title="AutoPilot Marketing"
-              description="One place to check channels and hit START — Facebook, Instagram, email draft, and analytics tips."
+              description="One place to check channels and hit START — Facebook, Instagram, and email drafts, along with analytics."
               badge="Ready now"
               statusText="Phase 5 shell: live channels + AI chatbot on published flyers; agency white-label later."
               requirements={[
@@ -111,10 +117,7 @@ export function AutomationHubDialog({
                 "Meta connected for real social Post Now",
               ]}
               actionLabel="Open AutoPilot"
-              onAction={() => {
-                onOpenChange(false);
-                onOpenAutoPilot();
-              }}
+              onAction={() => openAfterClose(onOpenAutoPilot)}
               icon={<Rocket className="h-4 w-4" />}
             />
 
@@ -129,10 +132,7 @@ export function AutomationHubDialog({
                 "Meta connected for real Post Now / schedule send",
               ]}
               actionLabel="Open AI posts"
-              onAction={() => {
-                onOpenChange(false);
-                onOpenMarketing();
-              }}
+              onAction={() => openAfterClose(onOpenMarketing)}
               icon={<Sparkles className="h-4 w-4" />}
             />
 
@@ -147,10 +147,7 @@ export function AutomationHubDialog({
                 "Works on draft or published flyers",
               ]}
               actionLabel="Open coach"
-              onAction={() => {
-                onOpenChange(false);
-                onOpenCoach();
-              }}
+              onAction={() => openAfterClose(onOpenCoach)}
               icon={<Sparkles className="h-4 w-4" />}
             />
 
@@ -165,10 +162,7 @@ export function AutomationHubDialog({
                 "META_APP_ID / META_APP_SECRET configured",
               ]}
               actionLabel="Open Facebook post"
-              onAction={() => {
-                onOpenChange(false);
-                onOpenFacebookPost();
-              }}
+              onAction={() => openAfterClose(onOpenFacebookPost)}
               icon={<Bot className="h-4 w-4" />}
             />
 
@@ -176,17 +170,14 @@ export function AutomationHubDialog({
               title="Instagram Post Now"
               description="Post the latest AI Instagram caption to your Instagram Business/Creator account."
               badge="Ready to test"
-              statusText="Working in test mode with Instagram Login token (Extend token for ~60 days)."
+              statusText="Working in test mode with Instagram Login token (Extend Instagram token for ~60 days)."
               requirements={[
                 "Instagram Business or Creator account",
                 "Instagram User ID saved + Extend Instagram token",
                 "Public flyer thumbnail JPEG URL",
               ]}
               actionLabel="Open Instagram post"
-              onAction={() => {
-                onOpenChange(false);
-                onOpenInstagramPost();
-              }}
+              onAction={() => openAfterClose(onOpenInstagramPost)}
               icon={<Instagram className="h-4 w-4" />}
             />
 
