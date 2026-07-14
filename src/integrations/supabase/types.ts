@@ -705,8 +705,6 @@ export type Database = {
           flyer_title: string | null
           flyer_url: string | null
           id: string
-          tiktok_caption: string | null
-          sms_body: string | null
           instagram_caption: string | null
           instagram_error_message: string | null
           instagram_last_attempt_at: string | null
@@ -717,8 +715,10 @@ export type Database = {
           instagram_scheduled_for: string | null
           instagram_status: string
           owner_id: string
+          sms_body: string | null
           status: string
           thumbnail_url: string | null
+          tiktok_caption: string | null
           updated_at: string
         }
         Insert: {
@@ -739,8 +739,6 @@ export type Database = {
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
-          tiktok_caption?: string | null
-          sms_body?: string | null
           instagram_caption?: string | null
           instagram_error_message?: string | null
           instagram_last_attempt_at?: string | null
@@ -751,8 +749,10 @@ export type Database = {
           instagram_scheduled_for?: string | null
           instagram_status?: string
           owner_id: string
+          sms_body?: string | null
           status?: string
           thumbnail_url?: string | null
+          tiktok_caption?: string | null
           updated_at?: string
         }
         Update: {
@@ -773,8 +773,6 @@ export type Database = {
           flyer_title?: string | null
           flyer_url?: string | null
           id?: string
-          tiktok_caption?: string | null
-          sms_body?: string | null
           instagram_caption?: string | null
           instagram_error_message?: string | null
           instagram_last_attempt_at?: string | null
@@ -785,8 +783,10 @@ export type Database = {
           instagram_scheduled_for?: string | null
           instagram_status?: string
           owner_id?: string
+          sms_body?: string | null
           status?: string
           thumbnail_url?: string | null
+          tiktok_caption?: string | null
           updated_at?: string
         }
         Relationships: [
