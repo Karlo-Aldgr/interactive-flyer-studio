@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Copy, ExternalLink, Loader2, Sparkles } from "lucide-react";
+import { Mail, Copy, ExternalLink, Loader2, Sparkles, Send } from "lucide-react";
 import { toast } from "sonner";
 import { loadLatestMarketingDraft } from "@/lib/marketingAutomation";
 import { safeCopyToClipboard } from "@/lib/safeBrowser";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 
 export interface MassEmailRecipient {
   email: string;
@@ -24,6 +25,7 @@ interface Props {
 }
 
 const CHUNK = 90; // safe BCC chunk for most mail clients
+const SERVER_MAX = 100;
 
 export function MassEmailDialog({
   open,
@@ -38,6 +40,7 @@ export function MassEmailDialog({
   const [includeLink, setIncludeLink] = useState(true);
   const [loadingDraft, setLoadingDraft] = useState(false);
   const [prefilledFromAi, setPrefilledFromAi] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -116,6 +119,49 @@ export function MassEmailDialog({
     else toast.error("Copy failed");
   }
 
+  async function sendViaServer() {
+    if (!subject.trim() || !finalBody.trim()) {
+      toast.error("Add a subject and message first");
+      return;
+    }
+    if (recipients.length === 0) {
+      toast.error("No recipients selected");
+      return;
+    }
+    if (recipients.length > SERVER_MAX) {
+      toast.error(`Server send supports up to ${SERVER_MAX} recipients. Select fewer, or use Gmail/Mail app batches.`);
+      return;
+    }
+
+    setSending(true);
+    try {
+      const result = await invokeEdgeFunction<{
+        sent: number;
+        failed: number;
+        total: number;
+        errors?: string[];
+      }>("send-subscriber-email", {
+        flyer_id: flyerId,
+        subject: subject.trim(),
+        body: finalBody,
+        recipient_emails: recipients.map((r) => r.email),
+      });
+
+      if (result.failed > 0) {
+        toast.message(`Sent ${result.sent}/${result.total}`, {
+          description: result.errors?.slice(0, 2).join(" · ") || `${result.failed} failed`,
+        });
+      } else {
+        toast.success(`Sent to ${result.sent} subscriber${result.sent === 1 ? "" : "s"}`);
+        onOpenChange(false);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Send failed");
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -125,8 +171,8 @@ export function MassEmailDialog({
             {recipients.length === 1 ? "" : "s"}
           </DialogTitle>
           <DialogDescription>
-            Prefills from AI Social Copy when available, then opens your mail app with everyone in BCC.
-            For high-volume sends, use CSV export with Mailchimp, Resend, etc.
+            Prefills from AI Social Copy when available. Use <strong>Send now</strong> for server delivery
+            (Resend), or open Gmail / Mail app as a fallback.
           </DialogDescription>
         </DialogHeader>
 
@@ -149,7 +195,7 @@ export function MassEmailDialog({
               maxLength={250}
               placeholder={`News about ${flyerTitle}`}
               onChange={(e) => setSubject(e.target.value)}
-              disabled={loadingDraft}
+              disabled={loadingDraft || sending}
             />
           </div>
           <div>
@@ -160,7 +206,7 @@ export function MassEmailDialog({
               maxLength={5000}
               placeholder="Hi friends, just wanted to share..."
               onChange={(e) => setBody(e.target.value)}
-              disabled={loadingDraft}
+              disabled={loadingDraft || sending}
             />
           </div>
           <label className="flex items-center gap-2 text-xs">
@@ -168,39 +214,51 @@ export function MassEmailDialog({
               type="checkbox"
               checked={includeLink}
               onChange={(e) => setIncludeLink(e.target.checked)}
-              disabled={loadingDraft}
+              disabled={loadingDraft || sending}
             />
             Include the flyer link at the bottom
           </label>
 
           {chunks.length > 1 && (
             <div className="rounded border border-border bg-muted/30 p-2 text-xs text-muted-foreground">
-              {recipients.length} recipients exceeds the safe-per-message limit. They&apos;ve been split into{" "}
-              <strong>{chunks.length}</strong> batches — open each one to send.
+              {recipients.length} recipients exceeds the safe-per-message limit for mail apps. They&apos;ve been split into{" "}
+              <strong>{chunks.length}</strong> batches — open each one to send, or select ≤{SERVER_MAX} for{" "}
+              <strong>Send now</strong>.
             </div>
           )}
         </div>
 
-        <DialogFooter className="flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => void copyAllEmails()}>
-            <Copy className="mr-1 h-3.5 w-3.5" /> Copy all emails
+        <DialogFooter className="flex-wrap gap-2 sm:justify-between">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void sendViaServer()}
+            disabled={loadingDraft || sending || recipients.length === 0}
+          >
+            {sending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1 h-3.5 w-3.5" />}
+            Send now
           </Button>
-          {chunks.map((bcc, i) => (
-            <div key={i} className="flex gap-2">
-              <Button asChild size="sm" variant="outline" disabled={loadingDraft}>
-                <a href={buildGmail(bcc)} target="_blank" rel="noreferrer">
-                  <ExternalLink className="mr-1 h-3.5 w-3.5" /> Gmail{" "}
-                  {chunks.length > 1 ? `${i + 1}/${chunks.length}` : ""}
-                </a>
-              </Button>
-              <Button asChild size="sm" disabled={loadingDraft}>
-                <a href={buildMailto(bcc)}>
-                  <Mail className="mr-1 h-3.5 w-3.5" /> Mail app{" "}
-                  {chunks.length > 1 ? `${i + 1}/${chunks.length}` : ""}
-                </a>
-              </Button>
-            </div>
-          ))}
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => void copyAllEmails()} disabled={sending}>
+              <Copy className="mr-1 h-3.5 w-3.5" /> Copy all emails
+            </Button>
+            {chunks.map((bcc, i) => (
+              <div key={i} className="flex gap-2">
+                <Button asChild size="sm" variant="outline" disabled={loadingDraft || sending}>
+                  <a href={buildGmail(bcc)} target="_blank" rel="noreferrer">
+                    <ExternalLink className="mr-1 h-3.5 w-3.5" /> Gmail{" "}
+                    {chunks.length > 1 ? `${i + 1}/${chunks.length}` : ""}
+                  </a>
+                </Button>
+                <Button asChild size="sm" variant="outline" disabled={loadingDraft || sending}>
+                  <a href={buildMailto(bcc)}>
+                    <Mail className="mr-1 h-3.5 w-3.5" /> Mail app{" "}
+                    {chunks.length > 1 ? `${i + 1}/${chunks.length}` : ""}
+                  </a>
+                </Button>
+              </div>
+            ))}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
