@@ -549,7 +549,7 @@ export function MarketingDraftsDialog({ open, onOpenChange, flyerId, ownerId, fl
                 disabled={savingManual || regenerating}
               />
               <p className="text-xs text-muted-foreground">
-                Copy/paste only — no SMS send ({smsBody.length}/320).
+                Copy/paste works here, or Subscribers → Compose SMS (Twilio) when phones exist.
               </p>
             </div>
 

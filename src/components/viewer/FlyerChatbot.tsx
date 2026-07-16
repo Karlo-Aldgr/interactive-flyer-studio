@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 type ChatTurn = { role: "user" | "assistant"; content: string };
-type Lead = { name: string; email: string };
+type Lead = { name: string; email: string; phone?: string };
 
 interface Props {
   flyerId: string;
@@ -25,7 +25,11 @@ function loadLead(flyerId: string): Lead | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Lead;
     if (parsed?.name?.trim() && parsed?.email?.trim()) {
-      return { name: parsed.name.trim(), email: parsed.email.trim().toLowerCase() };
+      return {
+        name: parsed.name.trim(),
+        email: parsed.email.trim().toLowerCase(),
+        phone: parsed.phone?.trim() || undefined,
+      };
     }
   } catch {
     /* ignore */
@@ -42,13 +46,14 @@ function saveLead(flyerId: string, lead: Lead) {
 }
 
 const INTRO =
-  "Hi — I’m your information assistant for this flyer. Before I answer questions, please share your name and email.";
+  "Hi — I’m your information assistant for this flyer. Before I answer questions, please share your name and email (phone optional).";
 
 export function FlyerChatbot({ flyerId, flyerTitle }: Props) {
   const [open, setOpen] = useState(false);
   const [lead, setLead] = useState<Lead | null>(() => loadLead(flyerId));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +75,7 @@ export function FlyerChatbot({ flyerId, flyerTitle }: Props) {
     e.preventDefault();
     const n = name.trim();
     const em = email.trim().toLowerCase();
+    const ph = phone.trim().slice(0, 40);
     if (!n) {
       setError("Please enter your name");
       return;
@@ -85,6 +91,7 @@ export function FlyerChatbot({ flyerId, flyerTitle }: Props) {
         flyer_id: flyerId,
         name: n.slice(0, 200),
         email: em.slice(0, 320),
+        phone: ph || null,
         list_name: "AI Chatbot",
         source: "chatbot",
       }]);
@@ -92,7 +99,7 @@ export function FlyerChatbot({ flyerId, flyerTitle }: Props) {
         console.error("[chatbot lead]", insertErr);
         // Still allow chat if duplicate or soft failure — edge also records lead
       }
-      const next = { name: n, email: em };
+      const next = { name: n, email: em, phone: ph || undefined };
       saveLead(flyerId, next);
       setLead(next);
       setTurns([
@@ -182,6 +189,20 @@ export function FlyerChatbot({ flyerId, flyerTitle }: Props) {
                   disabled={busy}
                   className="h-9"
                   autoComplete="email"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="chat-lead-phone" className="text-xs">Phone (optional)</Label>
+                <Input
+                  id="chat-lead-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+63…"
+                  maxLength={40}
+                  disabled={busy}
+                  className="h-9"
+                  autoComplete="tel"
                 />
               </div>
               {error ? <p className="text-xs text-destructive">{error}</p> : null}

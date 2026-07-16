@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.send-subscriber-email]
 verify_jwt = true
+
+[functions.send-subscriber-sms]
+verify_jwt = true

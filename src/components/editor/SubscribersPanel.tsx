@@ -4,9 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Download, Mail, Trash2, Search, RefreshCcw } from "lucide-react";
+import { Loader2, Download, Mail, MessageSquare, Trash2, Search, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { MassEmailDialog, type MassEmailRecipient } from "./MassEmailDialog";
+import { MassSmsDialog, type MassSmsRecipient } from "./MassSmsDialog";
 
 interface SubscriberRow {
   id: string;
@@ -64,6 +65,7 @@ export function SubscribersPanel({ open, onOpenChange, flyerId, flyerTitle, flye
   const [query, setQuery] = useState("");
   const [showUnsub, setShowUnsub] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [smsOpen, setSmsOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -119,6 +121,13 @@ export function SubscribersPanel({ open, onOpenChange, flyerId, flyerTitle, flye
   const recipients: MassEmailRecipient[] = selectedRows.length > 0
     ? selectedRows.map((r) => ({ email: r.email, name: r.name }))
     : filtered.filter((r) => !r.unsubscribed_at).map((r) => ({ email: r.email, name: r.name }));
+
+  const smsPool = (selectedRows.length > 0 ? selectedRows : filtered.filter((r) => !r.unsubscribed_at))
+    .filter((r) => !!r.phone?.trim());
+  const smsRecipients: MassSmsRecipient[] = smsPool.map((r) => ({
+    phone: r.phone!.trim(),
+    name: r.name,
+  }));
 
   async function deleteSelected() {
     if (selected.size === 0) return;
@@ -193,6 +202,16 @@ export function SubscribersPanel({ open, onOpenChange, flyerId, flyerTitle, flye
               <Mail className="mr-1 h-3.5 w-3.5" />
               Compose mass email ({recipients.length})
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSmsOpen(true)}
+              disabled={smsRecipients.length === 0}
+              title={smsRecipients.length === 0 ? "Need subscribers with phone numbers" : undefined}
+            >
+              <MessageSquare className="mr-1 h-3.5 w-3.5" />
+              Compose SMS ({smsRecipients.length})
+            </Button>
           </div>
         </div>
 
@@ -257,6 +276,14 @@ export function SubscribersPanel({ open, onOpenChange, flyerId, flyerTitle, flye
           open={composeOpen}
           onOpenChange={setComposeOpen}
           recipients={recipients}
+          flyerId={flyerId}
+          flyerTitle={flyerTitle}
+          flyerUrl={flyerUrl}
+        />
+        <MassSmsDialog
+          open={smsOpen}
+          onOpenChange={setSmsOpen}
+          recipients={smsRecipients}
           flyerId={flyerId}
           flyerTitle={flyerTitle}
           flyerUrl={flyerUrl}
