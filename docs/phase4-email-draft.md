@@ -5,7 +5,7 @@ AI generates marketing copy for several channels from one flyer.
 | Channel | Behavior |
 |---------|----------|
 | Facebook / Instagram | Draft + Meta schedule / Post Now (test mode) |
-| Email | Draft + MassEmail prefill (Gmail / Mail app) |
+| Email | Draft + MassEmail prefill + **Send now** (Resend) — see `phase4-email-send.md` |
 | TikTok / SMS / Google Ads | Draft copy/paste only |
 
 ## DB columns
@@ -28,4 +28,4 @@ AI generates marketing copy for several channels from one flyer.
 
 ## Out of scope
 
-Real Ads / TikTok / SMS APIs and server email send.
+Real Ads / TikTok / SMS APIs. Server email send: see `phase4-email-send.md`.
