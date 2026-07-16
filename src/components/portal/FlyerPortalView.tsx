@@ -5,12 +5,13 @@ import { Crown, UserCog, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, ChevronLeft, Download, Lightbulb, RefreshCw, Share2, Link as LinkIcon, Package, RotateCcw } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Download, Lightbulb, MessageCircle, RefreshCw, Share2, Link as LinkIcon, Package, RotateCcw } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -85,7 +86,15 @@ function isoWeek(date: Date): string {
 }
 
 export interface FlyerPortalViewProps {
-  flyer: { id: string; title: string; status?: string | null; public_slug?: string | null; thumbnail_url?: string | null; created_at?: string };
+  flyer: {
+    id: string;
+    title: string;
+    status?: string | null;
+    public_slug?: string | null;
+    thumbnail_url?: string | null;
+    created_at?: string;
+    chatbot_knowledge?: string | null;
+  };
   events: AnalyticsEvent[];
   subscribers: Subscriber[];
   appointments: Appointment[];
@@ -99,12 +108,14 @@ export interface FlyerPortalViewProps {
   onCancelAppointment?: (id: string) => Promise<void> | void;
   onSetOrderStatus?: (id: string, status: OrderStatus, extraData?: Record<string, any>) => Promise<boolean>;
   onLogPortalEvent?: (actionType: string, extra?: Record<string, any>, eventType?: "view" | "click") => Promise<void> | void;
+  onSaveChatbotKnowledge?: (text: string) => Promise<void> | void;
 }
 
 export function FlyerPortalView(props: FlyerPortalViewProps) {
   const {
     flyer, events, subscribers, appointments, submissions, pollVotes, actions, layers,
     mode, userEmail, onRefresh, onCancelAppointment, onSetOrderStatus, onLogPortalEvent,
+    onSaveChatbotKnowledge,
   } = props;
   const isOwner = mode === "owner";
 
@@ -112,6 +123,26 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
   const [calDate, setCalDate] = useState<Date | undefined>();
   const [shareOpen, setShareOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
+  const [chatKnowledge, setChatKnowledge] = useState(flyer.chatbot_knowledge || "");
+  const [savingKnowledge, setSavingKnowledge] = useState(false);
+
+  useEffect(() => {
+    setChatKnowledge(flyer.chatbot_knowledge || "");
+  }, [flyer.id, flyer.chatbot_knowledge]);
+
+  async function saveChatKnowledge() {
+    if (!onSaveChatbotKnowledge) return;
+    setSavingKnowledge(true);
+    try {
+      await onSaveChatbotKnowledge(chatKnowledge.trim().slice(0, 3500));
+      toast.success("Chatbot knowledge saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setSavingKnowledge(false);
+    }
+  }
+
   const navigate = useNavigate();
   const ROLE_KEY = `portal_role_${flyer.id}`;
   const [role, setRole] = useState<"master" | "analytics" | null>(() => {
@@ -623,6 +654,42 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
         flyerId={flyer.id}
         insightTip={suggestions[0]?.title ?? null}
       />
+
+      {isOwner && onSaveChatbotKnowledge ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <MessageCircle className="h-4 w-4 text-primary" />
+              Ask AI knowledge
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Extra business or event details for the information assistant (hours, prices, how to start, etc.).
+              Used with flyer content when visitors chat.
+            </p>
+            <Textarea
+              value={chatKnowledge}
+              onChange={(e) => setChatKnowledge(e.target.value)}
+              placeholder="Example: We offer a free dating evaluation. Hours Mon–Fri 9–5. Website vet4exito.com. Tap the purple hotspots to begin."
+              maxLength={3500}
+              rows={5}
+              className="text-sm"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-muted-foreground">{chatKnowledge.length}/3500</span>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void saveChatKnowledge()}
+                disabled={savingKnowledge}
+              >
+                {savingKnowledge ? "Saving…" : "Save for Ask AI"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader className="pb-2">

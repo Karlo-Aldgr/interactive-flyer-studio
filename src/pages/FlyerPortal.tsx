@@ -20,7 +20,15 @@ export default function FlyerPortal() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
-  const [flyerInfo, setFlyerInfo] = useState<{ id: string; title: string; status?: string | null; public_slug?: string | null; thumbnail_url?: string | null; created_at?: string } | null>(null);
+  const [flyerInfo, setFlyerInfo] = useState<{
+    id: string;
+    title: string;
+    status?: string | null;
+    public_slug?: string | null;
+    thumbnail_url?: string | null;
+    created_at?: string;
+    chatbot_knowledge?: string | null;
+  } | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
@@ -34,7 +42,7 @@ export default function FlyerPortal() {
     if (showSpinner) setLoading(true);
     const { data: flyer } = await supabase
       .from("flyers")
-      .select("id, title, owner_id, status, public_slug, thumbnail_url, created_at")
+      .select("id, title, owner_id, status, public_slug, thumbnail_url, created_at, chatbot_knowledge")
       .eq("id", flyerId)
       .maybeSingle();
 
@@ -51,6 +59,7 @@ export default function FlyerPortal() {
       public_slug: (flyer as any)?.public_slug ?? null,
       thumbnail_url: (flyer as any)?.thumbnail_url ?? null,
       created_at: (flyer as any)?.created_at,
+      chatbot_knowledge: (flyer as any)?.chatbot_knowledge ?? null,
     });
 
     const { data: pageRows } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);
@@ -121,6 +130,16 @@ export default function FlyerPortal() {
     toast.success("Cancelled");
   }
 
+  async function saveChatbotKnowledge(text: string) {
+    if (!flyerId) return;
+    const { error } = await supabase
+      .from("flyers")
+      .update({ chatbot_knowledge: text || null })
+      .eq("id", flyerId);
+    if (error) throw new Error(error.message);
+    setFlyerInfo((prev) => (prev ? { ...prev, chatbot_knowledge: text || null } : prev));
+  }
+
   if (!user) return <div className="p-8">Please sign in.</div>;
   if (loading || !flyerInfo) return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
@@ -148,6 +167,7 @@ export default function FlyerPortal() {
       onCancelAppointment={cancelAppointment}
       onSetOrderStatus={setOrderStatus}
       onLogPortalEvent={logPortalEvent}
+      onSaveChatbotKnowledge={saveChatbotKnowledge}
     />
   );
 }

@@ -324,6 +324,7 @@ export type Database = {
           baths: number | null
           beds: number | null
           category: Database["public"]["Enums"]["flyer_category"]
+          chatbot_knowledge: string | null
           created_at: string
           event_date: string | null
           id: string
@@ -344,6 +345,7 @@ export type Database = {
           baths?: number | null
           beds?: number | null
           category?: Database["public"]["Enums"]["flyer_category"]
+          chatbot_knowledge?: string | null
           created_at?: string
           event_date?: string | null
           id?: string
@@ -364,6 +366,7 @@ export type Database = {
           baths?: number | null
           beds?: number | null
           category?: Database["public"]["Enums"]["flyer_category"]
+          chatbot_knowledge?: string | null
           created_at?: string
           event_date?: string | null
           id?: string

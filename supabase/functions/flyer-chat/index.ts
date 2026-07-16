@@ -170,10 +170,18 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     const flyerId = String(body.flyer_id || "").trim();
     const message = String(body.message || "").trim().slice(0, 500);
+    const visitorName = String(body.visitor_name || "").trim().slice(0, 200);
+    const visitorEmail = String(body.visitor_email || "").trim().toLowerCase().slice(0, 320);
     const rawHistory = Array.isArray(body.history) ? body.history : [];
 
     if (!flyerId) return json({ error: "Missing flyer_id" }, 400);
     if (!message) return json({ error: "Missing message" }, 400);
+    if (!visitorName || !visitorEmail) {
+      return json({ error: "Name and email are required before chatting" }, 400);
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(visitorEmail)) {
+      return json({ error: "Invalid email" }, 400);
+    }
 
     const openaiKey = Deno.env.get("OPENAI_API_KEY")?.trim();
     if (!openaiKey) return json({ error: "OPENAI_API_KEY is not configured" }, 503);
@@ -185,7 +193,7 @@ Deno.serve(async (req) => {
 
     const { data: flyer, error: flyerErr } = await supabase
       .from("flyers")
-      .select("id, title, public_slug, status, category")
+      .select("id, title, public_slug, status, category, chatbot_knowledge")
       .eq("id", flyerId)
       .maybeSingle();
 
@@ -195,6 +203,18 @@ Deno.serve(async (req) => {
       return json({ error: "Chatbot is available on published flyers only" }, 403);
     }
 
+    // Capture / refresh lead (ignore duplicate email on this flyer)
+    const { error: leadErr } = await supabase.from("subscribers").insert([{
+      flyer_id: flyerId,
+      name: visitorName,
+      email: visitorEmail,
+      list_name: "AI Chatbot",
+      source: "chatbot",
+    }]);
+    if (leadErr && !String(leadErr.code || "").includes("23505") && !/duplicate|unique/i.test(String(leadErr.message || ""))) {
+      console.warn("[flyer-chat] lead insert", leadErr);
+    }
+
     const { data: pages } = await supabase
       .from("pages")
       .select("index, layers(type, content, actions(type, payload))")
@@ -202,6 +222,7 @@ Deno.serve(async (req) => {
       .order("index", { ascending: true });
 
     const flyerContext = buildFlyerContext(Array.isArray(pages) ? pages : []);
+    const ownerNotes = String(flyer.chatbot_knowledge || "").trim().slice(0, 3500);
 
     const site = Deno.env.get("PUBLIC_SITE_URL")?.trim() || "https://tapthatflyer.com";
     const flyerUrl = flyer.public_slug
@@ -221,19 +242,23 @@ Deno.serve(async (req) => {
     const category = flyer.category ? String(flyer.category) : "";
     const hasActions = /action type:|link:/i.test(flyerContext);
     const system =
-      `You are a friendly helper on an interactive flyer called "${flyer.title || "Flyer"}"` +
+      `You are an information assistant for an interactive flyer called "${flyer.title || "Flyer"}"` +
       (category ? ` (category: ${category})` : "") +
-      `. Public link: ${flyerUrl}.\n\n` +
+      `. The visitor’s name is ${visitorName}. Public link: ${flyerUrl}.\n\n` +
+      (ownerNotes
+        ? `Owner-provided business/event details (highest priority facts):\n${ownerNotes}\n\n`
+        : "") +
       (flyerContext
-        ? `Use ONLY the flyer facts below. Prefer them over guesses.\n\n${flyerContext}\n\n`
-        : "No layer text was available; answer cautiously from the title only.\n\n") +
-      "This flyer is interactive: purple/glowing hotspots and buttons on the flyer are tappable. " +
+        ? `Flyer content / actions:\n${flyerContext}\n\n`
+        : "No layer text was available from the design.\n\n") +
+      "Use ONLY the facts above. Prefer owner-provided details, then flyer content. " +
+      "This flyer is interactive: purple/glowing hotspots and buttons are tappable. " +
       (hasActions
-        ? "When visitors ask how to start, sign up, register, or what to do next, tell them to tap the main hotspot/CTA on the flyer and mention specific action titles/links from the facts. "
+        ? "When visitors ask how to start, sign up, register, or what to do next, tell them to tap the main hotspot/CTA and mention specific action titles/links from the facts. "
         : "When visitors ask how to start, tell them to tap the hotspots on the flyer for next steps. ") +
       "Answer briefly (1-4 short sentences). " +
       "You only know THIS flyer — do not invent other sample flyers or a gallery. " +
-      "If something is not in the flyer facts (prices, times, policies), say you don't know and point them to the flyer link or hotspots. " +
+      "If something is not in the facts (prices, times, policies), say you don't know and point them to the flyer link or hotspots. " +
       "Do not invent offers, prices, or guarantees. No markdown tables.";
 
     const model = Deno.env.get("OPENAI_MARKETING_MODEL")?.trim() || "gpt-4o-mini";
