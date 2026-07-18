@@ -108,7 +108,7 @@ Suggested wording (edit names as needed):
 
 ## What Carlo / staff should do this week
 
-1. Confirm privacy + terms URLs exist and match the Meta app settings  
+1. Confirm privacy, terms, and data-deletion URLs resolve live (`/privacy`, `/terms`, `/data-deletion`) and match Meta app settings  
 2. Record the Facebook Connect → Post Now screencast  
 3. Submit App Review for the three `pages_*` permissions  
 4. Tell Mr Biggs: FB/IG posting works today for testers; Live customers need this review  

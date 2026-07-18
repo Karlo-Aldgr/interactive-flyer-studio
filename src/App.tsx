@@ -42,6 +42,9 @@ const RealtorAcceptInvite = lazy(() => import("./pages/RealtorAcceptInvite"));
 const ForRealtors = lazy(() => import("./pages/ForRealtors"));
 const AdminRealtorApplications = lazy(() => import("./pages/AdminRealtorApplications"));
 const PublicRealtorProfile = lazy(() => import("./pages/PublicRealtorProfile"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const DataDeletion = lazy(() => import("./pages/DataDeletion"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,6 +92,9 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/reset-password" element={<ResetPassword />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/data-deletion" element={<DataDeletion />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/editor/:flyerId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
               <Route path="/analytics/:flyerId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
