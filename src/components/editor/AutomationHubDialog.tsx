@@ -5,7 +5,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot, CheckCircle2, Clock3, Instagram, PlusCircle, Rocket, Sparkles } from "lucide-react";
+import { Bot, CheckCircle2, Clock3, Instagram, PlusCircle, Rocket, Sparkles, ShieldCheck } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -155,7 +155,7 @@ export function AutomationHubDialog({
               title="Facebook Post Now"
               description="Connect your Facebook Page with OAuth and send the latest AI Facebook copy."
               badge="Ready to test"
-              statusText="Working in Meta test mode. Keep the Meta app unpublished until App Review."
+              statusText="Works in Meta test mode (app roles/testers). Live customers need Meta App Review — see docs/meta-app-review.md."
               requirements={[
                 "Facebook Page you admin",
                 "Connect with Facebook (OAuth)",
@@ -170,7 +170,7 @@ export function AutomationHubDialog({
               title="Instagram Post Now"
               description="Post the latest AI Instagram caption to your Instagram Business/Creator account."
               badge="Ready to test"
-              statusText="Working in test mode with Instagram Login token (Extend Instagram token for ~60 days)."
+              statusText="Works in test mode with staff IG token. Public IG for all customers needs App Review + later per-user IG OAuth."
               requirements={[
                 "Instagram Business or Creator account",
                 "Instagram User ID saved + Extend Instagram token",
@@ -182,20 +182,34 @@ export function AutomationHubDialog({
             />
 
             <AutomationCard
+              title="Meta App Review"
+              description="Checklist to move Facebook Page posting from testers-only to Live for real customers."
+              badge="Operator guide"
+              statusText="Code is ready in test mode. Submit pages_show_list, pages_read_engagement, pages_manage_posts + screencast. Full steps in docs/meta-app-review.md."
+              requirements={[
+                "Privacy Policy + Terms URLs on a public site",
+                "Screencast: Connect Facebook → Post Now",
+                "App Review in Meta Developer Console",
+              ]}
+              actionLabel="Guide in repo docs"
+              actionDisabled
+              icon={<ShieldCheck className="h-4 w-4" />}
+            />
+
+            <AutomationCard
               title="Automation Framework"
               description="This flyer-level hub is the foundation for future automations like audience tools and agency white-label."
               badge="Foundation"
-              statusText="Phases 1–5 MVP + Marketing Coach. Remaining: paid email send, subscriptions, agency."
+              statusText="Phases 1–5 + Coach + email send. SMS awaits Twilio account. Meta Live needs App Review."
               requirements={[
                 "Per-flyer automation entry point",
                 "Portal Suggestions + AutoPilot status strip",
-                "AI Marketing Coach scores",
+                "AI Marketing Coach + Resend email send",
               ]}
               actionLabel="Framework active"
               actionDisabled
               icon={<CheckCircle2 className="h-4 w-4" />}
-            />
-          </div>
+            />          </div>
 
           <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
             <div className="mb-1 flex items-center gap-2 text-foreground">
