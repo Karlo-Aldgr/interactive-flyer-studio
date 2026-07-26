@@ -39,6 +39,8 @@ export default function Dashboard() {
   const [searchParams] = useSearchParams();
   const studioMode = searchParams.get("studio") === "1";
   const customerView = searchParams.get("view") === "customer";
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   const load = async () => {
     setLoading(true);
