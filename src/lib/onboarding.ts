@@ -97,7 +97,7 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     .insert({
       user_id: userId,
       customer_email: userEmail ?? null,
-      type: flyerPath ? "upload" : "scratch",
+      type: flyerPath ? "upload" : "design",
       title,
       brief: input.business_description || null,
       upload_url: flyerPath,
