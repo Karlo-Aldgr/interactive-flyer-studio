@@ -1282,6 +1282,92 @@ export type Database = {
           },
         ]
       }
+      onboarding_submissions: {
+        Row: {
+          business_address: string | null
+          business_description: string | null
+          business_name: string | null
+          business_slogan: string | null
+          created_at: string
+          email: string | null
+          facebook_url: string | null
+          flyer_job_id: string | null
+          flyer_upload_url: string | null
+          full_name: string | null
+          hotspot_suggestions: Json | null
+          id: string
+          instagram_url: string | null
+          logo_help: string | null
+          logo_url: string | null
+          other_social_url: string | null
+          phone: string | null
+          social_help: boolean
+          tiktok_url: string | null
+          updated_at: string
+          user_id: string
+          website_help: string | null
+          website_url: string | null
+        }
+        Insert: {
+          business_address?: string | null
+          business_description?: string | null
+          business_name?: string | null
+          business_slogan?: string | null
+          created_at?: string
+          email?: string | null
+          facebook_url?: string | null
+          flyer_job_id?: string | null
+          flyer_upload_url?: string | null
+          full_name?: string | null
+          hotspot_suggestions?: Json | null
+          id?: string
+          instagram_url?: string | null
+          logo_help?: string | null
+          logo_url?: string | null
+          other_social_url?: string | null
+          phone?: string | null
+          social_help?: boolean
+          tiktok_url?: string | null
+          updated_at?: string
+          user_id: string
+          website_help?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          business_address?: string | null
+          business_description?: string | null
+          business_name?: string | null
+          business_slogan?: string | null
+          created_at?: string
+          email?: string | null
+          facebook_url?: string | null
+          flyer_job_id?: string | null
+          flyer_upload_url?: string | null
+          full_name?: string | null
+          hotspot_suggestions?: Json | null
+          id?: string
+          instagram_url?: string | null
+          logo_help?: string | null
+          logo_url?: string | null
+          other_social_url?: string | null
+          phone?: string | null
+          social_help?: boolean
+          tiktok_url?: string | null
+          updated_at?: string
+          user_id?: string
+          website_help?: string | null
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_submissions_flyer_job_id_fkey"
+            columns: ["flyer_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pages: {
         Row: {
           background: Json
@@ -1355,6 +1441,7 @@ export type Database = {
           full_name: string | null
           headline: string | null
           id: string
+          onboarding_completed_at: string | null
           phone: string | null
           photo_url: string | null
           profile_slug: string | null
@@ -1367,6 +1454,7 @@ export type Database = {
           full_name?: string | null
           headline?: string | null
           id: string
+          onboarding_completed_at?: string | null
           phone?: string | null
           photo_url?: string | null
           profile_slug?: string | null
@@ -1379,6 +1467,7 @@ export type Database = {
           full_name?: string | null
           headline?: string | null
           id?: string
+          onboarding_completed_at?: string | null
           phone?: string | null
           photo_url?: string | null
           profile_slug?: string | null

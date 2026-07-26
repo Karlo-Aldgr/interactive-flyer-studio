@@ -1,68 +1,88 @@
+
 ## Goal
 
-Let admins invite a realtor two ways:
-1. **Email invite** — enter name + email, system emails a branded invite with a one-click accept link.
-2. **Shareable link** — generate a tokenized URL to copy/paste anywhere (SMS, WhatsApp, DM). First person to open + sign up claims it.
+New client onboarding portal at `/onboarding` that collects business intake info + a flyer upload, auto-creates a job from the flyer, pre-runs smart-detect for hotspot suggestions, and is visible to admins/editors on that job.
 
-Both paths auto-grant the `realtor` role on sign-up / sign-in and mark the invite consumed. Existing `/realtor/apply` flow stays as-is for realtors who find the site on their own.
+## Flow
 
-## Backend
+1. New user signs up → `handle_new_user` sets `profiles.onboarding_completed_at = null` (default).
+2. `Dashboard` / customer view checks: if `onboarding_completed_at IS NULL` and user is not admin/editor/realtor → redirect to `/onboarding`.
+3. User completes form → row inserted into `onboarding_submissions`, flyer file uploaded to `job-uploads`, job created, smart-detect runs async, `onboarding_completed_at` stamped, redirect to Customer Dashboard.
+4. Sidebar link "Onboarding info" always available afterward (read-only view + "Edit & resubmit").
+5. Admin/editor sees the submission attached to the job in `JobDetailView`.
 
-Create `public.realtor_invites`:
-- `id`, `token` (uuid, unique, indexed), `email` (nullable — null = open shareable link), `invited_name` (nullable)
-- `invited_by` (admin uid), `note` (optional)
-- `status`: `pending` | `accepted` | `revoked` | `expired`
-- `accepted_by` (uid, nullable), `accepted_at`, `expires_at` (default now + 30 days)
-- standard timestamps
-- RLS: admins full access; anon can `SELECT` a single row only via RPC by token (no direct table read)
-- GRANTs to `authenticated` + `service_role` per project rules
+## Form fields
 
-RPCs (SECURITY DEFINER):
-- `admin_create_realtor_invite(_email text, _name text, _note text, _expires_days int)` → returns `{ id, token, accept_url }`. Admin-only.
-- `admin_list_realtor_invites()` → admin-only list.
-- `admin_revoke_realtor_invite(_id uuid)` → sets `status='revoked'`. Admin-only.
-- `resolve_realtor_invite(_token uuid)` → public; returns `{ ok, email, invited_name, status }` for the invite page to render (no PII beyond invited email/name).
-- `accept_realtor_invite(_token uuid)` → requires `auth.uid()`; verifies token pending + not expired + (if email set, matches user's email); grants `realtor` role via `user_roles`; marks accepted. Returns `{ ok }`.
+Grouped into 4 steps (single page, sectioned):
 
-Extend `handle_new_user()` trigger: if a matching pending invite exists for this new user (open token stored in signup metadata OR email match), grant `realtor` role and mark accepted. This covers the "sign up first, then land on `/realtor/accept`" case cleanly via a fallback call from the accept page.
+**About you**
+- Full name (required)
+- Phone number (required)
+- Email (prefilled from auth, editable)
 
-## Email
+**Your business**
+- Business name (required)
+- Business address
+- Business slogan / tagline
+- Business description (long text — powers flyer chatbot later)
 
-Uses Lovable's built-in app email (`send-transactional-email`). Add one new template `realtor-invite.tsx` in `supabase/functions/_shared/transactional-email-templates/` with:
-- Personalized greeting
-- Note from admin (if provided)
-- Big "Accept invite" CTA linking to `https://<site>/realtor/accept?token=…`
-- Fallback plain URL
+**Web & social presence**
+- Website URL — if blank, radio: "Would you like us to build one?" → Yes / More info / Not now
+- Facebook URL
+- Instagram URL
+- TikTok URL
+- Other social (free text)
+- If any key social missing, checkbox: "Help me set these up"
 
-Prerequisite: email domain + `setup_email_infra` + `scaffold_transactional_email` must be in place. If not, run those first as part of implementation.
+**Assets**
+- Logo upload — if skipped, radio: "Would you like us to design one?" → Yes / More info / Not now
+- Flyer upload (image or PDF, single file) — on submit, uploaded to `job-uploads`, job auto-created, `smart-detect` edge function invoked to generate hotspot suggestions saved on the submission row (JSON) and mirrored to the job for editors to accept in the editor.
 
-Registered in `registry.ts`. `admin_create_realtor_invite` (or a thin edge wrapper) invokes `send-transactional-email` with `idempotencyKey = invite-<id>`.
+Submit is enabled only when required fields are filled. Uses `zod` validation.
 
-## Frontend
+## Data model (migration)
 
-**Admin — new panel in `AdminUsers.tsx`** (or new `RealtorInvitesPanel.tsx` beside `RealtorAccessApplicationsPanel`):
-- "Invite realtor by email" form (name, email, optional note) → creates invite + sends email → toast confirms
-- "Generate shareable link" button → creates open invite (no email) → shows the URL with Copy button
-- Table of outstanding invites: recipient, type (Email / Link), status, expires, actions (Copy link, Resend email, Revoke)
+New table `public.onboarding_submissions`:
+- `id uuid pk default gen_random_uuid()`
+- `user_id uuid not null references auth.users(id) on delete cascade` (unique)
+- `full_name`, `phone`, `email` text
+- `business_name`, `business_address`, `business_slogan`, `business_description` text
+- `website_url text`, `website_help text check in ('yes','more_info','no',null)`
+- `facebook_url`, `instagram_url`, `tiktok_url`, `other_social_url` text
+- `social_help boolean default false`
+- `logo_url text`, `logo_help text check in ('yes','more_info','no',null)`
+- `flyer_upload_url text`, `flyer_job_id uuid references public.jobs(id)`
+- `hotspot_suggestions jsonb` (from smart-detect)
+- `created_at`, `updated_at timestamptz`
 
-**Public — `/realtor/accept?token=…`** (`src/pages/RealtorAcceptInvite.tsx`):
-- Calls `resolve_realtor_invite` → shows invited name/email and branded "You're invited to the Realtor Portal" card
-- If not signed in: shows Sign-up (email prefilled + locked if invite was email-targeted) and Sign-in tabs; on success, calls `accept_realtor_invite` and redirects to `/realtor`
-- If signed in: single "Accept & enter portal" button
-- Error states: expired, revoked, already accepted, email mismatch
+Add `profiles.onboarding_completed_at timestamptz` (nullable).
 
-Route added in `src/App.tsx`. Link from `ForRealtors.tsx` unchanged (still points to `/realtor/apply`).
+GRANTs: `SELECT, INSERT, UPDATE` to `authenticated`; `ALL` to `service_role`. RLS:
+- User: SELECT/INSERT/UPDATE own row (`user_id = auth.uid()`)
+- Admin/editor: SELECT all (`has_role(auth.uid(),'admin') OR has_role(auth.uid(),'editor')`)
 
-## Out of scope
+`update_updated_at` trigger.
 
-- Bulk CSV invite upload
-- Public "nominate your realtor" page (Option C from the question)
-- Editing invite after creation (only revoke + create-new)
+Storage: reuse `flyer-assets` (public) for logo; `job-uploads` (private) for flyer.
 
-## Notes for the user (non-technical)
+## Files
 
-- You'll get a new "Invite realtors" section in Admin → Users.
-- Two buttons: **Invite by email** sends a branded email with an accept link; **Generate share link** gives you a URL you can text, DM, or paste anywhere.
-- The moment they accept (and sign up if needed), they're granted realtor access — no manual approval step.
-- Existing `/realtor/apply` public form stays for realtors who find you on their own.
-- Invites expire after 30 days by default and can be revoked at any time.
+New:
+- `src/pages/Onboarding.tsx` — the form (sectioned, zod validated, upload progress)
+- `src/lib/onboarding.ts` — `getMyOnboarding`, `submitOnboarding` (creates job, invokes smart-detect, upserts row, stamps `profiles.onboarding_completed_at`)
+- `src/components/dashboard/OnboardingSubmissionCard.tsx` — read-only view rendered inside `JobDetailView` when the job has a linked submission (admin/editor + owner)
+- `supabase/migrations/<ts>_onboarding_submissions.sql`
+
+Edited:
+- `src/App.tsx` — add `/onboarding` route (protected, no shell)
+- `src/pages/Dashboard.tsx` — redirect to `/onboarding` when `onboarding_completed_at IS NULL` for non-editor/admin/realtor users
+- `src/components/portal-customer/CustomerPortalSidebar.tsx` — add "Onboarding info" link
+- `src/components/dashboard/JobDetailView.tsx` — show `OnboardingSubmissionCard` when present
+
+No changes to existing job creation, smart-detect, or editor hotspot flow — we only invoke them.
+
+## Notes
+
+- Welcome copy is rendered at the top of `/onboarding`.
+- "Assist me" answers are stored as-is; no auto-emails (per your choice).
+- Smart-detect runs in the background; if it fails, submission still succeeds and hotspot_suggestions stays null (editor uses normal in-editor smart-detect).

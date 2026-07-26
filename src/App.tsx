@@ -45,6 +45,7 @@ const PublicRealtorProfile = lazy(() => import("./pages/PublicRealtorProfile"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const DataDeletion = lazy(() => import("./pages/DataDeletion"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,6 +97,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/data-deletion" element={<DataDeletion />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/editor/:flyerId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
               <Route path="/analytics/:flyerId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/preview/:flyerId" element={<ProtectedRoute><PublicViewer previewMode /></ProtectedRoute>} />

@@ -39,6 +39,8 @@ export default function Dashboard() {
   const [searchParams] = useSearchParams();
   const studioMode = searchParams.get("studio") === "1";
   const customerView = searchParams.get("view") === "customer";
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -80,6 +82,20 @@ export default function Dashboard() {
   };
 
   useEffect(() => { if (canEdit) load(); }, [canEdit]);
+
+  useEffect(() => {
+    if (!user || accessLoading || adminLoading || realtorLoading) return;
+    if (canEdit || isAdmin || isRealtor) { setOnboardingChecked(true); return; }
+    supabase
+      .from("profiles")
+      .select("onboarding_completed_at")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setNeedsOnboarding(!data?.onboarding_completed_at);
+        setOnboardingChecked(true);
+      });
+  }, [user, canEdit, isAdmin, isRealtor, accessLoading, adminLoading, realtorLoading]);
 
   useEffect(() => {
     if (!user || accessLoading) return;
@@ -179,7 +195,7 @@ export default function Dashboard() {
     toast.success("Share link copied — paste it anywhere for a rich preview");
   };
 
-  if (adminLoading || accessLoading || realtorLoading) {
+  if (adminLoading || accessLoading || realtorLoading || !onboardingChecked) {
     return (
       <DashboardShell>
         <DashboardPage maxWidth="4xl">
@@ -187,6 +203,10 @@ export default function Dashboard() {
         </DashboardPage>
       </DashboardShell>
     );
+  }
+
+  if (needsOnboarding && !customerView && !studioMode) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   if (customerView) {
