@@ -50,7 +50,7 @@ export async function getOnboardingForJob(jobId: string): Promise<OnboardingSubm
     .eq("flyer_job_id", jobId)
     .maybeSingle();
   if (error) return null;
-  return (data as OnboardingSubmission | null) ?? null;
+  return (data as unknown as OnboardingSubmission | null) ?? null;
 }
 
 async function uploadLogo(userId: string, file: File): Promise<string> {
