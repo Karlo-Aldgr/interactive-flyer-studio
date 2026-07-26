@@ -87,28 +87,27 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
   if (logoFile) logoUrl = await uploadLogo(userId, logoFile);
 
   let flyerPath: string | null = null;
-  let jobId: string | null = null;
-
   if (flyerFile) {
     flyerPath = await uploadFlyer(userId, flyerFile);
-    const title = input.business_name?.trim() || "Onboarding flyer";
-    const { data: job, error: jobErr } = await supabase
-      .from("jobs")
-      .insert({
-        user_id: userId,
-        customer_email: userEmail ?? null,
-        type: "upload",
-        title,
-        brief: input.business_description || null,
-        upload_url: flyerPath,
-        selected_actions: [],
-        status: "new",
-      })
-      .select("id")
-      .single();
-    if (jobErr) throw jobErr;
-    jobId = job.id;
   }
+
+  const title = input.business_name?.trim() || "Onboarding project";
+  const { data: job, error: jobErr } = await supabase
+    .from("jobs")
+    .insert({
+      user_id: userId,
+      customer_email: userEmail ?? null,
+      type: flyerPath ? "upload" : "design",
+      title,
+      brief: input.business_description || null,
+      upload_url: flyerPath,
+      selected_actions: [],
+      status: "new",
+    })
+    .select("id")
+    .single();
+  if (jobErr) throw jobErr;
+  const jobId: string | null = job?.id ?? null;
 
   const row = {
     user_id: userId,
