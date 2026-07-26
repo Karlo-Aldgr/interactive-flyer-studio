@@ -139,7 +139,9 @@ export default function Onboarding() {
         flyerFile,
       });
       toast.success(
-        jobId ? "Thanks! Your flyer is in the queue — we'll get to work." : "Your info was saved.",
+        flyerFile
+          ? "Thanks! Your flyer is in the queue — we'll get to work."
+          : "Your project has been created. You can upload a flyer any time.",
       );
       navigate(jobId ? `/my-jobs/${jobId}` : "/dashboard?view=customer");
     } catch (err: any) {
