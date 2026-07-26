@@ -195,7 +195,7 @@ export default function Dashboard() {
     toast.success("Share link copied — paste it anywhere for a rich preview");
   };
 
-  if (adminLoading || accessLoading || realtorLoading) {
+  if (adminLoading || accessLoading || realtorLoading || !onboardingChecked) {
     return (
       <DashboardShell>
         <DashboardPage maxWidth="4xl">
@@ -203,6 +203,10 @@ export default function Dashboard() {
         </DashboardPage>
       </DashboardShell>
     );
+  }
+
+  if (needsOnboarding && !customerView && !studioMode) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   if (customerView) {
