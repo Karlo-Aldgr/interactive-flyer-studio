@@ -84,6 +84,20 @@ export default function Dashboard() {
   useEffect(() => { if (canEdit) load(); }, [canEdit]);
 
   useEffect(() => {
+    if (!user || accessLoading || adminLoading || realtorLoading) return;
+    if (canEdit || isAdmin || isRealtor) { setOnboardingChecked(true); return; }
+    supabase
+      .from("profiles")
+      .select("onboarding_completed_at")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setNeedsOnboarding(!data?.onboarding_completed_at);
+        setOnboardingChecked(true);
+      });
+  }, [user, canEdit, isAdmin, isRealtor, accessLoading, adminLoading, realtorLoading]);
+
+  useEffect(() => {
     if (!user || accessLoading) return;
     if (canEdit && !customerView) return;
     setCustomerJobsLoading(true);
