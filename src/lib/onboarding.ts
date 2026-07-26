@@ -40,7 +40,7 @@ export async function getMyOnboarding(userId: string): Promise<OnboardingSubmiss
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
-  return (data as OnboardingSubmission | null) ?? null;
+  return (data as unknown as OnboardingSubmission | null) ?? null;
 }
 
 export async function getOnboardingForJob(jobId: string): Promise<OnboardingSubmission | null> {
