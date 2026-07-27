@@ -256,6 +256,12 @@ export default function Landing() {
           <Link to="/examples" className="hover:text-foreground underline">Examples</Link>
         </div>
         <div className="mt-2">© {new Date().getFullYear()} TapThatFlyer</div>
+        <p className="mt-2 text-xs">
+          TapThatFlyer is operated by BOWEN ENTERPRISES LLC ·{" "}
+          <Link to="/privacy" className="underline hover:text-foreground">Privacy</Link>
+          {" · "}
+          <Link to="/terms" className="underline hover:text-foreground">Terms</Link>
+        </p>
       </footer>
 
       {/* Interaction details dialog */}

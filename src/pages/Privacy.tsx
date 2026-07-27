@@ -4,8 +4,9 @@ export default function Privacy() {
   return (
     <LegalLayout title="Privacy Policy" updated="July 18, 2026">
       <p>
-        TapThatFlyer (“we”, “us”) provides interactive flyer and marketing tools. This policy explains
-        what information we collect and how we use it when you use tapthatflyer.com and related apps.
+        TapThatFlyer (“we”, “us”) is operated by <strong>BOWEN ENTERPRISES LLC</strong>. We provide
+        interactive flyer and marketing tools. This policy explains what information we collect and how
+        we use it when you use tapthatflyer.com and related apps.
       </p>
 
       <h2 className="text-lg font-semibold">Information we collect</h2>

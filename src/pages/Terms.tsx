@@ -4,7 +4,8 @@ export default function Terms() {
   return (
     <LegalLayout title="Terms of Service" updated="July 18, 2026">
       <p>
-        By using TapThatFlyer you agree to these terms. If you do not agree, do not use the service.
+        By using TapThatFlyer you agree to these terms. TapThatFlyer is operated by{" "}
+        <strong>BOWEN ENTERPRISES LLC</strong>. If you do not agree, do not use the service.
       </p>
 
       <h2 className="text-lg font-semibold">The service</h2>

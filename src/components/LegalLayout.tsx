@@ -30,6 +30,9 @@ export function LegalLayout({
         <div className="prose prose-sm mt-8 max-w-none space-y-4 text-foreground dark:prose-invert">
           {children}
         </div>
+        <p className="mt-10 border-t border-border pt-6 text-xs text-muted-foreground">
+          BOWEN ENTERPRISES LLC · 513 13th Ave S, Columbus, MS 39701
+        </p>
       </main>
     </div>
   );
