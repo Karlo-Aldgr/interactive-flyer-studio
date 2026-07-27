@@ -7,6 +7,36 @@ const corsHeaders = {
 };
 
 const CONTEXT_MAX = 4500;
+const CHATBOT_KNOWLEDGE_MAX = 3500;
+
+function buildOnboardingKnowledge(row: Record<string, unknown>): string {
+  const pick = (key: string) => String(row[key] ?? "").trim();
+  const lines: string[] = [];
+  const businessName = pick("business_name");
+  const slogan = pick("business_slogan");
+  const description = pick("business_description");
+  const address = pick("business_address");
+  const phone = pick("phone");
+  const email = pick("email");
+  const website = pick("website_url");
+  const facebook = pick("facebook_url");
+  const instagram = pick("instagram_url");
+  const tiktok = pick("tiktok_url");
+  const otherSocial = pick("other_social_url");
+
+  if (businessName) lines.push(`Business name: ${businessName}`);
+  if (slogan) lines.push(`Slogan: ${slogan}`);
+  if (description) lines.push(`About the business:\n${description}`);
+  if (address) lines.push(`Address: ${address}`);
+  if (phone) lines.push(`Phone: ${phone}`);
+  if (email) lines.push(`Email: ${email}`);
+  if (website) lines.push(`Website: ${website}`);
+  if (facebook) lines.push(`Facebook: ${facebook}`);
+  if (instagram) lines.push(`Instagram: ${instagram}`);
+  if (tiktok) lines.push(`TikTok: ${tiktok}`);
+  if (otherSocial) lines.push(`Other social: ${otherSocial}`);
+  return lines.join("\n").slice(0, CHATBOT_KNOWLEDGE_MAX);
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -193,7 +223,7 @@ Deno.serve(async (req) => {
 
     const { data: flyer, error: flyerErr } = await supabase
       .from("flyers")
-      .select("id, title, public_slug, status, category, chatbot_knowledge")
+      .select("id, title, public_slug, status, category, chatbot_knowledge, owner_id")
       .eq("id", flyerId)
       .maybeSingle();
 
@@ -222,7 +252,19 @@ Deno.serve(async (req) => {
       .order("index", { ascending: true });
 
     const flyerContext = buildFlyerContext(Array.isArray(pages) ? pages : []);
-    const ownerNotes = String(flyer.chatbot_knowledge || "").trim().slice(0, 3500);
+    let ownerNotes = String(flyer.chatbot_knowledge || "").trim().slice(0, CHATBOT_KNOWLEDGE_MAX);
+    if (!ownerNotes && flyer.owner_id) {
+      const { data: onboarding } = await supabase
+        .from("onboarding_submissions")
+        .select(
+          "business_name, business_slogan, business_address, business_description, website_url, facebook_url, instagram_url, tiktok_url, other_social_url, phone, email",
+        )
+        .eq("user_id", flyer.owner_id)
+        .maybeSingle();
+      if (onboarding) {
+        ownerNotes = buildOnboardingKnowledge(onboarding as Record<string, unknown>);
+      }
+    }
 
     const site = Deno.env.get("PUBLIC_SITE_URL")?.trim() || "https://tapthatflyer.com";
     const flyerUrl = flyer.public_slug

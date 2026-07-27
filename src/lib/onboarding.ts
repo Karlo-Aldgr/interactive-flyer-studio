@@ -33,6 +33,62 @@ export type OnboardingInput = Omit<
   "id" | "user_id" | "flyer_upload_url" | "flyer_job_id" | "hotspot_suggestions" | "created_at" | "updated_at"
 >;
 
+const CHATBOT_KNOWLEDGE_MAX = 3500;
+
+export type OnboardingKnowledgeSource = Pick<
+  OnboardingSubmission,
+  | "full_name"
+  | "phone"
+  | "email"
+  | "business_name"
+  | "business_slogan"
+  | "business_address"
+  | "business_description"
+  | "website_url"
+  | "facebook_url"
+  | "instagram_url"
+  | "tiktok_url"
+  | "other_social_url"
+>;
+
+/** Text block fed to Ask AI from onboarding fields. */
+export function buildChatbotKnowledgeFromOnboarding(source: OnboardingKnowledgeSource): string {
+  const lines: string[] = [];
+  if (source.business_name?.trim()) lines.push(`Business name: ${source.business_name.trim()}`);
+  if (source.business_slogan?.trim()) lines.push(`Slogan: ${source.business_slogan.trim()}`);
+  if (source.business_description?.trim()) {
+    lines.push(`About the business:\n${source.business_description.trim()}`);
+  }
+  if (source.business_address?.trim()) lines.push(`Address: ${source.business_address.trim()}`);
+  if (source.phone?.trim()) lines.push(`Phone: ${source.phone.trim()}`);
+  if (source.email?.trim()) lines.push(`Email: ${source.email.trim()}`);
+  if (source.website_url?.trim()) lines.push(`Website: ${source.website_url.trim()}`);
+  if (source.facebook_url?.trim()) lines.push(`Facebook: ${source.facebook_url.trim()}`);
+  if (source.instagram_url?.trim()) lines.push(`Instagram: ${source.instagram_url.trim()}`);
+  if (source.tiktok_url?.trim()) lines.push(`TikTok: ${source.tiktok_url.trim()}`);
+  if (source.other_social_url?.trim()) lines.push(`Other social: ${source.other_social_url.trim()}`);
+  return lines.join("\n").slice(0, CHATBOT_KNOWLEDGE_MAX);
+}
+
+export async function syncOnboardingToFlyerChatbot(
+  flyerId: string,
+  source: OnboardingKnowledgeSource,
+): Promise<void> {
+  const text = buildChatbotKnowledgeFromOnboarding(source);
+  if (!text.trim()) return;
+  const { error } = await supabase.from("flyers").update({ chatbot_knowledge: text }).eq("id", flyerId);
+  if (error) throw error;
+}
+
+export async function syncOnboardingChatbotKnowledgeForJob(jobId: string): Promise<void> {
+  const onboarding = await getOnboardingForJob(jobId);
+  if (!onboarding) return;
+  const { data: job, error } = await supabase.from("jobs").select("flyer_id").eq("id", jobId).maybeSingle();
+  if (error) throw error;
+  if (!job?.flyer_id) return;
+  await syncOnboardingToFlyerChatbot(job.flyer_id, onboarding);
+}
+
 export async function getMyOnboarding(userId: string): Promise<OnboardingSubmission | null> {
   const { data, error } = await supabase
     .from("onboarding_submissions" as any)
@@ -92,22 +148,38 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
   }
 
   const title = input.business_name?.trim() || "Onboarding project";
-  const { data: job, error: jobErr } = await supabase
-    .from("jobs")
-    .insert({
-      user_id: userId,
-      customer_email: userEmail ?? null,
-      type: flyerPath ? "upload" : "design",
-      title,
-      brief: input.business_description || null,
-      upload_url: flyerPath,
-      selected_actions: [],
-      status: "new",
-    })
-    .select("id")
-    .single();
-  if (jobErr) throw jobErr;
-  const jobId: string | null = job?.id ?? null;
+  const existing = await getMyOnboarding(userId);
+  let jobId: string | null = null;
+
+  if (existing?.flyer_job_id && !flyerFile) {
+    jobId = existing.flyer_job_id;
+    const { error: jobUpdateErr } = await supabase
+      .from("jobs")
+      .update({
+        title,
+        brief: input.business_description || null,
+        customer_email: userEmail ?? null,
+      })
+      .eq("id", jobId);
+    if (jobUpdateErr) throw jobUpdateErr;
+  } else {
+    const { data: job, error: jobErr } = await supabase
+      .from("jobs")
+      .insert({
+        user_id: userId,
+        customer_email: userEmail ?? null,
+        type: flyerPath ? "upload" : "design",
+        title,
+        brief: input.business_description || null,
+        upload_url: flyerPath,
+        selected_actions: [],
+        status: "new",
+      })
+      .select("id")
+      .single();
+    if (jobErr) throw jobErr;
+    jobId = job?.id ?? null;
+  }
 
   const row = {
     user_id: userId,
@@ -140,6 +212,14 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     .from("profiles")
     .update({ onboarding_completed_at: new Date().toISOString() })
     .eq("id", userId);
+
+  if (jobId) {
+    try {
+      await syncOnboardingChatbotKnowledgeForJob(jobId);
+    } catch (err) {
+      console.warn("chatbot knowledge sync failed", err);
+    }
+  }
 
   // Fire smart-detect in the background (image files only). Do not block submission.
   if (jobId && flyerFile && flyerFile.type.startsWith("image/")) {

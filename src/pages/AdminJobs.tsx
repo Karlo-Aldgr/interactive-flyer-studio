@@ -22,6 +22,7 @@ import { checkIsAdmin } from "@/lib/roles";
 import { getJobUploadSignedUrl, jobUploadFilename } from "@/lib/jobUploads";
 import { uploadFlyerAsset } from "@/lib/uploadFlyerAsset";
 import { adminAssignJobEditor, fetchEditorDisplayNames } from "@/lib/editorJobs";
+import { syncOnboardingChatbotKnowledgeForJob } from "@/lib/onboarding";
 import { displayFirstName } from "@/lib/displayName";
 
 
@@ -187,6 +188,13 @@ export default function AdminJobs() {
       admin_notes: eNotes || null,
     }).eq("id", editing.id);
     if (error) { toast.error(error.message); return; }
+    if (eFlyerId) {
+      try {
+        await syncOnboardingChatbotKnowledgeForJob(editing.id);
+      } catch (syncErr) {
+        console.warn("Failed to sync onboarding to Ask AI", syncErr);
+      }
+    }
     toast.success("Job updated");
     setEditing(null);
     refresh();
@@ -285,6 +293,12 @@ export default function AdminJobs() {
         .update({ flyer_id: flyer.id })
         .eq("id", j.id);
       if (linkErr) throw linkErr;
+
+      try {
+        await syncOnboardingChatbotKnowledgeForJob(j.id);
+      } catch (syncErr) {
+        console.warn("Failed to sync onboarding to Ask AI", syncErr);
+      }
 
       toast.success("Flyer created", { id: toastId });
       navigate(`/editor/${flyer.id}`);
