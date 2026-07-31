@@ -44,7 +44,7 @@ export const ACTION_TYPE_GROUPS: { label: string; types: ActionType[] }[] = [
   },
   {
     label: "Media & display",
-    types: ["popup", "video", "audio", "gallery", "realtor_gallery", "reveal", "air_messages"],
+    types: ["popup", "video", "audio", "gallery", "carousel", "realtor_gallery", "reveal", "air_messages"],
   },
   {
     label: "Contact",
