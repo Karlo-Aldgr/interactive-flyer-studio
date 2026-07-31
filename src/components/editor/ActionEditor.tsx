@@ -115,7 +115,7 @@ function isValid(draft: LayerAction | null): boolean {
 
 function AssetUpload({
   label, value, onChange, accept = "image/*", kind = "image",
-}: { label: string; value?: string; onChange: (url: string) => void; accept?: string; kind?: "image" | "audio" }) {
+}: { label: string; value?: string; onChange: (url: string) => void; accept?: string; kind?: "image" | "audio" | "video" }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { flyerId } = useParams();
