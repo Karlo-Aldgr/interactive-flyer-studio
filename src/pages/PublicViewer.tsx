@@ -1403,6 +1403,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "gallery":
         setGallery(a);
         break;
+      case "carousel":
+        setCarousel(a);
+        break;
       case "realtor_gallery":
         setRealtorGallery(a);
         break;
