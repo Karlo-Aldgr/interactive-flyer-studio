@@ -788,6 +788,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
   const [gallery, setGallery] = useState<LayerAction | null>(null);
   const [realtorGallery, setRealtorGallery] = useState<LayerAction | null>(null);
+  const [carousel, setCarousel] = useState<LayerAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
