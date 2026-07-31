@@ -1739,7 +1739,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pages.length, popup, video, formAction, coupon, gallery, confirmAction, zoomImage, zoomPopup]);
+  }, [pages.length, popup, video, formAction, coupon, gallery, carousel, confirmAction, zoomImage, zoomPopup]);
 
 
 
