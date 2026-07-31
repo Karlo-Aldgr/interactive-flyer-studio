@@ -1724,7 +1724,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       });
     }, ms);
     return () => window.clearTimeout(t);
-  }, [pageIndex, loading, flyer, pages.length, popup, video, formAction, coupon, gallery, confirmAction, zoomImage, zoomPopup]);
+  }, [pageIndex, loading, flyer, pages.length, popup, video, formAction, coupon, gallery, carousel, confirmAction, zoomImage, zoomPopup]);
 
   // Keyboard navigation: ArrowLeft/ArrowRight to change pages.
   useEffect(() => {
