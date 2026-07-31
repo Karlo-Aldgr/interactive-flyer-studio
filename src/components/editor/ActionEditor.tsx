@@ -2484,6 +2484,10 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
           </>
         )}
 
+        {type === "carousel" && (
+          <CarouselEditor payload={p} update={update} depth={depth} />
+        )}
+
         {type === "gallery" && (
           <GalleryEditor
             title={p.galleryTitle || ""}
