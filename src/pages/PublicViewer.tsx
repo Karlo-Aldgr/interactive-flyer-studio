@@ -2702,6 +2702,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         onRunAction={(a) => { setGallery(null); executeAction(a, null); }}
       />
 
+      {/* Multi-view scrolling carousel (video + flyers) */}
+      <CarouselDialog
+        action={carousel}
+        onClose={() => setCarousel(null)}
+        onRunAction={(a) => { setCarousel(null); executeAction(a, null); }}
+      />
+
       {/* Realtor listing gallery */}
       <RealtorGalleryDialog
         action={realtorGallery}
