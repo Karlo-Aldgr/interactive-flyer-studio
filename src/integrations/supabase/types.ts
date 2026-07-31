@@ -1300,7 +1300,9 @@ export type Database = {
           logo_help: string | null
           logo_url: string | null
           other_social_url: string | null
+          page_published: boolean
           phone: string | null
+          public_slug: string | null
           social_help: boolean
           tiktok_url: string | null
           updated_at: string
@@ -1325,7 +1327,9 @@ export type Database = {
           logo_help?: string | null
           logo_url?: string | null
           other_social_url?: string | null
+          page_published?: boolean
           phone?: string | null
+          public_slug?: string | null
           social_help?: boolean
           tiktok_url?: string | null
           updated_at?: string
@@ -1350,7 +1354,9 @@ export type Database = {
           logo_help?: string | null
           logo_url?: string | null
           other_social_url?: string | null
+          page_published?: boolean
           phone?: string | null
+          public_slug?: string | null
           social_help?: boolean
           tiktok_url?: string | null
           updated_at?: string
@@ -1972,6 +1978,7 @@ export type Database = {
         Args: { _flyer_id: string }
         Returns: Json
       }
+      get_public_business_page: { Args: { _slug: string }; Returns: Json }
       get_realtor_public_profile: { Args: { _slug: string }; Returns: Json }
       grant_editor_by_email: { Args: { _email: string }; Returns: Json }
       grant_realtor_by_email: { Args: { _email: string }; Returns: Json }
