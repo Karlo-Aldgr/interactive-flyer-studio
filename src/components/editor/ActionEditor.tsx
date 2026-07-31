@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ActionType, LayerAction, PopupButton, PopupHotspot, AirMessageBubble, PollOption, GalleryImage, ProductGridItem, NovelChapter } from "@/types/flyer";
+import { ActionType, LayerAction, PopupButton, PopupHotspot, AirMessageBubble, PollOption, GalleryImage, ProductGridItem, NovelChapter, CarouselSlide } from "@/types/flyer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
