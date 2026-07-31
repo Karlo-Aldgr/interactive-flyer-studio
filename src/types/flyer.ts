@@ -34,7 +34,28 @@ export type ActionType =
   | "menu_add_item"
   | "product_grid"
   | "novel"
-  | "realtor_gallery";
+  | "realtor_gallery"
+  | "carousel";
+
+/** One slide of a multi-view scrolling carousel (video or flyer image). */
+export interface CarouselSlide {
+  id: string;
+  kind: "video" | "image";
+  mediaUrl?: string;
+  posterUrl?: string;      // optional poster for video slides
+  title?: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  ctaBgColor?: string;
+  ctaTextColor?: string;
+  ctaAction?: LayerAction | null;
+  tapAction?: LayerAction | null;
+  videoAutoplay?: boolean; // default true (muted)
+  videoLoop?: boolean;     // default true
+  videoShowMute?: boolean; // default true
+}
+
+export type CarouselDirection = "horizontal" | "vertical";
 
 export interface NovelChapter {
   id: string;
