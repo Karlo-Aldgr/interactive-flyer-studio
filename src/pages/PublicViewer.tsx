@@ -1715,7 +1715,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     const ms = Number((flyer.settings as any)?.autoAdvanceMs ?? 0);
     const loop = (flyer.settings as any)?.autoAdvanceLoop ?? true;
     if (!enabled || !ms || ms < 100) return;
-    if (popup || video || formAction || coupon || gallery || confirmAction || zoomImage || zoomPopup) return;
+    if (popup || video || formAction || coupon || gallery || carousel || confirmAction || zoomImage || zoomPopup) return;
     const t = window.setTimeout(() => {
       setPageIndex((i) => {
         const next = i + 1;
