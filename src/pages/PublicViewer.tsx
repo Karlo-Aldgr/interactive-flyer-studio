@@ -112,6 +112,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
+import CarouselDialog from "@/components/viewer/CarouselDialog";
 import NewInteractionDialogs, { MenuCartUI } from "@/components/viewer/NewInteractionDialogs";
 import { useMenuCart } from "@/store/menuCartStore";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
@@ -788,6 +789,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
   const [gallery, setGallery] = useState<LayerAction | null>(null);
   const [realtorGallery, setRealtorGallery] = useState<LayerAction | null>(null);
+  const [carousel, setCarousel] = useState<LayerAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<LayerAction | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [zoomPopup, setZoomPopup] = useState<LayerAction | null>(null);
@@ -1402,6 +1404,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       case "gallery":
         setGallery(a);
         break;
+      case "carousel":
+        setCarousel(a);
+        break;
       case "realtor_gallery":
         setRealtorGallery(a);
         break;
@@ -1711,7 +1716,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     const ms = Number((flyer.settings as any)?.autoAdvanceMs ?? 0);
     const loop = (flyer.settings as any)?.autoAdvanceLoop ?? true;
     if (!enabled || !ms || ms < 100) return;
-    if (popup || video || formAction || coupon || gallery || confirmAction || zoomImage || zoomPopup) return;
+    if (popup || video || formAction || coupon || gallery || carousel || confirmAction || zoomImage || zoomPopup) return;
     const t = window.setTimeout(() => {
       setPageIndex((i) => {
         const next = i + 1;
@@ -1720,12 +1725,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
       });
     }, ms);
     return () => window.clearTimeout(t);
-  }, [pageIndex, loading, flyer, pages.length, popup, video, formAction, coupon, gallery, confirmAction, zoomImage, zoomPopup]);
+  }, [pageIndex, loading, flyer, pages.length, popup, video, formAction, coupon, gallery, carousel, confirmAction, zoomImage, zoomPopup]);
 
   // Keyboard navigation: ArrowLeft/ArrowRight to change pages.
   useEffect(() => {
     if (pages.length < 2) return;
-    const blocked = popup || video || formAction || coupon || gallery || confirmAction || zoomImage || zoomPopup;
+    const blocked = popup || video || formAction || coupon || gallery || carousel || confirmAction || zoomImage || zoomPopup;
     if (blocked) return;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -1735,7 +1740,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pages.length, popup, video, formAction, coupon, gallery, confirmAction, zoomImage, zoomPopup]);
+  }, [pages.length, popup, video, formAction, coupon, gallery, carousel, confirmAction, zoomImage, zoomPopup]);
 
 
 
@@ -2079,7 +2084,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             const realIdx = pages.findIndex((p) => p.id === target.id);
             if (realIdx >= 0) setPageIndex(realIdx);
           };
-          if (isLinkedPage || total <= 1 || popup || video || formAction || coupon || gallery || confirmAction || zoomImage || zoomPopup || productGrid) return null;
+          if (isLinkedPage || total <= 1 || popup || video || formAction || coupon || gallery || carousel || confirmAction || zoomImage || zoomPopup || productGrid) return null;
           return (
             <div
               style={{
@@ -2696,6 +2701,13 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         onClose={() => setGallery(null)}
         onZoom={(url) => setZoomImage(url)}
         onRunAction={(a) => { setGallery(null); executeAction(a, null); }}
+      />
+
+      {/* Multi-view scrolling carousel (video + flyers) */}
+      <CarouselDialog
+        action={carousel}
+        onClose={() => setCarousel(null)}
+        onRunAction={(a) => { setCarousel(null); executeAction(a, null); }}
       />
 
       {/* Realtor listing gallery */}

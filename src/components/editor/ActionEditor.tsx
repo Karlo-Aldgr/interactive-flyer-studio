@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ActionType, LayerAction, PopupButton, PopupHotspot, AirMessageBubble, PollOption, GalleryImage, ProductGridItem, NovelChapter } from "@/types/flyer";
+import { ActionType, LayerAction, PopupButton, PopupHotspot, AirMessageBubble, PollOption, GalleryImage, ProductGridItem, NovelChapter, CarouselSlide } from "@/types/flyer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
@@ -89,6 +89,8 @@ function isValid(draft: LayerAction | null): boolean {
       return !!(p.apptTitle && p.apptDurationMin);
     case "gallery":
       return !!(p.galleryImages && p.galleryImages.length > 0);
+    case "carousel":
+      return !!(p.carouselSlides && p.carouselSlides.some((s) => !!s.mediaUrl));
     case "survey":
       return !!(p.surveyTitle && p.surveyQuestions && p.surveyQuestions.length > 0 && p.surveyQuestions.every((q) => q.label?.trim()));
     case "testimonial":
@@ -115,7 +117,7 @@ function isValid(draft: LayerAction | null): boolean {
 
 function AssetUpload({
   label, value, onChange, accept = "image/*", kind = "image",
-}: { label: string; value?: string; onChange: (url: string) => void; accept?: string; kind?: "image" | "audio" }) {
+}: { label: string; value?: string; onChange: (url: string) => void; accept?: string; kind?: "image" | "audio" | "video" }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { flyerId } = useParams();
@@ -156,6 +158,9 @@ function AssetUpload({
         )}
         {value && kind === "audio" && (
           <audio src={value} controls className="h-8 max-w-[200px]" />
+        )}
+        {value && kind === "video" && (
+          <video src={value} className="h-10 w-16 rounded border border-border object-cover" muted />
         )}
         {value && (
           <Button type="button" size="sm" variant="ghost" onClick={() => onChange("")}>
@@ -238,6 +243,276 @@ function RealtorGalleryPicker({
   );
 }
 
+
+const MAX_CAROUSEL_SLIDES = 20;
+
+function CarouselEditor({
+  payload, update, depth,
+}: {
+  payload: LayerAction["payload"];
+  update: (patch: Partial<LayerAction["payload"]>) => void;
+  depth: number;
+}) {
+  const slides: CarouselSlide[] = payload.carouselSlides || [];
+  const [openCtaId, setOpenCtaId] = useState<string | null>(null);
+  const [openTapId, setOpenTapId] = useState<string | null>(null);
+
+  function setSlides(next: CarouselSlide[]) {
+    update({ carouselSlides: next });
+  }
+  function patchSlide(id: string, patch: Partial<CarouselSlide>) {
+    setSlides(slides.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  }
+  function addSlide(kind: "video" | "image") {
+    if (slides.length >= MAX_CAROUSEL_SLIDES) {
+      toast.error(`Maximum ${MAX_CAROUSEL_SLIDES} slides`);
+      return;
+    }
+    setSlides([...slides, { id: safeUUID(), kind, videoAutoplay: true, videoLoop: true, videoShowMute: true }]);
+  }
+  function removeSlide(id: string) {
+    setSlides(slides.filter((s) => s.id !== id));
+  }
+  function move(id: string, dir: -1 | 1) {
+    const i = slides.findIndex((s) => s.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= slides.length) return;
+    const next = [...slides];
+    [next[i], next[j]] = [next[j], next[i]];
+    setSlides(next);
+  }
+
+  async function copyJson() {
+    const data = JSON.stringify({
+      carouselTitle: payload.carouselTitle,
+      carouselDirection: payload.carouselDirection,
+      carouselSlides: slides,
+    });
+    try {
+      await navigator.clipboard.writeText(data);
+      toast.success("Carousel copied — paste it into another flyer");
+    } catch {
+      toast.error("Clipboard not available");
+    }
+  }
+  async function pasteJson() {
+    try {
+      const text = await navigator.clipboard.readText();
+      const parsed = JSON.parse(text);
+      if (!parsed || !Array.isArray(parsed.carouselSlides)) throw new Error("bad");
+      update({
+        carouselTitle: parsed.carouselTitle,
+        carouselDirection: parsed.carouselDirection,
+        carouselSlides: parsed.carouselSlides.map((s: CarouselSlide) => ({ ...s, id: s.id || safeUUID() })),
+      });
+      toast.success("Carousel pasted");
+    } catch {
+      toast.error("Clipboard doesn't contain a copied carousel");
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] text-muted-foreground">
+        A scrolling multi-view gallery. Make the first slide a video and the rest your flyers — each slide has
+        its own title, subtitle, call-to-action button and optional tap action.
+      </p>
+
+      <div>
+        <Label className="text-xs">Carousel title (optional)</Label>
+        <Input
+          className="mt-1"
+          value={payload.carouselTitle || ""}
+          onChange={(e) => update({ carouselTitle: e.target.value })}
+          placeholder="e.g. Our teamwear"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Scroll direction</Label>
+          <Select
+            value={payload.carouselDirection || "horizontal"}
+            onValueChange={(v) => update({ carouselDirection: v as "horizontal" | "vertical" })}
+          >
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="horizontal">Horizontal cards (swipe sideways)</SelectItem>
+              <SelectItem value="vertical">Vertical feed (scroll down)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Start on slide</Label>
+          <Input
+            type="number"
+            min={1}
+            max={Math.max(1, slides.length)}
+            className="mt-1"
+            value={(payload.carouselStartIndex ?? 0) + 1}
+            onChange={(e) => update({ carouselStartIndex: Math.max(0, (parseInt(e.target.value, 10) || 1) - 1) })}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" size="sm" variant="outline" onClick={() => addSlide("video")}>
+          <Plus className="mr-1 h-3.5 w-3.5" /> Video slide
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => addSlide("image")}>
+          <Plus className="mr-1 h-3.5 w-3.5" /> Flyer slide
+        </Button>
+        <Button type="button" size="sm" variant="ghost" className="text-[11px]" onClick={copyJson} disabled={!slides.length}>
+          Copy carousel
+        </Button>
+        <Button type="button" size="sm" variant="ghost" className="text-[11px]" onClick={pasteJson}>
+          Paste carousel
+        </Button>
+      </div>
+
+      {slides.length === 0 ? (
+        <div className="rounded border border-dashed border-border p-6 text-center text-[11px] text-muted-foreground">
+          No slides yet. Add a video slide first, then your flyer slides.
+        </div>
+      ) : (
+        slides.map((s, i) => (
+          <div key={s.id} className="space-y-2 rounded border border-border p-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold">
+                Slide {i + 1} — {s.kind === "video" ? "Video" : "Flyer image"}
+              </Label>
+              <div className="flex items-center">
+                <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(s.id, -1)} disabled={i === 0}>
+                  <ChevronUp className="h-3 w-3" />
+                </Button>
+                <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(s.id, 1)} disabled={i === slides.length - 1}>
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+                <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeSlide(s.id)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            <AssetUpload
+              label={s.kind === "video" ? "Video file" : "Flyer image"}
+              value={s.mediaUrl}
+              kind={s.kind === "video" ? "video" : "image"}
+              accept={s.kind === "video" ? "video/*" : "image/*"}
+              onChange={(url) => patchSlide(s.id, { mediaUrl: url })}
+            />
+            <Input
+              className="h-8 text-[12px]"
+              value={s.mediaUrl || ""}
+              onChange={(e) => patchSlide(s.id, { mediaUrl: e.target.value })}
+              placeholder="…or paste a media URL"
+            />
+
+            {s.kind === "video" && (
+              <>
+                <AssetUpload
+                  label="Poster image (optional)"
+                  value={s.posterUrl}
+                  onChange={(url) => patchSlide(s.id, { posterUrl: url })}
+                />
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-[11px]">
+                    <Switch checked={s.videoAutoplay !== false} onCheckedChange={(v) => patchSlide(s.id, { videoAutoplay: v })} />
+                    Autoplay (muted)
+                  </label>
+                  <label className="flex items-center gap-2 text-[11px]">
+                    <Switch checked={s.videoLoop !== false} onCheckedChange={(v) => patchSlide(s.id, { videoLoop: v })} />
+                    Loop
+                  </label>
+                  <label className="flex items-center gap-2 text-[11px]">
+                    <Switch checked={s.videoShowMute !== false} onCheckedChange={(v) => patchSlide(s.id, { videoShowMute: v })} />
+                    Mute button
+                  </label>
+                </div>
+              </>
+            )}
+
+            <Input
+              className="h-8 text-[12px]"
+              value={s.title || ""}
+              onChange={(e) => patchSlide(s.id, { title: e.target.value })}
+              placeholder="Title"
+            />
+            <Input
+              className="h-8 text-[12px]"
+              value={s.subtitle || ""}
+              onChange={(e) => patchSlide(s.id, { subtitle: e.target.value })}
+              placeholder="Subtitle"
+            />
+
+            <div className="grid grid-cols-3 gap-2">
+              <Input
+                className="col-span-1 h-8 text-[12px]"
+                value={s.ctaLabel || ""}
+                onChange={(e) => patchSlide(s.id, { ctaLabel: e.target.value })}
+                placeholder="Button label"
+              />
+              <div className="flex items-center gap-1">
+                <input
+                  type="color"
+                  className="h-8 w-8 rounded border border-border"
+                  value={s.ctaBgColor || "#25D366"}
+                  onChange={(e) => patchSlide(s.id, { ctaBgColor: e.target.value })}
+                />
+                <input
+                  type="color"
+                  className="h-8 w-8 rounded border border-border"
+                  value={s.ctaTextColor || "#ffffff"}
+                  onChange={(e) => patchSlide(s.id, { ctaTextColor: e.target.value })}
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant={s.ctaAction ? "default" : "outline"}
+                className="h-8 px-2 text-[10px]"
+                onClick={() => { setOpenCtaId(openCtaId === s.id ? null : s.id); setOpenTapId(null); }}
+              >
+                {s.ctaAction ? ACTION_LABELS[s.ctaAction.type] : "+ Button action"}
+              </Button>
+            </div>
+
+            {openCtaId === s.id && (
+              <div className="rounded border border-border bg-muted/30 p-2">
+                <ActionEditor
+                  embedded
+                  depth={depth + 1}
+                  action={s.ctaAction || null}
+                  onChange={(a) => patchSlide(s.id, { ctaAction: a })}
+                />
+              </div>
+            )}
+
+            <Button
+              type="button"
+              size="sm"
+              variant={s.tapAction ? "default" : "ghost"}
+              className="h-7 px-2 text-[10px]"
+              onClick={() => { setOpenTapId(openTapId === s.id ? null : s.id); setOpenCtaId(null); }}
+            >
+              {s.tapAction ? `Tap: ${ACTION_LABELS[s.tapAction.type]}` : "+ Tap action on image"}
+            </Button>
+            {openTapId === s.id && (
+              <div className="rounded border border-border bg-muted/30 p-2">
+                <ActionEditor
+                  embedded
+                  depth={depth + 1}
+                  action={s.tapAction || null}
+                  onChange={(a) => patchSlide(s.id, { tapAction: a })}
+                />
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
 
 function GalleryEditor({
   title, images, onTitleChange, onImagesChange, depth,
@@ -2207,6 +2482,10 @@ export function ActionEditor({ action, onChange, initialType, depth = 0, embedde
               </Select>
             </div>
           </>
+        )}
+
+        {type === "carousel" && (
+          <CarouselEditor payload={p} update={update} depth={depth} />
         )}
 
         {type === "gallery" && (

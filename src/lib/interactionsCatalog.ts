@@ -3,7 +3,7 @@ import {
   FormInput, Navigation, Eye, CalendarPlus, Ticket, CheckSquare, ShoppingCart,
   BadgePercent, MapPin, Package, MessagesSquare, BarChart3, Mail, CalendarCheck,
   Images, ClipboardList, Quote, Utensils, BookOpen, Briefcase, Trophy, Star, ShoppingBag,
-  BookText,
+  BookText, GalleryHorizontal,
 } from "lucide-react";
 
 export type InteractionDef = {
@@ -81,6 +81,9 @@ export const INTERACTIONS: InteractionDef[] = [
   { id: "gallery", label: "Photo gallery", icon: Images,
     short: "Swipeable photo set.",
     details: "Tap an image to open a full-screen, swipeable gallery — menu photos, portfolio, event highlights." },
+  { id: "carousel", label: "Carousel (video + flyers)", icon: GalleryHorizontal,
+    short: "Scrolling multi-view gallery.",
+    details: "A scrolling gallery where the first card can be a video and the rest are flyers — each card has its own title, subtitle and call-to-action button." },
   { id: "survey", label: "Survey", icon: ClipboardList,
     short: "Ask multiple questions, collect answers.",
     details: "Multi-question survey with text, multiple-choice and star-rating questions. Responses appear in your dashboard." },

@@ -34,7 +34,28 @@ export type ActionType =
   | "menu_add_item"
   | "product_grid"
   | "novel"
-  | "realtor_gallery";
+  | "realtor_gallery"
+  | "carousel";
+
+/** One slide of a multi-view scrolling carousel (video or flyer image). */
+export interface CarouselSlide {
+  id: string;
+  kind: "video" | "image";
+  mediaUrl?: string;
+  posterUrl?: string;      // optional poster for video slides
+  title?: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  ctaBgColor?: string;
+  ctaTextColor?: string;
+  ctaAction?: LayerAction | null;
+  tapAction?: LayerAction | null;
+  videoAutoplay?: boolean; // default true (muted)
+  videoLoop?: boolean;     // default true
+  videoShowMute?: boolean; // default true
+}
+
+export type CarouselDirection = "horizontal" | "vertical";
 
 export interface NovelChapter {
   id: string;
@@ -326,6 +347,12 @@ export interface ActionPayload {
   novelSubscribeUrl?: string;              // PayPal subscription button URL (author-provided)
   novelShowFlyerPrice?: boolean;           // floating price on flyer cover (default true)
   novelFlyerPriceCorner?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+  // carousel — multi-view scrolling video / flyer gallery
+  carouselTitle?: string;
+  carouselDirection?: CarouselDirection;   // default "horizontal"
+  carouselStartIndex?: number;             // 0-based slide to open on
+  carouselSlides?: CarouselSlide[];
 }
 
 export type BubbleTextCase = "as-is" | "upper" | "lower";

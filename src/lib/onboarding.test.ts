@@ -25,6 +25,6 @@ describe("buildChatbotKnowledgeFromOnboarding", () => {
   });
 
   it("returns empty string when no fields are provided", () => {
-    expect(buildChatbotKnowledgeFromOnboarding({})).toBe("");
+    expect(buildChatbotKnowledgeFromOnboarding({} as never)).toBe("");
   });
 });
