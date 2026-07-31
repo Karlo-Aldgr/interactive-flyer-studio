@@ -33,6 +33,7 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   product_grid: "Multi-product shop",
   novel: "Novel / Story (paid chapters)",
   realtor_gallery: "Realtor gallery (link to listing photos)",
+  carousel: "Carousel (scrolling video / flyer gallery)",
 };
 
 /** Grouped action types for the editor dropdown (excludes internal menu_add_item). */
