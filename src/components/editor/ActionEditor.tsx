@@ -157,6 +157,9 @@ function AssetUpload({
         {value && kind === "audio" && (
           <audio src={value} controls className="h-8 max-w-[200px]" />
         )}
+        {value && kind === "video" && (
+          <video src={value} className="h-10 w-16 rounded border border-border object-cover" muted />
+        )}
         {value && (
           <Button type="button" size="sm" variant="ghost" onClick={() => onChange("")}>
             Remove
