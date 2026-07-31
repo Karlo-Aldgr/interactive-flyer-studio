@@ -89,6 +89,8 @@ function isValid(draft: LayerAction | null): boolean {
       return !!(p.apptTitle && p.apptDurationMin);
     case "gallery":
       return !!(p.galleryImages && p.galleryImages.length > 0);
+    case "carousel":
+      return !!(p.carouselSlides && p.carouselSlides.some((s) => !!s.mediaUrl));
     case "survey":
       return !!(p.surveyTitle && p.surveyQuestions && p.surveyQuestions.length > 0 && p.surveyQuestions.every((q) => q.label?.trim()));
     case "testimonial":
