@@ -2083,7 +2083,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
             const realIdx = pages.findIndex((p) => p.id === target.id);
             if (realIdx >= 0) setPageIndex(realIdx);
           };
-          if (isLinkedPage || total <= 1 || popup || video || formAction || coupon || gallery || confirmAction || zoomImage || zoomPopup || productGrid) return null;
+          if (isLinkedPage || total <= 1 || popup || video || formAction || coupon || gallery || carousel || confirmAction || zoomImage || zoomPopup || productGrid) return null;
           return (
             <div
               style={{
