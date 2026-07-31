@@ -1729,7 +1729,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   // Keyboard navigation: ArrowLeft/ArrowRight to change pages.
   useEffect(() => {
     if (pages.length < 2) return;
-    const blocked = popup || video || formAction || coupon || gallery || confirmAction || zoomImage || zoomPopup;
+    const blocked = popup || video || formAction || coupon || gallery || carousel || confirmAction || zoomImage || zoomPopup;
     if (blocked) return;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
