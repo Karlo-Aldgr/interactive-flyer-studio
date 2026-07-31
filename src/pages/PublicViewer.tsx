@@ -112,6 +112,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
+import CarouselDialog from "@/components/viewer/CarouselDialog";
 import NewInteractionDialogs, { MenuCartUI } from "@/components/viewer/NewInteractionDialogs";
 import { useMenuCart } from "@/store/menuCartStore";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
