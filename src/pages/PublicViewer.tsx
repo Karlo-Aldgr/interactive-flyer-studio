@@ -888,11 +888,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
   const introPlayedRef = useRef(false);
   const didLogViewRef = useRef(false);
-  const pageViewReadyRef = useRef(false);
 
   useEffect(() => {
     didLogViewRef.current = false;
-    pageViewReadyRef.current = false;
   }, [flyer?.id]);
   const [introNeedsTap, setIntroNeedsTap] = useState(false);
   // Background audio (separate from intro audio)
