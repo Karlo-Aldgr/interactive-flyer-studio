@@ -2150,6 +2150,7 @@ export type Database = {
         | "product_grid"
         | "novel"
         | "realtor_gallery"
+        | "carousel"
       app_role: "admin" | "user" | "editor" | "realtor"
       appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
@@ -2326,6 +2327,7 @@ export const Constants = {
         "product_grid",
         "novel",
         "realtor_gallery",
+        "carousel",
       ],
       app_role: ["admin", "user", "editor", "realtor"],
       appointment_status: ["confirmed", "cancelled"],
