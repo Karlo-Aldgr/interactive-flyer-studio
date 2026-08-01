@@ -286,6 +286,11 @@ function CarouselEditor({
     const data = JSON.stringify({
       carouselTitle: payload.carouselTitle,
       carouselDirection: payload.carouselDirection,
+      carouselHeadline: payload.carouselHeadline,
+      carouselSubtext: payload.carouselSubtext,
+      carouselBgColor: payload.carouselBgColor,
+      carouselTextColor: payload.carouselTextColor,
+      carouselCardRatio: payload.carouselCardRatio,
       carouselSlides: slides,
     });
     try {
@@ -303,6 +308,11 @@ function CarouselEditor({
       update({
         carouselTitle: parsed.carouselTitle,
         carouselDirection: parsed.carouselDirection,
+        carouselHeadline: parsed.carouselHeadline,
+        carouselSubtext: parsed.carouselSubtext,
+        carouselBgColor: parsed.carouselBgColor,
+        carouselTextColor: parsed.carouselTextColor,
+        carouselCardRatio: parsed.carouselCardRatio,
         carouselSlides: parsed.carouselSlides.map((s: CarouselSlide) => ({ ...s, id: s.id || safeUUID() })),
       });
       toast.success("Carousel pasted");
@@ -310,6 +320,7 @@ function CarouselEditor({
       toast.error("Clipboard doesn't contain a copied carousel");
     }
   }
+
 
   return (
     <div className="space-y-3">

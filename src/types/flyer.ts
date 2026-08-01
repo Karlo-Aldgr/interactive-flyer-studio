@@ -353,6 +353,11 @@ export interface ActionPayload {
   carouselDirection?: CarouselDirection;   // default "horizontal"
   carouselStartIndex?: number;             // 0-based slide to open on
   carouselSlides?: CarouselSlide[];
+  carouselHeadline?: string;               // text shown above the carousel
+  carouselSubtext?: string;                // text shown below the carousel
+  carouselBgColor?: string;                // background behind the carousel
+  carouselTextColor?: string;              // headline / subtext color
+  carouselCardRatio?: "9:16" | "4:5" | "1:1";
 }
 
 export type BubbleTextCase = "as-is" | "upper" | "lower";
