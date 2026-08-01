@@ -13,6 +13,8 @@ import type { IntroPreset, PageIntro } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { AiLandingPageDialog } from "@/components/editor/AiLandingPageDialog";
+
 
 const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
   { value: "none", label: "None" },
@@ -52,6 +54,8 @@ export function PagesPanel() {
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
+  const [aiLandingOpen, setAiLandingOpen] = useState(false);
+
 
   async function handleScanMenu(file: File) {
     if (!flyer) return;
@@ -161,6 +165,10 @@ export function PagesPanel() {
                 Add story page (1080×1920)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setAiLandingOpen(true)}>
+                <Sparkles className="mr-2 h-3.5 w-3.5" /> AI landing page
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem disabled={scanning} onClick={() => fileRef.current?.click()}>
                 <Camera className="mr-2 h-3.5 w-3.5" /> {scanning ? "Scanning…" : "Scan menu photo"}
               </DropdownMenuItem>
@@ -168,6 +176,8 @@ export function PagesPanel() {
           </DropdownMenu>
         </div>
       </div>
+      <AiLandingPageDialog open={aiLandingOpen} onOpenChange={setAiLandingOpen} />
+
       <div className="max-h-64 overflow-y-auto">
         {(() => { let flyerCount = 0; return pages.map((p, i) => {
           const isLanding = !!p.background?.linkPageId;

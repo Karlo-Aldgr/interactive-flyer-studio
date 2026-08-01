@@ -1,30 +1,35 @@
-## Goal
-Fix the carousel viewer so cards are correctly sized and vertically centered, and add editor options for text above/below the carousel plus a background color.
+# AI Landing Page for each flyer
 
-## New payload fields (src/types/flyer.ts)
-Add to the carousel section of the action payload:
-- `carouselHeadline?: string` — text above the carousel
-- `carouselSubtext?: string` — text below the carousel
-- `carouselBgColor?: string` — background behind the carousel (default `#111111`)
-- `carouselTextColor?: string` — color for the header/footer text (default `#ffffff`)
-- `carouselCardRatio?: "9:16" | "4:5" | "1:1"` — card aspect ratio (default `9:16`)
+Add a "Landing page" option in the editor's **Pages** panel that generates a complete, on-brand landing page for the current flyer using AI, with a built-in Shop now / Pre-order button.
 
-No database change is needed — these live inside the existing JSON payload.
+## Behavior
 
-## Viewer (src/components/viewer/CarouselDialog.tsx)
-- Apply `carouselBgColor` as the overlay background instead of the fixed `bg-black/95`.
-- Vertically center the scroller: the track becomes a centered flex row inside a full-height container, so the row of cards sits in the middle of the screen with the headline above and subtext below.
-- Card sizing: each card gets a fixed aspect ratio (from `carouselCardRatio`) and a height capped to the available viewport (`max-h`), width derived from the ratio, so the video and flyer cards all match the reference proportions instead of stretching. Media uses `object-contain` for flyers so nothing is cropped, video keeps `object-cover` option.
-- Render `carouselHeadline` above the track (centered, display font) and `carouselSubtext` below it, both using `carouselTextColor`.
-- Keep the close button, dots, arrows, mute and CTA behavior as-is.
+1. **New button in Pages panel**: "AI landing page" (next to the existing Add page / Landing / Scan menu actions).
+2. **Guard — no flyer content yet**: if the flyer has no design pages with real content (no text/image layers on any non-landing page), show a prompt dialog:
+   > "Create or design your flyer first — the AI builds the landing page from your flyer's content." with buttons *Design a flyer* (closes dialog, selects/creates page 1) and *Cancel*.
+3. **With flyer content**: show a short dialog (CTA label choice: *Shop now* / *Pre-order* / custom, plus optional extra notes), then generate.
+4. **Generation**: AI reads the flyer's text layers, image URLs, title/category, and the business's onboarding record (name, slogan, description, logo, address, phone, email, website, socials) and returns a structured landing layout.
+5. **Result**: a new page named "Landing page" is appended, at the **same canvas size as the flyer's pages**, containing:
+   - hero image (reused from the flyer's main image),
+   - headline + subheadline,
+   - 3 short benefit/feature lines,
+   - a CTA button wired to the flyer's **built-in order/checkout** action,
+   - business contact footer line.
+   Everything is normal editable layers, so the user can tweak, move, restyle, or delete them.
+6. The page is added through the existing store history (undo works) and saves with the normal flyer save flow.
 
-## Editor (src/components/editor/ActionEditor.tsx, CarouselEditor)
-Add controls under the existing title/direction/start-slide fields:
-- Headline (text above) and Subtext (text below) inputs
-- Background color and text color pickers
-- Card aspect ratio select (9:16 / 4:5 / 1:1)
-Include the new fields in the existing copy/paste carousel JSON.
+## CTA wiring
+
+The generated button gets a real action, picked in this order from what the flyer already has:
+- `show_menu` if the flyer has a menu catalog configured,
+- else `product_grid` / `buy_product` if products exist,
+- else `checkout`.
+If none of those exist, the button is created with a `checkout` action plus an inline hint in the inspector telling the user to finish payment setup (existing payment settings dialog).
 
 ## Technical notes
-- Colors here are user-chosen per-flyer content values, so they stay inline styles on the viewer (same pattern as the existing slide CTA colors), not design tokens.
-- Horizontal mode keeps snap scrolling with peeking neighbor cards as in the reference photo; vertical mode keeps one centered card per screen.
+
+- **New edge function** `landing-page-generate` (Supabase, authenticated), same shape as `flyer-coach`: verifies the caller owns the flyer, collects flyer facts from `pages` + the matching `onboarding_submissions` row, calls Lovable AI (`openai/gpt-5.6-sol`) with a strict JSON schema (`headline`, `subheadline`, `bullets[3]`, `ctaLabel`, `footerLine`, `accentColor`), returns it. Handles 429/402 with clear messages.
+- **Store**: add `addAiLandingPage(spec)` in `src/store/editorStore.ts` that builds the page + layers (image, text, button with action) at flyer width/height, using existing `defaultLayer` helpers and history snapshot.
+- **UI**: new `AiLandingPageDialog.tsx` under `src/components/editor/`, invoked from `PagesPanel.tsx`; handles the "no flyer yet" prompt, CTA choice, loading state, and errors.
+- No schema changes — the landing page is a regular `pages` row.
+- Styling uses existing design tokens; the AI-supplied accent color is applied to the CTA only.
