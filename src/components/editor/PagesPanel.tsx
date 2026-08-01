@@ -13,6 +13,8 @@ import type { IntroPreset, PageIntro } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { AiLandingPageDialog } from "@/components/editor/AiLandingPageDialog";
+
 
 const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
   { value: "none", label: "None" },
