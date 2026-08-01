@@ -888,11 +888,9 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   const [audioInfo, setAudioInfo] = useState<{ url: string; loop: boolean } | null>(null);
   const introPlayedRef = useRef(false);
   const didLogViewRef = useRef(false);
-  const pageViewReadyRef = useRef(false);
 
   useEffect(() => {
     didLogViewRef.current = false;
-    pageViewReadyRef.current = false;
   }, [flyer?.id]);
   const [introNeedsTap, setIntroNeedsTap] = useState(false);
   // Background audio (separate from intro audio)
@@ -1277,29 +1275,8 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     return () => window.removeEventListener("pagehide", onHide);
   }, [flyer, previewMode]);
 
-  // Log a page-level view when the visitor navigates between flyer pages.
-  useEffect(() => {
-    if (!flyer || previewMode || loading || pages.length === 0) return;
-    if (!pageViewReadyRef.current) {
-      pageViewReadyRef.current = true;
-      return;
-    }
-    const page = pages[pageIndex];
-    if (!page?.id) return;
-    const ts = getCurrentTrafficSource();
-    logAnalyticsEvent({
-      event_type: "view",
-      page_id: page.id,
-      metadata: {
-        page_change: true,
-        referrer: ts.referrer,
-        source: ts.source,
-        utm: ts.utm,
-        device: getViewerDevice(),
-      },
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when page index changes
-  }, [pageIndex, flyer?.id, loading, previewMode, pages.length]);
+  // Page swipes are navigation, not new visits — logging them as "view" inflated
+  // view counts and skewed CTR everywhere analytics_events is aggregated.
   function triggerClickPing(x: number, y: number, color?: string) {
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     setClickPings((prev) => [...prev, { id, x, y, color: color || "#7c3aed" }]);
