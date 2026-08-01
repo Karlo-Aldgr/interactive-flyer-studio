@@ -14,6 +14,19 @@ interface Snapshot {
 export type ResizeMode = "resize" | "scale" | "crop" | "fit";
 export type DeviceFrame = "desktop" | "tablet" | "mobile";
 
+/** AI-generated landing page content used to build a full page of layers. */
+export interface AiLandingSpec {
+  headline: string;
+  subheadline?: string;
+  bullets: string[];
+  ctaLabel: string;
+  footerLine?: string;
+  accentColor?: string;
+  heroImage?: string | null;
+  ctaAction: LayerAction | null;
+}
+
+
 interface EditorState {
   flyer: Flyer | null;
   pages: FlyerPage[];
