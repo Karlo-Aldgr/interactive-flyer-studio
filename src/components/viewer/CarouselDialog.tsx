@@ -9,6 +9,8 @@ interface Props {
   onRunAction: (a: LayerAction) => void;
 }
 
+const RATIOS: Record<string, number> = { "9:16": 9 / 16, "4:5": 4 / 5, "1:1": 1 };
+
 /**
  * Multi-view scrolling gallery: card 1 is usually a video, the rest are flyer images.
  * Each card carries its own title, subtitle, CTA button and optional tap action.
@@ -18,6 +20,9 @@ export default function CarouselDialog({ action, onClose, onRunAction }: Props) 
   const p = action?.payload || {};
   const slides = useMemo<CarouselSlide[]>(() => p.carouselSlides || [], [p.carouselSlides]);
   const vertical = p.carouselDirection === "vertical";
+  const ratio = RATIOS[p.carouselCardRatio || "9:16"] ?? 9 / 16;
+  const bgColor = p.carouselBgColor || "#111111";
+  const textColor = p.carouselTextColor || "#ffffff";
   const scrollRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -52,7 +57,11 @@ export default function CarouselDialog({ action, onClose, onRunAction }: Props) 
     const card = el.children[i] as HTMLElement | undefined;
     if (!card) return;
     if (vertical) el.scrollTo({ top: card.offsetTop - el.offsetTop, behavior });
-    else el.scrollTo({ left: card.offsetLeft - el.offsetLeft, behavior });
+    else {
+      // centre the card inside the track
+      const left = card.offsetLeft - el.offsetLeft - (el.clientWidth - card.clientWidth) / 2;
+      el.scrollTo({ left: Math.max(0, left), behavior });
+    }
     setActive(i);
   }
 
@@ -65,7 +74,9 @@ export default function CarouselDialog({ action, onClose, onRunAction }: Props) 
       const c = child as HTMLElement;
       const dist = vertical
         ? Math.abs(c.offsetTop - el.offsetTop - el.scrollTop)
-        : Math.abs(c.offsetLeft - el.offsetLeft - el.scrollLeft);
+        : Math.abs(
+            c.offsetLeft - el.offsetLeft + c.clientWidth / 2 - el.scrollLeft - el.clientWidth / 2,
+          );
       if (dist < bestDist) { bestDist = dist; best = i; }
     });
     setActive(best);
@@ -74,77 +85,104 @@ export default function CarouselDialog({ action, onClose, onRunAction }: Props) 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col bg-black/95 backdrop-blur-sm">
-      <div className="flex items-center justify-between px-4 py-3">
+    <div
+      className="fixed inset-0 z-[80] flex flex-col backdrop-blur-sm"
+      style={{ backgroundColor: bgColor }}
+    >
+      <div className="flex items-start justify-between px-4 py-3">
         <div className="min-w-0">
-          <p className="truncate font-display text-base font-semibold text-white">
+          <p className="truncate font-display text-base font-semibold" style={{ color: textColor }}>
             {p.carouselTitle || ""}
           </p>
           {slides.length > 0 && (
-            <p className="text-[11px] text-white/50">{active + 1} / {slides.length}</p>
+            <p className="text-[11px] opacity-50" style={{ color: textColor }}>
+              {active + 1} / {slides.length}
+            </p>
           )}
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close carousel"
-          className="rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+          className="rounded-full bg-black/20 p-2 transition hover:bg-black/40"
+          style={{ color: textColor }}
         >
           <X className="h-5 w-5" />
         </button>
       </div>
 
-      <div className="relative flex-1 overflow-hidden">
-        {slides.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-white/60">
-            No slides yet.
-          </div>
-        ) : (
-          <div
-            ref={scrollRef}
-            onScroll={onScroll}
-            className={
-              vertical
-                ? "flex h-full snap-y snap-mandatory flex-col gap-4 overflow-y-auto overflow-x-hidden px-4 pb-6 [scrollbar-width:none]"
-                : "flex h-full snap-x snap-mandatory items-stretch gap-4 overflow-x-auto overflow-y-hidden px-[6vw] pb-6 [scrollbar-width:none]"
-            }
+      {/* Centered stack: headline / carousel / subtext */}
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-3 py-2">
+        {p.carouselHeadline && (
+          <h2
+            className="px-6 text-center font-display text-lg font-bold leading-tight sm:text-2xl"
+            style={{ color: textColor }}
           >
-            {slides.map((s, i) => (
-              <SlideCard
-                key={s.id}
-                slide={s}
-                vertical={vertical}
-                isActive={i === active}
-                muted={muted}
-                onToggleMute={() => setMuted((m) => !m)}
-                onRunAction={onRunAction}
-              />
-            ))}
-          </div>
+            {p.carouselHeadline}
+          </h2>
         )}
 
-        {/* Desktop arrows */}
-        {slides.length > 1 && (
-          <>
-            <button
-              type="button"
-              aria-label="Previous"
-              onClick={() => scrollTo(active - 1)}
-              disabled={active === 0}
-              className="absolute left-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/15 p-2 text-white transition hover:bg-white/30 disabled:opacity-30 sm:block"
+        <div className="relative w-full min-h-0 flex-1">
+          {slides.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm opacity-60" style={{ color: textColor }}>
+              No slides yet.
+            </div>
+          ) : (
+            <div
+              ref={scrollRef}
+              onScroll={onScroll}
+              className={
+                vertical
+                  ? "flex h-full snap-y snap-mandatory flex-col items-center gap-4 overflow-y-auto overflow-x-hidden px-4 [scrollbar-width:none]"
+                  : "flex h-full snap-x snap-mandatory items-center gap-4 overflow-x-auto overflow-y-hidden px-[12vw] [scrollbar-width:none]"
+              }
             >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-            <button
-              type="button"
-              aria-label="Next"
-              onClick={() => scrollTo(active + 1)}
-              disabled={active === slides.length - 1}
-              className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/15 p-2 text-white transition hover:bg-white/30 disabled:opacity-30 sm:block"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-          </>
+              {slides.map((s, i) => (
+                <SlideCard
+                  key={s.id}
+                  slide={s}
+                  vertical={vertical}
+                  ratio={ratio}
+                  isActive={i === active}
+                  muted={muted}
+                  onToggleMute={() => setMuted((m) => !m)}
+                  onRunAction={onRunAction}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Desktop arrows */}
+          {slides.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="Previous"
+                onClick={() => scrollTo(active - 1)}
+                disabled={active === 0}
+                className="absolute left-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-black/30 p-2 transition hover:bg-black/60 disabled:opacity-30 sm:block"
+                style={{ color: textColor }}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next"
+                onClick={() => scrollTo(active + 1)}
+                disabled={active === slides.length - 1}
+                className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-black/30 p-2 transition hover:bg-black/60 disabled:opacity-30 sm:block"
+                style={{ color: textColor }}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
+        </div>
+
+        {p.carouselSubtext && (
+          <p className="px-6 text-center text-sm opacity-80" style={{ color: textColor }}>
+            {p.carouselSubtext}
+          </p>
         )}
       </div>
 
@@ -156,7 +194,8 @@ export default function CarouselDialog({ action, onClose, onRunAction }: Props) 
               type="button"
               aria-label={`Go to slide ${i + 1}`}
               onClick={() => scrollTo(i)}
-              className={`h-1.5 rounded-full transition-all ${i === active ? "w-6 bg-white" : "w-1.5 bg-white/35"}`}
+              className={`h-1.5 rounded-full transition-all ${i === active ? "w-6" : "w-1.5 opacity-40"}`}
+              style={{ backgroundColor: textColor }}
             />
           ))}
         </div>
@@ -166,10 +205,11 @@ export default function CarouselDialog({ action, onClose, onRunAction }: Props) 
 }
 
 function SlideCard({
-  slide, vertical, isActive, muted, onToggleMute, onRunAction,
+  slide, vertical, ratio, isActive, muted, onToggleMute, onRunAction,
 }: {
   slide: CarouselSlide;
   vertical: boolean;
+  ratio: number;
   isActive: boolean;
   muted: boolean;
   onToggleMute: () => void;
@@ -190,14 +230,21 @@ function SlideCard({
 
   const isVideo = slide.kind === "video" && !!slide.mediaUrl;
   const tap = slide.tapAction;
+  const hasCaption = !!(slide.title || slide.subtitle || slide.ctaLabel);
 
   return (
     <div
-      className={`relative flex shrink-0 snap-center flex-col overflow-hidden rounded-2xl bg-neutral-900 shadow-2xl ring-1 ring-white/10 ${
-        vertical ? "w-full max-w-md self-center" : "h-full w-[78vw] max-w-[360px]"
-      }`}
+      className="relative flex shrink-0 snap-center flex-col overflow-hidden rounded-2xl bg-neutral-900 shadow-2xl ring-1 ring-white/10"
+      style={
+        vertical
+          ? { width: "min(100%, 26rem)", maxHeight: "100%" }
+          : { height: "100%", width: `calc((100% - ${hasCaption ? "5.5rem" : "0rem"}) * ${ratio})`, maxWidth: "88vw" }
+      }
     >
-      <div className="relative flex-1 overflow-hidden bg-black">
+      <div
+        className="relative min-h-0 flex-1 overflow-hidden bg-black"
+        style={vertical ? { aspectRatio: String(ratio) } : undefined}
+      >
         {isVideo ? (
           <>
             <video
@@ -209,7 +256,7 @@ function SlideCard({
               playsInline
               controls={false}
               onClick={() => tap && onRunAction(tap)}
-              className={`h-full w-full object-cover ${vertical ? "max-h-[60vh]" : ""} ${tap ? "cursor-pointer" : ""}`}
+              className={`h-full w-full object-cover ${tap ? "cursor-pointer" : ""}`}
             />
             {slide.videoShowMute !== false && (
               <button
@@ -228,15 +275,15 @@ function SlideCard({
             alt={slide.title || ""}
             loading="lazy"
             onClick={() => tap && onRunAction(tap)}
-            className={`h-full w-full object-cover ${vertical ? "max-h-[60vh]" : ""} ${tap ? "cursor-pointer" : ""}`}
+            className={`h-full w-full object-contain ${tap ? "cursor-pointer" : ""}`}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-xs text-white/40">No media</div>
         )}
       </div>
 
-      {(slide.title || slide.subtitle || slide.ctaLabel) && (
-        <div className="flex items-end justify-between gap-3 bg-neutral-900 px-3 py-3">
+      {hasCaption && (
+        <div className="flex shrink-0 items-end justify-between gap-3 bg-neutral-900 px-3 py-3">
           <div className="min-w-0">
             {slide.title && (
               <p className="truncate text-sm font-semibold text-white">{slide.title}</p>
