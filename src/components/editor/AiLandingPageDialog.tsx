@@ -65,7 +65,7 @@ export function AiLandingPageDialog({ open, onOpenChange }: Props) {
     }
 
     return {
-      action: { id: ensureUuid(), type, payload: payload as LayerAction["payload"] },
+      action: { id: ensureUuid(null), type, payload: payload as LayerAction["payload"] },
       hint,
     };
   }
