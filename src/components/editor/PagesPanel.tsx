@@ -54,6 +54,8 @@ export function PagesPanel() {
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
+  const [aiLandingOpen, setAiLandingOpen] = useState(false);
+
 
   async function handleScanMenu(file: File) {
     if (!flyer) return;
