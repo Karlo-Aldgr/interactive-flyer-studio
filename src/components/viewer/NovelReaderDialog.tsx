@@ -494,20 +494,30 @@ export function NovelReaderDialog({ action, flyerId, coverFallbackUrl, previewMo
 
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Step 3 — Confirm unlock</p>
-          <Button className="w-full" disabled>
-            {paymentVerified ? (
-              "Unlocked"
-            ) : verifyingPayment ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Waiting for PayPal confirmation…
-              </>
-            ) : payPalOpened ? (
-              "Complete payment on PayPal to unlock"
-            ) : (
-              "Pay on PayPal first (Step 2)"
-            )}
-          </Button>
+          {payPalOpened && !paymentVerified && !modeVerifiable ? (
+            <Button
+              className="w-full"
+              disabled={busy}
+              onClick={() => completeVerifiedUnlock()}
+            >
+              I&apos;ve paid — unlock now
+            </Button>
+          ) : (
+            <Button className="w-full" disabled>
+              {paymentVerified ? (
+                "Unlocked"
+              ) : verifyingPayment ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Waiting for PayPal confirmation…
+                </>
+              ) : payPalOpened ? (
+                "Complete payment on PayPal to unlock"
+              ) : (
+                "Pay on PayPal first (Step 2)"
+              )}
+            </Button>
+          )}
           {paymentTimedOut && !paymentVerified && (
             <Button
               variant="outline"
