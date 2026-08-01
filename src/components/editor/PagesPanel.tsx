@@ -161,6 +161,10 @@ export function PagesPanel() {
                 Add story page (1080×1920)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setAiLandingOpen(true)}>
+                <Sparkles className="mr-2 h-3.5 w-3.5" /> AI landing page
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem disabled={scanning} onClick={() => fileRef.current?.click()}>
                 <Camera className="mr-2 h-3.5 w-3.5" /> {scanning ? "Scanning…" : "Scan menu photo"}
               </DropdownMenuItem>
@@ -168,6 +172,8 @@ export function PagesPanel() {
           </DropdownMenu>
         </div>
       </div>
+      <AiLandingPageDialog open={aiLandingOpen} onOpenChange={setAiLandingOpen} />
+
       <div className="max-h-64 overflow-y-auto">
         {(() => { let flyerCount = 0; return pages.map((p, i) => {
           const isLanding = !!p.background?.linkPageId;
