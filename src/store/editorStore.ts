@@ -14,19 +14,6 @@ interface Snapshot {
 export type ResizeMode = "resize" | "scale" | "crop" | "fit";
 export type DeviceFrame = "desktop" | "tablet" | "mobile";
 
-/** AI-generated landing page content used to build a full page of layers. */
-export interface AiLandingSpec {
-  headline: string;
-  subheadline?: string;
-  bullets: string[];
-  ctaLabel: string;
-  footerLine?: string;
-  accentColor?: string;
-  heroImage?: string | null;
-  ctaAction: LayerAction | null;
-}
-
-
 interface EditorState {
   flyer: Flyer | null;
   pages: FlyerPage[];
@@ -72,8 +59,6 @@ interface EditorState {
   // pages
   addPage: () => void;
   addLandingPage: (width?: number, height?: number) => void;
-  addAiLandingPage: (spec: AiLandingSpec) => string;
-
   addScannedMenuPage: (args: { imageUrl: string; imgWidth: number; imgHeight: number; items: Array<{ id?: string; name: string; price?: number; description?: string; category?: string; color?: string; bbox: { x: number; y: number; w: number; h: number } }>; }) => string;
   setPageSize: (id: string, w: number, h: number, mode: ResizeMode) => void;
   deletePage: (id: string) => void;
@@ -304,133 +289,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     };
     set({ pages: [...s.pages, newPage], selectedPageId: newPage.id, past, future: [], dirty: true });
   },
-
-  addAiLandingPage: (spec) => {
-    const s = get();
-    if (!s.flyer) return "";
-    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
-    const W = s.flyer.settings.width;
-    const H = s.flyer.settings.height;
-    const base = emptyPage(s.flyer.id, s.pages.length);
-    const pageId = base.id;
-    const pad = Math.round(W * 0.07);
-    const innerW = W - pad * 2;
-    const accent = spec.accentColor || "#7c3aed";
-    const layers: Layer[] = [];
-    let z = 0;
-    let y = pad;
-
-    if (spec.heroImage) {
-      const heroH = Math.round(H * 0.34);
-      layers.push({
-        ...defaultLayer("image", pageId, z++),
-        position: { x: pad, y },
-        size: { width: innerW, height: heroH },
-        content: { src: spec.heroImage },
-        style: { cornerRadius: 24 },
-      });
-      y += heroH + Math.round(H * 0.035);
-    }
-
-    const headlineH = Math.round(H * 0.09);
-    layers.push({
-      ...defaultLayer("text", pageId, z++),
-      position: { x: pad, y },
-      size: { width: innerW, height: headlineH },
-      content: { text: spec.headline },
-      style: {
-        fontFamily: "Plus Jakarta Sans",
-        fontSize: Math.round(W * 0.075),
-        fontWeight: 800,
-        color: "#0f172a",
-        align: "center",
-      },
-    });
-    y += headlineH + Math.round(H * 0.012);
-
-    if (spec.subheadline) {
-      const subH = Math.round(H * 0.07);
-      layers.push({
-        ...defaultLayer("text", pageId, z++),
-        position: { x: pad, y },
-        size: { width: innerW, height: subH },
-        content: { text: spec.subheadline },
-        style: {
-          fontFamily: "Plus Jakarta Sans",
-          fontSize: Math.round(W * 0.038),
-          fontWeight: 500,
-          color: "#475569",
-          align: "center",
-        },
-      });
-      y += subH + Math.round(H * 0.02);
-    }
-
-    for (const bullet of spec.bullets.slice(0, 3)) {
-      const bh = Math.round(H * 0.045);
-      layers.push({
-        ...defaultLayer("text", pageId, z++),
-        position: { x: pad, y },
-        size: { width: innerW, height: bh },
-        content: { text: `• ${bullet}` },
-        style: {
-          fontFamily: "Plus Jakarta Sans",
-          fontSize: Math.round(W * 0.033),
-          fontWeight: 600,
-          color: "#0f172a",
-          align: "center",
-        },
-      });
-      y += bh + Math.round(H * 0.008);
-    }
-
-    const btnW = Math.min(innerW, Math.round(W * 0.62));
-    const btnH = Math.round(H * 0.075);
-    y += Math.round(H * 0.02);
-    layers.push({
-      ...defaultLayer("button", pageId, z++),
-      position: { x: Math.round((W - btnW) / 2), y },
-      size: { width: btnW, height: btnH },
-      content: { label: spec.ctaLabel },
-      style: {
-        fill: accent,
-        color: "#ffffff",
-        cornerRadius: 999,
-        fontSize: Math.round(W * 0.04),
-        fontWeight: 700,
-        align: "center",
-      },
-      action: spec.ctaAction,
-    });
-    y += btnH + Math.round(H * 0.02);
-
-    if (spec.footerLine) {
-      layers.push({
-        ...defaultLayer("text", pageId, z++),
-        position: { x: pad, y: Math.min(y, H - Math.round(H * 0.07)) },
-        size: { width: innerW, height: Math.round(H * 0.05) },
-        content: { text: spec.footerLine },
-        style: {
-          fontFamily: "Plus Jakarta Sans",
-          fontSize: Math.round(W * 0.026),
-          fontWeight: 500,
-          color: "#64748b",
-          align: "center",
-        },
-      });
-    }
-
-    const newPage: FlyerPage = {
-      ...base,
-      name: "Landing page",
-      background: { color: "#ffffff", size: { width: W, height: H } },
-      layers,
-    };
-    set({ pages: [...s.pages, newPage], selectedPageId: newPage.id, selectedLayerId: null, past, future: [], dirty: true });
-    return newPage.id;
-  },
-
-
 
   addScannedMenuPage: ({ imageUrl, imgWidth, imgHeight, items }) => {
     const s = get();
