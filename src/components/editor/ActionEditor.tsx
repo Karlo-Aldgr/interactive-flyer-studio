@@ -366,6 +366,62 @@ function CarouselEditor({
         </div>
       </div>
 
+      <div>
+        <Label className="text-xs">Text above carousel (optional)</Label>
+        <Input
+          className="mt-1"
+          value={payload.carouselHeadline || ""}
+          onChange={(e) => update({ carouselHeadline: e.target.value })}
+          placeholder="e.g. WE MAKE TEAMWEAR"
+        />
+      </div>
+
+      <div>
+        <Label className="text-xs">Text below carousel (optional)</Label>
+        <Input
+          className="mt-1"
+          value={payload.carouselSubtext || ""}
+          onChange={(e) => update({ carouselSubtext: e.target.value })}
+          placeholder="e.g. Chat with us for a quote"
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <Label className="text-xs">Background</Label>
+          <Input
+            type="color"
+            className="mt-1 h-9 p-1"
+            value={payload.carouselBgColor || "#111111"}
+            onChange={(e) => update({ carouselBgColor: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Text color</Label>
+          <Input
+            type="color"
+            className="mt-1 h-9 p-1"
+            value={payload.carouselTextColor || "#ffffff"}
+            onChange={(e) => update({ carouselTextColor: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Card shape</Label>
+          <Select
+            value={payload.carouselCardRatio || "9:16"}
+            onValueChange={(v) => update({ carouselCardRatio: v as "9:16" | "4:5" | "1:1" })}
+          >
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="9:16">Tall (9:16)</SelectItem>
+              <SelectItem value="4:5">Portrait (4:5)</SelectItem>
+              <SelectItem value="1:1">Square (1:1)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" variant="outline" onClick={() => addSlide("video")}>
           <Plus className="mr-1 h-3.5 w-3.5" /> Video slide
