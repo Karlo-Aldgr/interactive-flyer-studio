@@ -1,41 +1,30 @@
 ## Goal
+Fix the carousel viewer so cards are correctly sized and vertically centered, and add editor options for text above/below the carousel plus a background color.
 
-A new interactive action, **Carousel** — a multi-view scrolling gallery. Slide 1 is a video, slides 2+ are flyer images with title/subtitle, each slide can have its own CTA button and its own tap action. Any button/hotspot/image on any of your 4+ flyers can open it. It is not a page, so it never shows in page navigation.
+## New payload fields (src/types/flyer.ts)
+Add to the carousel section of the action payload:
+- `carouselHeadline?: string` — text above the carousel
+- `carouselSubtext?: string` — text below the carousel
+- `carouselBgColor?: string` — background behind the carousel (default `#111111`)
+- `carouselTextColor?: string` — color for the header/footer text (default `#ffffff`)
+- `carouselCardRatio?: "9:16" | "4:5" | "1:1"` — card aspect ratio (default `9:16`)
 
-## Editor experience
+No database change is needed — these live inside the existing JSON payload.
 
-New action type `carousel` appears in the action picker under **Media & content** (next to Photo gallery).
+## Viewer (src/components/viewer/CarouselDialog.tsx)
+- Apply `carouselBgColor` as the overlay background instead of the fixed `bg-black/95`.
+- Vertically center the scroller: the track becomes a centered flex row inside a full-height container, so the row of cards sits in the middle of the screen with the headline above and subtext below.
+- Card sizing: each card gets a fixed aspect ratio (from `carouselCardRatio`) and a height capped to the available viewport (`max-h`), width derived from the ratio, so the video and flyer cards all match the reference proportions instead of stretching. Media uses `object-contain` for flyers so nothing is cropped, video keeps `object-cover` option.
+- Render `carouselHeadline` above the track (centered, display font) and `carouselSubtext` below it, both using `carouselTextColor`.
+- Keep the close button, dots, arrows, mute and CTA behavior as-is.
 
-Editor panel fields:
-- Carousel title (optional header)
-- Scroll direction: **Horizontal cards** (default, like your example) or **Vertical feed** — your choice per carousel
-- Start on slide N (so different flyers can open the same carousel at different slides)
-- Slide list (add / reorder / delete, up to ~20):
-  - Type: **Video** or **Image**
-  - Media: upload or paste URL (video upload reuses existing flyer-asset upload)
-  - Title + subtitle text
-  - CTA button: label, color, and an action (WhatsApp/URL, call, SMS, navigate to page, popup)
-  - Tap action on the media itself (optional, same action picker)
-  - Video options: autoplay muted, loop, show mute toggle
-
-## Viewer experience
-
-Fullscreen overlay matching your reference:
-- Horizontal mode: snap-scrolling card rail, swipe on mobile, prev/next arrow buttons on desktop, dot indicators
-- Vertical mode: stacked full-width cards, snap scroll
-- Each card: media on top (video card autoplays muted with a mute/unmute icon), title + subtitle below, CTA pill button at the bottom right of the card
-- Only the card in view plays video; others pause. Off-screen images lazy-load
-- Close button; existing viewer auto-advance/page-nav is paused while it's open (same as other overlays)
-
-## Linking the 4+ flyers
-
-Each flyer gets a button or hotspot with the Carousel action. To reuse the same content across flyers, the editor panel gets **Copy carousel JSON / Paste carousel JSON** so you configure it once and paste into the other flyers, optionally changing only "Start on slide".
+## Editor (src/components/editor/ActionEditor.tsx, CarouselEditor)
+Add controls under the existing title/direction/start-slide fields:
+- Headline (text above) and Subtext (text below) inputs
+- Background color and text color pickers
+- Card aspect ratio select (9:16 / 4:5 / 1:1)
+Include the new fields in the existing copy/paste carousel JSON.
 
 ## Technical notes
-
-- `src/types/flyer.ts`: add `"carousel"` to `ActionType`, add `CarouselSlide` interface and payload fields (`carouselTitle`, `carouselDirection`, `carouselStartIndex`, `carouselSlides`)
-- `src/lib/actionCategories.ts` + `src/lib/interactionsCatalog.ts`: register the action with an icon and description
-- `src/components/editor/ActionEditor.tsx`: new `CarouselEditor` sub-component + validity check (valid when ≥1 slide has media)
-- New `src/components/viewer/CarouselDialog.tsx` for the overlay
-- `src/pages/PublicViewer.tsx`: new `carousel` state, `case "carousel"` in the action dispatcher, render the dialog, include it in the overlay-blocking lists
-- No database or migration changes — it all lives in the existing action payload JSON
+- Colors here are user-chosen per-flyer content values, so they stay inline styles on the viewer (same pattern as the existing slide CTA colors), not design tokens.
+- Horizontal mode keeps snap scrolling with peeking neighbor cards as in the reference photo; vertical mode keeps one centered card per screen.
