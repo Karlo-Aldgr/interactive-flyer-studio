@@ -238,12 +238,12 @@ function SlideCard({
       style={
         vertical
           ? { width: "min(100%, 26rem)", maxHeight: "100%" }
-          : { height: "100%", width: `calc((100% - ${hasCaption ? "5.5rem" : "0rem"}) * ${ratio})`, maxWidth: "88vw" }
+          : { height: "100%", width: "auto", maxWidth: "88vw" }
       }
     >
       <div
         className="relative min-h-0 flex-1 overflow-hidden bg-black"
-        style={vertical ? { aspectRatio: String(ratio) } : undefined}
+        style={{ aspectRatio: String(ratio) }}
       >
         {isVideo ? (
           <>
