@@ -65,6 +65,7 @@ export function CustomerPortalShell({ children, maxWidth = "4xl" }: Props) {
             </div>
           </header>
           <main className={cn("mx-auto w-full min-w-0 px-4 py-6 sm:px-6 sm:py-10", maxWidthClass[maxWidth])}>
+            <OnboardingBanner className="mb-4" />
             {children}
           </main>
         </div>
