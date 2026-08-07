@@ -193,6 +193,7 @@ export type Database = {
           priority: string
           sheet_error: string | null
           sheet_row: number | null
+          sheet_spreadsheet_id: string | null
           sheet_synced_at: string | null
           sms_body: string | null
           staff_notes: string | null
@@ -216,6 +217,7 @@ export type Database = {
           priority?: string
           sheet_error?: string | null
           sheet_row?: number | null
+          sheet_spreadsheet_id?: string | null
           sheet_synced_at?: string | null
           sms_body?: string | null
           staff_notes?: string | null
@@ -239,6 +241,7 @@ export type Database = {
           priority?: string
           sheet_error?: string | null
           sheet_row?: number | null
+          sheet_spreadsheet_id?: string | null
           sheet_synced_at?: string | null
           sms_body?: string | null
           staff_notes?: string | null
@@ -1374,6 +1377,8 @@ export type Database = {
           flyer_job_id: string | null
           flyer_upload_url: string | null
           full_name: string | null
+          google_sheet_tab: string | null
+          google_sheet_url: string | null
           hotspot_suggestions: Json | null
           id: string
           instagram_url: string | null
@@ -1401,6 +1406,8 @@ export type Database = {
           flyer_job_id?: string | null
           flyer_upload_url?: string | null
           full_name?: string | null
+          google_sheet_tab?: string | null
+          google_sheet_url?: string | null
           hotspot_suggestions?: Json | null
           id?: string
           instagram_url?: string | null
@@ -1428,6 +1435,8 @@ export type Database = {
           flyer_job_id?: string | null
           flyer_upload_url?: string | null
           full_name?: string | null
+          google_sheet_tab?: string | null
+          google_sheet_url?: string | null
           hotspot_suggestions?: Json | null
           id?: string
           instagram_url?: string | null
@@ -1521,6 +1530,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          automation_sheet_id: string | null
+          automation_sheet_tab: string | null
           brokerage: string | null
           created_at: string
           email: string
@@ -1534,6 +1545,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          automation_sheet_id?: string | null
+          automation_sheet_tab?: string | null
           brokerage?: string | null
           created_at?: string
           email: string
@@ -1547,6 +1560,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          automation_sheet_id?: string | null
+          automation_sheet_tab?: string | null
           brokerage?: string | null
           created_at?: string
           email?: string
