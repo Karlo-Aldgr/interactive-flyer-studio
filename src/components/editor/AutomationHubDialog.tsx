@@ -94,6 +94,7 @@ export function AutomationHubDialog({
   const { canEdit } = useCanEdit();
   const [scriptsOpen, setScriptsOpen] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [apiOpen, setApiOpen] = useState(false);
   const ownerId = flyer.owner_id ?? user?.id ?? "";
 
   // Closing this Dialog and opening another in the same tick often drops the second modal (Radix).
@@ -257,7 +258,23 @@ export function AutomationHubDialog({
               onAction={() => openAfterClose(() => setPermissionsOpen(true))}
               icon={<ShieldCheck className="h-4 w-4" />}
             />
+
+            <AutomationCard
+              title="External publishing API"
+              description="Let Make.com, n8n, Zapier or your own app publish to your connected Facebook, Instagram and TikTok accounts."
+              badge="Ready now"
+              statusText="Create an API key, send a POST request, and posts go out through your existing connections."
+              requirements={[
+                "Connected Facebook / Instagram (and TikTok for video)",
+                "An API key from this panel",
+              ]}
+              actionLabel="Manage API keys"
+              actionDisabled={!ownerId}
+              onAction={() => openAfterClose(() => setApiOpen(true))}
+              icon={<KeyRound className="h-4 w-4" />}
+            />
           </div>
+
 
           <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
             <div className="mb-1 flex items-center gap-2 text-foreground">
