@@ -10,13 +10,20 @@ import {
 import { publish } from "../_shared/publishing/service.ts";
 import { resolveDraftRequests } from "../_shared/publishing/resolve.ts";
 import { summarizeResults } from "../_shared/publishing/types.ts";
+import {
+  completeIdempotency,
+  readIdempotencyKey,
+  reserveIdempotency,
+} from "../_shared/publishing/idempotency.ts";
 import type { MediaItem, Platform, PlatformResult } from "../_shared/publishing/types.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-api-key, idempotency-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
 
 function json(body: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
