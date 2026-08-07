@@ -108,7 +108,10 @@ fails the whole request.
 | 400 | Validation error — see `error` / `details` |
 | 401 | Missing, unknown or revoked API key |
 | 405 | Method not allowed (use POST) |
+| 409 | Same `Idempotency-Key` is still being processed |
+| 422 | `Idempotency-Key` reused with a different request body |
 | 429 | Rate limited — retry after `Retry-After` seconds |
+
 | 500 | Unexpected server error |
 
 ## Notes
