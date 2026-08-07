@@ -27,6 +27,9 @@ const schema = z.object({
   instagram_url: z.string().trim().max(300).optional().or(z.literal("")),
   tiktok_url: z.string().trim().max(300).optional().or(z.literal("")),
   other_social_url: z.string().trim().max(500).optional().or(z.literal("")),
+  facebook_page_name: z.string().trim().max(160).optional().or(z.literal("")),
+  instagram_handle: z.string().trim().max(120).optional().or(z.literal("")),
+  posting_permission_name: z.string().trim().max(120).optional().or(z.literal("")),
   google_sheet_url: z.string().trim().max(500).optional().or(z.literal("")),
   google_sheet_tab: z.string().trim().max(80).optional().or(z.literal("")),
 });
@@ -46,6 +49,9 @@ const emptyForm: FormState = {
   instagram_url: "",
   tiktok_url: "",
   other_social_url: "",
+  facebook_page_name: "",
+  instagram_handle: "",
+  posting_permission_name: "",
   google_sheet_url: "",
   google_sheet_tab: "",
 };
@@ -63,6 +69,7 @@ export default function Onboarding() {
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
   const [flyerFile, setFlyerFile] = useState<File | null>(null);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [postingPermission, setPostingPermission] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -83,9 +90,13 @@ export default function Onboarding() {
             instagram_url: existing.instagram_url ?? "",
             tiktok_url: existing.tiktok_url ?? "",
             other_social_url: existing.other_social_url ?? "",
+            facebook_page_name: existing.facebook_page_name ?? "",
+            instagram_handle: existing.instagram_handle ?? "",
+            posting_permission_name: existing.posting_permission_name ?? "",
             google_sheet_url: existing.google_sheet_url ?? "",
             google_sheet_tab: existing.google_sheet_tab ?? "",
           });
+          setPostingPermission(Boolean(existing.posting_permission));
           setWebsiteHelp(existing.website_help);
           setLogoHelp(existing.logo_help);
           setSocialHelp(existing.social_help);
@@ -118,6 +129,10 @@ export default function Onboarding() {
       toast.error(first || "Please review the form");
       return;
     }
+    if (postingPermission && !parsed.data.posting_permission_name?.trim()) {
+      toast.error("Type your full name to authorize posting on your behalf");
+      return;
+    }
     setSaving(true);
     try {
       const { jobId } = await submitOnboarding({
@@ -137,6 +152,13 @@ export default function Onboarding() {
           instagram_url: parsed.data.instagram_url || null,
           tiktok_url: parsed.data.tiktok_url || null,
           other_social_url: parsed.data.other_social_url || null,
+          facebook_page_name: parsed.data.facebook_page_name || null,
+          instagram_handle: parsed.data.instagram_handle || null,
+          posting_permission: postingPermission,
+          posting_permission_name: postingPermission
+            ? parsed.data.posting_permission_name!.trim()
+            : null,
+          posting_permission_at: postingPermission ? new Date().toISOString() : null,
           google_sheet_url: parsed.data.google_sheet_url || null,
           google_sheet_tab: parsed.data.google_sheet_tab || null,
           social_help: missingSocials ? socialHelp : false,
@@ -276,6 +298,58 @@ export default function Onboarding() {
                 <Label htmlFor="social_help" className="text-sm">Help me set up my social media accounts</Label>
               </div>
             )}
+
+            <div>
+              <Label htmlFor="facebook_page_name">Facebook Page name</Label>
+              <Input
+                id="facebook_page_name"
+                placeholder="Exact page name"
+                value={form.facebook_page_name}
+                onChange={(e) => set("facebook_page_name", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="instagram_handle">Instagram handle</Label>
+              <Input
+                id="instagram_handle"
+                placeholder="@yourbusiness"
+                value={form.instagram_handle}
+                onChange={(e) => set("instagram_handle", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            <div className="sm:col-span-2 rounded-md border bg-muted/40 p-3 space-y-3">
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="posting_permission"
+                  checked={postingPermission}
+                  onCheckedChange={(v) => setPostingPermission(v === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="posting_permission" className="text-sm font-normal leading-snug">
+                  I authorize TapThatFlyer to create and publish posts on my behalf to the social
+                  accounts listed above.
+                </Label>
+              </div>
+              {postingPermission && (
+                <div>
+                  <Label htmlFor="posting_permission_name">Type your full name to sign</Label>
+                  <Input
+                    id="posting_permission_name"
+                    placeholder="Your full name"
+                    value={form.posting_permission_name}
+                    onChange={(e) => set("posting_permission_name", e.target.value)}
+                    className="mt-1"
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Your name and today's date are recorded as your consent. You can revoke this at
+                    any time by unchecking the box and saving again.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </Card>
 

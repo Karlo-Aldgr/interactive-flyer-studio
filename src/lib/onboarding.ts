@@ -19,6 +19,11 @@ export interface OnboardingSubmission {
   tiktok_url: string | null;
   other_social_url: string | null;
   social_help: boolean;
+  facebook_page_name: string | null;
+  instagram_handle: string | null;
+  posting_permission: boolean;
+  posting_permission_name: string | null;
+  posting_permission_at: string | null;
   logo_url: string | null;
   logo_help: OnboardingHelp;
   google_sheet_url: string | null;
@@ -213,6 +218,11 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     logo_help: input.logo_help,
     google_sheet_url: input.google_sheet_url,
     google_sheet_tab: input.google_sheet_tab,
+    facebook_page_name: input.facebook_page_name,
+    instagram_handle: input.instagram_handle,
+    posting_permission: input.posting_permission,
+    posting_permission_name: input.posting_permission_name,
+    posting_permission_at: input.posting_permission_at,
     flyer_upload_url: flyerPath,
     flyer_job_id: jobId,
   };
