@@ -88,6 +88,13 @@ export function AutomationHubDialog({
   onOpenFacebookPost,
   onOpenInstagramPost,
 }: Props) {
+  const { user } = useAuth();
+  const { isAdmin } = useIsAdmin();
+  const { canEdit } = useCanEdit();
+  const [scriptsOpen, setScriptsOpen] = useState(false);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const ownerId = flyer.owner_id ?? user?.id ?? "";
+
   // Closing this Dialog and opening another in the same tick often drops the second modal (Radix).
   function openAfterClose(next: () => void) {
     onOpenChange(false);
@@ -95,6 +102,8 @@ export function AutomationHubDialog({
   }
 
   return (
+    <>
+
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
