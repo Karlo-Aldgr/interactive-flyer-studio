@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Flyer } from "@/types/flyer";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -5,7 +6,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot, CheckCircle2, Clock3, Instagram, PlusCircle, Rocket, Sparkles, ShieldCheck } from "lucide-react";
+import { Bot, CheckCircle2, Clock3, FileText, Instagram, PlusCircle, Rocket, Sparkles, ShieldCheck } from "lucide-react";
+import { AutomationScriptsDialog } from "@/components/automation/AutomationScriptsDialog";
+import { SocialPermissionsDialog } from "@/components/automation/SocialPermissionsDialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useCanEdit } from "@/hooks/useCanEdit";
+
 
 interface Props {
   open: boolean;
