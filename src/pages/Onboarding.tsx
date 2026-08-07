@@ -69,6 +69,7 @@ export default function Onboarding() {
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
   const [flyerFile, setFlyerFile] = useState<File | null>(null);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [postingPermission, setPostingPermission] = useState(false);
 
   useEffect(() => {
     if (!user) return;
