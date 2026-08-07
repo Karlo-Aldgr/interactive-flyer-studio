@@ -1373,6 +1373,7 @@ export type Database = {
           business_slogan: string | null
           created_at: string
           email: string | null
+          facebook_page_name: string | null
           facebook_url: string | null
           flyer_job_id: string | null
           flyer_upload_url: string | null
@@ -1381,12 +1382,16 @@ export type Database = {
           google_sheet_url: string | null
           hotspot_suggestions: Json | null
           id: string
+          instagram_handle: string | null
           instagram_url: string | null
           logo_help: string | null
           logo_url: string | null
           other_social_url: string | null
           page_published: boolean
           phone: string | null
+          posting_permission: boolean
+          posting_permission_at: string | null
+          posting_permission_name: string | null
           public_slug: string | null
           social_help: boolean
           tiktok_url: string | null
@@ -1402,6 +1407,7 @@ export type Database = {
           business_slogan?: string | null
           created_at?: string
           email?: string | null
+          facebook_page_name?: string | null
           facebook_url?: string | null
           flyer_job_id?: string | null
           flyer_upload_url?: string | null
@@ -1410,12 +1416,16 @@ export type Database = {
           google_sheet_url?: string | null
           hotspot_suggestions?: Json | null
           id?: string
+          instagram_handle?: string | null
           instagram_url?: string | null
           logo_help?: string | null
           logo_url?: string | null
           other_social_url?: string | null
           page_published?: boolean
           phone?: string | null
+          posting_permission?: boolean
+          posting_permission_at?: string | null
+          posting_permission_name?: string | null
           public_slug?: string | null
           social_help?: boolean
           tiktok_url?: string | null
@@ -1431,6 +1441,7 @@ export type Database = {
           business_slogan?: string | null
           created_at?: string
           email?: string | null
+          facebook_page_name?: string | null
           facebook_url?: string | null
           flyer_job_id?: string | null
           flyer_upload_url?: string | null
@@ -1439,12 +1450,16 @@ export type Database = {
           google_sheet_url?: string | null
           hotspot_suggestions?: Json | null
           id?: string
+          instagram_handle?: string | null
           instagram_url?: string | null
           logo_help?: string | null
           logo_url?: string | null
           other_social_url?: string | null
           page_published?: boolean
           phone?: string | null
+          posting_permission?: boolean
+          posting_permission_at?: string | null
+          posting_permission_name?: string | null
           public_slug?: string | null
           social_help?: boolean
           tiktok_url?: string | null
