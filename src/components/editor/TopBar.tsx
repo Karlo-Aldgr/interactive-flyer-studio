@@ -464,12 +464,31 @@ export function TopBar({ saving }: Props) {
   return (
     <header className="relative z-50 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card px-2 sm:px-3">
       {/* Navigation + document */}
-      <Button asChild variant="ghost" size="sm" className="shrink-0 px-2">
-        <Link to="/dashboard">
-          <ChevronLeft className="h-4 w-4 sm:mr-1" />
-          <span className="hidden sm:inline">Dashboard</span>
-        </Link>
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-1 rounded-full border-transparent bg-accent px-3 text-accent-foreground hover:bg-accent/90 data-[state=open]:bg-accent/90"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Back</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-52">
+          <DropdownMenuItem asChild>
+            <Link to="/dashboard" className="flex cursor-pointer items-center">
+              <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/dashboard?studio=1" className="flex cursor-pointer items-center">
+              <PenTool className="mr-2 h-4 w-4" /> Editor&apos;s Studio
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Input
         className="h-8 min-w-0 flex-1 max-w-[8rem] border-transparent bg-transparent font-semibold focus-visible:border-input sm:max-w-[12rem] lg:max-w-xs"
         value={flyer.title}
