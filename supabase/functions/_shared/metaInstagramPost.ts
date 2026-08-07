@@ -85,9 +85,23 @@ export async function postInstagramImage(args: {
   apiHost: string;
   tokenSource: InstagramTokenSource;
 }): Promise<InstagramPostResult> {
+  return postInstagramMedia({ ...args, mediaType: "image", mediaUrl: args.imageUrl });
+}
+
+/** Publish a single image or video (Reel) to an Instagram Business account. */
+export async function postInstagramMedia(args: {
+  igUserId: string;
+  caption: string;
+  mediaUrl: string;
+  mediaType: "image" | "video";
+  graphVersion: string;
+  accessToken: string;
+  apiHost: string;
+  tokenSource: InstagramTokenSource;
+}): Promise<InstagramPostResult> {
   const attemptAt = new Date().toISOString();
   const caption = args.caption.trim();
-  const imageUrl = args.imageUrl.trim();
+  const imageUrl = args.mediaUrl.trim();
   const igUserId = args.igUserId.trim();
 
   if (!igUserId) return { ok: false, error: "Instagram User ID is missing", attemptAt };
@@ -96,7 +110,7 @@ export async function postInstagramImage(args: {
     return {
       ok: false,
       error:
-        "Instagram needs a public flyer thumbnail URL. Publish/regenerate so thumbnail_url is publicly reachable (not a local LAN URL).",
+        "Instagram needs a public media URL. Publish/regenerate so the media URL is publicly reachable (not a local LAN URL).",
       attemptAt,
     };
   }
