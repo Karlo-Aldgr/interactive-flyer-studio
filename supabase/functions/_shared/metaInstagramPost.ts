@@ -184,10 +184,10 @@ export async function postInstagramMedia(args: {
     };
   }
 
-  const { res: createRes, data: createJson } = await igPost(`${igUserId}/media`, {
-    image_url: imageUrl,
-    caption,
-  });
+  const createBody: Record<string, string> = args.mediaType === "video"
+    ? { media_type: "REELS", video_url: imageUrl, caption }
+    : { image_url: imageUrl, caption };
+  const { res: createRes, data: createJson } = await igPost(`${igUserId}/media`, createBody);
   if (!createRes.ok || typeof createJson.id !== "string") {
     return {
       ok: false,
