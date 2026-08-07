@@ -1,30 +1,45 @@
-## Goal
-Fix the carousel viewer so cards are correctly sized and vertically centered, and add editor options for text above/below the carousel plus a background color.
+# Onboarding Prompt + Automation Script Requests with Google Sheets Export
 
-## New payload fields (src/types/flyer.ts)
-Add to the carousel section of the action payload:
-- `carouselHeadline?: string` — text above the carousel
-- `carouselSubtext?: string` — text below the carousel
-- `carouselBgColor?: string` — background behind the carousel (default `#111111`)
-- `carouselTextColor?: string` — color for the header/footer text (default `#ffffff`)
-- `carouselCardRatio?: "9:16" | "4:5" | "1:1"` — card aspect ratio (default `9:16`)
+Three connected pieces: nudge every customer to finish onboarding when a new flyer appears, let each flyer carry an automation script request (AI-drafted, editable, plus a custom request form), and push every request to one master Google Sheet automatically.
 
-No database change is needed — these live inside the existing JSON payload.
+## 1. Complete-onboarding prompt on new flyers
 
-## Viewer (src/components/viewer/CarouselDialog.tsx)
-- Apply `carouselBgColor` as the overlay background instead of the fixed `bg-black/95`.
-- Vertically center the scroller: the track becomes a centered flex row inside a full-height container, so the row of cards sits in the middle of the screen with the headline above and subtext below.
-- Card sizing: each card gets a fixed aspect ratio (from `carouselCardRatio`) and a height capped to the available viewport (`max-h`), width derived from the ratio, so the video and flyer cards all match the reference proportions instead of stretching. Media uses `object-contain` for flyers so nothing is cropped, video keeps `object-cover` option.
-- Render `carouselHeadline` above the track (centered, display font) and `carouselSubtext` below it, both using `carouselTextColor`.
-- Keep the close button, dots, arrows, mute and CTA behavior as-is.
+- When a customer's flyer is created (dashboard "New flyer", editor first save, and job/onboarding-created flyers), check whether their profile has finished onboarding.
+- If not finished:
+  - Show a one-time dialog: "Finish your onboarding so we can personalize this flyer" with **Complete onboarding** and **Later**.
+  - Keep a persistent banner at the top of the dashboard and the customer portal until onboarding is completed. The banner never blocks work.
+- Dialog is shown once per flyer creation (tracked locally); the banner is driven by the profile's onboarding-completed timestamp, so it disappears the moment onboarding is submitted.
 
-## Editor (src/components/editor/ActionEditor.tsx, CarouselEditor)
-Add controls under the existing title/direction/start-slide fields:
-- Headline (text above) and Subtext (text below) inputs
-- Background color and text color pickers
-- Card aspect ratio select (9:16 / 4:5 / 1:1)
-Include the new fields in the existing copy/paste carousel JSON.
+## 2. Automation script request per flyer
+
+A new "Automation scripts" panel available on each flyer (customer portal + editor, and visible to admin/editor staff in the job view).
+
+Each request record holds:
+- Flyer, owner, created date, status (`requested` → `drafting` → `ready` → `fulfilled`)
+- Channel scripts: Facebook, Instagram, TikTok, Email (subject + body), SMS — each editable text
+- A **custom automation request** free-text field where the customer describes what they want automated, plus optional target date and priority
+- Staff notes and a fulfilled-by/at stamp
+
+Flow:
+1. Customer opens the panel, optionally writes a custom automation request, and clicks **Generate scripts**.
+2. AI drafts all channel scripts from the flyer's title, category, business details from onboarding, and the flyer link. Drafting runs server-side.
+3. Customer can edit any script inline and save; each save keeps the row current.
+4. Admin/editor sees all requests in the admin jobs area with a filter for pending ones, can edit scripts and mark them fulfilled.
+
+The existing marketing drafts feature stays as-is; this new panel is the request/fulfilment record that also feeds the sheet.
+
+## 3. Automatic export to one master Google Sheet
+
+- Connect a Google Sheets account once (workspace-level connection) and store the target spreadsheet ID in app settings, editable by an admin.
+- Every time a script request is created, its scripts are generated, or staff mark it fulfilled, a row is appended/updated in the master sheet with:
+  `Timestamp, Customer name, Email, Business, Flyer title, Flyer link, Status, Custom automation request, Facebook, Instagram, TikTok, Email subject, Email body, SMS, Staff notes`
+- Appending happens server-side right after the record is saved, so the sheet stays current without any manual step.
+- If the sheet append fails, the request is still saved and the failure is recorded so an admin can retry from a **Re-sync to Sheets** button.
 
 ## Technical notes
-- Colors here are user-chosen per-flyer content values, so they stay inline styles on the viewer (same pattern as the existing slide CTA colors), not design tokens.
-- Horizontal mode keeps snap scrolling with peeking neighbor cards as in the reference photo; vertical mode keeps one centered card per screen.
+
+- New table `automation_script_requests` (flyer_id, owner_id, status, custom_request, priority, due_date, facebook/instagram/tiktok/email_subject/email_body/sms, staff_notes, sheet_row, sheet_synced_at, sheet_error, timestamps) with RLS: owner can read/write their own; admin and editor roles full access; explicit GRANTs.
+- New edge function `automation-scripts` with actions `generate` (Lovable AI drafting), `save`, and `sync-sheet`; a shared helper appends/updates rows through the Google Sheets connector gateway.
+- Master spreadsheet ID stored in `app_settings` under a `automation_scripts_sheet` key, set from an admin settings panel.
+- Onboarding status read from `profiles.onboarding_completed_at`; banner component reused in `Dashboard` and the customer portal shell; dialog triggered from the flyer-creation paths in `Dashboard`, `useFlyerData`, and job-created flyers.
+- Requires connecting Google Sheets during implementation; if the connection is skipped, everything else still works and rows queue for sync.
