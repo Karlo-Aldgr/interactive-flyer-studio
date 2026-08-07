@@ -68,8 +68,15 @@ Deno.serve(async (req) => {
     });
 
     const result = outcome.results[0];
-    if (!result || result.status !== "success") {
-      return json({ error: result?.error || "Instagram publish failed" }, 502);
+    if (!result) {
+      return json({ error: "Instagram publish failed" }, 502);
+    }
+    // A queued executor accepts the work and finishes it out of band.
+    if (result.status === "queued") {
+      return json({ ok: true, queued: true, job_id: outcome.job_id ?? null });
+    }
+    if (result.status !== "success") {
+      return json({ error: result.error || "Instagram publish failed" }, 502);
     }
 
     const { data: updatedDraft } = await supabase

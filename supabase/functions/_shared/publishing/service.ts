@@ -1,5 +1,13 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
-import type { AdapterContext, Platform, PlatformResult, PublishOutcome, PublishRequest } from "./types.ts";
+import type {
+  AdapterContext,
+  Platform,
+  PlatformResult,
+  PublishExecutor,
+  PublishOutcome,
+  PublishRequest,
+} from "./types.ts";
+import { summarizeResults } from "./types.ts";
 import { publishToFacebook } from "./adapters/facebook.ts";
 import { publishToInstagram } from "./adapters/instagram.ts";
 import { publishToTikTok } from "./adapters/tiktok.ts";
@@ -52,14 +60,17 @@ async function applyDraftPatch(
 }
 
 /**
- * The single publishing code path used by the in-app "Post now" buttons,
- * the external API, and scheduled publishing.
+ * Performs the provider calls for one PublishRequest and returns terminal
+ * results. This is the unit of work: an inline executor calls it during the
+ * HTTP request, a future queue worker calls the exact same function when it
+ * picks the job up. Never call it directly from an entry point — go through
+ * `publish()` so the configured executor decides the timing.
  */
-export async function publish(
+export async function executePublishRequest(
   supabase: SupabaseClient,
   request: PublishRequest,
 ): Promise<PublishOutcome> {
-  const ctxBase = {
+  const ctxBase: AdapterContext = {
     supabase,
     ownerId: request.ownerId,
     caption: request.caption,
@@ -99,12 +110,47 @@ export async function publish(
     results.push(result);
   }
 
-  const successes = results.filter((r) => r.status === "success").length;
-  const status = successes === results.length && successes > 0
-    ? "success"
-    : successes > 0
-    ? "partial_success"
-    : "failed";
+  return { status: summarizeResults(results), results };
+}
 
-  return { status, results };
+/** Runs the work during the caller's request — today's behaviour. */
+export const inlineExecutor: PublishExecutor = {
+  name: "inline",
+  run: (supabase, request) => executePublishRequest(supabase, request),
+};
+
+const executorRegistry = new Map<string, PublishExecutor>([[inlineExecutor.name, inlineExecutor]]);
+
+/**
+ * Registers an alternative executor (e.g. a queue-backed one that inserts a
+ * job row and returns `status: "queued"` plus a `job_id`). Because executors
+ * share the PublishRequest/PublishOutcome contract, registering one is the
+ * only change needed to move publishing off the request path.
+ */
+export function registerExecutor(executor: PublishExecutor) {
+  executorRegistry.set(executor.name, executor);
+}
+
+/** Chosen with PUBLISH_EXECUTOR; falls back to inline when unset/unknown. */
+export function activeExecutor(): PublishExecutor {
+  const configured = Deno.env.get("PUBLISH_EXECUTOR")?.trim();
+  if (configured) {
+    const found = executorRegistry.get(configured);
+    if (found) return found;
+    console.warn(`[publishing] Unknown PUBLISH_EXECUTOR "${configured}" — using inline`);
+  }
+  return inlineExecutor;
+}
+
+/**
+ * The single publishing entry point used by the in-app "Post now" buttons, the
+ * external API, and scheduled publishing. Callers must treat the outcome as
+ * possibly non-terminal: `status: "queued"` means the work was accepted and the
+ * result will be available later via `job_id`.
+ */
+export function publish(
+  supabase: SupabaseClient,
+  request: PublishRequest,
+): Promise<PublishOutcome> {
+  return activeExecutor().run(supabase, request);
 }
