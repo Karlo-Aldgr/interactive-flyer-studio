@@ -97,6 +97,8 @@ export default function Onboarding() {
             google_sheet_tab: existing.google_sheet_tab ?? "",
           });
           setPostingPermission(Boolean(existing.posting_permission));
+          setWebsiteHelp(existing.website_help);
+          setLogoHelp(existing.logo_help);
           setSocialHelp(existing.social_help);
           setExistingLogoUrl(existing.logo_url);
           setAlreadySubmitted(true);
