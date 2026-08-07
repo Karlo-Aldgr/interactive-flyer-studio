@@ -176,6 +176,86 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_script_requests: {
+        Row: {
+          created_at: string
+          custom_request: string | null
+          due_date: string | null
+          email_body: string | null
+          email_subject: string | null
+          facebook_post: string | null
+          flyer_id: string
+          fulfilled_at: string | null
+          fulfilled_by: string | null
+          id: string
+          instagram_caption: string | null
+          owner_id: string
+          priority: string
+          sheet_error: string | null
+          sheet_row: number | null
+          sheet_synced_at: string | null
+          sms_body: string | null
+          staff_notes: string | null
+          status: string
+          tiktok_caption: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_request?: string | null
+          due_date?: string | null
+          email_body?: string | null
+          email_subject?: string | null
+          facebook_post?: string | null
+          flyer_id: string
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
+          id?: string
+          instagram_caption?: string | null
+          owner_id: string
+          priority?: string
+          sheet_error?: string | null
+          sheet_row?: number | null
+          sheet_synced_at?: string | null
+          sms_body?: string | null
+          staff_notes?: string | null
+          status?: string
+          tiktok_caption?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_request?: string | null
+          due_date?: string | null
+          email_body?: string | null
+          email_subject?: string | null
+          facebook_post?: string | null
+          flyer_id?: string
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
+          id?: string
+          instagram_caption?: string | null
+          owner_id?: string
+          priority?: string
+          sheet_error?: string | null
+          sheet_row?: number | null
+          sheet_synced_at?: string | null
+          sms_body?: string | null
+          staff_notes?: string | null
+          status?: string
+          tiktok_caption?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_script_requests_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_ratings: {
         Row: {
           action_id: string | null

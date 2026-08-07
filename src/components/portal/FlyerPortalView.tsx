@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Crown, UserCog, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AutomationScriptsPanel } from "@/components/automation/AutomationScriptsPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -94,6 +95,7 @@ export interface FlyerPortalViewProps {
     thumbnail_url?: string | null;
     created_at?: string;
     chatbot_knowledge?: string | null;
+    owner_id?: string | null;
   };
   events: AnalyticsEvent[];
   subscribers: Subscriber[];
@@ -733,6 +735,7 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               {hasFoodOrdering ? `Food Orders (${foodOrderCount})` : `Cart (${cartOrders.length})`}
             </TabsTrigger>
             <TabsTrigger value="interactions" className="shrink-0">Interactions</TabsTrigger>
+            <TabsTrigger value="automation" className="shrink-0">Automation</TabsTrigger>
             <TabsTrigger value="novels" className="shrink-0">Novels ({novelActionCount})</TabsTrigger>
             {isOwner && hasFoodOrdering && <TabsTrigger value="live" className="shrink-0">🟢 Live Orders</TabsTrigger>}
             {isOwner && hasFoodOrdering && <TabsTrigger value="staff" className="shrink-0">Staff & Tables</TabsTrigger>}
@@ -1138,6 +1141,10 @@ export function FlyerPortalView(props: FlyerPortalViewProps) {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="automation" className="space-y-4">
+          <AutomationScriptsPanel flyerId={flyer.id} ownerId={flyer.owner_id ?? null} />
         </TabsContent>
 
         <TabsContent value="novels" className="space-y-4">

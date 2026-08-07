@@ -28,6 +28,7 @@ export default function FlyerPortal() {
     thumbnail_url?: string | null;
     created_at?: string;
     chatbot_knowledge?: string | null;
+    owner_id?: string | null;
   } | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -60,6 +61,7 @@ export default function FlyerPortal() {
       thumbnail_url: (flyer as any)?.thumbnail_url ?? null,
       created_at: (flyer as any)?.created_at,
       chatbot_knowledge: (flyer as any)?.chatbot_knowledge ?? null,
+      owner_id: (flyer as any)?.owner_id ?? null,
     });
 
     const { data: pageRows } = await supabase.from("pages").select("id").eq("flyer_id", flyerId);

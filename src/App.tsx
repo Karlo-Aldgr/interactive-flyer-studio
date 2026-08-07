@@ -34,6 +34,7 @@ const AdminExamples = lazy(() => import("./pages/AdminExamples"));
 const AdminEditors = lazy(() => import("./pages/AdminEditors"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 const AdminMiniAds = lazy(() => import("./pages/AdminMiniAds"));
+const AdminAutomation = lazy(() => import("./pages/AdminAutomation"));
 const RealtorDashboard = lazy(() => import("./pages/RealtorDashboard"));
 const RealtorListing = lazy(() => import("./pages/RealtorListing"));
 const RealtorGalleryIndex = lazy(() => import("./pages/RealtorGalleryIndex"));
@@ -117,6 +118,7 @@ const App = () => (
               <Route path="/examples" element={<Examples />} />
               <Route path="/admin/examples" element={<ProtectedRoute><AdminExamples /></ProtectedRoute>} />
               <Route path="/admin/editors" element={<ProtectedRoute><AdminEditors /></ProtectedRoute>} />
+              <Route path="/admin/automation" element={<ProtectedRoute><AdminAutomation /></ProtectedRoute>} />
               <Route path="/admin/mini-ads" element={<ProtectedRoute><AdminMiniAds /></ProtectedRoute>} />
               <Route path="/realtor" element={<ProtectedRoute><RealtorDashboard /></ProtectedRoute>} />
               <Route path="/realtor/apply" element={<RealtorApply />} />
