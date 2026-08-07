@@ -172,10 +172,10 @@ async function syncToSheet(
     new Date().toISOString(),
   ];
 
-  const range = `'${SHEET_TAB}'!A:P`;
+  const range = `'${tab}'!A:P`;
 
   // Ensure the header row exists.
-  const head = await fetch(`${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${SHEET_TAB}'!A1:P1`, {
+  const head = await fetch(`${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${tab}'!A1:P1`, {
     headers,
   });
   if (!head.ok) {
@@ -185,13 +185,14 @@ async function syncToSheet(
   const headJson = await head.json();
   if (!headJson.values?.length) {
     await fetch(
-      `${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${SHEET_TAB}'!A1:P1?valueInputOption=RAW`,
+      `${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${tab}'!A1:P1?valueInputOption=RAW`,
       { method: "PUT", headers, body: JSON.stringify({ values: [HEADER] }) },
     );
   }
 
-  if (req.sheet_row) {
-    const cellRange = `'${SHEET_TAB}'!A${req.sheet_row}:P${req.sheet_row}`;
+  // Only reuse the stored row when it belongs to the same spreadsheet.
+  if (req.sheet_row && req.sheet_spreadsheet_id === spreadsheetId) {
+    const cellRange = `'${tab}'!A${req.sheet_row}:P${req.sheet_row}`;
     const upd = await fetch(
       `${GATEWAY}/spreadsheets/${spreadsheetId}/values/${cellRange}?valueInputOption=USER_ENTERED`,
       { method: "PUT", headers, body: JSON.stringify({ values: [row] }) },
@@ -200,7 +201,7 @@ async function syncToSheet(
       const detail = await upd.text();
       throw new Error(`Sheets update failed (${upd.status}): ${detail.slice(0, 300)}`);
     }
-    return { sheet_row: req.sheet_row as number };
+    return { sheet_row: req.sheet_row as number, spreadsheet_id: spreadsheetId };
   }
 
   const app = await fetch(
@@ -214,7 +215,8 @@ async function syncToSheet(
   const appJson = await app.json();
   const updatedRange: string = appJson.updates?.updatedRange ?? "";
   const rowNumber = Number(updatedRange.match(/![A-Z]+(\d+)/)?.[1] ?? 0) || null;
-  return { sheet_row: rowNumber };
+  return { sheet_row: rowNumber, spreadsheet_id: spreadsheetId };
+
 }
 
 Deno.serve(async (request) => {
