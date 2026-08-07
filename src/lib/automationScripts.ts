@@ -15,6 +15,7 @@ export type AutomationScriptRequest = {
   email_subject: string | null;
   email_body: string | null;
   sms_body: string | null;
+  video_script: string | null;
   staff_notes: string | null;
   fulfilled_at: string | null;
   sheet_row: number | null;

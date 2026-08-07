@@ -47,6 +47,7 @@ const FIELDS: Array<{ key: keyof AutomationScriptRequest; label: string; rows?: 
   { key: "email_subject", label: "Email subject", rows: 2 },
   { key: "email_body", label: "Email body", rows: 5 },
   { key: "sms_body", label: "SMS message", rows: 3 },
+  { key: "video_script", label: "Video script (30-45s)", rows: 6 },
 ];
 
 export function AutomationScriptsDialog({ open, onOpenChange, flyerId, ownerId, isStaff }: Props) {
