@@ -316,6 +316,7 @@ Deno.serve(async (request) => {
           .from("automation_script_requests")
           .update({
             sheet_row: (result as any).sheet_row ?? updated.sheet_row,
+            sheet_spreadsheet_id: (result as any).spreadsheet_id ?? updated.sheet_spreadsheet_id,
             sheet_synced_at: new Date().toISOString(),
             sheet_error: null,
           })
