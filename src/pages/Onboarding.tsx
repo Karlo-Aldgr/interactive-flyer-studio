@@ -27,6 +27,9 @@ const schema = z.object({
   instagram_url: z.string().trim().max(300).optional().or(z.literal("")),
   tiktok_url: z.string().trim().max(300).optional().or(z.literal("")),
   other_social_url: z.string().trim().max(500).optional().or(z.literal("")),
+  facebook_page_name: z.string().trim().max(160).optional().or(z.literal("")),
+  instagram_handle: z.string().trim().max(120).optional().or(z.literal("")),
+  posting_permission_name: z.string().trim().max(120).optional().or(z.literal("")),
   google_sheet_url: z.string().trim().max(500).optional().or(z.literal("")),
   google_sheet_tab: z.string().trim().max(80).optional().or(z.literal("")),
 });
