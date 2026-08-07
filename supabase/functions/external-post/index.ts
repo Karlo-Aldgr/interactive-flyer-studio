@@ -117,66 +117,45 @@ Deno.serve(async (req) => {
 
   try {
     if (input.mode === "draft") {
-      const { data: draft, error: draftErr } = await supabase
-        .from("marketing_drafts")
-        .select("*")
-        .eq("id", input.draft_id)
-        .maybeSingle();
+      const resolved = await resolveDraftRequests(supabase, {
+        draftId: input.draft_id,
+        ownerId: key.owner_id,
+        platforms,
+        requestId,
+      });
 
-      if (draftErr) throw new Error(draftErr.message);
-      if (!draft) {
-        return finish("invalid", {
-          request_id: requestId,
-          error: "Draft not found",
-          errors: [{ field: "draft_id", message: "Draft not found" }],
-        }, 404, { platforms, error: "draft not found" });
+      if (!resolved.ok) {
+        return finish(
+          resolved.reason === "forbidden" ? "forbidden" : "invalid",
+          {
+            request_id: requestId,
+            error: resolved.message,
+            ...(resolved.reason === "not_found"
+              ? { errors: [{ field: "draft_id", message: resolved.message }] }
+              : {}),
+          },
+          resolved.reason === "forbidden" ? 403 : 404,
+          { platforms, error: resolved.message },
+        );
       }
-      if (String(draft.owner_id) !== key.owner_id) {
-        return finish("forbidden", {
-          request_id: requestId,
-          error: "This draft belongs to another account",
-        }, 403, { platforms, error: "draft ownership" });
-      }
 
-      const mediaUrl = typeof draft.thumbnail_url === "string" ? draft.thumbnail_url.trim() : "";
-      const media: MediaItem[] = mediaUrl && mediaUrl.startsWith("https://")
-        ? [{ type: "image", url: mediaUrl }]
-        : [];
-      const link = typeof draft.flyer_url === "string" ? draft.flyer_url : undefined;
-
-      const results: PlatformResult[] = [];
-      for (const platform of platforms) {
-        const caption = String(draft[DRAFT_CAPTION_FIELD[platform]] || draft.facebook_post || "").trim();
-        if (!caption) {
-          results.push({
-            platform,
-            status: "failed",
-            error: `Draft has no ${platform} copy yet`,
-            attempt_at: new Date().toISOString(),
-          });
-          continue;
-        }
-        const outcome = await publish(supabase, {
-          ownerId: key.owner_id,
-          platforms: [platform],
-          caption,
-          media,
-          link,
-          draftId: String(draft.id),
-        });
+      const results: PlatformResult[] = [...resolved.skipped];
+      const jobIds: string[] = [];
+      for (const request of resolved.requests) {
+        const outcome = await publish(supabase, request);
+        if (outcome.job_id) jobIds.push(outcome.job_id);
         results.push(...outcome.results);
       }
 
-      const successes = results.filter((r) => r.status === "success").length;
-      const status = successes === results.length && successes > 0
-        ? "success"
-        : successes > 0
-        ? "partial_success"
-        : "failed";
-
-      return finish(status, { request_id: requestId, status, results }, 200, {
+      const status = summarizeResults(results);
+      return finish(status, {
+        request_id: requestId,
+        status,
+        results,
+        ...(jobIds.length ? { job_ids: jobIds } : {}),
+      }, 200, {
         platforms,
-        mediaType: media[0]?.type ?? null,
+        mediaType: resolved.media[0]?.type ?? null,
         error: status === "failed" ? results.map((r) => r.error).filter(Boolean).join("; ").slice(0, 500) : null,
       });
     }
@@ -200,12 +179,14 @@ Deno.serve(async (req) => {
       caption: input.caption,
       media,
       link: input.link,
+      requestId,
     });
 
     return finish(outcome.status, {
       request_id: requestId,
       status: outcome.status,
       results: outcome.results,
+      ...(outcome.job_id ? { job_id: outcome.job_id } : {}),
     }, 200, {
       platforms,
       mediaType: media[0]?.type ?? null,
@@ -213,6 +194,7 @@ Deno.serve(async (req) => {
         ? outcome.results.map((r) => r.error).filter(Boolean).join("; ").slice(0, 500)
         : null,
     });
+
   } catch (err) {
     console.error("[external-post]", err);
     return finish("error", {
