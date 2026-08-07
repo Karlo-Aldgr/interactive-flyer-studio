@@ -20,6 +20,7 @@ const HEADER = [
   "Email subject",
   "Email body",
   "SMS message",
+  "Video script",
   "Staff notes",
   "Last synced",
 ];
@@ -46,7 +47,7 @@ async function generateScripts(context: Record<string, unknown>) {
       model: "openai/gpt-5.6-sol",
       stream: true,
       instructions:
-        "You are a small-business marketing copywriter. Write ready-to-post promotional scripts for the flyer described by the user. Keep the brand voice friendly and concrete. No hashtags spam, no emojis overload, no placeholders like [NAME].",
+        "You are a small-business marketing copywriter. Write ready-to-post promotional scripts for the flyer described by the user. The video script must be a short-form (30-45 second) video script with spoken lines plus brief on-screen shot directions. Keep the brand voice friendly and concrete. No hashtags spam, no emojis overload, no placeholders like [NAME].",
       input: JSON.stringify(context),
       text: {
         format: {
@@ -63,6 +64,7 @@ async function generateScripts(context: Record<string, unknown>) {
               email_subject: { type: "string" },
               email_body: { type: "string" },
               sms_body: { type: "string" },
+              video_script: { type: "string" },
             },
             required: [
               "facebook_post",
@@ -71,6 +73,7 @@ async function generateScripts(context: Record<string, unknown>) {
               "email_subject",
               "email_body",
               "sms_body",
+              "video_script",
             ],
           },
         },
@@ -168,14 +171,15 @@ async function syncToSheet(
     req.email_subject ?? "",
     req.email_body ?? "",
     req.sms_body ?? "",
+    req.video_script ?? "",
     req.staff_notes ?? "",
     new Date().toISOString(),
   ];
 
-  const range = `'${tab}'!A:P`;
+  const range = `'${tab}'!A:Q`;
 
   // Ensure the header row exists.
-  const head = await fetch(`${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${tab}'!A1:P1`, {
+  const head = await fetch(`${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${tab}'!A1:Q1`, {
     headers,
   });
   if (!head.ok) {
@@ -185,14 +189,14 @@ async function syncToSheet(
   const headJson = await head.json();
   if (!headJson.values?.length) {
     await fetch(
-      `${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${tab}'!A1:P1?valueInputOption=RAW`,
+      `${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${tab}'!A1:Q1?valueInputOption=RAW`,
       { method: "PUT", headers, body: JSON.stringify({ values: [HEADER] }) },
     );
   }
 
   // Only reuse the stored row when it belongs to the same spreadsheet.
   if (req.sheet_row && req.sheet_spreadsheet_id === spreadsheetId) {
-    const cellRange = `'${tab}'!A${req.sheet_row}:P${req.sheet_row}`;
+    const cellRange = `'${tab}'!A${req.sheet_row}:Q${req.sheet_row}`;
     const upd = await fetch(
       `${GATEWAY}/spreadsheets/${spreadsheetId}/values/${cellRange}?valueInputOption=USER_ENTERED`,
       { method: "PUT", headers, body: JSON.stringify({ values: [row] }) },
@@ -287,6 +291,7 @@ Deno.serve(async (request) => {
           email_subject: scripts.email_subject,
           email_body: scripts.email_body,
           sms_body: scripts.sms_body,
+          video_script: scripts.video_script,
           status: scriptRequest.status === "requested" ? "drafted" : scriptRequest.status,
         })
         .eq("id", requestId)

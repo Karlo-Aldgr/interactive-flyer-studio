@@ -1,0 +1,1 @@
+ALTER TABLE public.automation_script_requests ADD COLUMN IF NOT EXISTS video_script text;

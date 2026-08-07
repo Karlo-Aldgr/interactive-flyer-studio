@@ -200,6 +200,7 @@ export type Database = {
           status: string
           tiktok_caption: string | null
           updated_at: string
+          video_script: string | null
         }
         Insert: {
           created_at?: string
@@ -224,6 +225,7 @@ export type Database = {
           status?: string
           tiktok_caption?: string | null
           updated_at?: string
+          video_script?: string | null
         }
         Update: {
           created_at?: string
@@ -248,6 +250,7 @@ export type Database = {
           status?: string
           tiktok_caption?: string | null
           updated_at?: string
+          video_script?: string | null
         }
         Relationships: [
           {
