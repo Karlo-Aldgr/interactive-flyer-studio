@@ -21,6 +21,9 @@ import { useCanEdit } from "@/hooks/useCanEdit";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { loadUserJobs, type UserJob } from "@/lib/userJobs";
 import { useIsRealtor } from "@/hooks/useIsRealtor";
+import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
+import { OnboardingPromptDialog } from "@/components/onboarding/OnboardingPromptDialog";
+import { useOnboardingStatus } from "@/hooks/useOnboardingStatus";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -40,6 +43,9 @@ export default function Dashboard() {
   const studioMode = searchParams.get("studio") === "1";
   const customerView = searchParams.get("view") === "customer";
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [pendingFlyerId, setPendingFlyerId] = useState<string | null>(null);
+  const { completed: onboardingCompleted } = useOnboardingStatus();
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   const load = async () => {
@@ -133,7 +139,12 @@ export default function Dashboard() {
         .insert([{ flyer_id: flyer.id, index: 0, name: "Page 1" }]);
       if (pErr) throw pErr;
       setCreateOpen(false);
-      navigate(`/editor/${flyer.id}`);
+      if (onboardingCompleted === false) {
+        setPendingFlyerId(flyer.id);
+        setPromptOpen(true);
+      } else {
+        navigate(`/editor/${flyer.id}`);
+      }
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -244,6 +255,7 @@ export default function Dashboard() {
   return (
     <DashboardShell>
       <DashboardPage maxWidth="6xl">
+        <OnboardingBanner className="mb-4" />
         <EditorDashboard
           flyers={flyers}
           loading={loading}
@@ -326,6 +338,14 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <OnboardingPromptDialog
+        open={promptOpen}
+        onOpenChange={setPromptOpen}
+        onLater={() => {
+          if (pendingFlyerId) navigate(`/editor/${pendingFlyerId}`);
+        }}
+      />
     </DashboardShell>
   );
 }

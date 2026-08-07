@@ -9,6 +9,7 @@ import { displayFirstName } from "@/lib/displayName";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useCanEdit } from "@/hooks/useCanEdit";
 import { cn } from "@/lib/utils";
+import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
 
 type Props = {
   children: React.ReactNode;
