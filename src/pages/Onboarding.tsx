@@ -49,6 +49,9 @@ const emptyForm: FormState = {
   instagram_url: "",
   tiktok_url: "",
   other_social_url: "",
+  facebook_page_name: "",
+  instagram_handle: "",
+  posting_permission_name: "",
   google_sheet_url: "",
   google_sheet_tab: "",
 };
