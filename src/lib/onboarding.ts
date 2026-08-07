@@ -21,12 +21,24 @@ export interface OnboardingSubmission {
   social_help: boolean;
   logo_url: string | null;
   logo_help: OnboardingHelp;
+  google_sheet_url: string | null;
+  google_sheet_tab: string | null;
   flyer_upload_url: string | null;
   flyer_job_id: string | null;
   hotspot_suggestions: unknown;
   created_at: string;
   updated_at: string;
 }
+
+/** Accepts a full Google Sheets URL or a bare spreadsheet ID and returns the ID. */
+export function extractSpreadsheetId(value: string | null | undefined): string | null {
+  const raw = (value ?? "").trim();
+  if (!raw) return null;
+  const match = raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (match) return match[1];
+  return /^[a-zA-Z0-9-_]{20,}$/.test(raw) ? raw : null;
+}
+
 
 export type OnboardingInput = Omit<
   OnboardingSubmission,
