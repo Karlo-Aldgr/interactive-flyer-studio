@@ -104,6 +104,56 @@ export type Database = {
           },
         ]
       }
+      api_idempotency_keys: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          http_status: number | null
+          id: string
+          idempotency_key: string
+          key_id: string
+          request_fingerprint: string | null
+          request_id: string
+          response_body: Json | null
+          state: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          http_status?: number | null
+          id?: string
+          idempotency_key: string
+          key_id: string
+          request_fingerprint?: string | null
+          request_id: string
+          response_body?: Json | null
+          state?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          http_status?: number | null
+          id?: string
+          idempotency_key?: string
+          key_id?: string
+          request_fingerprint?: string | null
+          request_id?: string
+          response_body?: Json | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_idempotency_keys_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_keys: {
         Row: {
           created_at: string

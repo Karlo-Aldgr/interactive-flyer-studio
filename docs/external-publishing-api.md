@@ -30,6 +30,25 @@ Revoked keys return `401`.
 
 Exceeding either returns `429` with a `Retry-After` header (seconds).
 
+## Idempotency
+
+Send an optional header to make retries safe:
+
+```
+Idempotency-Key: 9f1c2b7e-any-unique-string
+```
+
+- The key is stored per API key together with the result for **24 hours**.
+- A repeat request with the same API key + `Idempotency-Key` returns the **original
+  response** (same body and status) with `Idempotent-Replay: true`, without publishing again.
+- Reusing a key with a *different* request body returns `422`.
+- If the original request is still running, the retry returns `409` with `Retry-After: 5`.
+- After 24 hours the key expires and can be reused.
+
+This prevents duplicate Facebook, Instagram or TikTok posts from network retries in
+Make.com, n8n, Zapier or custom clients.
+
+
 ## Request body
 
 ### Manual mode
@@ -89,7 +108,10 @@ fails the whole request.
 | 400 | Validation error — see `error` / `details` |
 | 401 | Missing, unknown or revoked API key |
 | 405 | Method not allowed (use POST) |
+| 409 | Same `Idempotency-Key` is still being processed |
+| 422 | `Idempotency-Key` reused with a different request body |
 | 429 | Rate limited — retry after `Retry-After` seconds |
+
 | 500 | Unexpected server error |
 
 ## Notes

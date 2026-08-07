@@ -10,13 +10,20 @@ import {
 import { publish } from "../_shared/publishing/service.ts";
 import { resolveDraftRequests } from "../_shared/publishing/resolve.ts";
 import { summarizeResults } from "../_shared/publishing/types.ts";
+import {
+  completeIdempotency,
+  readIdempotencyKey,
+  reserveIdempotency,
+} from "../_shared/publishing/idempotency.ts";
 import type { MediaItem, Platform, PlatformResult } from "../_shared/publishing/types.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-api-key, idempotency-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
 
 function json(body: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
@@ -44,6 +51,8 @@ Deno.serve(async (req) => {
     return json({ request_id: requestId, error: auth.error }, auth.status);
   }
   const key = auth.key;
+  const idempotencyKey = readIdempotencyKey(req.headers);
+  let idempotencyReserved = false;
 
   const finish = async (
     status: string,
@@ -52,6 +61,15 @@ Deno.serve(async (req) => {
     meta: { platforms?: string[]; mediaType?: string | null; error?: string | null } = {},
     headers: Record<string, string> = {},
   ) => {
+    if (idempotencyReserved) {
+      await completeIdempotency(supabase, {
+        keyId: key.id,
+        idempotencyKey,
+        requestId,
+        httpStatus,
+        body,
+      });
+    }
     await logApiRequest(supabase, {
       request_id: requestId,
       key_id: key.id,
@@ -66,6 +84,7 @@ Deno.serve(async (req) => {
     });
     return json(body, httpStatus, headers);
   };
+
 
   if (!hasScope(key, "publish")) {
     return finish("forbidden", { request_id: requestId, error: "Key is missing the publish scope" }, 403, {
@@ -114,6 +133,54 @@ Deno.serve(async (req) => {
 
   const input = parsed.data;
   const platforms = input.platforms as Platform[];
+
+  // Idempotency: replay the original response for repeated Idempotency-Key values.
+  const reservation = await reserveIdempotency(supabase, {
+    keyId: key.id,
+    idempotencyKey,
+    requestId,
+    rawBody,
+  });
+
+  if (reservation.kind === "replay") {
+    await logApiRequest(supabase, {
+      request_id: requestId,
+      key_id: key.id,
+      key_prefix: key.key_prefix,
+      owner_id: key.owner_id,
+      endpoint,
+      platforms,
+      media_type: null,
+      status: "idempotent_replay",
+      duration_ms: Date.now() - startedAt,
+      error_message: null,
+    });
+    return json(reservation.body, reservation.httpStatus, { "Idempotent-Replay": "true" });
+  }
+
+  if (reservation.kind === "in_progress") {
+    return finish(
+      "idempotent_in_progress",
+      {
+        request_id: reservation.originalRequestId,
+        error: "A request with this Idempotency-Key is still being processed",
+      },
+      409,
+      { platforms, error: "idempotency in progress" },
+      { "Retry-After": "5" },
+    );
+  }
+
+  if (reservation.kind === "conflict") {
+    return finish("idempotent_conflict", {
+      request_id: requestId,
+      error: reservation.message,
+    }, 422, { platforms, error: reservation.message });
+  }
+
+  idempotencyReserved = reservation.kind === "reserved";
+
+
 
   try {
     if (input.mode === "draft") {
