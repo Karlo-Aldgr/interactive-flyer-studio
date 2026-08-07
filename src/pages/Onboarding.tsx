@@ -280,6 +280,45 @@ export default function Onboarding() {
         </Card>
 
         <Card className="p-5 space-y-4">
+          <h2 className="font-semibold">Your Google Sheet</h2>
+          <p className="text-sm text-muted-foreground">
+            Every customer gets their own spreadsheet. We export your automation scripts (social posts,
+            email and SMS copy) into it. Create a Google Sheet, give it{" "}
+            <strong>edit access to anyone with the link</strong> (or share it with your TapThatFlyer
+            account manager), then paste the link below.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label htmlFor="google_sheet_url">Google Sheet link</Label>
+              <Input
+                id="google_sheet_url"
+                placeholder="https://docs.google.com/spreadsheets/d/…"
+                value={form.google_sheet_url}
+                onChange={(e) => set("google_sheet_url", e.target.value)}
+                className="mt-1"
+              />
+              {form.google_sheet_url.trim() && !extractSpreadsheetId(form.google_sheet_url) && (
+                <p className="mt-1 text-xs text-destructive">
+                  That doesn't look like a Google Sheets link — paste the full URL from your browser.
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="google_sheet_tab">Tab name (optional)</Label>
+              <Input
+                id="google_sheet_tab"
+                placeholder="Automation Requests"
+                value={form.google_sheet_tab}
+                onChange={(e) => set("google_sheet_tab", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+        </Card>
+
+
+
+        <Card className="p-5 space-y-4">
           <h2 className="font-semibold">Assets</h2>
           <div className="space-y-4">
             <div>
