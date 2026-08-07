@@ -129,6 +129,10 @@ export default function Onboarding() {
       toast.error(first || "Please review the form");
       return;
     }
+    if (postingPermission && !parsed.data.posting_permission_name?.trim()) {
+      toast.error("Type your full name to authorize posting on your behalf");
+      return;
+    }
     setSaving(true);
     try {
       const { jobId } = await submitOnboarding({
