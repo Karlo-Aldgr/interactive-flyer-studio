@@ -46,6 +46,8 @@ const emptyForm: FormState = {
   instagram_url: "",
   tiktok_url: "",
   other_social_url: "",
+  google_sheet_url: "",
+  google_sheet_tab: "",
 };
 
 export default function Onboarding() {
@@ -81,6 +83,8 @@ export default function Onboarding() {
             instagram_url: existing.instagram_url ?? "",
             tiktok_url: existing.tiktok_url ?? "",
             other_social_url: existing.other_social_url ?? "",
+            google_sheet_url: existing.google_sheet_url ?? "",
+            google_sheet_tab: existing.google_sheet_tab ?? "",
           });
           setWebsiteHelp(existing.website_help);
           setLogoHelp(existing.logo_help);
@@ -133,6 +137,8 @@ export default function Onboarding() {
           instagram_url: parsed.data.instagram_url || null,
           tiktok_url: parsed.data.tiktok_url || null,
           other_social_url: parsed.data.other_social_url || null,
+          google_sheet_url: parsed.data.google_sheet_url || null,
+          google_sheet_tab: parsed.data.google_sheet_tab || null,
           social_help: missingSocials ? socialHelp : false,
           logo_url: existingLogoUrl,
           logo_help: !logoFile && !existingLogoUrl ? logoHelp : null,
