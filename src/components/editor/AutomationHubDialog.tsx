@@ -225,7 +225,38 @@ export function AutomationHubDialog({
               actionLabel="Framework active"
               actionDisabled
               icon={<CheckCircle2 className="h-4 w-4" />}
-            />          </div>
+            />
+
+            <AutomationCard
+              title="Automation Scripts"
+              description="View, edit and request the marketing scripts for this flyer — Facebook, Instagram, TikTok, email and SMS."
+              badge="Ready now"
+              statusText="AI writes the first draft, you edit and save. Every request exports to your Google Sheet."
+              requirements={[
+                "Signed-in owner/editor",
+                "Your Google Sheet link from onboarding (for export)",
+              ]}
+              actionLabel="Open scripts"
+              actionDisabled={!ownerId}
+              onAction={() => openAfterClose(() => setScriptsOpen(true))}
+              icon={<FileText className="h-4 w-4" />}
+            />
+
+            <AutomationCard
+              title="Posting Permission & Social Accounts"
+              description="Give permission to post on your behalf and provide the Facebook, Instagram, TikTok and website details we need."
+              badge="Required for posting"
+              statusText="Saved to your business profile and used by every social automation on this flyer."
+              requirements={[
+                "Facebook page URL / name",
+                "Instagram handle (Business or Creator)",
+                "Signed authorization to post on your behalf",
+              ]}
+              actionLabel="Manage permission"
+              onAction={() => openAfterClose(() => setPermissionsOpen(true))}
+              icon={<ShieldCheck className="h-4 w-4" />}
+            />
+          </div>
 
           <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
             <div className="mb-1 flex items-center gap-2 text-foreground">
@@ -243,5 +274,18 @@ export function AutomationHubDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {ownerId && (
+      <AutomationScriptsDialog
+        open={scriptsOpen}
+        onOpenChange={setScriptsOpen}
+        flyerId={flyer.id}
+        ownerId={ownerId}
+        isStaff={isAdmin || canEdit}
+      />
+    )}
+    <SocialPermissionsDialog open={permissionsOpen} onOpenChange={setPermissionsOpen} />
+    </>
   );
+
 }
