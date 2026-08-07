@@ -70,7 +70,7 @@ export default function AdminAutomation() {
 
   if (!isAdmin || loading) {
     return (
-      <AdminLayout active="automation" title="Automation">
+      <AdminLayout active="automation">
         <div className="flex h-60 items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
@@ -79,7 +79,7 @@ export default function AdminAutomation() {
   }
 
   return (
-    <AdminLayout active="automation" title="Automation">
+    <AdminLayout active="automation">
       <div className="space-y-6">
         <Card>
           <CardHeader>
