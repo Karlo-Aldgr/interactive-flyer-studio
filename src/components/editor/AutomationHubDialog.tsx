@@ -303,6 +303,9 @@ export function AutomationHubDialog({
       />
     )}
     <SocialPermissionsDialog open={permissionsOpen} onOpenChange={setPermissionsOpen} />
+    {ownerId && (
+      <ApiManagementDialog open={apiOpen} onOpenChange={setApiOpen} ownerId={ownerId} />
+    )}
     </>
   );
 
