@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
-import { getMyOnboarding, submitOnboarding, type OnboardingHelp } from "@/lib/onboarding";
+import { getMyOnboarding, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
 
 const schema = z.object({
   full_name: z.string().trim().min(1, "Your name is required").max(120),
