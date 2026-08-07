@@ -90,11 +90,13 @@ export default function Onboarding() {
             instagram_url: existing.instagram_url ?? "",
             tiktok_url: existing.tiktok_url ?? "",
             other_social_url: existing.other_social_url ?? "",
+            facebook_page_name: existing.facebook_page_name ?? "",
+            instagram_handle: existing.instagram_handle ?? "",
+            posting_permission_name: existing.posting_permission_name ?? "",
             google_sheet_url: existing.google_sheet_url ?? "",
             google_sheet_tab: existing.google_sheet_tab ?? "",
           });
-          setWebsiteHelp(existing.website_help);
-          setLogoHelp(existing.logo_help);
+          setPostingPermission(Boolean(existing.posting_permission));
           setSocialHelp(existing.social_help);
           setExistingLogoUrl(existing.logo_url);
           setAlreadySubmitted(true);
