@@ -22,15 +22,17 @@ Per-key limits (default 60 requests/minute, 1000/day) enforced by counting recen
 
 Authentication is the `X-API-Key` header only. No JWT, no OAuth for callers.
 
-Direct mode:
+Manual mode:
 ```json
 {
+  "mode": "manual",
   "platforms": ["facebook", "instagram", "tiktok"],
   "caption": "Our latest flyer is now available!",
-  "media": { "type": "image", "url": "https://example.com/flyer.jpg" },
+  "media": [{ "type": "image", "url": "https://example.com/flyer.jpg" }],
   "link": "https://tapthatflyer.com/f/123"
 }
 ```
+`media` is an array of `{ type, url }` objects (image or video), so multi-item posts can be added later without breaking the contract. A single object is also accepted and normalized.
 
 Draft mode:
 ```json
