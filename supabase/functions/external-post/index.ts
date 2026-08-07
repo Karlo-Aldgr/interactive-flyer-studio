@@ -8,6 +8,8 @@ import {
   verifyMediaReachable,
 } from "../_shared/publishing/schema.ts";
 import { publish } from "../_shared/publishing/service.ts";
+import { resolveDraftRequests } from "../_shared/publishing/resolve.ts";
+import { summarizeResults } from "../_shared/publishing/types.ts";
 import type { MediaItem, Platform, PlatformResult } from "../_shared/publishing/types.ts";
 
 const corsHeaders = {
@@ -23,11 +25,6 @@ function json(body: unknown, status = 200, extraHeaders: Record<string, string> 
   });
 }
 
-const DRAFT_CAPTION_FIELD: Record<Platform, string> = {
-  facebook: "facebook_post",
-  instagram: "instagram_caption",
-  tiktok: "tiktok_caption",
-};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
