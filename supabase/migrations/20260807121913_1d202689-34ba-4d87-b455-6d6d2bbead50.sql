@@ -1,0 +1,1 @@
+GRANT SELECT ON public.api_idempotency_keys TO authenticated;
