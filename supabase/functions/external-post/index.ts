@@ -51,6 +51,8 @@ Deno.serve(async (req) => {
     return json({ request_id: requestId, error: auth.error }, auth.status);
   }
   const key = auth.key;
+  const idempotencyKey = readIdempotencyKey(req.headers);
+  let idempotencyReserved = false;
 
   const finish = async (
     status: string,
@@ -59,6 +61,15 @@ Deno.serve(async (req) => {
     meta: { platforms?: string[]; mediaType?: string | null; error?: string | null } = {},
     headers: Record<string, string> = {},
   ) => {
+    if (idempotencyReserved) {
+      await completeIdempotency(supabase, {
+        keyId: key.id,
+        idempotencyKey,
+        requestId,
+        httpStatus,
+        body,
+      });
+    }
     await logApiRequest(supabase, {
       request_id: requestId,
       key_id: key.id,
@@ -73,6 +84,7 @@ Deno.serve(async (req) => {
     });
     return json(body, httpStatus, headers);
   };
+
 
   if (!hasScope(key, "publish")) {
     return finish("forbidden", { request_id: requestId, error: "Key is missing the publish scope" }, 403, {
