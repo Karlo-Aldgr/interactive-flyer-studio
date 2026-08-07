@@ -1,11 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
-import {
-  extractLinkFromDraft,
-  facebookFailurePatch,
-  facebookSuccessPatch,
-  postFacebookToPage,
-} from "../_shared/metaFacebookPost.ts";
-import { resolveMetaPageCredentials, tokenLast4 } from "../_shared/metaCredentials.ts";
+import { publish } from "../_shared/publishing/service.ts";
+import { extractLinkFromDraft } from "../_shared/metaFacebookPost.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -62,73 +57,34 @@ Deno.serve(async (req) => {
     const allowed = await canManageDraft(supabase, user.id, draft.owner_id as string);
     if (!allowed) return json({ error: "Forbidden" }, 403);
 
-    const creds = await resolveMetaPageCredentials(supabase, user.id);
-    if ("error" in creds) return json({ error: creds.error }, 400);
-
     const message = messageOverride || String(draft.facebook_post || "").trim();
     if (!message) return json({ error: "No Facebook copy is ready yet" }, 400);
 
-    const link = extractLinkFromDraft(draft as Record<string, unknown>, message);
     const thumbnailUrl = typeof draft.thumbnail_url === "string" ? draft.thumbnail_url.trim() : "";
-    const attemptAt = new Date().toISOString();
-
-    await supabase
-      .from("marketing_drafts")
-      .update({
-        facebook_provider_status: "posting",
-        facebook_last_attempt_at: attemptAt,
-        facebook_last_error: null,
-      })
-      .eq("id", draftId);
-
-    const graphVersion = Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
-    const result = await postFacebookToPage({
-      pageId: creds.pageId,
-      pageAccessToken: creds.pageAccessToken,
-      graphVersion,
-      message,
-      link,
-      thumbnailUrl,
+    const outcome = await publish(supabase, {
+      ownerId: String(draft.owner_id),
+      platforms: ["facebook"],
+      caption: message,
+      media: thumbnailUrl ? [{ type: "image", url: thumbnailUrl }] : [],
+      link: extractLinkFromDraft(draft as Record<string, unknown>, message),
+      draftId,
     });
 
-    if (!result.ok) {
-      await supabase.from("marketing_drafts").update(facebookFailurePatch(result.error, result.attemptAt)).eq("id", draftId);
-      if (creds.connectionId) {
-        await supabase
-          .from("meta_connections")
-          .update({
-            status: "error",
-            last_error: result.error,
-            page_access_token_last4: tokenLast4(creds.pageAccessToken),
-          })
-          .eq("id", creds.connectionId);
-      }
-      return json({ error: result.error }, 502);
+    const result = outcome.results[0];
+    if (!result || result.status !== "success") {
+      return json({ error: result?.error || "Facebook publish failed" }, 502);
     }
 
-    const { data: updatedDraft, error: updateErr } = await supabase
+    const { data: updatedDraft } = await supabase
       .from("marketing_drafts")
-      .update(facebookSuccessPatch(result.provider_post_id, result.attemptAt))
-      .eq("id", draftId)
       .select("*")
+      .eq("id", draftId)
       .single();
-    if (updateErr) return json({ error: updateErr.message }, 500);
-
-    if (creds.connectionId) {
-      await supabase
-        .from("meta_connections")
-        .update({
-          status: "ready",
-          last_error: null,
-          page_access_token_last4: tokenLast4(creds.pageAccessToken),
-        })
-        .eq("id", creds.connectionId);
-    }
 
     return json({
       ok: true,
-      provider_post_id: result.provider_post_id,
-      token_source: creds.source,
+      provider_post_id: result.post_id,
+      token_source: result.token_source,
       draft: updatedDraft,
     });
   } catch (err) {
