@@ -98,3 +98,31 @@ fails the whole request.
 - TikTok uses its own OAuth connection and the Content Posting API (`PULL_FROM_URL`),
   so media URLs must be publicly reachable over HTTPS.
 - Every call is logged (key prefix only) and visible in the API dialog.
+
+## Asynchronous processing (forward compatibility)
+
+The publishing service is split into a **contract** (`PublishRequest` in,
+`PublishOutcome` out) and an **executor** that decides *when* the work runs:
+
+- `executePublishRequest()` — the unit of work (provider calls + draft status
+  patches). An inline executor calls it during the HTTP request; a queue worker
+  would call the exact same function when it picks a job up.
+- `inlineExecutor` — today's default, runs during the request.
+- `registerExecutor()` + `PUBLISH_EXECUTOR` env var — swap in a queue-backed
+  executor without touching any caller.
+- `resolveDraftRequests()` — turns a draft into plain, serialisable
+  `PublishRequest` objects, so a worker can persist and replay them.
+
+`PublishRequest` already carries `request_id`, `idempotency_key` and
+`scheduled_at` fields reserved for the queued executor.
+
+Clients must therefore treat a response as possibly non-terminal:
+
+```json
+{ "request_id": "…", "status": "queued", "job_id": "…",
+  "results": [{ "platform": "facebook", "status": "queued" }] }
+```
+
+`queued` means accepted, not finished — the terminal result is read back via
+`job_id`. Existing fields, status values and HTTP codes are unchanged, so
+integrations built against the synchronous behaviour keep working.
