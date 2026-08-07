@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
-import { getMyOnboarding, submitOnboarding, type OnboardingHelp } from "@/lib/onboarding";
+import { getMyOnboarding, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
 
 const schema = z.object({
   full_name: z.string().trim().min(1, "Your name is required").max(120),
@@ -27,6 +27,8 @@ const schema = z.object({
   instagram_url: z.string().trim().max(300).optional().or(z.literal("")),
   tiktok_url: z.string().trim().max(300).optional().or(z.literal("")),
   other_social_url: z.string().trim().max(500).optional().or(z.literal("")),
+  google_sheet_url: z.string().trim().max(500).optional().or(z.literal("")),
+  google_sheet_tab: z.string().trim().max(80).optional().or(z.literal("")),
 });
 
 type FormState = z.infer<typeof schema>;
@@ -44,6 +46,8 @@ const emptyForm: FormState = {
   instagram_url: "",
   tiktok_url: "",
   other_social_url: "",
+  google_sheet_url: "",
+  google_sheet_tab: "",
 };
 
 export default function Onboarding() {
@@ -79,6 +83,8 @@ export default function Onboarding() {
             instagram_url: existing.instagram_url ?? "",
             tiktok_url: existing.tiktok_url ?? "",
             other_social_url: existing.other_social_url ?? "",
+            google_sheet_url: existing.google_sheet_url ?? "",
+            google_sheet_tab: existing.google_sheet_tab ?? "",
           });
           setWebsiteHelp(existing.website_help);
           setLogoHelp(existing.logo_help);
@@ -131,6 +137,8 @@ export default function Onboarding() {
           instagram_url: parsed.data.instagram_url || null,
           tiktok_url: parsed.data.tiktok_url || null,
           other_social_url: parsed.data.other_social_url || null,
+          google_sheet_url: parsed.data.google_sheet_url || null,
+          google_sheet_tab: parsed.data.google_sheet_tab || null,
           social_help: missingSocials ? socialHelp : false,
           logo_url: existingLogoUrl,
           logo_help: !logoFile && !existingLogoUrl ? logoHelp : null,
@@ -270,6 +278,45 @@ export default function Onboarding() {
             )}
           </div>
         </Card>
+
+        <Card className="p-5 space-y-4">
+          <h2 className="font-semibold">Your Google Sheet</h2>
+          <p className="text-sm text-muted-foreground">
+            Every customer gets their own spreadsheet. We export your automation scripts (social posts,
+            email and SMS copy) into it. Create a Google Sheet, give it{" "}
+            <strong>edit access to anyone with the link</strong> (or share it with your TapThatFlyer
+            account manager), then paste the link below.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label htmlFor="google_sheet_url">Google Sheet link</Label>
+              <Input
+                id="google_sheet_url"
+                placeholder="https://docs.google.com/spreadsheets/d/…"
+                value={form.google_sheet_url}
+                onChange={(e) => set("google_sheet_url", e.target.value)}
+                className="mt-1"
+              />
+              {form.google_sheet_url.trim() && !extractSpreadsheetId(form.google_sheet_url) && (
+                <p className="mt-1 text-xs text-destructive">
+                  That doesn't look like a Google Sheets link — paste the full URL from your browser.
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="google_sheet_tab">Tab name (optional)</Label>
+              <Input
+                id="google_sheet_tab"
+                placeholder="Automation Requests"
+                value={form.google_sheet_tab}
+                onChange={(e) => set("google_sheet_tab", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+        </Card>
+
+
 
         <Card className="p-5 space-y-4">
           <h2 className="font-semibold">Assets</h2>

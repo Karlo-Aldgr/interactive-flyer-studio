@@ -124,21 +124,34 @@ async function syncToSheet(
 ) {
   const lovableKey = Deno.env.get("LOVABLE_API_KEY");
   const sheetsKey = Deno.env.get("GOOGLE_SHEETS_API_KEY");
+
+  // Each customer exports to their own spreadsheet; the master sheet is a fallback.
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("automation_sheet_id, automation_sheet_tab")
+    .eq("id", req.owner_id)
+    .maybeSingle();
   const { data: setting } = await admin
     .from("app_settings")
     .select("value")
     .eq("key", SHEET_SETTING_KEY)
     .maybeSingle();
-  const spreadsheetId = (setting?.value as any)?.spreadsheet_id as string | undefined;
+  const spreadsheetId =
+    (profile?.automation_sheet_id as string | null)?.trim() ||
+    ((setting?.value as any)?.spreadsheet_id as string | undefined);
+  const tab = (profile?.automation_sheet_tab as string | null)?.trim() || SHEET_TAB;
 
   if (!lovableKey || !sheetsKey) return { skipped: "Google Sheets is not connected yet." };
-  if (!spreadsheetId) return { skipped: "No master spreadsheet configured yet." };
+  if (!spreadsheetId) {
+    return { skipped: "No Google Sheet on file for this customer. Add one in onboarding." };
+  }
 
   const headers = {
     Authorization: `Bearer ${lovableKey}`,
     "X-Connection-Api-Key": sheetsKey,
     "Content-Type": "application/json",
   };
+
 
   const row = [
     req.id,
@@ -159,10 +172,10 @@ async function syncToSheet(
     new Date().toISOString(),
   ];
 
-  const range = `'${SHEET_TAB}'!A:P`;
+  const range = `'${tab}'!A:P`;
 
   // Ensure the header row exists.
-  const head = await fetch(`${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${SHEET_TAB}'!A1:P1`, {
+  const head = await fetch(`${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${tab}'!A1:P1`, {
     headers,
   });
   if (!head.ok) {
@@ -172,13 +185,14 @@ async function syncToSheet(
   const headJson = await head.json();
   if (!headJson.values?.length) {
     await fetch(
-      `${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${SHEET_TAB}'!A1:P1?valueInputOption=RAW`,
+      `${GATEWAY}/spreadsheets/${spreadsheetId}/values/'${tab}'!A1:P1?valueInputOption=RAW`,
       { method: "PUT", headers, body: JSON.stringify({ values: [HEADER] }) },
     );
   }
 
-  if (req.sheet_row) {
-    const cellRange = `'${SHEET_TAB}'!A${req.sheet_row}:P${req.sheet_row}`;
+  // Only reuse the stored row when it belongs to the same spreadsheet.
+  if (req.sheet_row && req.sheet_spreadsheet_id === spreadsheetId) {
+    const cellRange = `'${tab}'!A${req.sheet_row}:P${req.sheet_row}`;
     const upd = await fetch(
       `${GATEWAY}/spreadsheets/${spreadsheetId}/values/${cellRange}?valueInputOption=USER_ENTERED`,
       { method: "PUT", headers, body: JSON.stringify({ values: [row] }) },
@@ -187,7 +201,7 @@ async function syncToSheet(
       const detail = await upd.text();
       throw new Error(`Sheets update failed (${upd.status}): ${detail.slice(0, 300)}`);
     }
-    return { sheet_row: req.sheet_row as number };
+    return { sheet_row: req.sheet_row as number, spreadsheet_id: spreadsheetId };
   }
 
   const app = await fetch(
@@ -201,7 +215,8 @@ async function syncToSheet(
   const appJson = await app.json();
   const updatedRange: string = appJson.updates?.updatedRange ?? "";
   const rowNumber = Number(updatedRange.match(/![A-Z]+(\d+)/)?.[1] ?? 0) || null;
-  return { sheet_row: rowNumber };
+  return { sheet_row: rowNumber, spreadsheet_id: spreadsheetId };
+
 }
 
 Deno.serve(async (request) => {
@@ -301,6 +316,7 @@ Deno.serve(async (request) => {
           .from("automation_script_requests")
           .update({
             sheet_row: (result as any).sheet_row ?? updated.sheet_row,
+            sheet_spreadsheet_id: (result as any).spreadsheet_id ?? updated.sheet_spreadsheet_id,
             sheet_synced_at: new Date().toISOString(),
             sheet_error: null,
           })

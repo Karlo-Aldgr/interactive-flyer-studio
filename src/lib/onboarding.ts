@@ -21,12 +21,24 @@ export interface OnboardingSubmission {
   social_help: boolean;
   logo_url: string | null;
   logo_help: OnboardingHelp;
+  google_sheet_url: string | null;
+  google_sheet_tab: string | null;
   flyer_upload_url: string | null;
   flyer_job_id: string | null;
   hotspot_suggestions: unknown;
   created_at: string;
   updated_at: string;
 }
+
+/** Accepts a full Google Sheets URL or a bare spreadsheet ID and returns the ID. */
+export function extractSpreadsheetId(value: string | null | undefined): string | null {
+  const raw = (value ?? "").trim();
+  if (!raw) return null;
+  const match = raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (match) return match[1];
+  return /^[a-zA-Z0-9-_]{20,}$/.test(raw) ? raw : null;
+}
+
 
 export type OnboardingInput = Omit<
   OnboardingSubmission,
@@ -199,6 +211,8 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     social_help: input.social_help,
     logo_url: logoUrl,
     logo_help: input.logo_help,
+    google_sheet_url: input.google_sheet_url,
+    google_sheet_tab: input.google_sheet_tab,
     flyer_upload_url: flyerPath,
     flyer_job_id: jobId,
   };
@@ -210,8 +224,13 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
 
   await supabase
     .from("profiles")
-    .update({ onboarding_completed_at: new Date().toISOString() })
+    .update({
+      onboarding_completed_at: new Date().toISOString(),
+      automation_sheet_id: extractSpreadsheetId(input.google_sheet_url),
+      automation_sheet_tab: input.google_sheet_tab?.trim() || null,
+    } as any)
     .eq("id", userId);
+
 
   if (jobId) {
     try {

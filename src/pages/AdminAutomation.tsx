@@ -83,11 +83,12 @@ export default function AdminAutomation() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Master Google Sheet</CardTitle>
+            <CardTitle className="text-base">Fallback Google Sheet</CardTitle>
             <CardDescription>
-              Every automation script request is appended to the tab “Automation Requests” in this
-              spreadsheet. Paste the spreadsheet ID from its URL
+              Each customer exports to their own spreadsheet, collected during onboarding. This sheet is
+              only used when a customer hasn't provided one. Paste the spreadsheet ID from its URL
               (docs.google.com/spreadsheets/d/<strong>ID</strong>/edit).
+
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
