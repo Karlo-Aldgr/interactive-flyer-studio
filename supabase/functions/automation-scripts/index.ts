@@ -124,21 +124,34 @@ async function syncToSheet(
 ) {
   const lovableKey = Deno.env.get("LOVABLE_API_KEY");
   const sheetsKey = Deno.env.get("GOOGLE_SHEETS_API_KEY");
+
+  // Each customer exports to their own spreadsheet; the master sheet is a fallback.
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("automation_sheet_id, automation_sheet_tab")
+    .eq("id", req.owner_id)
+    .maybeSingle();
   const { data: setting } = await admin
     .from("app_settings")
     .select("value")
     .eq("key", SHEET_SETTING_KEY)
     .maybeSingle();
-  const spreadsheetId = (setting?.value as any)?.spreadsheet_id as string | undefined;
+  const spreadsheetId =
+    (profile?.automation_sheet_id as string | null)?.trim() ||
+    ((setting?.value as any)?.spreadsheet_id as string | undefined);
+  const tab = (profile?.automation_sheet_tab as string | null)?.trim() || SHEET_TAB;
 
   if (!lovableKey || !sheetsKey) return { skipped: "Google Sheets is not connected yet." };
-  if (!spreadsheetId) return { skipped: "No master spreadsheet configured yet." };
+  if (!spreadsheetId) {
+    return { skipped: "No Google Sheet on file for this customer. Add one in onboarding." };
+  }
 
   const headers = {
     Authorization: `Bearer ${lovableKey}`,
     "X-Connection-Api-Key": sheetsKey,
     "Content-Type": "application/json",
   };
+
 
   const row = [
     req.id,
