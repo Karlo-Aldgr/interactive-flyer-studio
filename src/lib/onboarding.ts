@@ -19,6 +19,11 @@ export interface OnboardingSubmission {
   tiktok_url: string | null;
   other_social_url: string | null;
   social_help: boolean;
+  facebook_page_name: string | null;
+  instagram_handle: string | null;
+  posting_permission: boolean;
+  posting_permission_name: string | null;
+  posting_permission_at: string | null;
   logo_url: string | null;
   logo_help: OnboardingHelp;
   google_sheet_url: string | null;
