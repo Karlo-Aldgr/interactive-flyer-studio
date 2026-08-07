@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 import { Link } from "react-router-dom";
 import {
-  BarChart3, Briefcase, ChevronDown, Crosshair, DollarSign, Eye, Inbox,
+  BarChart3, Briefcase, ChevronDown, ClipboardList, Crosshair, DollarSign, Eye, Inbox,
   Link as LinkIcon, Monitor, MoreHorizontal, Music, Music2, PartyPopper,
   Share2, Smartphone, Sparkles, Tablet, Timer, Users, Wallet,
 } from "lucide-react";
