@@ -22,15 +22,17 @@ Per-key limits (default 60 requests/minute, 1000/day) enforced by counting recen
 
 Authentication is the `X-API-Key` header only. No JWT, no OAuth for callers.
 
-Direct mode:
+Manual mode:
 ```json
 {
+  "mode": "manual",
   "platforms": ["facebook", "instagram", "tiktok"],
   "caption": "Our latest flyer is now available!",
-  "media": { "type": "image", "url": "https://example.com/flyer.jpg" },
+  "media": [{ "type": "image", "url": "https://example.com/flyer.jpg" }],
   "link": "https://tapthatflyer.com/f/123"
 }
 ```
+`media` is an array of `{ type, url }` objects (image or video), so multi-item posts can be added later without breaking the contract. A single object is also accepted and normalized.
 
 Draft mode:
 ```json
@@ -42,7 +44,7 @@ The server loads the draft's copy and media itself. Mixing `mode: "draft"` with 
 Zod schemas validate platforms, caption length per platform, HTTPS-only media URLs, media reachability and content type, draft and flyer ownership against the key's owner, payload size, and required fields. Errors come back per field.
 
 ### 6. One shared publishing service
-A single `publishService` module decides which platforms to target, detects image vs. video, dispatches to the right adapter, and returns a standardized per-platform result. The endpoint contains no platform logic. The existing in-app "Post now" buttons for Facebook and Instagram are refactored to call this same service, so there is exactly one publishing code path.
+A single `publishService` module decides which platforms to target, detects image vs. video, dispatches to the right adapter, and returns a standardized per-platform result. The endpoint contains no platform logic. The existing in-app "Post now" buttons for Facebook and Instagram are refactored to call this same service, and the scheduled-post function uses it too, so there is exactly one publishing code path for current and future features.
 
 ### 7. Platform adapters
 - `facebook.ts` — wraps the existing page photo/feed posting logic, adds video (`/videos`) support.
