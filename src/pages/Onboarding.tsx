@@ -298,6 +298,58 @@ export default function Onboarding() {
                 <Label htmlFor="social_help" className="text-sm">Help me set up my social media accounts</Label>
               </div>
             )}
+
+            <div>
+              <Label htmlFor="facebook_page_name">Facebook Page name</Label>
+              <Input
+                id="facebook_page_name"
+                placeholder="Exact page name"
+                value={form.facebook_page_name}
+                onChange={(e) => set("facebook_page_name", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="instagram_handle">Instagram handle</Label>
+              <Input
+                id="instagram_handle"
+                placeholder="@yourbusiness"
+                value={form.instagram_handle}
+                onChange={(e) => set("instagram_handle", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            <div className="sm:col-span-2 rounded-md border bg-muted/40 p-3 space-y-3">
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="posting_permission"
+                  checked={postingPermission}
+                  onCheckedChange={(v) => setPostingPermission(v === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="posting_permission" className="text-sm font-normal leading-snug">
+                  I authorize TapThatFlyer to create and publish posts on my behalf to the social
+                  accounts listed above.
+                </Label>
+              </div>
+              {postingPermission && (
+                <div>
+                  <Label htmlFor="posting_permission_name">Type your full name to sign</Label>
+                  <Input
+                    id="posting_permission_name"
+                    placeholder="Your full name"
+                    value={form.posting_permission_name}
+                    onChange={(e) => set("posting_permission_name", e.target.value)}
+                    className="mt-1"
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Your name and today's date are recorded as your consent. You can revoke this at
+                    any time by unchecking the box and saving again.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </Card>
 
