@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Globe, Loader2, ZoomIn, ZoomOut, Crop, Share2, Sparkles,
-  Briefcase, PartyPopper, CalendarIcon,
+  Briefcase, PartyPopper, CalendarIcon, LayoutDashboard, PenTool,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
@@ -22,6 +22,9 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ShareDialog } from "./ShareDialog";
 import { AutomationHubDialog } from "./AutomationHubDialog";
 import { MarketingCoachDialog } from "./MarketingCoachDialog";
