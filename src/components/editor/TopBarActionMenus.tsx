@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 import { Link } from "react-router-dom";
 import {
-  BarChart3, Briefcase, ChevronDown, Crosshair, DollarSign, Eye, Inbox,
+  BarChart3, Briefcase, ChevronDown, ClipboardList, Crosshair, DollarSign, Eye, Inbox,
   Link as LinkIcon, Monitor, MoreHorizontal, Music, Music2, PartyPopper,
   Share2, Smartphone, Sparkles, Tablet, Timer, Users, Wallet,
 } from "lucide-react";
@@ -148,6 +148,11 @@ export function TopBarPortalMenu({
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onOpenSubscribers}>
           <Users className="mr-2 h-4 w-4" /> Subscribers
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/onboarding" className="flex cursor-pointer items-center">
+            <ClipboardList className="mr-2 h-4 w-4" /> Onboarding
+          </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -314,6 +319,11 @@ export function TopBarMobileMenu(actions: TopBarMenuActions) {
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={actions.onOpenSubscribers}>
           <Users className="mr-2 h-4 w-4" /> Subscribers
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/onboarding" className="flex cursor-pointer items-center">
+            <ClipboardList className="mr-2 h-4 w-4" /> Onboarding
+          </Link>
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
