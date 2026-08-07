@@ -152,6 +152,13 @@ export default function Onboarding() {
           instagram_url: parsed.data.instagram_url || null,
           tiktok_url: parsed.data.tiktok_url || null,
           other_social_url: parsed.data.other_social_url || null,
+          facebook_page_name: parsed.data.facebook_page_name || null,
+          instagram_handle: parsed.data.instagram_handle || null,
+          posting_permission: postingPermission,
+          posting_permission_name: postingPermission
+            ? parsed.data.posting_permission_name!.trim()
+            : null,
+          posting_permission_at: postingPermission ? new Date().toISOString() : null,
           google_sheet_url: parsed.data.google_sheet_url || null,
           google_sheet_tab: parsed.data.google_sheet_tab || null,
           social_help: missingSocials ? socialHelp : false,
