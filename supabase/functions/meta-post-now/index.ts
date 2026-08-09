@@ -63,6 +63,8 @@ Deno.serve(async (req) => {
     const thumbnailUrl = typeof draft.thumbnail_url === "string" ? draft.thumbnail_url.trim() : "";
     const outcome = await publish(supabase, {
       ownerId: String(draft.owner_id),
+      actorId: user.id,
+
       platforms: ["facebook"],
       caption: message,
       media: thumbnailUrl ? [{ type: "image", url: thumbnailUrl }] : [],
