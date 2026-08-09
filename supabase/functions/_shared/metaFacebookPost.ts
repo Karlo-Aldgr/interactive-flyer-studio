@@ -4,13 +4,34 @@ export type MetaPostResult =
   | { ok: true; provider_post_id: string; attemptAt: string }
   | { ok: false; error: string; attemptAt: string };
 
+/** Cloudflare share worker that serves crawler-friendly og:image for flyers. */
+const SHARE_WORKER_ORIGIN = "https://tapthatflyer-share.showoffgrafixs.workers.dev";
+
+/** Rewrite tapthatflyer.com flyer links to the share worker so FB gets the flyer og:image. */
+export function toShareWorkerUrl(url: string): string {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url);
+    const isMainSite = /^(www\.)?tapthatflyer\.com$/i.test(parsed.hostname);
+    if (!isMainSite) return url;
+    if (!/^\/f\//i.test(parsed.pathname)) return url;
+    return `${SHARE_WORKER_ORIGIN}${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return url;
+  }
+}
+
 export function extractLinkFromDraft(draft: Record<string, unknown>, message: string): string {
+  const urlsInMessage = (message.match(/https?:\/\/[^\s]+/gi) ?? []).map((u) =>
+    u.replace(/[),.;!?]+$/g, "")
+  );
+  // Prefer an explicit share-worker URL already present in the caption.
+  const workerUrl = urlsInMessage.find((u) => /workers\.dev/i.test(u));
+  if (workerUrl) return workerUrl;
+
   const linkFromDraft = typeof draft.flyer_url === "string" ? draft.flyer_url.trim() : "";
-  const linkFromMessage = (() => {
-    const match = message.match(/https?:\/\/[^\s]+/i);
-    return match?.[0]?.replace(/[),.;!?]+$/g, "") || "";
-  })();
-  return linkFromDraft || linkFromMessage;
+  const link = linkFromDraft || urlsInMessage[0] || "";
+  return toShareWorkerUrl(link);
 }
 
 export async function postFacebookToPage(args: {
