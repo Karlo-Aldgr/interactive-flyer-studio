@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { isPasswordRecoveryUrl, passwordRecoveryRedirectPath } from "@/lib/authUtils";
 import Landing from "./pages/Landing";
+import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 
 // Lazy-loaded routes — keeps Konva/Recharts/etc out of the initial bundle
 const Auth = lazy(() => import("./pages/Auth"));
