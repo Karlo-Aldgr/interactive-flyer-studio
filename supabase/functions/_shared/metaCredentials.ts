@@ -5,6 +5,8 @@ export type ResolvedMetaCredentials = {
   pageAccessToken: string;
   source: "oauth" | "test_fallback";
   connectionId: string | null;
+  /** The user whose Meta connection was actually used. */
+  userId: string;
 };
 
 function tokenLast4(token: string) {
@@ -13,11 +15,38 @@ function tokenLast4(token: string) {
 
 export { tokenLast4 };
 
+/**
+ * Picks the user whose Meta connection should be used: the content owner when
+ * they have one, otherwise the acting user (admin/editor posting on behalf).
+ */
+export async function resolveMetaUserId(
+  supabase: SupabaseClient,
+  ownerId: string,
+  actorId?: string | null,
+): Promise<string> {
+  const candidates = [ownerId, actorId].filter(
+    (id, i, arr): id is string => !!id && arr.indexOf(id) === i,
+  );
+  for (const id of candidates) {
+    const { data } = await supabase
+      .from("meta_connections")
+      .select("id, facebook_page_id")
+      .eq("user_id", id)
+      .eq("provider", "meta")
+      .maybeSingle();
+    if (data?.facebook_page_id) return id;
+  }
+  return ownerId;
+}
+
 /** Prefer per-user OAuth page token; fall back to global test-mode token. */
 export async function resolveMetaPageCredentials(
   supabase: SupabaseClient,
-  userId: string,
+  ownerId: string,
+  actorId?: string | null,
 ): Promise<ResolvedMetaCredentials | { error: string }> {
+  const userId = await resolveMetaUserId(supabase, ownerId, actorId);
+
   const { data: connection, error: connErr } = await supabase
     .from("meta_connections")
     .select("*")
@@ -43,8 +72,10 @@ export async function resolveMetaPageCredentials(
       pageAccessToken: oauthToken,
       source: "oauth",
       connectionId: connection.id ? String(connection.id) : null,
+      userId,
     };
   }
+
 
   const testMode = (Deno.env.get("META_TEST_MODE_ENABLED") ?? "").toLowerCase() === "true";
   const globalToken = Deno.env.get("META_PAGE_ACCESS_TOKEN")?.trim() || "";
@@ -55,6 +86,8 @@ export async function resolveMetaPageCredentials(
       pageAccessToken: globalToken,
       source: "test_fallback",
       connectionId: connection.id ? String(connection.id) : null,
+      userId,
+
     };
   }
 

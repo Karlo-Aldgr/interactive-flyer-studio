@@ -13,7 +13,7 @@ function providerError(payload: Record<string, unknown>, fallback: string) {
 /** Facebook Page adapter: images, videos and link posts. */
 export async function publishToFacebook(ctx: AdapterContext): Promise<PlatformResult> {
   const attempt_at = new Date().toISOString();
-  const creds = await resolveMetaPageCredentials(ctx.supabase, ctx.ownerId);
+  const creds = await resolveMetaPageCredentials(ctx.supabase, ctx.ownerId, ctx.actorId);
   if ("error" in creds) {
     return { platform: "facebook", status: "not_connected", error: creds.error, attempt_at };
   }

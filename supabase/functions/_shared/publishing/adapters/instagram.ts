@@ -8,13 +8,15 @@ async function resolveIgUserId(
   ctx: AdapterContext,
   accessToken: string,
   pageId: string | null,
+  metaUserId: string,
 ): Promise<{ igUserId: string; connectionId: string | null } | { error: string }> {
   const { data: connection } = await ctx.supabase
     .from("meta_connections")
     .select("id, instagram_user_id")
-    .eq("user_id", ctx.ownerId)
+    .eq("user_id", metaUserId)
     .eq("provider", "meta")
     .maybeSingle();
+
 
   const connectionId = connection?.id ? String(connection.id) : null;
   const stored = typeof connection?.instagram_user_id === "string"
@@ -65,20 +67,22 @@ export async function publishToInstagram(ctx: AdapterContext): Promise<PlatformR
     };
   }
 
-  const creds = await resolveMetaPageCredentials(ctx.supabase, ctx.ownerId);
+  const creds = await resolveMetaPageCredentials(ctx.supabase, ctx.ownerId, ctx.actorId);
   const pageToken = !("error" in creds) ? creds.pageAccessToken : null;
   const pageId = !("error" in creds) ? creds.pageId : null;
+  const metaUserId = !("error" in creds) ? creds.userId : ctx.ownerId;
 
   const access = await resolveInstagramAccess({
     supabase: ctx.supabase,
-    userId: ctx.ownerId,
+    userId: metaUserId,
     pageAccessToken: pageToken,
   });
   if ("error" in access) {
     return { platform: "instagram", status: "not_connected", error: access.error, attempt_at };
   }
 
-  const resolved = await resolveIgUserId(ctx, access.accessToken, pageId);
+  const resolved = await resolveIgUserId(ctx, access.accessToken, pageId, metaUserId);
+
   if ("error" in resolved) {
     return { platform: "instagram", status: "not_connected", error: resolved.error, attempt_at };
   }

@@ -73,6 +73,8 @@ export async function executePublishRequest(
   const ctxBase: AdapterContext = {
     supabase,
     ownerId: request.ownerId,
+    actorId: request.actorId,
+
     caption: request.caption,
     media: request.media,
     link: request.link,

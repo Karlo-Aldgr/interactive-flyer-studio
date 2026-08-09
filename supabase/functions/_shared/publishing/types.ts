@@ -13,7 +13,10 @@ export type MediaItem = {
 
 export type PublishRequest = {
   ownerId: string;
+  /** Authenticated user performing the publish (admin/editor acting for owner). */
+  actorId?: string;
   platforms: Platform[];
+
   caption: string;
   /** Zero or more media items. Adapters currently publish the first item. */
   media: MediaItem[];
@@ -59,7 +62,10 @@ export type AdapterContext = {
   /** Service-role client. Adapters never receive user JWT clients. */
   supabase: SupabaseClient;
   ownerId: string;
+  /** Falls back to this user's Meta/TikTok connection when the owner has none. */
+  actorId?: string;
   caption: string;
+
   media: MediaItem[];
   link?: string;
   graphVersion: string;

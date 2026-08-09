@@ -61,6 +61,8 @@ Deno.serve(async (req) => {
 
     const outcome = await publish(supabase, {
       ownerId: String(draft.owner_id),
+      actorId: user.id,
+
       platforms: ["instagram"],
       caption,
       media: imageUrl ? [{ type: "image", url: imageUrl }] : [],
