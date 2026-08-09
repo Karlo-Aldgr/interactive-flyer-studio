@@ -47,14 +47,15 @@ export async function postFacebookToPage(args: {
     access_token: args.pageAccessToken,
   });
 
-  const hasLink = !!args.link && /^https:\/\//i.test(args.link);
+  const link = args.link ? toShareWorkerUrl(args.link) : "";
+  const hasLink = !!link && /^https:\/\//i.test(link);
   const canPostPhoto = !!args.thumbnailUrl && /^https:\/\//i.test(args.thumbnailUrl);
   // Prefer /feed + link: it renders a clickable link preview card back to the flyer.
   // /photos shows the image but the image is not clickable, so only use it when no link exists.
   let graphEndpoint = `https://graph.facebook.com/${args.graphVersion}/${args.pageId}/feed`;
   if (hasLink) {
     params.set("message", args.message);
-    params.set("link", args.link!);
+    params.set("link", link);
   } else if (canPostPhoto) {
     graphEndpoint = `https://graph.facebook.com/${args.graphVersion}/${args.pageId}/photos`;
     params.set("url", args.thumbnailUrl!);
