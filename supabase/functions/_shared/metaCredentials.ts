@@ -86,6 +86,8 @@ export async function resolveMetaPageCredentials(
       pageAccessToken: globalToken,
       source: "test_fallback",
       connectionId: connection.id ? String(connection.id) : null,
+      userId,
+
     };
   }
 
