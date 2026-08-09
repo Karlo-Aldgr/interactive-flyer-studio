@@ -116,12 +116,9 @@ export function buildMarketingPublicUrl(args: {
   openPageId?: string | null;
 }): string {
   if (args.landingPageId) {
-    const params = new URLSearchParams();
-    params.set("page", args.landingPageId);
-    if (args.openPageId) params.set("open", args.openPageId);
-    return `${getMarketingAppOrigin()}/f/${args.slug}?${params.toString()}`;
+    return buildSocialLandingShareUrl(args.slug, args.landingPageId, args.openPageId);
   }
-  return buildMarketingFlyerUrl(args.slug);
+  return buildSocialShareUrl(args.slug);
 }
 
 export function buildPublicPortalUrl(token: string, code?: string): string {
