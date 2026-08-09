@@ -1197,6 +1197,7 @@ export type Database = {
           instagram_user_access_token: string | null
           page_access_token: string
           updated_at: string
+          user_access_token: string | null
           user_id: string
         }
         Insert: {
@@ -1204,6 +1205,7 @@ export type Database = {
           instagram_user_access_token?: string | null
           page_access_token: string
           updated_at?: string
+          user_access_token?: string | null
           user_id: string
         }
         Update: {
@@ -1211,6 +1213,7 @@ export type Database = {
           instagram_user_access_token?: string | null
           page_access_token?: string
           updated_at?: string
+          user_access_token?: string | null
           user_id?: string
         }
         Relationships: []
