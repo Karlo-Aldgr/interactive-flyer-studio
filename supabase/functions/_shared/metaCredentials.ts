@@ -52,6 +52,40 @@ export async function resolveMetaUserId(
   return ownerId;
 }
 
+const GRAPH_VERSION = Deno.env.get("META_GRAPH_VERSION")?.trim() || "v21.0";
+
+/**
+ * Exchange the stored user access token for a fresh Page access token.
+ * Page tokens can be invalidated independently of the user token, so we always
+ * re-derive them from /me/accounts when a user token is available.
+ */
+async function freshPageTokenFromUserToken(
+  userAccessToken: string,
+  pageId: string,
+): Promise<{ token: string } | { error: string }> {
+  try {
+    const url = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/me/accounts`);
+    url.searchParams.set("fields", "id,name,access_token");
+    url.searchParams.set("limit", "200");
+    url.searchParams.set("access_token", userAccessToken);
+    const res = await fetch(url.toString());
+    const json = await res.json().catch(() => ({})) as Record<string, unknown>;
+    if (!res.ok) {
+      const msg = (json.error as Record<string, unknown> | undefined)?.message;
+      return { error: String(msg || "Facebook session expired") };
+    }
+    const pages = Array.isArray(json.data) ? json.data as Record<string, unknown>[] : [];
+    const match = pages.find((p) => String(p.id) === pageId) ?? null;
+    const token = typeof match?.access_token === "string" ? match.access_token.trim() : "";
+    if (!token) {
+      return { error: "That Facebook Page is no longer available on this account." };
+    }
+    return { token };
+  } catch (err) {
+    return { error: String(err) };
+  }
+}
+
 /** Prefer per-user OAuth page token; fall back to global test-mode token. */
 export async function resolveMetaPageCredentials(
   supabase: SupabaseClient,
@@ -71,40 +105,75 @@ export async function resolveMetaPageCredentials(
 
   const { data: secretRow } = await supabase
     .from("meta_connection_secrets")
-    .select("page_access_token")
+    .select("page_access_token, user_access_token")
     .eq("user_id", userId)
     .maybeSingle();
 
   const oauthToken = typeof secretRow?.page_access_token === "string"
     ? secretRow.page_access_token.trim()
     : "";
+  const userToken = typeof secretRow?.user_access_token === "string"
+    ? secretRow.user_access_token.trim()
+    : "";
+  const isOauthMode = String(connection?.connection_mode ?? "").toLowerCase() === "oauth";
+  const pageId = connection?.facebook_page_id ? String(connection.facebook_page_id) : "";
 
-  if (oauthToken && connection?.facebook_page_id) {
+  // 1. With a user token, always re-derive a fresh page token and persist it.
+  if (pageId && userToken) {
+    const fresh = await freshPageTokenFromUserToken(userToken, pageId);
+    if ("token" in fresh) {
+      if (fresh.token !== oauthToken) {
+        await upsertMetaPageSecret(supabase, userId, fresh.token).catch(() => {});
+      }
+      return {
+        pageId,
+        pageAccessToken: fresh.token,
+        source: "oauth",
+        connectionId: connection?.id ? String(connection.id) : null,
+        userId,
+      };
+    }
+    // User token is dead: never silently fall back in OAuth mode.
+    if (isOauthMode || !oauthToken) {
+      return {
+        error:
+          `Your Facebook connection expired (${fresh.error}). Click "Connect with Facebook" again to reauthorize posting.`,
+      };
+    }
+  }
+
+  if (oauthToken && pageId) {
     return {
-      pageId: String(connection.facebook_page_id),
+      pageId,
       pageAccessToken: oauthToken,
       source: "oauth",
-      connectionId: connection.id ? String(connection.id) : null,
+      connectionId: connection?.id ? String(connection.id) : null,
       userId,
     };
   }
 
+  // 3. OAuth connections must never use the staff/global test token.
+  if (isOauthMode) {
+    return {
+      error:
+        'Your Facebook connection needs to be reauthorized. Click "Connect with Facebook" again.',
+    };
+  }
 
   const testMode = (Deno.env.get("META_TEST_MODE_ENABLED") ?? "").toLowerCase() === "true";
   const globalToken = Deno.env.get("META_PAGE_ACCESS_TOKEN")?.trim() || "";
 
-  if (testMode && globalToken && connection?.facebook_page_id) {
+  if (testMode && globalToken && pageId) {
     return {
-      pageId: String(connection.facebook_page_id),
+      pageId,
       pageAccessToken: globalToken,
       source: "test_fallback",
-      connectionId: connection.id ? String(connection.id) : null,
+      connectionId: connection?.id ? String(connection.id) : null,
       userId,
-
     };
   }
 
-  if (!connection?.facebook_page_id) {
+  if (!pageId) {
     return { error: "Facebook page is not connected yet. Use Connect with Facebook or save a test page." };
   }
   if (!oauthToken && !testMode) {
