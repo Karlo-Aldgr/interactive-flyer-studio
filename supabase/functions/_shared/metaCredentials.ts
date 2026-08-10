@@ -27,6 +27,8 @@ export async function resolveMetaUserId(
   const candidates = [actorId, ownerId].filter(
     (id, i, arr): id is string => !!id && arr.indexOf(id) === i,
   );
+  const withPage: string[] = [];
+  // Pass 1: a connection that has BOTH a page and a stored OAuth token wins.
   for (const id of candidates) {
     const { data } = await supabase
       .from("meta_connections")
@@ -34,8 +36,19 @@ export async function resolveMetaUserId(
       .eq("user_id", id)
       .eq("provider", "meta")
       .maybeSingle();
-    if (data?.facebook_page_id) return id;
+    if (!data?.facebook_page_id) continue;
+    withPage.push(id);
+    const { data: secret } = await supabase
+      .from("meta_connection_secrets")
+      .select("page_access_token")
+      .eq("user_id", id)
+      .maybeSingle();
+    if (typeof secret?.page_access_token === "string" && secret.page_access_token.trim()) {
+      return id;
+    }
   }
+  // Pass 2: any connected page (test-mode fallback path).
+  if (withPage.length) return withPage[0];
   return ownerId;
 }
 
