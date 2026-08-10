@@ -206,7 +206,7 @@ export function InstagramPostDialog({
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-medium">Meta / Instagram connection</h3>
-                <p className="text-xs text-muted-foreground">Uses the Facebook Page already saved for test posting.</p>
+                <p className="text-xs text-muted-foreground">Uses the Facebook Page already connected for posting.</p>
               </div>
               <Badge variant={connectionBadgeVariant(connectionStatus)}>
                 {connectionLabel(connectionStatus)}
@@ -366,7 +366,7 @@ export function InstagramPostDialog({
 
             {hasDraft && !hasAiCaption && (
               <p className="text-xs text-muted-foreground">
-                No AI Instagram caption yet — type a test caption below (OpenAI regenerate can wait).
+                No AI Instagram caption yet — type a caption below.
               </p>
             )}
 
@@ -378,7 +378,7 @@ export function InstagramPostDialog({
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
                 disabled={loading || posting || !hasDraft}
-                placeholder={hasDraft ? "Type an Instagram caption for this test post…" : undefined}
+                placeholder={hasDraft ? "Type an Instagram caption…" : undefined}
               />
             </div>
 
@@ -397,7 +397,7 @@ export function InstagramPostDialog({
             )}
             {draft?.instagram_posted_at && (
               <p className="text-xs text-muted-foreground">
-                Last successful test post: <span className="font-medium text-foreground">{new Date(draft.instagram_posted_at).toLocaleString()}</span>
+                Last successful post: <span className="font-medium text-foreground">{new Date(draft.instagram_posted_at).toLocaleString()}</span>
               </p>
             )}
           </section>
