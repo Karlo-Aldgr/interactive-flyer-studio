@@ -336,7 +336,7 @@ export function InstagramPostDialog({
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-medium">Instagram caption</h3>
-                <p className="text-xs text-muted-foreground">Reuse AI caption, or type one manually for this test post.</p>
+                <p className="text-xs text-muted-foreground">Reuse AI caption, or type one manually, then post it to your connected Page.</p>
               </div>
               {draft?.instagram_provider_status ? (
                 <Badge variant={draft.instagram_provider_status === "failed" ? "destructive" : "outline"}>
