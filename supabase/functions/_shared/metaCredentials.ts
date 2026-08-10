@@ -16,15 +16,15 @@ function tokenLast4(token: string) {
 export { tokenLast4 };
 
 /**
- * Picks the user whose Meta connection should be used: the content owner when
- * they have one, otherwise the acting user (admin/editor posting on behalf).
+ * Picks the user whose Meta connection should be used: prefer the acting
+ * (logged-in) user's live OAuth connection, then fall back to the content owner.
  */
 export async function resolveMetaUserId(
   supabase: SupabaseClient,
   ownerId: string,
   actorId?: string | null,
 ): Promise<string> {
-  const candidates = [ownerId, actorId].filter(
+  const candidates = [actorId, ownerId].filter(
     (id, i, arr): id is string => !!id && arr.indexOf(id) === i,
   );
   for (const id of candidates) {
