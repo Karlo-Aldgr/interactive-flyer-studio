@@ -418,7 +418,7 @@ export function InstagramPostDialog({
               disabled={loading || savingConnection || posting || !draft || !caption.trim() || !hasPage || !hasInstagram}
             >
               {posting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-1 h-4 w-4" />}
-              Post now (test mode)
+              Post now
             </Button>
           </div>
         </DialogFooter>

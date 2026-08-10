@@ -345,7 +345,7 @@ export function FacebookPostDialog({
               disabled={loading || savingConnection || posting || !draft || !message.trim() || connectionStatus === "missing"}
             >
               {posting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-1 h-4 w-4" />}
-              Post now (test mode)
+              Post now
             </Button>
           </div>
         </DialogFooter>

@@ -553,7 +553,7 @@ export async function postFacebookNow(
       },
     );
     const updated = normalizeDraft(result.draft);
-    toast.success("Facebook post sent in test mode");
+    toast.success("Facebook post sent");
     return updated;
   } catch (err) {
     console.error("[marketing] post facebook failed", err);
@@ -575,7 +575,7 @@ export async function postInstagramNow(
       },
     );
     const updated = normalizeDraft(result.draft);
-    toast.success("Instagram post sent in test mode");
+    toast.success("Instagram post sent");
     return updated;
   } catch (err) {
     console.error("[marketing] post instagram failed", err);
