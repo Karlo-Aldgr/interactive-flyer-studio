@@ -175,7 +175,7 @@ export function FacebookPostDialog({
           </DialogTitle>
           <DialogDescription>
             Connect a Facebook Page for {flyerTitle}, then post the latest AI Facebook copy.
-            OAuth stores your page token securely; staff can still use the manual test-page fallback.
+            OAuth stores your page token securely; the manual page fields remain as a fallback.
           </DialogDescription>
         </DialogHeader>
 
@@ -189,7 +189,7 @@ export function FacebookPostDialog({
               <div>
                 <h3 className="text-sm font-medium">Meta connection</h3>
                 <p className="text-xs text-muted-foreground">
-                  Preferred: Connect with Facebook. Manual page ID fields remain for staff test mode.
+                  Preferred: Connect with Facebook. Manual page ID fields remain as a fallback.
                 </p>
               </div>
               <Badge variant={connectionBadgeVariant(connectionStatus)}>
@@ -216,7 +216,7 @@ export function FacebookPostDialog({
               </p>
             )}
             {connection?.connection_mode === "manual_test" && (
-              <p className="text-xs text-muted-foreground">Using manual test-page connection.</p>
+              <p className="text-xs text-muted-foreground">Using manual page connection.</p>
             )}
             {connection?.meta_app_id && (
               <p className="text-xs text-muted-foreground">
@@ -235,7 +235,7 @@ export function FacebookPostDialog({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="facebook-page-id">Facebook page ID (manual test)</Label>
+                <Label htmlFor="facebook-page-id">Facebook page ID (manual)</Label>
                 <Input
                   id="facebook-page-id"
                   value={pageId}
@@ -245,7 +245,7 @@ export function FacebookPostDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="facebook-page-name">Facebook page name (manual test)</Label>
+                <Label htmlFor="facebook-page-name">Facebook page name (manual)</Label>
                 <Input
                   id="facebook-page-name"
                   value={pageName}
@@ -264,7 +264,7 @@ export function FacebookPostDialog({
               disabled={loading || savingConnection || posting || startingOAuth}
             >
               {savingConnection ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
-              Save Facebook page (manual test)
+              Save Facebook page (manual)
             </Button>
           </section>
 
@@ -272,7 +272,7 @@ export function FacebookPostDialog({
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-medium">Facebook copy</h3>
-                <p className="text-xs text-muted-foreground">Reuse the latest AI-generated Facebook copy, then post it in Meta test mode.</p>
+                <p className="text-xs text-muted-foreground">Reuse the latest AI-generated Facebook copy, then post it to your connected Page.</p>
               </div>
               {draft?.facebook_provider_status ? (
                 <Badge variant={draft.facebook_provider_status === "failed" ? "destructive" : "outline"}>
@@ -345,7 +345,7 @@ export function FacebookPostDialog({
               disabled={loading || savingConnection || posting || !draft || !message.trim() || connectionStatus === "missing"}
             >
               {posting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-1 h-4 w-4" />}
-              Post now (test mode)
+              Post now
             </Button>
           </div>
         </DialogFooter>
