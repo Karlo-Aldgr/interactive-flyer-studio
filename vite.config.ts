@@ -26,6 +26,15 @@ export default defineConfig(({ mode }) => ({
         // bundle stays small and library upgrades don't bust the whole cache.
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
+          // Keep React core with the shared vendor chunk so every other vendor
+          // chunk resolves the same React instance at load time.
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/scheduler/")
+          ) {
+            return "react-vendor";
+          }
           if (id.includes("react-konva") || id.includes("/konva/") || id.includes("use-image")) {
             return "konva";
           }
