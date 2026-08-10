@@ -70,7 +70,6 @@ Deno.serve(async (req) => {
     // on facebook.com/dialog/oauth (business_* belong to Instagram Login).
     const scope = [
       "pages_show_list",
-      "pages_read_engagement",
       "pages_manage_posts",
     ].join(",");
 
