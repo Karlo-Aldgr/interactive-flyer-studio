@@ -20,44 +20,11 @@ export default defineConfig(({ mode }) => ({
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
   build: {
-    rollupOptions: {
-      output: {
-        // Split big vendor libs into their own cacheable chunks so the initial
-        // bundle stays small and library upgrades don't bust the whole cache.
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          // Keep React core with the shared vendor chunk so every other vendor
-          // chunk resolves the same React instance at load time.
-          if (
-            id.includes("node_modules/react/") ||
-            id.includes("node_modules/react-dom/") ||
-            id.includes("node_modules/scheduler/")
-          ) {
-            return "react-vendor";
-          }
-          if (id.includes("react-konva") || id.includes("/konva/") || id.includes("use-image")) {
-            return "konva";
-          }
-          if (id.includes("recharts") || id.includes("d3-")) {
-            return "charts";
-          }
-          if (id.includes("@supabase") || id.includes("@lovable.dev/cloud-auth-js")) {
-            return "supabase";
-          }
-          if (id.includes("@radix-ui")) {
-            return "radix";
-          }
-          if (id.includes("lucide-react")) {
-            return "icons";
-          }
-          if (id.includes("react-router") || id.includes("@tanstack")) {
-            return "react-vendor";
-          }
-          if (id.includes("jszip") || id.includes("qrcode.react")) {
-            return "utils-vendor";
-          }
-        },
-      },
-    },
+    // NOTE: no manual chunk splitting. Hand-rolled manualChunks introduced
+    // circular chunk dependencies which crashed the app at boot with
+    // "Cannot access 'A' before initialization" (blank white screen).
+    // Rollup's default chunking is safe here.
+    chunkSizeWarningLimit: 1500,
   },
+
 }));
