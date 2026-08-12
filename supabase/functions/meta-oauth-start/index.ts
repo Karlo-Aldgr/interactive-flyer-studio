@@ -71,6 +71,8 @@ Deno.serve(async (req) => {
     const scope = [
       "pages_show_list",
       "pages_manage_posts",
+      // Required to see Pages owned by a Business Manager portfolio.
+      "business_management",
     ].join(",");
 
     const url = new URL(`https://www.facebook.com/${graphVersion}/dialog/oauth`);
