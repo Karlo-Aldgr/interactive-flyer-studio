@@ -79,6 +79,8 @@ Deno.serve(async (req) => {
     url.searchParams.set("state", state);
     url.searchParams.set("scope", scope);
     url.searchParams.set("response_type", "code");
+    // Force Meta to re-prompt so a fresh (non-stale) grant + tokens are issued.
+    url.searchParams.set("auth_type", "rerequest");
 
     return json({
       ok: true,
