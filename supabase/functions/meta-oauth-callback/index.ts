@@ -242,6 +242,8 @@ Deno.serve(async (req) => {
       userToken: longUserToken,
       graphVersion,
       preferredPageId: existing?.facebook_page_id ? String(existing.facebook_page_id) : null,
+      appId,
+      appSecret,
     });
 
     await upsertMetaPageSecret(supabase, userId, page.page_access_token, longUserToken);
