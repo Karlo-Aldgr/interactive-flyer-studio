@@ -34,6 +34,11 @@ export function extractLinkFromDraft(draft: Record<string, unknown>, message: st
   return toShareWorkerUrl(link);
 }
 
+/** Graph error codes worth retrying (transient), not token death. */
+const RETRYABLE_CODES = new Set([1, 2, 4, 17, 32, 341, 368, 613]);
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export async function postFacebookToPage(args: {
   pageId: string;
   pageAccessToken: string;
@@ -41,8 +46,9 @@ export async function postFacebookToPage(args: {
   message: string;
   link?: string;
   thumbnailUrl?: string;
+  /** Total attempts including the first one. */
+  maxAttempts?: number;
 }): Promise<MetaPostResult> {
-  const attemptAt = new Date().toISOString();
   const params = new URLSearchParams({
     access_token: args.pageAccessToken,
   });
@@ -64,29 +70,51 @@ export async function postFacebookToPage(args: {
     params.set("message", args.message);
   }
 
-  const graphRes = await fetch(graphEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
+  const maxAttempts = Math.max(1, args.maxAttempts ?? 3);
+  let lastError = "Facebook API request failed";
+  let attemptAt = new Date().toISOString();
 
-  let graphJson: Record<string, unknown> = {};
-  try {
-    graphJson = await graphRes.json();
-  } catch {
-    graphJson = {};
-  }
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    attemptAt = new Date().toISOString();
+    let status = 0;
+    let graphJson: Record<string, unknown> = {};
+    let networkError = "";
 
-  if (!graphRes.ok || typeof graphJson.id !== "string") {
-    const providerError = String(
-      graphJson.error && typeof graphJson.error === "object"
-        ? (graphJson.error as Record<string, unknown>).message || "Facebook API request failed"
-        : graphJson.error || "Facebook API request failed",
+    try {
+      const graphRes = await fetch(graphEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString(),
+      });
+      status = graphRes.status;
+      try {
+        graphJson = await graphRes.json();
+      } catch {
+        graphJson = {};
+      }
+      if (graphRes.ok && typeof graphJson.id === "string") {
+        return { ok: true, provider_post_id: graphJson.id, attemptAt };
+      }
+    } catch (err) {
+      networkError = String(err);
+    }
+
+    const errObj = (graphJson.error ?? {}) as Record<string, unknown>;
+    lastError = String(
+      networkError ||
+        errObj.message ||
+        graphJson.error ||
+        "Facebook API request failed",
     ).slice(0, 500);
-    return { ok: false, error: providerError, attemptAt };
+    const code = Number(errObj.code ?? 0);
+    const retryable = !!networkError || status >= 500 || RETRYABLE_CODES.has(code);
+
+    if (!retryable || attempt === maxAttempts) break;
+    // Exponential backoff: 1s, 2s, 4s ...
+    await sleep(1000 * 2 ** (attempt - 1));
   }
 
-  return { ok: true, provider_post_id: graphJson.id, attemptAt };
+  return { ok: false, error: lastError, attemptAt };
 }
 
 export function facebookSuccessPatch(providerPostId: string, attemptAt: string) {
