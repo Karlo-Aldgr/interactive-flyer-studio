@@ -223,22 +223,37 @@ export async function resolveMetaPageCredentials(
   const isOauthMode = String(connection?.connection_mode ?? "").toLowerCase() === "oauth";
   const pageId = connection?.facebook_page_id ? String(connection.facebook_page_id) : "";
 
+  const connectionId = connection?.id ? String(connection.id) : null;
+
   // 1. With a user token, always re-derive a fresh page token and persist it.
   if (pageId && userToken) {
     const fresh = await freshPageTokenFromUserToken(userToken, pageId);
     if ("token" in fresh) {
-      if (fresh.token !== oauthToken) {
-        await upsertMetaPageSecret(supabase, userId, fresh.token).catch(() => {});
+      const check = await validatePageToken(fresh.token, pageId);
+      if (check.state !== "invalid") {
+        if (fresh.token !== oauthToken) {
+          await upsertMetaPageSecret(supabase, userId, fresh.token).catch(() => {});
+        }
+        return {
+          pageId,
+          pageAccessToken: fresh.token,
+          source: "oauth",
+          connectionId,
+          userId,
+        };
       }
+      // Confirmed dead page token — try test fallback before clearing.
+      const fallback = await testFallback(pageId, connectionId, userId);
+      if (fallback) return fallback;
+      await clearMetaConnection(supabase, userId, check.error);
       return {
-        pageId,
-        pageAccessToken: fresh.token,
-        source: "oauth",
-        connectionId: connection?.id ? String(connection.id) : null,
-        userId,
+        error:
+          `Your Facebook connection expired (${check.error}). Click "Connect with Facebook" again to reauthorize posting.`,
       };
     }
-    // User token is dead: never silently fall back in OAuth mode.
+    // User token rejected by Meta.
+    const fallback = await testFallback(pageId, connectionId, userId);
+    if (fallback) return fallback;
     if (isOauthMode || !oauthToken) {
       await clearMetaConnection(supabase, userId, fresh.error);
       return {
@@ -248,17 +263,31 @@ export async function resolveMetaPageCredentials(
     }
   }
 
+  // 2. Stored page token — never post with something Meta already rejects.
   if (oauthToken && pageId) {
+    const check = await validatePageToken(oauthToken, pageId);
+    if (check.state !== "invalid") {
+      return {
+        pageId,
+        pageAccessToken: oauthToken,
+        source: "oauth",
+        connectionId,
+        userId,
+      };
+    }
+    const fallback = await testFallback(pageId, connectionId, userId);
+    if (fallback) return fallback;
+    await clearMetaConnection(supabase, userId, check.error);
     return {
-      pageId,
-      pageAccessToken: oauthToken,
-      source: "oauth",
-      connectionId: connection?.id ? String(connection.id) : null,
-      userId,
+      error:
+        `Your Facebook connection expired (${check.error}). Click "Connect with Facebook" again to reauthorize posting.`,
     };
   }
 
-  // 3. OAuth connections must never use the staff/global test token.
+  // 3. No usable OAuth token at all.
+  const fallback = await testFallback(pageId, connectionId, userId);
+  if (fallback) return fallback;
+
   if (isOauthMode) {
     await clearMetaConnection(supabase, userId, "Reconnect required");
     return {
@@ -267,18 +296,8 @@ export async function resolveMetaPageCredentials(
     };
   }
 
-  const testMode = (Deno.env.get("META_TEST_MODE_ENABLED") ?? "").toLowerCase() === "true";
-  const globalToken = Deno.env.get("META_PAGE_ACCESS_TOKEN")?.trim() || "";
-
-  if (testMode && globalToken && pageId) {
-    return {
-      pageId,
-      pageAccessToken: globalToken,
-      source: "test_fallback",
-      connectionId: connection?.id ? String(connection.id) : null,
-      userId,
-    };
-  }
+  const testMode = TEST_MODE_ENABLED();
+  const globalToken = GLOBAL_TEST_TOKEN();
 
   if (!pageId) {
     return { error: "Facebook page is not connected yet. Use Connect with Facebook or save a test page." };
