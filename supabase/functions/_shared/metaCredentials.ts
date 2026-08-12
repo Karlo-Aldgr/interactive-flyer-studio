@@ -95,6 +95,70 @@ export async function clearMetaConnection(
 
 const GRAPH_VERSION = Deno.env.get("META_GRAPH_VERSION")?.trim() || "v21.0";
 
+export type TokenCheck =
+  | { state: "valid" }
+  /** Meta confirmed the token is dead — safe to clear stored secrets. */
+  | { state: "invalid"; error: string }
+  /** Network/5xx/rate-limit — do NOT clear secrets, the token may still be fine. */
+  | { state: "unknown"; error: string };
+
+/** Graph error codes that mean "try again later", not "token is dead". */
+const TRANSIENT_CODES = new Set([1, 2, 4, 17, 32, 341, 368, 613]);
+
+/**
+ * Ask Meta whether a page token still works before we attempt a post.
+ * Never treat a network blip as an invalidation.
+ */
+export async function validatePageToken(
+  pageAccessToken: string,
+  pageId: string,
+): Promise<TokenCheck> {
+  try {
+    const url = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/${pageId}`);
+    url.searchParams.set("fields", "id");
+    url.searchParams.set("access_token", pageAccessToken);
+    const res = await fetch(url.toString());
+    const json = await res.json().catch(() => ({})) as Record<string, unknown>;
+    if (res.ok && json?.id) return { state: "valid" };
+    const err = (json.error ?? {}) as Record<string, unknown>;
+    const message = String(err.message || `Graph responded ${res.status}`);
+    const code = Number(err.code ?? 0);
+    if (res.status >= 500 || TRANSIENT_CODES.has(code)) {
+      return { state: "unknown", error: message };
+    }
+    if (code === 190 || isSessionInvalidError(message)) {
+      return { state: "invalid", error: message };
+    }
+    // Permission/other 4xx: token itself may be fine, don't wipe it.
+    return { state: "unknown", error: message };
+  } catch (err) {
+    return { state: "unknown", error: String(err) };
+  }
+}
+
+const TEST_MODE_ENABLED = () =>
+  (Deno.env.get("META_TEST_MODE_ENABLED") ?? "").toLowerCase() === "true";
+const GLOBAL_TEST_TOKEN = () => Deno.env.get("META_PAGE_ACCESS_TOKEN")?.trim() || "";
+
+/** Last-resort staff token, only when test mode is explicitly enabled. */
+async function testFallback(
+  pageId: string,
+  connectionId: string | null,
+  userId: string,
+): Promise<ResolvedMetaCredentials | null> {
+  const globalToken = GLOBAL_TEST_TOKEN();
+  if (!TEST_MODE_ENABLED() || !globalToken || !pageId) return null;
+  const check = await validatePageToken(globalToken, pageId);
+  if (check.state === "invalid") return null;
+  return {
+    pageId,
+    pageAccessToken: globalToken,
+    source: "test_fallback",
+    connectionId,
+    userId,
+  };
+}
+
 /**
  * Exchange the stored user access token for a fresh Page access token.
  * Page tokens can be invalidated independently of the user token, so we always
