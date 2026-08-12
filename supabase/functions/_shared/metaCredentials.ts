@@ -52,6 +52,47 @@ export async function resolveMetaUserId(
   return ownerId;
 }
 
+/** True when a Graph error means the token/session is dead and needs re-auth. */
+export function isSessionInvalidError(message: string): boolean {
+  const m = (message || "").toLowerCase();
+  return (
+    m.includes("session has been invalidated") ||
+    m.includes("session has expired") ||
+    m.includes("session is invalid") ||
+    m.includes("access token") && (m.includes("expired") || m.includes("invalid")) ||
+    m.includes("error validating access token") ||
+    m.includes("malformed access token") ||
+    m.includes("no longer available on this account") ||
+    m.includes("connection expired")
+  );
+}
+
+/**
+ * Wipe stored Meta secrets and flag the connection as needing a reconnect so the
+ * UI stops reporting "Connected with ...".
+ */
+export async function clearMetaConnection(
+  supabase: SupabaseClient,
+  userId: string,
+  reason: string,
+) {
+  try {
+    await supabase.from("meta_connection_secrets").delete().eq("user_id", userId);
+    await supabase
+      .from("meta_connections")
+      .update({
+        status: "error",
+        page_access_token_last4: null,
+        last_error: (reason || "Reconnect required").slice(0, 500),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+      .eq("provider", "meta");
+  } catch (err) {
+    console.error("[metaCredentials] clearMetaConnection failed", err);
+  }
+}
+
 const GRAPH_VERSION = Deno.env.get("META_GRAPH_VERSION")?.trim() || "v21.0";
 
 /**
@@ -135,6 +176,7 @@ export async function resolveMetaPageCredentials(
     }
     // User token is dead: never silently fall back in OAuth mode.
     if (isOauthMode || !oauthToken) {
+      await clearMetaConnection(supabase, userId, fresh.error);
       return {
         error:
           `Your Facebook connection expired (${fresh.error}). Click "Connect with Facebook" again to reauthorize posting.`,
@@ -154,6 +196,7 @@ export async function resolveMetaPageCredentials(
 
   // 3. OAuth connections must never use the staff/global test token.
   if (isOauthMode) {
+    await clearMetaConnection(supabase, userId, "Reconnect required");
     return {
       error:
         'Your Facebook connection needs to be reauthorized. Click "Connect with Facebook" again.',
