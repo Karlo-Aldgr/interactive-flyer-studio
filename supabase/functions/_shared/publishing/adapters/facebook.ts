@@ -1,6 +1,10 @@
 import type { AdapterContext, PlatformResult } from "../types.ts";
 import { primaryMedia } from "../types.ts";
-import { resolveMetaPageCredentials } from "../../metaCredentials.ts";
+import {
+  clearMetaConnection,
+  isSessionInvalidError,
+  resolveMetaPageCredentials,
+} from "../../metaCredentials.ts";
 import { extractLinkFromDraft, postFacebookToPage } from "../../metaFacebookPost.ts";
 
 function providerError(payload: Record<string, unknown>, fallback: string) {
@@ -37,10 +41,14 @@ export async function publishToFacebook(ctx: AdapterContext): Promise<PlatformRe
     );
     const json = await res.json().catch(() => ({})) as Record<string, unknown>;
     if (!res.ok || typeof json.id !== "string") {
+      const videoError = providerError(json, "Facebook video upload failed");
+      if (isSessionInvalidError(videoError)) {
+        await clearMetaConnection(ctx.supabase, creds.userId, videoError);
+      }
       return {
         platform: "facebook",
         status: "failed",
-        error: providerError(json, "Facebook video upload failed"),
+        error: videoError,
         attempt_at,
         token_source: creds.source,
       };
@@ -69,6 +77,9 @@ export async function publishToFacebook(ctx: AdapterContext): Promise<PlatformRe
   });
 
   if (!result.ok) {
+    if (isSessionInvalidError(result.error)) {
+      await clearMetaConnection(ctx.supabase, creds.userId, result.error);
+    }
     return {
       platform: "facebook",
       status: "failed",
