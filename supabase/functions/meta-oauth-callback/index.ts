@@ -61,33 +61,93 @@ async function extendUserToken(args: {
   return data.access_token;
 }
 
-async function resolvePageFromUserToken(args: {
-  userToken: string;
-  graphVersion: string;
-  preferredPageId?: string | null;
-}) {
-  const url = new URL(`https://graph.facebook.com/${args.graphVersion}/me/accounts`);
-  url.searchParams.set(
-    "fields",
-    "id,name,access_token,instagram_business_account{id,username},connected_instagram_account{id,username}",
-  );
-  url.searchParams.set("access_token", args.userToken);
+const PAGE_FIELDS =
+  "id,name,access_token,instagram_business_account{id,username},connected_instagram_account{id,username}";
+
+async function listPagesFromEdge(userToken: string, graphVersion: string, edge: string) {
+  const url = new URL(`https://graph.facebook.com/${graphVersion}/${edge}`);
+  url.searchParams.set("fields", PAGE_FIELDS);
+  url.searchParams.set("limit", "100");
+  url.searchParams.set("access_token", userToken);
   const res = await fetch(url.toString());
   const data = await res.json().catch(() => ({})) as Record<string, unknown>;
   if (!res.ok) {
     const msg = data.error && typeof data.error === "object"
-      ? String((data.error as Record<string, unknown>).message || "Could not list pages")
-      : "Could not list pages";
-    throw new Error(msg);
+      ? String((data.error as Record<string, unknown>).message || `Could not list pages via ${edge}`)
+      : `Could not list pages via ${edge}`;
+    console.warn(`[meta-oauth-callback] ${edge} failed: ${msg}`);
+    return [] as Array<Record<string, unknown>>;
   }
-  const pages = Array.isArray(data.data) ? data.data as Array<Record<string, unknown>> : [];
-  if (!pages.length) throw new Error("No Facebook Pages were returned for this account");
+  return Array.isArray(data.data) ? data.data as Array<Record<string, unknown>> : [];
+}
+
+/** Last resort: read granted Page IDs from debug_token, then fetch each Page token. */
+async function listPagesFromDebugToken(args: {
+  userToken: string;
+  graphVersion: string;
+  appId: string;
+  appSecret: string;
+}) {
+  const dbg = new URL(`https://graph.facebook.com/${args.graphVersion}/debug_token`);
+  dbg.searchParams.set("input_token", args.userToken);
+  dbg.searchParams.set("access_token", `${args.appId}|${args.appSecret}`);
+  const res = await fetch(dbg.toString());
+  const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+  if (!res.ok) return [] as Array<Record<string, unknown>>;
+  const info = (data.data || {}) as Record<string, unknown>;
+  const granular = Array.isArray(info.granular_scopes)
+    ? info.granular_scopes as Array<Record<string, unknown>>
+    : [];
+  const ids = new Set<string>();
+  for (const g of granular) {
+    const targets = Array.isArray(g.target_ids) ? g.target_ids : [];
+    for (const t of targets) if (t) ids.add(String(t));
+  }
+  const pages: Array<Record<string, unknown>> = [];
+  for (const id of ids) {
+    const url = new URL(`https://graph.facebook.com/${args.graphVersion}/${id}`);
+    url.searchParams.set("fields", PAGE_FIELDS);
+    url.searchParams.set("access_token", args.userToken);
+    const pr = await fetch(url.toString());
+    const pd = await pr.json().catch(() => ({})) as Record<string, unknown>;
+    if (pr.ok && typeof pd.access_token === "string") pages.push(pd);
+  }
+  return pages;
+}
+
+async function resolvePageFromUserToken(args: {
+  userToken: string;
+  graphVersion: string;
+  preferredPageId?: string | null;
+  appId: string;
+  appSecret: string;
+}) {
+  let pages = await listPagesFromEdge(args.userToken, args.graphVersion, "me/accounts");
+  if (!pages.length) {
+    pages = await listPagesFromEdge(args.userToken, args.graphVersion, "me/assigned_pages");
+  }
+  if (!pages.length) {
+    pages = await listPagesFromDebugToken({
+      userToken: args.userToken,
+      graphVersion: args.graphVersion,
+      appId: args.appId,
+      appSecret: args.appSecret,
+    });
+  }
+  if (!pages.length) {
+    throw new Error(
+      "No Facebook Pages were returned for this account. Make sure you selected your Page (and its Business) during the Facebook permission screen.",
+    );
+  }
 
   const preferred = args.preferredPageId
     ? pages.find((p) => String(p.id) === args.preferredPageId)
     : null;
-  const page = preferred || pages[0];
-  if (typeof page.access_token !== "string" || typeof page.id !== "string") {
+  const withToken = pages.filter((p) => typeof p.access_token === "string");
+  const page = (preferred && typeof preferred.access_token === "string")
+    ? preferred
+    : (withToken[0] || pages[0]);
+  if (typeof page.access_token !== "string" || !page.id) {
     throw new Error("Page token missing from Meta response");
   }
 
