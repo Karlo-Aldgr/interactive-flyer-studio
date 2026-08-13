@@ -492,6 +492,9 @@ export default function Landing() {
           <Link to="/for-realtors" className="hover:text-[#0a1f44]">
             For Realtors
           </Link>
+          <Link to="/affiliate" className="hover:text-[#0a1f44]">
+            Affiliates
+          </Link>
           <Link to="/examples" className="hover:text-[#0a1f44]">
             Examples
           </Link>
