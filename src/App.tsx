@@ -48,6 +48,10 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const DataDeletion = lazy(() => import("./pages/DataDeletion"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Affiliate = lazy(() => import("./pages/Affiliate"));
+const AffiliateApply = lazy(() => import("./pages/AffiliateApply"));
+const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
+const AdminAffiliates = lazy(() => import("./pages/AdminAffiliates"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
