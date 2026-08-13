@@ -134,6 +134,10 @@ const App = () => (
               <Route path="/realtor/listing/:listingId/photos" element={<ProtectedRoute><RealtorListing focusPhotos /></ProtectedRoute>} />
               <Route path="/admin/realtor-applications" element={<ProtectedRoute><AdminRealtorApplications /></ProtectedRoute>} />
               <Route path="/r/:slug" element={<PublicRealtorProfile />} />
+              <Route path="/affiliate" element={<Affiliate />} />
+              <Route path="/affiliate/apply" element={<AffiliateApply />} />
+              <Route path="/affiliate/dashboard" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
+              <Route path="/admin/affiliates" element={<ProtectedRoute><AdminAffiliates /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
