@@ -57,7 +57,14 @@ export default function AffiliateApply() {
     setBusy(true);
     try {
       await submitAffiliateApplication({
-        ...parsed.data,
+        ...(parsed.data as {
+          full_name: string;
+          email: string;
+          phone?: string;
+          website?: string;
+          audience?: string;
+          message?: string;
+        }),
         applicant_user_id: user?.id ?? null,
       });
       setSubmitted(true);
