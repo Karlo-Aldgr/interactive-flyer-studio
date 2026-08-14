@@ -142,6 +142,8 @@ const App = () => (
               <Route path="/r/:slug" element={<PublicRealtorProfile />} />
               <Route path="/affiliate" element={<Affiliate />} />
               <Route path="/affiliate/apply" element={<AffiliateApply />} />
+              <Route path="/affiliate/terms" element={<AffiliateTerms />} />
+
               <Route path="/affiliate/dashboard" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
               <Route path="/admin/affiliates" element={<ProtectedRoute><AdminAffiliates /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
