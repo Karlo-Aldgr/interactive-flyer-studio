@@ -7,6 +7,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AffiliateTracker } from "@/components/AffiliateTracker";
+
 import { isPasswordRecoveryUrl, passwordRecoveryRedirectPath } from "@/lib/authUtils";
 import Landing from "./pages/Landing";
 import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
@@ -52,6 +54,8 @@ const Affiliate = lazy(() => import("./pages/Affiliate"));
 const AffiliateApply = lazy(() => import("./pages/AffiliateApply"));
 const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
 const AdminAffiliates = lazy(() => import("./pages/AdminAffiliates"));
+const AffiliateTerms = lazy(() => import("./pages/AffiliateTerms"));
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,6 +97,8 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <PasswordRecoveryRedirect />
+          <AffiliateTracker />
+
           <Suspense fallback={<FullScreenSpinner />}>
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -136,6 +142,8 @@ const App = () => (
               <Route path="/r/:slug" element={<PublicRealtorProfile />} />
               <Route path="/affiliate" element={<Affiliate />} />
               <Route path="/affiliate/apply" element={<AffiliateApply />} />
+              <Route path="/affiliate/terms" element={<AffiliateTerms />} />
+
               <Route path="/affiliate/dashboard" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
               <Route path="/admin/affiliates" element={<ProtectedRoute><AdminAffiliates /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
