@@ -100,6 +100,89 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_assets: {
+        Row: {
+          active: boolean
+          asset_type: string
+          body_text: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          link_url: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          asset_type?: string
+          body_text?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          asset_type?: string
+          body_text?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      affiliate_clicks: {
+        Row: {
+          affiliate_id: string
+          channel: string
+          code: string
+          created_at: string
+          id: string
+          landing_path: string | null
+          referrer: string | null
+          session_id: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          channel?: string
+          code: string
+          created_at?: string
+          id?: string
+          landing_path?: string | null
+          referrer?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          channel?: string
+          code?: string
+          created_at?: string
+          id?: string
+          landing_path?: string | null
+          referrer?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_clicks_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_commissions: {
         Row: {
           affiliate_id: string
@@ -154,11 +237,153 @@ export type Database = {
           },
         ]
       }
+      affiliate_coupons: {
+        Row: {
+          active: boolean
+          affiliate_id: string | null
+          code: string
+          created_at: string
+          description: string | null
+          discount_percent: number
+          id: string
+          redemption_count: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          affiliate_id?: string | null
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_percent?: number
+          id?: string
+          redemption_count?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          affiliate_id?: string | null
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_percent?: number
+          id?: string
+          redemption_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_coupons_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_notifications: {
+        Row: {
+          affiliate_id: string | null
+          body: string | null
+          created_at: string
+          id: string
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          affiliate_id?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          affiliate_id?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_notifications_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_payouts: {
+        Row: {
+          admin_note: string | null
+          affiliate_id: string
+          amount_cents: number
+          created_at: string
+          currency: string
+          id: string
+          method: string
+          paid_at: string | null
+          payout_email: string | null
+          requested_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          affiliate_id: string
+          amount_cents: number
+          created_at?: string
+          currency?: string
+          id?: string
+          method?: string
+          paid_at?: string | null
+          payout_email?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          affiliate_id?: string
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          method?: string
+          paid_at?: string | null
+          payout_email?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_referrals: {
         Row: {
           affiliate_id: string
+          channel: string
+          click_id: string | null
+          commission_cents: number | null
           converted_at: string | null
           created_at: string
+          fraud_flag: string | null
           id: string
           referred_email: string | null
           referred_name: string | null
@@ -169,8 +394,12 @@ export type Database = {
         }
         Insert: {
           affiliate_id: string
+          channel?: string
+          click_id?: string | null
+          commission_cents?: number | null
           converted_at?: string | null
           created_at?: string
+          fraud_flag?: string | null
           id?: string
           referred_email?: string | null
           referred_name?: string | null
@@ -181,8 +410,12 @@ export type Database = {
         }
         Update: {
           affiliate_id?: string
+          channel?: string
+          click_id?: string | null
+          commission_cents?: number | null
           converted_at?: string | null
           created_at?: string
+          fraud_flag?: string | null
           id?: string
           referred_email?: string | null
           referred_name?: string | null
@@ -2388,6 +2621,7 @@ export type Database = {
     }
     Functions: {
       accept_realtor_invite: { Args: { _token: string }; Returns: Json }
+      admin_affiliate_overview: { Args: never; Returns: Json }
       admin_assign_job_editor: {
         Args: { _editor_id: string; _job_id: string }
         Returns: Json
@@ -2401,6 +2635,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_delete_coupon: { Args: { _id: string }; Returns: Json }
       admin_list_affiliate_applications: {
         Args: never
         Returns: {
@@ -2441,6 +2676,36 @@ export type Database = {
           referral_count: number
           status: string
           user_id: string
+        }[]
+      }
+      admin_list_commissions: {
+        Args: never
+        Returns: {
+          affiliate_id: string
+          affiliate_name: string
+          amount_cents: number
+          code: string
+          created_at: string
+          description: string
+          id: string
+          paid_at: string
+          status: string
+        }[]
+      }
+      admin_list_payouts: {
+        Args: never
+        Returns: {
+          admin_note: string
+          affiliate_id: string
+          affiliate_name: string
+          amount_cents: number
+          code: string
+          id: string
+          method: string
+          paid_at: string
+          payout_email: string
+          requested_at: string
+          status: string
         }[]
       }
       admin_list_realtor_applications: {
@@ -2492,6 +2757,31 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_list_referrals: {
+        Args: never
+        Returns: {
+          affiliate_id: string
+          affiliate_name: string
+          channel: string
+          code: string
+          commission_cents: number
+          converted_at: string
+          created_at: string
+          fraud_flag: string
+          id: string
+          referred_email: string
+          referred_name: string
+          status: string
+        }[]
+      }
+      admin_record_conversion: {
+        Args: {
+          _description?: string
+          _referral_id: string
+          _sale_cents: number
+        }
+        Returns: Json
+      }
       admin_review_affiliate_application: {
         Args: { _application_id: string; _decision: string; _notes?: string }
         Returns: Json
@@ -2501,8 +2791,45 @@ export type Database = {
         Returns: Json
       }
       admin_revoke_realtor_invite: { Args: { _id: string }; Returns: Json }
+      admin_set_affiliate_rate: {
+        Args: { _affiliate_id: string; _rate: number }
+        Returns: Json
+      }
       admin_set_job_mini_ad: {
         Args: { _enabled: boolean; _job_id: string }
+        Returns: Json
+      }
+      admin_update_payout: {
+        Args: { _note?: string; _payout_id: string; _status: string }
+        Returns: Json
+      }
+      admin_upsert_coupon: {
+        Args: {
+          _active?: boolean
+          _affiliate_id?: string
+          _code: string
+          _description?: string
+          _discount?: number
+        }
+        Returns: Json
+      }
+      affiliate_attribute_signup: {
+        Args: { _channel?: string; _code: string }
+        Returns: Json
+      }
+      affiliate_balance: { Args: { _affiliate_id: string }; Returns: Json }
+      affiliate_request_payout: {
+        Args: { _amount_cents: number; _payout_email?: string }
+        Returns: Json
+      }
+      affiliate_track_click: {
+        Args: {
+          _channel?: string
+          _code: string
+          _landing?: string
+          _referrer?: string
+          _session?: string
+        }
         Returns: Json
       }
       archive_menu_orders_daily: { Args: never; Returns: number }
