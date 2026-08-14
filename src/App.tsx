@@ -52,6 +52,8 @@ const Affiliate = lazy(() => import("./pages/Affiliate"));
 const AffiliateApply = lazy(() => import("./pages/AffiliateApply"));
 const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
 const AdminAffiliates = lazy(() => import("./pages/AdminAffiliates"));
+const AffiliateTerms = lazy(() => import("./pages/AffiliateTerms"));
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
