@@ -93,6 +93,8 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <PasswordRecoveryRedirect />
+          <AffiliateTracker />
+
           <Suspense fallback={<FullScreenSpinner />}>
             <Routes>
               <Route path="/" element={<Landing />} />
