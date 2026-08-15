@@ -72,11 +72,17 @@ export async function loadMyAffiliate(userId: string): Promise<Affiliate | null>
   return (data as Affiliate) ?? null;
 }
 
-export async function loadMyAffiliateApplication(userId: string): Promise<AffiliateApplication | null> {
+export async function loadMyAffiliateApplication(
+  userId: string,
+  email?: string | null,
+): Promise<AffiliateApplication | null> {
+  const orFilter = email
+    ? `applicant_user_id.eq.${userId},email.eq.${email}`
+    : `applicant_user_id.eq.${userId}`;
   const { data } = await db
     .from("affiliate_applications")
     .select("*")
-    .eq("applicant_user_id", userId)
+    .or(orFilter)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -93,8 +99,14 @@ export async function submitAffiliateApplication(payload: {
   message?: string | null;
 }) {
   const { error } = await db.from("affiliate_applications").insert(payload);
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23505" || /duplicate key|unique/i.test(error.message ?? "")) {
+      throw new Error("An application for this email is already pending review.");
+    }
+    throw error;
+  }
 }
+
 
 export async function loadAffiliateReferrals(affiliateId: string): Promise<AffiliateReferral[]> {
   const { data } = await db

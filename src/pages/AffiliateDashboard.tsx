@@ -58,7 +58,8 @@ function Stat({ icon: Icon, label, value, hint }: { icon: any; label: string; va
 }
 
 export default function AffiliateDashboard() {
-  const { affiliate, application, loading } = useAffiliate();
+  const { affiliate, application, loading, reload } = useAffiliate();
+
   const [referrals, setReferrals] = useState<AffiliateReferral[]>([]);
   const [commissions, setCommissions] = useState<AffiliateCommission[]>([]);
   const [clicks, setClicks] = useState<AffiliateClick[]>([]);
@@ -106,6 +107,19 @@ export default function AffiliateDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [affiliate]);
 
+  // Keep settings (minimum payout), rate and balances current when returning to the tab.
+  useEffect(() => {
+    if (!affiliate) return;
+    const onFocus = () => {
+      reload();
+      refresh(affiliate.id);
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [affiliate?.id]);
+
+
   const available = useMemo(() => {
     if (!balance) return 0;
     return Math.max(
@@ -126,7 +140,9 @@ export default function AffiliateDashboard() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md space-y-4 p-8 text-center">
-          <h1 className="text-2xl font-bold">Affiliate access pending</h1>
+          <h1 className="text-2xl font-bold">
+            {application?.status === "pending" ? "Under review" : "Affiliate access pending"}
+          </h1>
           <p className="text-muted-foreground">
             {application?.status === "pending"
               ? "Your application is under review. We'll email you as soon as it's approved."
@@ -135,7 +151,11 @@ export default function AffiliateDashboard() {
                 : "You're not an affiliate yet. Apply to get your referral link and dashboard."}
           </p>
           <div className="flex flex-col gap-2 pt-2">
-            {application?.status !== "pending" && (
+            {application?.status === "pending" ? (
+              <Button variant="outline" onClick={() => reload()}>
+                <RefreshCw className="mr-1 h-4 w-4" /> Check status
+              </Button>
+            ) : (
               <Button asChild>
                 <Link to="/affiliate/apply">Apply now</Link>
               </Button>
@@ -144,6 +164,7 @@ export default function AffiliateDashboard() {
               <Link to="/affiliate">Affiliate program</Link>
             </Button>
           </div>
+
         </Card>
       </div>
     );
@@ -192,9 +213,18 @@ export default function AffiliateDashboard() {
               <ArrowLeft className="mr-1 h-4 w-4" /> Dashboard
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => refresh(affiliate.id)} disabled={refreshing}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              reload();
+              refresh(affiliate.id);
+            }}
+            disabled={refreshing}
+          >
             <RefreshCw className={`mr-1 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh
           </Button>
+
         </div>
 
         <div>

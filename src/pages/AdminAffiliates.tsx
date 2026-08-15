@@ -132,6 +132,26 @@ export default function AdminAffiliates() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleLoading, isAdmin]);
 
+  // Keep the payout queue live without a manual refresh.
+  useEffect(() => {
+    if (roleLoading || !isAdmin) return;
+    const syncPayouts = async () => {
+      try {
+        setPayouts(await adminListPayouts());
+      } catch {
+        /* ignore transient errors */
+      }
+    };
+    const onFocus = () => syncPayouts();
+    window.addEventListener("focus", onFocus);
+    const timer = window.setInterval(syncPayouts, 30_000);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(timer);
+    };
+  }, [roleLoading, isAdmin]);
+
+
   const run = async (id: string, fn: () => Promise<unknown>, okMsg?: string) => {
     setBusyId(id);
     try {
