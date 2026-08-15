@@ -173,7 +173,10 @@ export default function AffiliateApply() {
               Submit application
             </Button>
           </form>
+          </>
+          )}
         </Card>
+
       </div>
     </div>
   );
