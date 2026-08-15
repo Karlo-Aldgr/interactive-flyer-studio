@@ -140,7 +140,9 @@ export default function AffiliateDashboard() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md space-y-4 p-8 text-center">
-          <h1 className="text-2xl font-bold">Affiliate access pending</h1>
+          <h1 className="text-2xl font-bold">
+            {application?.status === "pending" ? "Under review" : "Affiliate access pending"}
+          </h1>
           <p className="text-muted-foreground">
             {application?.status === "pending"
               ? "Your application is under review. We'll email you as soon as it's approved."
@@ -149,7 +151,11 @@ export default function AffiliateDashboard() {
                 : "You're not an affiliate yet. Apply to get your referral link and dashboard."}
           </p>
           <div className="flex flex-col gap-2 pt-2">
-            {application?.status !== "pending" && (
+            {application?.status === "pending" ? (
+              <Button variant="outline" onClick={() => reload()}>
+                <RefreshCw className="mr-1 h-4 w-4" /> Check status
+              </Button>
+            ) : (
               <Button asChild>
                 <Link to="/affiliate/apply">Apply now</Link>
               </Button>
@@ -158,6 +164,7 @@ export default function AffiliateDashboard() {
               <Link to="/affiliate">Affiliate program</Link>
             </Button>
           </div>
+
         </Card>
       </div>
     );
