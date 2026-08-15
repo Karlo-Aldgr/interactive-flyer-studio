@@ -58,7 +58,8 @@ function Stat({ icon: Icon, label, value, hint }: { icon: any; label: string; va
 }
 
 export default function AffiliateDashboard() {
-  const { affiliate, application, loading } = useAffiliate();
+  const { affiliate, application, loading, reload } = useAffiliate();
+
   const [referrals, setReferrals] = useState<AffiliateReferral[]>([]);
   const [commissions, setCommissions] = useState<AffiliateCommission[]>([]);
   const [clicks, setClicks] = useState<AffiliateClick[]>([]);
