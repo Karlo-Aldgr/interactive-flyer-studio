@@ -107,6 +107,19 @@ export default function AffiliateDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [affiliate]);
 
+  // Keep settings (minimum payout), rate and balances current when returning to the tab.
+  useEffect(() => {
+    if (!affiliate) return;
+    const onFocus = () => {
+      reload();
+      refresh(affiliate.id);
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [affiliate?.id]);
+
+
   const available = useMemo(() => {
     if (!balance) return 0;
     return Math.max(
