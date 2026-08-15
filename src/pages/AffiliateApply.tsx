@@ -117,11 +117,17 @@ export default function AffiliateApply() {
             </p>
           </div>
 
-          {application?.status === "pending" && (
-            <Card className="border-amber-400/50 bg-amber-500/5 p-4 text-sm">
-              Your application is pending review. We'll email you once a decision is made.
-            </Card>
-          )}
+          {application?.status === "pending" ? (
+            <div className="space-y-4">
+              <Card className="border-amber-400/50 bg-amber-500/5 p-4 text-sm">
+                Your application is <strong>under review</strong>. We'll email you once a decision is made.
+              </Card>
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/affiliate/dashboard">Go to affiliate dashboard</Link>
+              </Button>
+            </div>
+          ) : (
+          <>
           {application?.status === "rejected" && (
             <Card className="border-destructive/40 bg-destructive/5 p-4 text-sm">
               {application.review_notes?.trim() || "Your previous application was not approved."}
@@ -129,6 +135,7 @@ export default function AffiliateApply() {
           )}
 
           <form onSubmit={submit} className="space-y-4">
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="full_name">Full name *</Label>
