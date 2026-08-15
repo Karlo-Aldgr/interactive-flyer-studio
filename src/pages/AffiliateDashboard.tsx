@@ -213,9 +213,18 @@ export default function AffiliateDashboard() {
               <ArrowLeft className="mr-1 h-4 w-4" /> Dashboard
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => refresh(affiliate.id)} disabled={refreshing}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              reload();
+              refresh(affiliate.id);
+            }}
+            disabled={refreshing}
+          >
             <RefreshCw className={`mr-1 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh
           </Button>
+
         </div>
 
         <div>
