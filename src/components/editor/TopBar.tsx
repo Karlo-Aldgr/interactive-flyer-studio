@@ -39,6 +39,7 @@ import { IntroAudioDialog } from "./IntroAudioDialog";
 import { BackgroundAudioDialog } from "./BackgroundAudioDialog";
 import { SubscribersPanel } from "./SubscribersPanel";
 import { PortalLinkDialog } from "./PortalLinkDialog";
+import { BizadDialog } from "./BizadDialog";
 import { SocialMediaDialog } from "./SocialMediaDialog";
 import {
   TopBarFlyerMenu, TopBarMediaMenu, TopBarMobileMenu, TopBarPaymentsMenu,
@@ -95,6 +96,7 @@ export function TopBar({ saving }: Props) {
   const [subscribersOpen, setSubscribersOpen] = useState(false);
   const [paySettingsOpen, setPaySettingsOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
+  const [bizadOpen, setBizadOpen] = useState(false);
   const [socialOpen, setSocialOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [autoAdvanceOpen, setAutoAdvanceOpen] = useState(false);
@@ -450,6 +452,7 @@ export function TopBar({ saving }: Props) {
     onOpenCategory: openCategory,
     onOpenSubscribers: () => setSubscribersOpen(true),
     onOpenPortalLink: () => setPortalLinkOpen(true),
+    onOpenBizad: () => setBizadOpen(true),
     onOpenIntroAudio: () => setIntroAudioOpen(true),
     onOpenBgAudio: () => setBgAudioOpen(true),
     onOpenAutoAdvance: () => setAutoAdvanceOpen(true),
@@ -798,6 +801,7 @@ export function TopBar({ saving }: Props) {
       <PaymentLinkDialog open={payOpen} onOpenChange={setPayOpen} />
       <FlyerPaymentSettingsDialog open={paySettingsOpen} onOpenChange={setPaySettingsOpen} />
       <PortalLinkDialog flyerId={flyer.id} open={portalLinkOpen} onOpenChange={setPortalLinkOpen} />
+      <BizadDialog flyer={flyer} open={bizadOpen} onOpenChange={setBizadOpen} />
       <IntroAudioDialog open={introAudioOpen} onOpenChange={setIntroAudioOpen} />
       <BackgroundAudioDialog open={bgAudioOpen} onOpenChange={setBgAudioOpen} />
       <SocialMediaDialog open={socialOpen} onOpenChange={setSocialOpen} />

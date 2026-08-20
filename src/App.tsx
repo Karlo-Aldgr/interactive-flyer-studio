@@ -46,6 +46,7 @@ const RealtorAcceptInvite = lazy(() => import("./pages/RealtorAcceptInvite"));
 const ForRealtors = lazy(() => import("./pages/ForRealtors"));
 const AdminRealtorApplications = lazy(() => import("./pages/AdminRealtorApplications"));
 const PublicRealtorProfile = lazy(() => import("./pages/PublicRealtorProfile"));
+const PublicBizad = lazy(() => import("./pages/PublicBizad"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const DataDeletion = lazy(() => import("./pages/DataDeletion"));
@@ -140,6 +141,7 @@ const App = () => (
               <Route path="/realtor/listing/:listingId/photos" element={<ProtectedRoute><RealtorListing focusPhotos /></ProtectedRoute>} />
               <Route path="/admin/realtor-applications" element={<ProtectedRoute><AdminRealtorApplications /></ProtectedRoute>} />
               <Route path="/r/:slug" element={<PublicRealtorProfile />} />
+              <Route path="/bizads/:slug" element={<PublicBizad />} />
               <Route path="/affiliate" element={<Affiliate />} />
               <Route path="/affiliate/apply" element={<AffiliateApply />} />
               <Route path="/affiliate/terms" element={<AffiliateTerms />} />
