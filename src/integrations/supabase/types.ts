@@ -2886,6 +2886,7 @@ export type Database = {
       }
       get_public_business_page: { Args: { _slug: string }; Returns: Json }
       get_realtor_public_profile: { Args: { _slug: string }; Returns: Json }
+      grant_admin_by_email: { Args: { _email: string }; Returns: Json }
       grant_editor_by_email: { Args: { _email: string }; Returns: Json }
       grant_realtor_by_email: { Args: { _email: string }; Returns: Json }
       has_role: {
@@ -2978,6 +2979,7 @@ export type Database = {
         }[]
       }
       resolve_realtor_invite: { Args: { _token: string }; Returns: Json }
+      revoke_admin_by_email: { Args: { _email: string }; Returns: Json }
       revoke_editor_by_email: { Args: { _email: string }; Returns: Json }
       revoke_realtor_by_email: { Args: { _email: string }; Returns: Json }
       staff_acknowledge_job: { Args: { _job_id: string }; Returns: Json }
