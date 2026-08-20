@@ -85,6 +85,22 @@ export default function AdminUsers() {
     refresh();
   };
 
+  const toggleAdmin = async (row: AdminUserRow) => {
+    const isAdminRow = row.roles.includes("admin");
+    if (isAdminRow && !confirm(`Remove admin access from ${row.email}?`)) return;
+    setPendingId(row.user_id);
+    const rpc = isAdminRow ? "revoke_admin_by_email" : "grant_admin_by_email";
+    const { data, error } = await supabase.rpc(rpc as any, { _email: row.email });
+    setPendingId(null);
+    if (error || (data as any)?.ok === false) {
+      toast.error(error?.message || (data as any)?.error || "Failed");
+      return;
+    }
+    toast.success(isAdminRow ? "Admin access removed" : "Admin access granted");
+    refresh();
+  };
+
+
 
   if (authLoading || isAdmin === null) {
     return (
