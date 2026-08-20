@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Link, Navigate } from "react-router-dom";
-import { Briefcase, FileText, Loader2, Users, Home } from "lucide-react";
+import { Briefcase, FileText, Loader2, Users, Home, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
