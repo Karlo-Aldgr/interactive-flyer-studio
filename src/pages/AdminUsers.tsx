@@ -216,6 +216,16 @@ export default function AdminUsers() {
                       <Home className="mr-1 h-3.5 w-3.5" />
                       {row.roles.includes("realtor") ? "Revoke realtor" : "Grant realtor"}
                     </Button>
+                    <Button
+                      size="sm"
+                      variant={row.roles.includes("admin") ? "secondary" : "outline"}
+                      disabled={pendingId === row.user_id || row.user_id === user?.id}
+                      onClick={() => toggleAdmin(row)}
+                    >
+                      <ShieldCheck className="mr-1 h-3.5 w-3.5" />
+                      {row.roles.includes("admin") ? "Revoke admin" : "Make admin"}
+                    </Button>
+
 
                   </div>
                 </div>
