@@ -209,15 +209,6 @@ export default function AdminUsers() {
                     )}
                     <Button
                       size="sm"
-                      variant={row.roles.includes("realtor") ? "secondary" : "outline"}
-                      disabled={pendingId === row.user_id}
-                      onClick={() => toggleRealtor(row)}
-                    >
-                      <Home className="mr-1 h-3.5 w-3.5" />
-                      {row.roles.includes("realtor") ? "Revoke realtor" : "Grant realtor"}
-                    </Button>
-                    <Button
-                      size="sm"
                       variant={row.roles.includes("admin") ? "secondary" : "outline"}
                       disabled={pendingId === row.user_id || row.user_id === user?.id}
                       onClick={() => toggleAdmin(row)}
@@ -225,6 +216,16 @@ export default function AdminUsers() {
                       <ShieldCheck className="mr-1 h-3.5 w-3.5" />
                       {row.roles.includes("admin") ? "Revoke admin" : "Make admin"}
                     </Button>
+                    <Button
+                      size="sm"
+                      variant={row.roles.includes("realtor") ? "secondary" : "outline"}
+                      disabled={pendingId === row.user_id}
+                      onClick={() => toggleRealtor(row)}
+                    >
+                      <Home className="mr-1 h-3.5 w-3.5" />
+                      {row.roles.includes("realtor") ? "Revoke realtor" : "Grant realtor"}
+                    </Button>
+
 
 
                   </div>
