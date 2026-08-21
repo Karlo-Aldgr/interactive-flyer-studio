@@ -92,7 +92,11 @@ export function buildBizadPayloadFromOnboarding(
     video_url: existing?.video_url ?? null,
     copyright_text:
       existing?.copyright_text ??
-      (onboarding?.business_name ? `© ${onboarding.business_name}` : null),
+      (onboarding?.business_name
+        ? `© ${onboarding.business_name} ${new Date().getFullYear()}`
+        : existing?.business_name
+          ? `© ${existing.business_name} ${new Date().getFullYear()}`
+          : null),
   };
 }
 

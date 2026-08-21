@@ -72,6 +72,7 @@ interface EditorState {
   duplicatePage: (id: string) => void;
   reorderPages: (orderedIds: string[]) => void;
   setPageBackground: (id: string, color: string) => void;
+  setPageBackgroundImage: (id: string, image: string | null) => void;
   setPageLink: (id: string, linkPageId: string | null) => void;
   setPageIntro: (id: string, intro: PageIntro | null) => void;
   applyIntroToAllPages: (intro: PageIntro | null) => void;
@@ -496,6 +497,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
     set({
       pages: s.pages.map((p) => (p.id === id ? { ...p, background: { ...p.background, color } } : p)),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  setPageBackgroundImage: (id, image) => {
+    const s = get();
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) =>
+        p.id === id ? { ...p, background: { ...p.background, image: image ?? undefined } } : p
+      ),
       past,
       future: [],
       dirty: true,

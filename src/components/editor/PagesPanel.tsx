@@ -43,6 +43,7 @@ export function PagesPanel() {
   const reorderPages = useEditorStore((s) => s.reorderPages);
   const setPageIntro = useEditorStore((s) => s.setPageIntro);
   const setPageBackground = useEditorStore((s) => s.setPageBackground);
+  const setPageBackgroundImage = useEditorStore((s) => s.setPageBackgroundImage);
   const applyIntroToAllPages = useEditorStore((s) => s.applyIntroToAllPages);
   const replayIntro = useEditorStore((s) => s.replayIntro);
   const setPageLink = useEditorStore((s) => s.setPageLink);
@@ -52,6 +53,29 @@ export function PagesPanel() {
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
+  const bgFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingBg, setUploadingBg] = useState(false);
+
+  async function uploadBackground(file: File) {
+    const pageId = selectedPageId;
+    if (!flyer || !pageId) return;
+    if (!user) { toast.error("Sign in required"); return; }
+    setUploadingBg(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/${flyer.id}/bg-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("flyer-assets").upload(path, file);
+      if (error) throw error;
+      const { data } = supabase.storage.from("flyer-assets").getPublicUrl(path);
+      setPageBackgroundImage(pageId, data.publicUrl);
+      toast.success("Background image added");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not upload background");
+    } finally {
+      setUploadingBg(false);
+    }
+  }
+
 
   async function handleScanMenu(file: File) {
     if (!flyer) return;
@@ -251,6 +275,49 @@ export function PagesPanel() {
               className="h-9 flex-1 text-xs"
               value={activePage.background.color || "#ffffff"}
               onChange={(e) => setPageBackground(activePage.id, e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-[11px] font-medium text-muted-foreground">Background image</div>
+            {activePage.background.image && (
+              <div
+                className="h-16 w-full rounded border border-border bg-cover bg-center"
+                style={{ backgroundImage: `url(${activePage.background.image})` }}
+              />
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 flex-1 text-xs"
+                disabled={uploadingBg}
+                onClick={() => bgFileRef.current?.click()}
+              >
+                {uploadingBg ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                {activePage.background.image ? "Replace" : "Upload image"}
+              </Button>
+              {activePage.background.image && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-xs text-destructive"
+                  onClick={() => setPageBackgroundImage(activePage.id, null)}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+            <input
+              ref={bgFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) uploadBackground(f);
+              }}
             />
           </div>
         </div>
