@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { Layer, LayerAction } from "@/types/flyer";
+import type { IntroPreset, Layer, LayerAction, PageIntro } from "@/types/flyer";
+import type { BizadAudioSettings } from "@/lib/bizadPage";
 import type { BizadRecord } from "@/lib/bizad";
 import { downloadVCard } from "@/lib/bizad";
 
@@ -8,7 +9,93 @@ export type BizadLayout = {
   height: number;
   background: string;
   layers: Layer[];
+  intro?: PageIntro | null;
+  audio?: BizadAudioSettings | null;
 };
+
+function resolveIntroCfg(intro: PageIntro | null | undefined) {
+  return {
+    preset: (intro?.preset ?? "none") as IntroPreset,
+    durationMs: intro?.durationMs ?? 600,
+    delayMs: intro?.delayMs ?? 0,
+    stagger: intro?.stagger ?? false,
+    staggerStepMs: intro?.staggerStepMs ?? 80,
+    loop: intro?.loop ?? false,
+    loopDelayMs: intro?.loopDelayMs ?? 1000,
+  };
+}
+
+/** Same intro presets as the flyer viewer, expressed as CSS transforms. */
+function introStart(preset: IntroPreset): { transform: string; opacity: number; filter?: string } | null {
+  switch (preset) {
+    case "fade": return { transform: "none", opacity: 0 };
+    case "slide-up": return { transform: "translateY(60px)", opacity: 0 };
+    case "slide-down": return { transform: "translateY(-60px)", opacity: 0 };
+    case "slide-left": return { transform: "translateX(60px)", opacity: 0 };
+    case "slide-right": return { transform: "translateX(-60px)", opacity: 0 };
+    case "zoom": return { transform: "scale(0.9)", opacity: 0 };
+    case "pop": return { transform: "scale(0.6)", opacity: 0 };
+    case "blur": return { transform: "scale(1.05)", opacity: 0, filter: "blur(6px)" };
+    case "drop": return { transform: "translateY(-120px)", opacity: 0 };
+    default: return null;
+  }
+}
+
+function IntroWrap({
+  intro,
+  index,
+  pageIntro,
+  children,
+}: {
+  intro: PageIntro | null | undefined;
+  index: number;
+  pageIntro: PageIntro | null | undefined;
+  children: React.ReactNode;
+}) {
+  const cfg = resolveIntroCfg(intro ?? pageIntro);
+  const delay = intro ? cfg.delayMs : cfg.delayMs + (cfg.stagger ? index * cfg.staggerStepMs : 0);
+  const start = introStart(cfg.preset);
+  const reduced =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const [shown, setShown] = useState(!start || !!reduced);
+
+  useEffect(() => {
+    if (!start || reduced) return;
+    let cancelled = false;
+    const timers: number[] = [];
+    const run = () => {
+      setShown(false);
+      timers.push(window.setTimeout(() => !cancelled && setShown(true), delay + 20));
+    };
+    run();
+    let interval: number | undefined;
+    if (cfg.loop) {
+      interval = window.setInterval(run, delay + cfg.durationMs + cfg.loopDelayMs);
+    }
+    return () => {
+      cancelled = true;
+      timers.forEach((t) => window.clearTimeout(t));
+      if (interval) window.clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfg.preset, cfg.durationMs, cfg.loop, cfg.loopDelayMs, delay]);
+
+  if (!start) return <>{children}</>;
+
+  return (
+    <div
+      style={{
+        transition: `transform ${cfg.durationMs}ms ease-out, opacity ${cfg.durationMs}ms ease-out, filter ${cfg.durationMs}ms ease-out`,
+        transform: shown ? "none" : start.transform,
+        opacity: shown ? 1 : start.opacity,
+        filter: shown ? "none" : start.filter,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function isBizadLayout(v: unknown): v is BizadLayout {
   const l = v as BizadLayout | null;
@@ -146,8 +233,10 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
               position: "relative",
             }}
           >
-            {ordered.map((l) => (
-              <LayerView key={l.id} layer={l} bizad={bizad} />
+            {ordered.map((l, i) => (
+              <IntroWrap key={l.id} intro={l.intro} index={i} pageIntro={layout.intro}>
+                <LayerView layer={l} bizad={bizad} />
+              </IntroWrap>
             ))}
           </div>
         </div>
