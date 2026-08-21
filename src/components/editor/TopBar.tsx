@@ -814,6 +814,16 @@ export function TopBar({ saving }: Props) {
         regenerating={regenerating}
         isPublished={flyer.status === "published" && !!flyer.public_slug}
         flyerPreview={flyerPreviewSection}
+        extraLinks={
+          bizadShareUrl
+            ? [{
+                label: "Digital business card",
+                url: bizadShareUrl,
+                description: "Opens your tappable business card.",
+              }]
+            : undefined
+        }
+
         landingPreviewMeta={{
           label: "Landing page link",
           description: "Opens the landing page first.",
