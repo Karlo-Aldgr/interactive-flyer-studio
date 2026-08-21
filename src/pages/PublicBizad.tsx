@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { buildPublicBizadUrl } from "@/lib/utils";
 import { downloadVCard, buildMapsUrl, loadPublicBizad, DEMO_BIZAD, type BizadRecord } from "@/lib/bizad";
+import { BizadLayoutView, isBizadLayout } from "@/components/viewer/BizadLayoutView";
 
 function HotButton({
   href,
@@ -267,6 +268,10 @@ export default function PublicBizad() {
         <Button asChild variant="outline"><Link to="/">Go home</Link></Button>
       </div>
     );
+  }
+
+  if (isBizadLayout(bizad.layout)) {
+    return <BizadLayoutView layout={bizad.layout} bizad={bizad} />;
   }
 
   return <BizadContent bizad={bizad} />;

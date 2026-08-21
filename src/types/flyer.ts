@@ -491,7 +491,12 @@ export interface FlyerPage {
     size?: { width: number; height: number };
     /** When set, tapping anywhere on this page navigates to the page with this id (used for landing → flyer). */
     linkPageId?: string;
+    /** Marks this page as the editable Digital business card page (editor-only, never shown in the viewer). */
+    bizadPage?: boolean;
+    /** Digital business card page is toggled off — kept in the editor but not published. */
+    bizadHidden?: boolean;
   };
+
   layers: Layer[];
   intro?: PageIntro | null;
 }

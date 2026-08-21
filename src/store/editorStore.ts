@@ -4,6 +4,9 @@ import { defaultLayer, emptyPage, uid } from "@/lib/konvaHelpers";
 import { ensureUuid } from "@/lib/safeBrowser";
 import type { SubjectDetection, NormalizedPoint } from "@/lib/subjectDetect";
 import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant } from "@/lib/editorToolPresets";
+import { buildBizadPage } from "@/lib/bizadPage";
+import type { BizadRecord } from "@/lib/bizad";
+
 
 export type DrawMode = null | "hotspot" | "hotspot-ellipse" | "crop" | "extract-rect" | "extract-auto";
 
@@ -60,7 +63,10 @@ interface EditorState {
   addPage: () => void;
   addLandingPage: (width?: number, height?: number) => void;
   addScannedMenuPage: (args: { imageUrl: string; imgWidth: number; imgHeight: number; items: Array<{ id?: string; name: string; price?: number; description?: string; category?: string; color?: string; bbox: { x: number; y: number; w: number; h: number } }>; }) => string;
+  addBizadPage: (bizad: BizadRecord) => string;
+  setBizadPageHidden: (hidden: boolean) => void;
   setPageSize: (id: string, w: number, h: number, mode: ResizeMode) => void;
+
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
   duplicatePage: (id: string) => void;
@@ -382,7 +388,53 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  addBizadPage: (bizad) => {
+    const s = get();
+    if (!s.flyer) return "";
+    const existing = s.pages.find((p) => p.background?.bizadPage);
+    if (existing) {
+      const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+      set({
+        pages: s.pages.map((p) =>
+          p.id === existing.id
+            ? { ...p, background: { ...p.background, bizadHidden: !bizad.enabled } }
+            : p
+        ),
+        selectedPageId: existing.id,
+        past,
+        future: [],
+        dirty: true,
+      });
+      return existing.id;
+    }
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const page = buildBizadPage(s.flyer.id, s.pages.length, bizad);
+    set({
+      pages: [...s.pages, page],
+      selectedPageId: page.id,
+      selectedLayerId: null,
+      past,
+      future: [],
+      dirty: true,
+    });
+    return page.id;
+  },
+
+  setBizadPageHidden: (hidden) => {
+    const s = get();
+    const existing = s.pages.find((p) => p.background?.bizadPage);
+    if (!existing) return;
+    if (!!existing.background?.bizadHidden === hidden) return;
+    set({
+      pages: s.pages.map((p) =>
+        p.id === existing.id ? { ...p, background: { ...p.background, bizadHidden: hidden } } : p
+      ),
+      dirty: true,
+    });
+  },
+
   deletePage: (id) => {
+
     const s = get();
     if (s.pages.length <= 1) return;
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
