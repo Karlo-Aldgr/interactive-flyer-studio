@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, ExternalLink, Eye, ChevronRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Plus, ExternalLink, Eye, ChevronRight, Send } from "lucide-react";
 import { INTERACTIONS } from "@/lib/interactionsCatalog";
 import { format } from "date-fns";
 import { getJobUploadSignedUrl } from "@/lib/jobUploads";
@@ -13,6 +14,7 @@ import { toast } from "sonner";
 import { getUnifiedStatusLabel } from "@/lib/jobStatus";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { PostToSocialsDialog } from "@/components/social/PostToSocialsDialog";
 
 const labelFor = (id: string) => INTERACTIONS.find((i) => i.id === id)?.label ?? id;
 const formatPrice = (cents?: number | null) =>
@@ -22,6 +24,8 @@ export default function MyJobs() {
   const { user } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [postOpen, setPostOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -36,26 +40,57 @@ export default function MyJobs() {
     })();
   }, [user]);
 
+  const selectedJobs = useMemo(
+    () => jobs.filter((j) => selected[j.id]).map((j) => ({ id: j.id, title: j.title })),
+    [jobs, selected],
+  );
+  const allSelected = jobs.length > 0 && selectedJobs.length === jobs.length;
+  const toggleAll = () =>
+    setSelected(allSelected ? {} : Object.fromEntries(jobs.map((j) => [j.id, true])));
+
   return (
     <CustomerPortalShell maxWidth="4xl">
       <PageHeader
         title="My projects"
         description="Track your projects, preview, pay, and share when ready."
         actions={
-          <Button asChild className="shadow-glow">
-            <Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />New project</Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              className="shadow-glow"
+              disabled={selectedJobs.length === 0}
+              onClick={() => setPostOpen(true)}
+            >
+              <Send className="mr-1 h-4 w-4" />
+              Post to Socials{selectedJobs.length ? ` (${selectedJobs.length})` : ""}
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />New project</Link>
+            </Button>
+          </div>
         }
       />
 
-      {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-      ) : jobs.length === 0 ? (
-        <Card className="mt-8 p-10 text-center">
-          <p className="text-muted-foreground">You haven't submitted any projects yet.</p>
-          <Button asChild className="mt-4"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit your first project</Link></Button>
-        </Card>
-      ) : (
+      {jobs.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-sm">
+          <label className="flex cursor-pointer items-center gap-2">
+            <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+            Select all
+          </label>
+          <span className="text-muted-foreground">{selectedJobs.length} selected</span>
+          {selectedJobs.length > 0 && (
+            <Button size="sm" variant="ghost" onClick={() => setSelected({})}>
+              Clear selection
+            </Button>
+          )}
+        </div>
+      )}
+
+      <PostToSocialsDialog
+        open={postOpen}
+        onOpenChange={setPostOpen}
+        projects={selectedJobs}
+      />
+
         <div className="mt-8 space-y-4">
           {jobs.map((j) => {
             const status = getUnifiedStatusLabel(j);
