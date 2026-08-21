@@ -72,6 +72,7 @@ interface EditorState {
   duplicatePage: (id: string) => void;
   reorderPages: (orderedIds: string[]) => void;
   setPageBackground: (id: string, color: string) => void;
+  setPageBackgroundImage: (id: string, image: string | null) => void;
   setPageLink: (id: string, linkPageId: string | null) => void;
   setPageIntro: (id: string, intro: PageIntro | null) => void;
   applyIntroToAllPages: (intro: PageIntro | null) => void;
