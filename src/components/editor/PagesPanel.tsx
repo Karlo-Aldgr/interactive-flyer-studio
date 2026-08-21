@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed } from "lucide-react";
+import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed, IdCard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
@@ -170,9 +170,10 @@ export function PagesPanel() {
       </div>
       <div className="max-h-64 overflow-y-auto">
         {(() => { let flyerCount = 0; return pages.map((p, i) => {
-          const isLanding = !!p.background?.linkPageId;
-          if (!isLanding) flyerCount += 1;
-          const label = isLanding ? "L" : String(flyerCount);
+          const isBizad = !!p.background?.bizadPage;
+          const isLanding = !isBizad && !!p.background?.linkPageId;
+          if (!isLanding && !isBizad) flyerCount += 1;
+          const label = isBizad ? "B" : isLanding ? "L" : String(flyerCount);
           const active = p.id === selectedPageId;
           const editing = editingId === p.id;
           return (
@@ -181,8 +182,11 @@ export function PagesPanel() {
               onClick={() => selectPage(p.id)}
               className={`group flex items-center gap-2 border-b border-border px-3 py-2 text-sm cursor-pointer ${active ? "bg-primary/10" : "hover:bg-muted/60"}`}
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold" title={isLanding ? "Landing page (not counted)" : `Page ${flyerCount}`}>
-                {label}
+              <span
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold"
+                title={isBizad ? "Digital business card page (editor only)" : isLanding ? "Landing page (not counted)" : `Page ${flyerCount}`}
+              >
+                {isBizad ? <IdCard className="h-3.5 w-3.5" /> : label}
               </span>
               {editing ? (
                 <Input
@@ -199,7 +203,8 @@ export function PagesPanel() {
                 />
               ) : (
                 <span
-                  className="flex-1 truncate"
+                  className={`flex-1 truncate ${isBizad && p.background?.bizadHidden ? "text-muted-foreground line-through" : ""}`}
+                  title={isBizad && p.background?.bizadHidden ? "Card is turned off — enable it in the Digital business card dialog" : undefined}
                   onDoubleClick={(e) => { e.stopPropagation(); setEditingId(p.id); setEditValue(p.name); }}
                 >
                   {p.name}
