@@ -33,6 +33,8 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   const [enabled, setEnabled] = useState(false);
   const [buttonColor, setButtonColor] = useState("#2563eb");
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [copyrightText, setCopyrightText] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -45,11 +47,15 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           setEnabled(existing.enabled);
           setButtonColor(existing.button_color);
           setBackgroundColor(existing.background_color);
+          setVideoUrl(existing.video_url ?? "");
+          setCopyrightText(existing.copyright_text ?? "");
         } else {
           setBizad(null);
           setEnabled(false);
           setButtonColor("#2563eb");
           setBackgroundColor("#ffffff");
+          setVideoUrl("");
+          setCopyrightText("");
         }
       } catch (e: any) {
         toast.error(e?.message || "Could not load bizad settings");
@@ -78,6 +84,8 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
         enabled: nextEnabled,
         button_color: buttonColor,
         background_color: backgroundColor,
+        video_url: videoUrl.trim() || null,
+        copyright_text: copyrightText.trim() || base.copyright_text,
       });
       setBizad(saved);
       setEnabled(saved.enabled);
@@ -108,7 +116,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
             <IdCard className="h-4 w-4" /> Digital business card
           </DialogTitle>
           <DialogDescription>
-            Mobile-only bizad page with Save Contact, hot links, socials, and QR — auto-filled from onboarding.
+            Logo and contact info come from onboarding. Flyer button links to the interactive flyer. Intro/background audio stays in the editor.
           </DialogDescription>
         </DialogHeader>
 
@@ -154,6 +162,28 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
               </div>
             </div>
 
+            <div className="space-y-1.5">
+              <Label htmlFor="bizad-video" className="text-xs">Video URL (optional)</Label>
+              <Input
+                id="bizad-video"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="YouTube or direct .mp4 link"
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="bizad-copyright" className="text-xs">Copyright footer</Label>
+              <Input
+                id="bizad-copyright"
+                value={copyrightText}
+                onChange={(e) => setCopyrightText(e.target.value)}
+                placeholder="© Your Business Name"
+                className="h-8 text-xs"
+              />
+            </div>
+
             {publicUrl && enabled && (
               <div className="space-y-2 rounded-lg bg-muted/40 p-3">
                 <Label className="text-xs">Public link</Label>
@@ -173,7 +203,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
 
             {!flyer.public_slug && enabled && (
               <p className="text-xs text-amber-700">
-                Publish this flyer to get a stable public slug. Gallery link works best after publish.
+                Publish this flyer to get a stable public slug. Flyer button links to the interactive flyer.
               </p>
             )}
           </div>
@@ -183,7 +213,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
           <Button onClick={() => save()} disabled={saving || loading}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Save colors
+            Save settings
           </Button>
         </DialogFooter>
       </DialogContent>

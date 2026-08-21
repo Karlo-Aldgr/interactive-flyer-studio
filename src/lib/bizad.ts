@@ -28,6 +28,8 @@ export type BizadRecord = {
   button_color: string;
   background_color: string;
   gallery_url: string | null;
+  video_url: string | null;
+  copyright_text: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -85,6 +87,10 @@ export function buildBizadPayloadFromOnboarding(
     button_color: existing?.button_color ?? "#2563eb",
     background_color: existing?.background_color ?? "#ffffff",
     gallery_url: galleryUrl,
+    video_url: existing?.video_url ?? null,
+    copyright_text:
+      existing?.copyright_text ??
+      (onboarding?.business_name ? `© ${onboarding.business_name}` : null),
   };
 }
 
@@ -168,8 +174,8 @@ export const DEMO_BIZAD: BizadRecord = {
   about_text:
     "Family-owned auto repair since 1998. Oil changes, brakes, diagnostics, and honest service. Walk-ins welcome.",
   flyer_image_url: "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800&auto=format&fit=crop",
-  owner_photo_url: null,
-  logo_url: null,
+  owner_photo_url: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop",
+  logo_url: "https://images.unsplash.com/photo-1625044429174-4ad4afb6e6c8?w=200&auto=format&fit=crop",
   address: "123 Main St, Springfield",
   social_links: {
     facebook: "https://facebook.com",
@@ -179,6 +185,8 @@ export const DEMO_BIZAD: BizadRecord = {
   button_color: "#2563eb",
   background_color: "#f8fafc",
   gallery_url: "https://tapthatflyer.com",
+  video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+  copyright_text: "© Biggs Auto Repair",
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };

@@ -1,8 +1,8 @@
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import {
-  Loader2, Phone, MessageSquare, Mail, MapPin, Images, UserPlus,
+  Loader2, Phone, MessageSquare, Mail, MapPin, FileImage, UserPlus,
   Facebook, Instagram, Globe, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ function HotButton({
   );
 }
 
-function SocialButton({ href, label, children, color }: { href: string; label: string; children: React.ReactNode; color: string }) {
+function SocialButton({ href, label, children, color }: { href: string; label: string; children: ReactNode; color: string }) {
   return (
     <a
       href={href}
@@ -58,10 +58,50 @@ function SocialButton({ href, label, children, color }: { href: string; label: s
   );
 }
 
+function toEmbedVideoUrl(url: string): string | null {
+  const raw = url.trim();
+  if (!raw) return null;
+  if (raw.includes("youtube.com/watch")) {
+    const id = new URL(raw).searchParams.get("v");
+    return id ? `https://www.youtube.com/embed/${id}` : raw;
+  }
+  if (raw.includes("youtu.be/")) {
+    const id = raw.split("youtu.be/")[1]?.split(/[?#]/)[0];
+    return id ? `https://www.youtube.com/embed/${id}` : raw;
+  }
+  return raw;
+}
+
+function BizadVideo({ url }: { url: string }) {
+  const embed = toEmbedVideoUrl(url);
+  if (!embed) return null;
+
+  const isDirect = /\.(mp4|webm|mov)(\?|$)/i.test(embed) || embed.startsWith("blob:");
+
+  return (
+    <section className="mt-6 w-full overflow-hidden rounded-2xl bg-black shadow-md ring-1 ring-black/5">
+      {isDirect ? (
+        <video src={embed} controls playsInline className="aspect-video w-full bg-black" />
+      ) : (
+        <iframe
+          src={embed}
+          title="Business video"
+          className="aspect-video w-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      )}
+    </section>
+  );
+}
+
 function BizadContent({ bizad }: { bizad: BizadRecord }) {
   const publicUrl = buildPublicBizadUrl(bizad.slug);
   const btn = bizad.button_color || "#2563eb";
   const phoneDigits = bizad.phone?.replace(/[^\d+]/g, "") ?? "";
+  const copyright =
+    bizad.copyright_text?.trim() ||
+    (bizad.business_name ? `© ${bizad.business_name}` : "©");
 
   const socials = [
     { key: "facebook", url: bizad.social_links?.facebook, icon: <Facebook className="h-5 w-5" />, label: "Facebook" },
@@ -71,12 +111,33 @@ function BizadContent({ bizad }: { bizad: BizadRecord }) {
     { key: "other", url: bizad.social_links?.other, icon: <ExternalLink className="h-5 w-5" />, label: "Social" },
   ].filter((s) => !!s.url?.trim());
 
+  const hotButtons: { key: string; href: string; label: string; icon: ComponentType<{ className?: string }>; external?: boolean }[] = [];
+  if (phoneDigits) {
+    hotButtons.push({ key: "call", href: `tel:${phoneDigits}`, label: "Call", icon: Phone });
+    hotButtons.push({ key: "text", href: `sms:${phoneDigits}`, label: "Text", icon: MessageSquare });
+  }
+  if (bizad.gallery_url) {
+    hotButtons.push({ key: "flyer", href: bizad.gallery_url, label: "Flyer", icon: FileImage, external: true });
+  }
+  if (bizad.email) {
+    hotButtons.push({ key: "email", href: `mailto:${bizad.email}`, label: "Email", icon: Mail });
+  }
+  if (bizad.address) {
+    hotButtons.push({ key: "gps", href: buildMapsUrl(bizad.address), label: "GPS", icon: MapPin, external: true });
+  }
+
   return (
     <div
-      className="mx-auto min-h-screen w-full max-w-[430px] px-4 py-6 pb-10"
+      className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-4 py-6"
       style={{ backgroundColor: bizad.background_color || "#ffffff" }}
     >
-      <div className="flex flex-col items-center text-center">
+      <div className="flex flex-1 flex-col items-center text-center">
+        {bizad.logo_url && (
+          <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5">
+            <img src={bizad.logo_url} alt={`${bizad.business_name || "Business"} logo`} className="h-full w-full object-contain p-1" />
+          </div>
+        )}
+
         <h1 className="font-display text-2xl font-bold text-foreground">
           {bizad.business_name || "Business"}
         </h1>
@@ -91,10 +152,10 @@ function BizadContent({ bizad }: { bizad: BizadRecord }) {
           </div>
         )}
 
-        {(bizad.owner_photo_url || bizad.logo_url) && (
+        {bizad.owner_photo_url && (
           <div className="-mt-10 relative z-10 h-20 w-20 overflow-hidden rounded-full border-4 border-white bg-muted shadow-lg">
             <img
-              src={bizad.owner_photo_url || bizad.logo_url || ""}
+              src={bizad.owner_photo_url}
               alt={bizad.owner_name || "Owner"}
               className="h-full w-full object-cover"
             />
@@ -114,26 +175,22 @@ function BizadContent({ bizad }: { bizad: BizadRecord }) {
           Save Contact
         </Button>
 
-        <div className="mt-5 grid w-full grid-cols-3 gap-2">
-          {phoneDigits && (
-            <HotButton href={`tel:${phoneDigits}`} label="Call" icon={Phone} color={btn} />
-          )}
-          {phoneDigits && (
-            <HotButton href={`sms:${phoneDigits}`} label="Text" icon={MessageSquare} color={btn} />
-          )}
-          {phoneDigits && (
-            <HotButton href={`sms:${phoneDigits}`} label="SMS" icon={MessageSquare} color={btn} />
-          )}
-          {bizad.gallery_url && (
-            <HotButton href={bizad.gallery_url} label="Gallery" icon={Images} color={btn} external />
-          )}
-          {bizad.email && (
-            <HotButton href={`mailto:${bizad.email}`} label="Email" icon={Mail} color={btn} />
-          )}
-          {bizad.address && (
-            <HotButton href={buildMapsUrl(bizad.address)} label="GPS" icon={MapPin} color={btn} external />
-          )}
-        </div>
+        {hotButtons.length > 0 && (
+          <div className="mt-5 grid w-full grid-cols-3 gap-2">
+            {hotButtons.map((b) => (
+              <HotButton
+                key={b.key}
+                href={b.href}
+                label={b.label}
+                icon={b.icon}
+                color={btn}
+                external={b.external}
+              />
+            ))}
+          </div>
+        )}
+
+        {bizad.video_url && <BizadVideo url={bizad.video_url} />}
 
         {bizad.about_text && (
           <section className="mt-8 w-full rounded-2xl bg-white/70 p-4 text-left shadow-sm ring-1 ring-black/5">
@@ -160,6 +217,10 @@ function BizadContent({ bizad }: { bizad: BizadRecord }) {
           <p className="max-w-full truncate text-[11px] text-muted-foreground">{publicUrl}</p>
         </div>
       </div>
+
+      <footer className="mt-8 pb-4 text-center text-xs text-muted-foreground">
+        {copyright}
+      </footer>
     </div>
   );
 }

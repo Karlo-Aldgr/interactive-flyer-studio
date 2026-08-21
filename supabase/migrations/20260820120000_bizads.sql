@@ -18,6 +18,8 @@ CREATE TABLE public.bizads (
   button_color text NOT NULL DEFAULT '#2563eb',
   background_color text NOT NULL DEFAULT '#ffffff',
   gallery_url text,
+  video_url text,
+  copyright_text text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
