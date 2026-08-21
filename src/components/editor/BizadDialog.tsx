@@ -10,6 +10,7 @@ import {
   type BizadRecord,
 } from "@/lib/bizad";
 import { buildPublicBizadUrl } from "@/lib/utils";
+import { useEditorStore } from "@/store/editorStore";
 import type { Flyer } from "@/types/flyer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,9 @@ interface Props {
 
 export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   const { user } = useAuth();
+  const addBizadPage = useEditorStore((s) => s.addBizadPage);
+  const setBizadPageHidden = useEditorStore((s) => s.setBizadPageHidden);
+  const pages = useEditorStore((s) => s.pages);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [bizad, setBizad] = useState<BizadRecord | null>(null);
@@ -89,6 +93,16 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       });
       setBizad(saved);
       setEnabled(saved.enabled);
+
+      const hasPage = pages.some((p) => p.background?.bizadPage);
+      if (saved.enabled) {
+        addBizadPage(saved);
+        if (!hasPage) {
+          toast.success("Digital business card page added to your flyer pages");
+        }
+      } else {
+        setBizadPageHidden(true);
+      }
       toast.success(nextEnabled ? "Digital business card enabled" : "Digital business card saved");
     } catch (e: any) {
       toast.error(e?.message || "Could not save bizad");
