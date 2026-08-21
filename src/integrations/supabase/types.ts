@@ -843,6 +843,7 @@ export type Database = {
           flyer_image_url: string | null
           gallery_url: string | null
           id: string
+          layout: Json | null
           logo_url: string | null
           owner_name: string | null
           owner_photo_url: string | null
@@ -866,6 +867,7 @@ export type Database = {
           flyer_image_url?: string | null
           gallery_url?: string | null
           id?: string
+          layout?: Json | null
           logo_url?: string | null
           owner_name?: string | null
           owner_photo_url?: string | null
@@ -889,6 +891,7 @@ export type Database = {
           flyer_image_url?: string | null
           gallery_url?: string | null
           id?: string
+          layout?: Json | null
           logo_url?: string | null
           owner_name?: string | null
           owner_photo_url?: string | null

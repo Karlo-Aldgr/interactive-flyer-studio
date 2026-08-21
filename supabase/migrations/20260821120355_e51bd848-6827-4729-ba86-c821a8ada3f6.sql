@@ -1,0 +1,1 @@
+ALTER TABLE public.bizads ADD COLUMN IF NOT EXISTS layout jsonb;
