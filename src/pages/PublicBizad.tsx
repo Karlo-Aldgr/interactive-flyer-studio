@@ -270,9 +270,21 @@ export default function PublicBizad() {
     );
   }
 
+  const audio = (bizad.layout as { audio?: BizadAudioSettings } | null)?.audio ?? null;
+
   if (isBizadLayout(bizad.layout)) {
-    return <BizadLayoutView layout={bizad.layout} bizad={bizad} />;
+    return (
+      <>
+        <BizadAudio audio={audio} />
+        <BizadLayoutView layout={bizad.layout} bizad={bizad} />
+      </>
+    );
   }
 
-  return <BizadContent bizad={bizad} />;
+  return (
+    <>
+      <BizadAudio audio={audio} />
+      <BizadContent bizad={bizad} />
+    </>
+  );
 }
