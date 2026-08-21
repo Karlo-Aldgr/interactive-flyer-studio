@@ -53,6 +53,29 @@ export function PagesPanel() {
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
+  const bgFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingBg, setUploadingBg] = useState(false);
+
+  async function uploadBackground(file: File) {
+    const pageId = selectedPageId;
+    if (!flyer || !pageId) return;
+    if (!user) { toast.error("Sign in required"); return; }
+    setUploadingBg(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/${flyer.id}/bg-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("flyer-assets").upload(path, file);
+      if (error) throw error;
+      const { data } = supabase.storage.from("flyer-assets").getPublicUrl(path);
+      setPageBackgroundImage(pageId, data.publicUrl);
+      toast.success("Background image added");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not upload background");
+    } finally {
+      setUploadingBg(false);
+    }
+  }
+
 
   async function handleScanMenu(file: File) {
     if (!flyer) return;
