@@ -118,11 +118,67 @@ export default function Onboarding() {
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
+  // Latest flyer already in the system for this user (used by "Get info").
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("flyers")
+        .select("id, title, thumbnail_url")
+        .eq("owner_id", user.id)
+        .not("thumbnail_url", "is", null)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      const row = data?.[0];
+      if (row?.thumbnail_url) setExistingFlyer({ title: row.title ?? "Your flyer", url: row.thumbnail_url });
+    })();
+  }, [user]);
+
+  const readAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result));
+      fr.onerror = () => reject(new Error("Could not read the flyer file"));
+      fr.readAsDataURL(file);
+    });
+
+  const scanFlyerForInfo = async () => {
+    const source = flyerFile ? await readAsDataUrl(flyerFile).catch(() => null) : existingFlyer?.url;
+    if (!source) {
+      toast.error("No flyer available to scan");
+      return;
+    }
+    setScanning(true);
+    try {
+      const { info } = await invokeEdgeFunction<{ info: Partial<FormState> }>("flyer-info-scan", {
+        imageUrl: source,
+      });
+      let filled = 0;
+      setForm((f) => {
+        const next = { ...f };
+        (Object.keys(emptyForm) as (keyof FormState)[]).forEach((k) => {
+          const val = (info as Record<string, unknown>)[k];
+          if (typeof val === "string" && val.trim() && !String(next[k] ?? "").trim()) {
+            next[k] = val.trim() as FormState[keyof FormState];
+            filled += 1;
+          }
+        });
+        return next;
+      });
+      toast.success(filled ? `Filled ${filled} field${filled === 1 ? "" : "s"} from your flyer` : "No new details found on the flyer");
+    } catch (err: any) {
+      toast.error(err.message || "Could not scan the flyer");
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const websiteBlank = useMemo(() => !form.website_url.trim(), [form.website_url]);
   const missingSocials = useMemo(
     () => !form.facebook_url.trim() && !form.instagram_url.trim() && !form.tiktok_url.trim(),
     [form],
   );
+
 
   const onSubmit = async () => {
     if (!user) return;
