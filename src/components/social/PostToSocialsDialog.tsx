@@ -92,8 +92,9 @@ export function PostToSocialsDialog({ open, onOpenChange, projects, onPosted }: 
                         {r.platform ? ` · ${PLATFORM_LABEL[r.platform]}` : ""}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {r.ok ? "Published" : r.message ?? "Failed"}
+                        {r.ok ? "Published" : "Couldn't publish — please try again."}
                       </p>
+
                     </div>
                     {r.ok && r.remote_post_url && (
                       <a

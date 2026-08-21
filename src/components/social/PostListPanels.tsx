@@ -50,8 +50,11 @@ function VariantRow({
         </a>
       )}
       {variant.last_error && (
-        <span className="w-full text-xs text-destructive">{variant.last_error}</span>
+        <span className="w-full text-xs text-destructive">
+          This post didn't go out. Please try again.
+        </span>
       )}
+
       <div className="ml-auto flex gap-1">
         {variant.status === "failed" && (
           <Button size="sm" variant="outline" onClick={() => act("retry")}>Retry</Button>
