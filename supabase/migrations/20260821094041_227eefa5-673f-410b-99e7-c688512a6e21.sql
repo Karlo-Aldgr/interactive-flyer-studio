@@ -1,0 +1,1 @@
+delete from public.bizads where id = '2c2e5f55-2a56-4023-a6fe-9712bf29951d';
