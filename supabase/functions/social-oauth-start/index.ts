@@ -5,16 +5,11 @@ import { requireUser, serviceClient, tokenEncryptionReady } from "../_shared/soc
 import { getAdapter, PKCE_PLATFORMS } from "../_shared/social/registry.ts";
 import { pkceChallenge, randomToken, sha256Hex } from "../_shared/social/crypto.ts";
 import { isSocialPlatform } from "../_shared/social/types.ts";
+import { callbackUrlFor } from "../_shared/social/redirect.ts";
 
 const STATE_TTL_MINUTES = 15;
 
-/** Callback URL registered with every platform app. */
-export function callbackUrl() {
-  const explicit = Deno.env.get("SOCIAL_OAUTH_CALLBACK_URL")?.trim();
-  if (explicit) return explicit;
-  const ref = Deno.env.get("SUPABASE_URL")!.replace(/\/$/, "");
-  return `${ref}/functions/v1/social-oauth-callback`;
-}
+
 
 /** Only same-site relative paths may be used as the post-connect destination. */
 function safeRedirectPath(value: unknown) {
@@ -49,7 +44,7 @@ Deno.serve(async (req) => {
   const codeVerifier = needsPkce ? randomToken(48) : null;
 
   const started = await adapter.startOAuth({
-    redirectUri: callbackUrl(),
+    redirectUri: callbackUrlFor(platform),
     state,
     scopes: Array.isArray(body.scopes) && body.scopes.length ? body.scopes : adapter.defaultScopes,
   });

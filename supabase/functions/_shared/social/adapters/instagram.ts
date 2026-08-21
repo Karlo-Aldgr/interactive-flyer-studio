@@ -14,8 +14,11 @@ import {
 import { fetchJson, mapHttpError, requireEnv } from "../http.ts";
 import { exchangeFacebookCode, listFacebookPages } from "./facebook.ts";
 
-const GRAPH = () => Deno.env.get("META_GRAPH_API_VERSION")?.trim() || "v23.0";
-const SECRETS = ["META_APP_ID", "META_APP_SECRET"];
+const GRAPH = () =>
+  Deno.env.get("SOCIAL_META_GRAPH_API_VERSION")?.trim() ||
+  Deno.env.get("META_GRAPH_API_VERSION")?.trim() ||
+  "v23.0";
+const SECRETS = ["SOCIAL_META_APP_ID", "SOCIAL_META_APP_SECRET"];
 
 const IG_SCOPES = [
   "instagram_basic",
@@ -56,7 +59,7 @@ export const instagramAdapter: SocialPlatformAdapter = {
     const env = requireEnv(SECRETS);
     if ("ok" in env && env.ok === false) return env;
     const url = new URL(`https://www.facebook.com/${GRAPH()}/dialog/oauth`);
-    url.searchParams.set("client_id", (env as Record<string, string>).META_APP_ID);
+    url.searchParams.set("client_id", (env as Record<string, string>).SOCIAL_META_APP_ID);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
     url.searchParams.set("response_type", "code");
