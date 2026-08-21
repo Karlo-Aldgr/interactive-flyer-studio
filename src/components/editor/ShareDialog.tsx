@@ -182,12 +182,14 @@ export function ShareDialog({
     fileSlug,
     keyName,
     accent,
+    hidePreview,
   }: {
     section: { label: string; description?: string; thumbnailUrl?: string; url: string };
     qrId: string;
     fileSlug: string;
     keyName: string;
     accent?: string;
+    hidePreview?: boolean;
   }) {
     return (
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
@@ -200,6 +202,7 @@ export function ShareDialog({
           )}
         </div>
 
+        {!hidePreview && (
         <div className="mx-auto w-full max-h-[40vh] overflow-hidden rounded-md border border-border bg-muted/30">
           {section.thumbnailUrl ? (
             <img
@@ -218,6 +221,8 @@ export function ShareDialog({
             </div>
           )}
         </div>
+        )}
+
 
         <div className="flex items-start gap-3">
           <div className="rounded-md bg-white p-2 shadow-sm shrink-0">
@@ -282,6 +287,24 @@ export function ShareDialog({
                 accent="text-primary"
               />
             </div>
+
+            {safeExtraLinks.length > 0 && (
+              <div className="grid gap-4 md:grid-cols-2">
+                {safeExtraLinks.map((l, i) => (
+                  <PreviewCard
+                    key={l.label}
+                    section={{ label: l.label, description: l.description, url: l.url }}
+                    qrId={`share-qr-extra-${i}`}
+                    fileSlug={l.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}
+                    keyName={`extra-${i}`}
+                    accent="text-primary"
+                    hidePreview
+                  />
+                ))}
+              </div>
+            )}
+
+
 
             {onRegenerateThumbnail && (
               <div className="grid gap-2 sm:grid-cols-3">

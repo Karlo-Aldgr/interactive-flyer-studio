@@ -11,7 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { buildPublicFlyerUrl, buildSocialLandingShareUrl, buildSocialShareUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
+import { buildPublicBizadUrl, buildPublicFlyerUrl, buildSocialLandingShareUrl, buildSocialShareUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
+import { getBizadForFlyer } from "@/lib/bizad";
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -81,6 +82,7 @@ export function TopBar({ saving }: Props) {
   const [useCustom, setUseCustom] = useState(false);
   const [mode, setMode] = useState<ResizeMode>("resize");
   const [shareOpen, setShareOpen] = useState(false);
+
   const [automationOpen, setAutomationOpen] = useState(false);
   const [autoPilotOpen, setAutoPilotOpen] = useState(false);
   const [facebookPostOpen, setFacebookPostOpen] = useState(false);
@@ -97,6 +99,8 @@ export function TopBar({ saving }: Props) {
   const [paySettingsOpen, setPaySettingsOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
   const [bizadOpen, setBizadOpen] = useState(false);
+  const [bizadShareUrl, setBizadShareUrl] = useState<string | null>(null);
+
   const [socialOpen, setSocialOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [autoAdvanceOpen, setAutoAdvanceOpen] = useState(false);
@@ -113,6 +117,24 @@ export function TopBar({ saving }: Props) {
     setFlyer({ public_slug: slug });
     void supabase.from("flyers").update({ public_slug: slug }).eq("id", flyer.id);
   }, [flyer, setFlyer]);
+
+  // Digital business card link for the share dialog.
+  useEffect(() => {
+    if (!shareOpen || !flyer?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const bizad = await getBizadForFlyer(flyer.id);
+        if (!cancelled) {
+          setBizadShareUrl(bizad?.slug && bizad.enabled ? buildPublicBizadUrl(bizad.slug) : null);
+        }
+      } catch {
+        if (!cancelled) setBizadShareUrl(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [shareOpen, flyer?.id]);
+
 
   function openCategory() {
     setEditCategory(((flyer as any)?.category as FlyerCategory) || "business");
@@ -792,6 +814,16 @@ export function TopBar({ saving }: Props) {
         regenerating={regenerating}
         isPublished={flyer.status === "published" && !!flyer.public_slug}
         flyerPreview={flyerPreviewSection}
+        extraLinks={
+          bizadShareUrl
+            ? [{
+                label: "Digital business card",
+                url: bizadShareUrl,
+                description: "Opens your tappable business card.",
+              }]
+            : undefined
+        }
+
         landingPreviewMeta={{
           label: "Landing page link",
           description: "Opens the landing page first.",
