@@ -1966,6 +1966,8 @@ export type Database = {
           posting_permission_name: string | null
           public_slug: string | null
           social_help: boolean
+          social_step_seen_at: string | null
+          social_step_status: string
           tiktok_url: string | null
           updated_at: string
           user_id: string
@@ -2000,6 +2002,8 @@ export type Database = {
           posting_permission_name?: string | null
           public_slug?: string | null
           social_help?: boolean
+          social_step_seen_at?: string | null
+          social_step_status?: string
           tiktok_url?: string | null
           updated_at?: string
           user_id: string
@@ -2034,6 +2038,8 @@ export type Database = {
           posting_permission_name?: string | null
           public_slug?: string | null
           social_help?: boolean
+          social_step_seen_at?: string | null
+          social_step_status?: string
           tiktok_url?: string | null
           updated_at?: string
           user_id?: string
@@ -2261,6 +2267,466 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      social_accounts: {
+        Row: {
+          access_token_encrypted: string | null
+          account_name: string | null
+          connected_at: string
+          connection_status: Database["public"]["Enums"]["social_connection_status"]
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          metadata: Json
+          platform: Database["public"]["Enums"]["social_platform"]
+          platform_account_id: string
+          profile_image_url: string | null
+          refresh_token_encrypted: string | null
+          scopes: string[]
+          status_detail: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          account_name?: string | null
+          connected_at?: string
+          connection_status?: Database["public"]["Enums"]["social_connection_status"]
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          metadata?: Json
+          platform: Database["public"]["Enums"]["social_platform"]
+          platform_account_id: string
+          profile_image_url?: string | null
+          refresh_token_encrypted?: string | null
+          scopes?: string[]
+          status_detail?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          account_name?: string | null
+          connected_at?: string
+          connection_status?: Database["public"]["Enums"]["social_connection_status"]
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          metadata?: Json
+          platform?: Database["public"]["Enums"]["social_platform"]
+          platform_account_id?: string
+          profile_image_url?: string | null
+          refresh_token_encrypted?: string | null
+          scopes?: string[]
+          status_detail?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      social_media_assets: {
+        Row: {
+          byte_size: number | null
+          created_at: string
+          file_name: string | null
+          id: string
+          kind: string
+          metadata: Json
+          mime_type: string
+          status: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          byte_size?: number | null
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          kind?: string
+          metadata?: Json
+          mime_type: string
+          status?: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          byte_size?: number | null
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          kind?: string
+          metadata?: Json
+          mime_type?: string
+          status?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      social_oauth_states: {
+        Row: {
+          code_verifier: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          redirect_path: string
+          state_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code_verifier?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          redirect_path?: string
+          state_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code_verifier?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          platform?: Database["public"]["Enums"]["social_platform"]
+          redirect_path?: string
+          state_hash?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      social_platform_settings: {
+        Row: {
+          enabled: boolean
+          notes: string | null
+          platform: Database["public"]["Enums"]["social_platform"]
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          notes?: string | null
+          platform: Database["public"]["Enums"]["social_platform"]
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          notes?: string | null
+          platform?: Database["public"]["Enums"]["social_platform"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      social_post_analytics: {
+        Row: {
+          captured_at: string
+          clicks: number | null
+          comments: number | null
+          created_at: string
+          engagements: number | null
+          id: string
+          impressions: number | null
+          likes: number | null
+          platform: Database["public"]["Enums"]["social_platform"]
+          platform_metrics: Json
+          post_id: string | null
+          reach: number | null
+          shares: number | null
+          social_account_id: string | null
+          user_id: string
+          variant_id: string | null
+          video_views: number | null
+        }
+        Insert: {
+          captured_at?: string
+          clicks?: number | null
+          comments?: number | null
+          created_at?: string
+          engagements?: number | null
+          id?: string
+          impressions?: number | null
+          likes?: number | null
+          platform: Database["public"]["Enums"]["social_platform"]
+          platform_metrics?: Json
+          post_id?: string | null
+          reach?: number | null
+          shares?: number | null
+          social_account_id?: string | null
+          user_id: string
+          variant_id?: string | null
+          video_views?: number | null
+        }
+        Update: {
+          captured_at?: string
+          clicks?: number | null
+          comments?: number | null
+          created_at?: string
+          engagements?: number | null
+          id?: string
+          impressions?: number | null
+          likes?: number | null
+          platform?: Database["public"]["Enums"]["social_platform"]
+          platform_metrics?: Json
+          post_id?: string | null
+          reach?: number | null
+          shares?: number | null
+          social_account_id?: string | null
+          user_id?: string
+          variant_id?: string | null
+          video_views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_post_analytics_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_post_analytics_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_post_analytics_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "social_post_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_post_variants: {
+        Row: {
+          caption: string
+          created_at: string
+          hashtags: string[]
+          id: string
+          last_error: string | null
+          link_url: string | null
+          media: Json
+          platform: Database["public"]["Enums"]["social_platform"]
+          platform_options: Json
+          post_id: string
+          published_at: string | null
+          remote_post_id: string | null
+          remote_post_url: string | null
+          social_account_id: string | null
+          status: Database["public"]["Enums"]["social_variant_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string
+          created_at?: string
+          hashtags?: string[]
+          id?: string
+          last_error?: string | null
+          link_url?: string | null
+          media?: Json
+          platform: Database["public"]["Enums"]["social_platform"]
+          platform_options?: Json
+          post_id: string
+          published_at?: string | null
+          remote_post_id?: string | null
+          remote_post_url?: string | null
+          social_account_id?: string | null
+          status?: Database["public"]["Enums"]["social_variant_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          caption?: string
+          created_at?: string
+          hashtags?: string[]
+          id?: string
+          last_error?: string | null
+          link_url?: string | null
+          media?: Json
+          platform?: Database["public"]["Enums"]["social_platform"]
+          platform_options?: Json
+          post_id?: string
+          published_at?: string | null
+          remote_post_id?: string | null
+          remote_post_url?: string | null
+          social_account_id?: string | null
+          status?: Database["public"]["Enums"]["social_variant_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_post_variants_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_post_variants_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posts: {
+        Row: {
+          content: string
+          created_at: string
+          flyer_id: string | null
+          hashtags: string[]
+          id: string
+          last_error: string | null
+          link_url: string | null
+          media: Json
+          published_at: string | null
+          schedule_timezone: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["social_post_status"]
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          flyer_id?: string | null
+          hashtags?: string[]
+          id?: string
+          last_error?: string | null
+          link_url?: string | null
+          media?: Json
+          published_at?: string | null
+          schedule_timezone?: string | null
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["social_post_status"]
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          flyer_id?: string | null
+          hashtags?: string[]
+          id?: string
+          last_error?: string | null
+          link_url?: string | null
+          media?: Json
+          published_at?: string | null
+          schedule_timezone?: string | null
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["social_post_status"]
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_publish_jobs: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          due_at: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          locked_at: string | null
+          locked_by: string | null
+          max_attempts: number
+          next_attempt_at: string | null
+          platform: Database["public"]["Enums"]["social_platform"]
+          post_id: string
+          social_account_id: string | null
+          status: Database["public"]["Enums"]["social_job_status"]
+          updated_at: string
+          user_id: string
+          variant_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          due_at?: string
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number
+          next_attempt_at?: string | null
+          platform: Database["public"]["Enums"]["social_platform"]
+          post_id: string
+          social_account_id?: string | null
+          status?: Database["public"]["Enums"]["social_job_status"]
+          updated_at?: string
+          user_id: string
+          variant_id: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          due_at?: string
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number
+          next_attempt_at?: string | null
+          platform?: Database["public"]["Enums"]["social_platform"]
+          post_id?: string
+          social_account_id?: string | null
+          status?: Database["public"]["Enums"]["social_job_status"]
+          updated_at?: string
+          user_id?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_publish_jobs_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_publish_jobs_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_publish_jobs_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "social_post_variants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscribers: {
         Row: {
@@ -2799,6 +3265,7 @@ export type Database = {
         Args: { _enabled: boolean; _job_id: string }
         Returns: Json
       }
+      admin_social_overview: { Args: never; Returns: Json }
       admin_update_payout: {
         Args: { _note?: string; _payout_id: string; _status: string }
         Returns: Json
@@ -2919,6 +3386,24 @@ export type Database = {
           roles: string[]
           signed_up_at: string
           user_id: string
+        }[]
+      }
+      my_social_accounts: {
+        Args: never
+        Returns: {
+          account_name: string
+          connected_at: string
+          connection_status: Database["public"]["Enums"]["social_connection_status"]
+          id: string
+          last_synced_at: string
+          metadata: Json
+          platform: Database["public"]["Enums"]["social_platform"]
+          platform_account_id: string
+          profile_image_url: string
+          scopes: string[]
+          status_detail: string
+          token_expires_at: string
+          username: string
         }[]
       }
       pick_mini_ad:
@@ -3076,6 +3561,42 @@ export type Database = {
         | "cancelled"
       job_type: "upload" | "design"
       layer_type: "text" | "image" | "icon" | "shape" | "button" | "hotspot"
+      social_connection_status:
+        | "connected"
+        | "reconnect_required"
+        | "permission_missing"
+        | "revoked"
+        | "error"
+      social_job_status:
+        | "pending"
+        | "locked"
+        | "running"
+        | "succeeded"
+        | "failed"
+        | "cancelled"
+      social_platform:
+        | "facebook"
+        | "instagram"
+        | "tiktok"
+        | "linkedin"
+        | "x"
+        | "youtube"
+      social_post_status:
+        | "draft"
+        | "queued"
+        | "publishing"
+        | "published"
+        | "partially_published"
+        | "failed"
+        | "cancelled"
+      social_variant_status:
+        | "draft"
+        | "queued"
+        | "publishing"
+        | "published"
+        | "failed"
+        | "cancelled"
+        | "skipped"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3255,6 +3776,47 @@ export const Constants = {
       ],
       job_type: ["upload", "design"],
       layer_type: ["text", "image", "icon", "shape", "button", "hotspot"],
+      social_connection_status: [
+        "connected",
+        "reconnect_required",
+        "permission_missing",
+        "revoked",
+        "error",
+      ],
+      social_job_status: [
+        "pending",
+        "locked",
+        "running",
+        "succeeded",
+        "failed",
+        "cancelled",
+      ],
+      social_platform: [
+        "facebook",
+        "instagram",
+        "tiktok",
+        "linkedin",
+        "x",
+        "youtube",
+      ],
+      social_post_status: [
+        "draft",
+        "queued",
+        "publishing",
+        "published",
+        "partially_published",
+        "failed",
+        "cancelled",
+      ],
+      social_variant_status: [
+        "draft",
+        "queued",
+        "publishing",
+        "published",
+        "failed",
+        "cancelled",
+        "skipped",
+      ],
     },
   },
 } as const
