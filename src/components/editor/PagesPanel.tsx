@@ -43,6 +43,7 @@ export function PagesPanel() {
   const reorderPages = useEditorStore((s) => s.reorderPages);
   const setPageIntro = useEditorStore((s) => s.setPageIntro);
   const setPageBackground = useEditorStore((s) => s.setPageBackground);
+  const setPageBackgroundImage = useEditorStore((s) => s.setPageBackgroundImage);
   const applyIntroToAllPages = useEditorStore((s) => s.applyIntroToAllPages);
   const replayIntro = useEditorStore((s) => s.replayIntro);
   const setPageLink = useEditorStore((s) => s.setPageLink);
