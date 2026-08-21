@@ -283,6 +283,24 @@ export function ShareDialog({
               />
             </div>
 
+            {safeExtraLinks.length > 0 && (
+              <div className="grid gap-4 md:grid-cols-2">
+                {safeExtraLinks.map((l, i) => (
+                  <PreviewCard
+                    key={l.label}
+                    section={{ label: l.label, description: l.description, url: l.url }}
+                    qrId={`share-qr-extra-${i}`}
+                    fileSlug={l.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}
+                    keyName={`extra-${i}`}
+                    accent="text-primary"
+                    hidePreview
+                  />
+                ))}
+              </div>
+            )}
+
+
+
             {onRegenerateThumbnail && (
               <div className="grid gap-2 sm:grid-cols-3">
                 <input
