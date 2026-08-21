@@ -273,6 +273,35 @@ export default function Onboarding() {
       </div>
 
       <div className="mt-8 space-y-6">
+        {(existingFlyer || flyerFile) && (
+          <Card className="flex flex-col gap-3 border-primary/30 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              {existingFlyer && !flyerFile && (
+                <img
+                  src={existingFlyer.url}
+                  alt="Your flyer"
+                  loading="lazy"
+                  className="h-14 w-14 rounded-md object-cover"
+                />
+              )}
+              <div>
+                <p className="font-semibold">Use your flyer to fill this form</p>
+                <p className="text-sm text-muted-foreground">
+                  {flyerFile ? flyerFile.name : existingFlyer?.title} — our AI reads the flyer and fills in any
+                  blank fields below.
+                </p>
+              </div>
+            </div>
+            <Button type="button" onClick={scanFlyerForInfo} disabled={scanning} className="shrink-0">
+              {scanning ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scanning…</>
+              ) : (
+                <><Sparkles className="mr-2 h-4 w-4" /> Get info</>
+              )}
+            </Button>
+          </Card>
+        )}
+
         <Card className="p-5 space-y-4">
           <h2 className="font-semibold">About you</h2>
           <div className="grid gap-4 sm:grid-cols-2">
