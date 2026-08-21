@@ -42,7 +42,7 @@ export function useSocialAccounts(redirectPath = "/dashboard/social") {
       );
       queryClient.invalidateQueries({ queryKey: ["social-accounts"] });
     }
-    if (error) toast.error(error);
+    if (error) toast.error("We couldn't finish connecting that account. Please try again.");
     params.delete("social_connected");
     params.delete("social_error");
     params.delete("social_accounts");
@@ -58,7 +58,7 @@ export function useSocialAccounts(redirectPath = "/dashboard/social") {
         const url = await startConnect(platform, redirectPath);
         window.location.href = url;
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not start the connection.");
+        toast.error(friendlyErrorMessage(err, platform));
         setConnecting(null);
       }
     },
@@ -72,17 +72,20 @@ export function useSocialAccounts(redirectPath = "/dashboard/social") {
         toast.success(
           action === "disconnect"
             ? "Account disconnected"
-            : action === "sync"
-            ? "Account details refreshed"
-            : "Access token refreshed",
+            : "Account updated",
         );
         queryClient.invalidateQueries({ queryKey: ["social-accounts"] });
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Action failed");
+        toast.error(
+          action === "disconnect"
+            ? "We couldn't disconnect that account. Please try again."
+            : friendlyErrorMessage(err),
+        );
       }
     },
     [queryClient],
   );
+
 
   const byPlatform = useCallback(
     (platform: SocialPlatform) => (accounts.data ?? []).filter((a) => a.platform === platform),
