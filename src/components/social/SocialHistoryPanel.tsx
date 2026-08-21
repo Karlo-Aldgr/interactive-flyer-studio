@@ -155,14 +155,12 @@ export function SocialHistoryPanel() {
                       {new Date(row.published_at ?? row.created_at).toLocaleString()}
                     </p>
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{row.caption}</p>
-                    {row.remote_post_id && (
-                      <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                        ID {row.remote_post_id}
+                    {row.last_error && (
+                      <p className="mt-1 text-xs text-destructive">
+                        This post didn't go out. Please try again.
                       </p>
                     )}
-                    {row.last_error && (
-                      <p className="mt-1 text-xs text-destructive">{row.last_error}</p>
-                    )}
+
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2">
                     <Badge variant="outline" className={STATUS_TONE[row.status] ?? ""}>
