@@ -828,6 +828,86 @@ export type Database = {
           },
         ]
       }
+      bizads: {
+        Row: {
+          about_text: string | null
+          address: string | null
+          background_color: string
+          business_name: string | null
+          button_color: string
+          copyright_text: string | null
+          created_at: string
+          email: string | null
+          enabled: boolean
+          flyer_id: string
+          flyer_image_url: string | null
+          gallery_url: string | null
+          id: string
+          logo_url: string | null
+          owner_name: string | null
+          owner_photo_url: string | null
+          phone: string | null
+          slug: string
+          social_links: Json
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          about_text?: string | null
+          address?: string | null
+          background_color?: string
+          business_name?: string | null
+          button_color?: string
+          copyright_text?: string | null
+          created_at?: string
+          email?: string | null
+          enabled?: boolean
+          flyer_id: string
+          flyer_image_url?: string | null
+          gallery_url?: string | null
+          id?: string
+          logo_url?: string | null
+          owner_name?: string | null
+          owner_photo_url?: string | null
+          phone?: string | null
+          slug: string
+          social_links?: Json
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          about_text?: string | null
+          address?: string | null
+          background_color?: string
+          business_name?: string | null
+          button_color?: string
+          copyright_text?: string | null
+          created_at?: string
+          email?: string | null
+          enabled?: boolean
+          flyer_id?: string
+          flyer_image_url?: string | null
+          gallery_url?: string | null
+          id?: string
+          logo_url?: string | null
+          owner_name?: string | null
+          owner_photo_url?: string | null
+          phone?: string | null
+          slug?: string
+          social_links?: Json
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bizads_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: true
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_ratings: {
         Row: {
           action_id: string | null
