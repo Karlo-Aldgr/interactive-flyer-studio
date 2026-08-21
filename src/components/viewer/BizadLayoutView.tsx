@@ -8,6 +8,7 @@ export type BizadLayout = {
   width: number;
   height: number;
   background: string;
+  backgroundImage?: string | null;
   layers: Layer[];
   intro?: PageIntro | null;
   audio?: BizadAudioSettings | null;
@@ -220,7 +221,13 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
   return (
     <div
       className="min-h-screen w-full"
-      style={{ backgroundColor: layout.background || "#ffffff" }}
+      style={{
+        backgroundColor: layout.background || "#ffffff",
+        backgroundImage: layout.backgroundImage ? `url(${layout.backgroundImage})` : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }}
     >
       <div ref={wrapRef} className="mx-auto w-full max-w-[430px] px-2">
         <div style={{ height: layout.height * scale, position: "relative", overflow: "hidden" }}>

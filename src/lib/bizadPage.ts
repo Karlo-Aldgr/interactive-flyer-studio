@@ -184,6 +184,7 @@ export type BizadLayout = {
   width: number;
   height: number;
   background: string;
+  backgroundImage?: string | null;
   layers: Layer[];
   /** Page-level intro animation, mirrored from the flyer editor page. */
   intro?: PageIntro | null;
@@ -211,6 +212,7 @@ export function layoutFromPage(page: FlyerPage, settings?: FlyerSettings | null)
     width: page.background?.size?.width ?? BIZAD_PAGE_WIDTH,
     height: page.background?.size?.height ?? BIZAD_PAGE_HEIGHT,
     background: page.background?.color ?? "#ffffff",
+    backgroundImage: page.background?.image ?? null,
     layers: page.layers,
     intro: page.intro ?? null,
     audio: audioSettingsFromFlyer(settings),

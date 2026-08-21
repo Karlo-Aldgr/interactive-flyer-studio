@@ -1,5 +1,5 @@
 import { useRef, type ComponentType } from "react";
-import { Type, Image as ImageIcon } from "lucide-react";
+import { Type, Image as ImageIcon, RectangleHorizontal } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useEditorStore } from "@/store/editorStore";
@@ -57,6 +57,7 @@ export function Toolbar() {
         className="hidden"
         onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])}
       />
+      <Btn label="Button" icon={RectangleHorizontal} onClick={() => addLayer("button")} />
       <ShapesLinesPanel />
       <InteractiveToolsPanel />
     </div>
