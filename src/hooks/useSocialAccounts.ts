@@ -7,7 +7,9 @@ import {
   fetchIntegrationStatus,
   startConnect,
 } from "@/lib/social/api";
+import { friendlyErrorMessage } from "@/lib/social/friendly";
 import type { SocialPlatform } from "@/lib/social/types";
+
 
 /**
  * Single source of truth for social connections. Used by both the Social Media

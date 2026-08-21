@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSocialAccounts } from "@/hooks/useSocialAccounts";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ConnectPlatformGrid } from "@/components/social/ConnectPlatformGrid";
 import { ComposerPanel } from "@/components/social/ComposerPanel";
 import { PublishedPanel, ScheduledPanel } from "@/components/social/PostListPanels";
@@ -10,14 +11,15 @@ import { SocialHistoryPanel } from "@/components/social/SocialHistoryPanel";
 
 export default function SocialManager() {
   const social = useSocialAccounts("/dashboard/social");
+  const { isAdmin } = useIsAdmin();
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-8">
       <header>
-        <h1 className="text-2xl font-bold">Social Media Manager</h1>
+        <h1 className="text-2xl font-bold">Social Accounts</h1>
         <p className="text-sm text-muted-foreground">
-          Connect your accounts with official platform authorization, then compose, schedule and
-          track posts. TapThatFlyer never asks for social media passwords.
+          Connect your accounts, then post your flyers in a couple of clicks. You sign in on each
+          platform's own page — TapThatFlyer never asks for your social media passwords.
         </p>
       </header>
 
@@ -29,8 +31,7 @@ export default function SocialManager() {
           <TabsTrigger value="published">Published</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="settings">Settings / Integrations</TabsTrigger>
-
+          {isAdmin && <TabsTrigger value="settings">Settings / Integrations</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="accounts" className="pt-4">
@@ -43,10 +44,11 @@ export default function SocialManager() {
         <TabsContent value="published" className="pt-4"><PublishedPanel /></TabsContent>
         <TabsContent value="analytics" className="pt-4"><AnalyticsPanel /></TabsContent>
         <TabsContent value="history" className="pt-4"><SocialHistoryPanel /></TabsContent>
-        <TabsContent value="settings" className="pt-4">
-
-          <IntegrationsPanel social={social} />
-        </TabsContent>
+        {isAdmin && (
+          <TabsContent value="settings" className="pt-4">
+            <IntegrationsPanel social={social} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
