@@ -382,7 +382,53 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  addBizadPage: (bizad) => {
+    const s = get();
+    if (!s.flyer) return "";
+    const existing = s.pages.find((p) => p.background?.bizadPage);
+    if (existing) {
+      const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+      set({
+        pages: s.pages.map((p) =>
+          p.id === existing.id
+            ? { ...p, background: { ...p.background, bizadHidden: !bizad.enabled } }
+            : p
+        ),
+        selectedPageId: existing.id,
+        past,
+        future: [],
+        dirty: true,
+      });
+      return existing.id;
+    }
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const page = buildBizadPage(s.flyer.id, s.pages.length, bizad);
+    set({
+      pages: [...s.pages, page],
+      selectedPageId: page.id,
+      selectedLayerId: null,
+      past,
+      future: [],
+      dirty: true,
+    });
+    return page.id;
+  },
+
+  setBizadPageHidden: (hidden) => {
+    const s = get();
+    const existing = s.pages.find((p) => p.background?.bizadPage);
+    if (!existing) return;
+    if (!!existing.background?.bizadHidden === hidden) return;
+    set({
+      pages: s.pages.map((p) =>
+        p.id === existing.id ? { ...p, background: { ...p.background, bizadHidden: hidden } } : p
+      ),
+      dirty: true,
+    });
+  },
+
   deletePage: (id) => {
+
     const s = get();
     if (s.pages.length <= 1) return;
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
