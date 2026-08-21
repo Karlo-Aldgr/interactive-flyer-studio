@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   BarChart3, Briefcase, ChevronDown, ClipboardList, Crosshair, DollarSign, Eye, IdCard, Inbox,
@@ -15,6 +15,7 @@ import type { DeviceFrame } from "@/store/editorStore";
 import type { Flyer } from "@/types/flyer";
 import { hasAnySocial } from "@/components/viewer/SocialSlideout";
 import { cn } from "@/lib/utils";
+import { getBizadForFlyer } from "@/lib/bizad";
 import { format } from "date-fns";
 
 export interface TopBarMenuActions {
@@ -373,21 +374,61 @@ export function TopBarMobileMenu(actions: TopBarMenuActions) {
 }
 
 export function TopBarPreviewButton({ flyerId, compact }: { flyerId: string; compact?: boolean }) {
-  if (compact) {
-    return (
-      <Button asChild size="icon" variant="outline" className="h-8 w-8 shrink-0">
-        <a href={`/preview/${flyerId}`} target="_blank" rel="noreferrer" title="Preview (private)">
-          <Eye className="h-4 w-4" />
-        </a>
-      </Button>
-    );
-  }
-  return (
-    <Button asChild size="sm" variant="outline" className="h-8">
-      <a href={`/preview/${flyerId}`} target="_blank" rel="noreferrer">
-        <Eye className="mr-1 h-4 w-4" /> Preview
-      </a>
+  const [bizadSlug, setBizadSlug] = useState<string | null>(null);
+  const [bizadEnabled, setBizadEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const b = await getBizadForFlyer(flyerId);
+        if (cancelled) return;
+        setBizadSlug(b?.slug ?? null);
+        setBizadEnabled(!!b?.enabled);
+      } catch {
+        /* no card yet */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [flyerId]);
+
+  const trigger = compact ? (
+    <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" title="Preview">
+      <Eye className="h-4 w-4" />
     </Button>
+  ) : (
+    <Button size="sm" variant="outline" className="h-8">
+      <Eye className="mr-1 h-4 w-4" /> Preview
+      <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
+    </Button>
+  );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-60">
+        <DropdownMenuLabel>Preview</DropdownMenuLabel>
+        <DropdownMenuItem asChild>
+          <a href={`/preview/${flyerId}`} target="_blank" rel="noreferrer">
+            <Eye className="mr-2 h-4 w-4" /> Flyer (private preview)
+          </a>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {bizadSlug ? (
+          <DropdownMenuItem asChild>
+            <a href={`/bizads/${bizadSlug}`} target="_blank" rel="noreferrer">
+              <IdCard className="mr-2 h-4 w-4" />
+              <span className="flex-1">Digital business card</span>
+              {!bizadEnabled && <span className="ml-2 text-[10px] text-muted-foreground">off</span>}
+            </a>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem disabled>
+            <IdCard className="mr-2 h-4 w-4" /> No digital business card yet
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
