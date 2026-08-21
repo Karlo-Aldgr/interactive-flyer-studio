@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { buildPublicBizadUrl } from "@/lib/utils";
 import { downloadVCard, buildMapsUrl, loadPublicBizad, DEMO_BIZAD, type BizadRecord } from "@/lib/bizad";
 import { BizadLayoutView, isBizadLayout } from "@/components/viewer/BizadLayoutView";
+import { BizadAudio } from "@/components/viewer/BizadAudio";
+import type { BizadAudioSettings } from "@/lib/bizadPage";
 
 function HotButton({
   href,
@@ -270,9 +272,21 @@ export default function PublicBizad() {
     );
   }
 
+  const audio = (bizad.layout as { audio?: BizadAudioSettings } | null)?.audio ?? null;
+
   if (isBizadLayout(bizad.layout)) {
-    return <BizadLayoutView layout={bizad.layout} bizad={bizad} />;
+    return (
+      <>
+        <BizadAudio audio={audio} />
+        <BizadLayoutView layout={bizad.layout} bizad={bizad} />
+      </>
+    );
   }
 
-  return <BizadContent bizad={bizad} />;
+  return (
+    <>
+      <BizadAudio audio={audio} />
+      <BizadContent bizad={bizad} />
+    </>
+  );
 }

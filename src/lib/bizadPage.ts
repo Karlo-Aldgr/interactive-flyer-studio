@@ -1,4 +1,4 @@
-import type { FlyerPage, Layer, LayerAction } from "@/types/flyer";
+import type { FlyerPage, FlyerSettings, Layer, LayerAction, PageIntro } from "@/types/flyer";
 import { defaultLayer, uid } from "@/lib/konvaHelpers";
 import type { BizadRecord } from "@/lib/bizad";
 import { buildMapsUrl } from "@/lib/bizad";
@@ -168,18 +168,51 @@ export function buildBizadPage(flyerId: string, index: number, bizad: BizadRecor
   };
 }
 
+export type BizadAudioSettings = {
+  introAudioUrl?: string;
+  introAudioLoop?: boolean;
+  introAudioVolume?: number;
+  introAudioShowControl?: boolean;
+  bgAudioUrl?: string;
+  bgAudioLoop?: boolean;
+  bgAudioVolume?: number;
+  bgAudioAutoplay?: boolean;
+  bgAudioShowControl?: boolean;
+};
+
 export type BizadLayout = {
   width: number;
   height: number;
   background: string;
   layers: Layer[];
+  /** Page-level intro animation, mirrored from the flyer editor page. */
+  intro?: PageIntro | null;
+  /** Intro + background audio copied from the flyer settings. */
+  audio?: BizadAudioSettings | null;
 };
 
-export function layoutFromPage(page: FlyerPage): BizadLayout {
+/** Picks only the audio-related flyer settings shared with the business card. */
+export function audioSettingsFromFlyer(settings?: FlyerSettings | null): BizadAudioSettings {
+  return {
+    introAudioUrl: settings?.introAudioUrl,
+    introAudioLoop: settings?.introAudioLoop,
+    introAudioVolume: settings?.introAudioVolume,
+    introAudioShowControl: settings?.introAudioShowControl,
+    bgAudioUrl: settings?.bgAudioUrl,
+    bgAudioLoop: settings?.bgAudioLoop,
+    bgAudioVolume: settings?.bgAudioVolume,
+    bgAudioAutoplay: settings?.bgAudioAutoplay,
+    bgAudioShowControl: settings?.bgAudioShowControl,
+  };
+}
+
+export function layoutFromPage(page: FlyerPage, settings?: FlyerSettings | null): BizadLayout {
   return {
     width: page.background?.size?.width ?? BIZAD_PAGE_WIDTH,
     height: page.background?.size?.height ?? BIZAD_PAGE_HEIGHT,
     background: page.background?.color ?? "#ffffff",
     layers: page.layers,
+    intro: page.intro ?? null,
+    audio: audioSettingsFromFlyer(settings),
   };
 }

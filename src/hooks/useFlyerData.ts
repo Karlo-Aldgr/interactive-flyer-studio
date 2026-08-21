@@ -261,7 +261,7 @@ export function useFlyerData(flyerId: string | undefined) {
       const bizadPage = pagesToSave.find((p) => p.background?.bizadPage);
       if (bizadPage) {
         try {
-          await updateBizadLayout(f.id, bizadPage.background?.bizadHidden ? null : layoutFromPage(bizadPage));
+          await updateBizadLayout(f.id, bizadPage.background?.bizadHidden ? null : layoutFromPage(bizadPage, f.settings));
         } catch {
           /* card sync is best-effort */
         }
