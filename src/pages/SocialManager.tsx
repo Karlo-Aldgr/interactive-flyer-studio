@@ -5,6 +5,8 @@ import { ComposerPanel } from "@/components/social/ComposerPanel";
 import { PublishedPanel, ScheduledPanel } from "@/components/social/PostListPanels";
 import { AnalyticsPanel } from "@/components/social/AnalyticsPanel";
 import { IntegrationsPanel } from "@/components/social/IntegrationsPanel";
+import { SocialHistoryPanel } from "@/components/social/SocialHistoryPanel";
+
 
 export default function SocialManager() {
   const social = useSocialAccounts("/dashboard/social");
@@ -26,7 +28,9 @@ export default function SocialManager() {
           <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
           <TabsTrigger value="published">Published</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="settings">Settings / Integrations</TabsTrigger>
+
         </TabsList>
 
         <TabsContent value="accounts" className="pt-4">
@@ -38,7 +42,9 @@ export default function SocialManager() {
         <TabsContent value="scheduled" className="pt-4"><ScheduledPanel /></TabsContent>
         <TabsContent value="published" className="pt-4"><PublishedPanel /></TabsContent>
         <TabsContent value="analytics" className="pt-4"><AnalyticsPanel /></TabsContent>
+        <TabsContent value="history" className="pt-4"><SocialHistoryPanel /></TabsContent>
         <TabsContent value="settings" className="pt-4">
+
           <IntegrationsPanel social={social} />
         </TabsContent>
       </Tabs>
