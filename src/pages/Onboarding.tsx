@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConnectPlatformGrid } from "@/components/social/ConnectPlatformGrid";
+import { useSocialAccounts } from "@/hooks/useSocialAccounts";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -69,6 +71,7 @@ export default function Onboarding() {
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
   const [flyerFile, setFlyerFile] = useState<File | null>(null);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const social = useSocialAccounts();
   const [postingPermission, setPostingPermission] = useState(false);
 
   useEffect(() => {
@@ -352,6 +355,16 @@ export default function Onboarding() {
             </div>
           </div>
         </Card>
+
+        <Card className="p-5 space-y-4">
+          <h2 className="font-semibold">Connect your social accounts</h2>
+          <p className="text-sm text-muted-foreground">
+            Optional, but it lets us publish your flyers for you. Connect now or later from the
+            Social Media Manager — nothing is posted without your approval.
+          </p>
+          <ConnectPlatformGrid social={social} compact />
+        </Card>
+
 
         <Card className="p-5 space-y-4">
           <h2 className="font-semibold">Your Google Sheet</h2>
