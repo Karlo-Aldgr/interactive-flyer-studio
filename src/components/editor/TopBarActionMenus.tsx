@@ -154,6 +154,11 @@ export function TopBarPortalMenu({
             <ClipboardList className="mr-2 h-4 w-4" /> Onboarding
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/dashboard/social" className="flex cursor-pointer items-center">
+            <ClipboardList className="mr-2 h-4 w-4" /> Social Media Manager
+          </Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -323,6 +328,11 @@ export function TopBarMobileMenu(actions: TopBarMenuActions) {
         <DropdownMenuItem asChild>
           <Link to="/onboarding" className="flex cursor-pointer items-center">
             <ClipboardList className="mr-2 h-4 w-4" /> Onboarding
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/dashboard/social" className="flex cursor-pointer items-center">
+            <ClipboardList className="mr-2 h-4 w-4" /> Social Media Manager
           </Link>
         </DropdownMenuItem>
 
