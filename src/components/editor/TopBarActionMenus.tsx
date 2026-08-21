@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 import { Link } from "react-router-dom";
 import {
-  BarChart3, Briefcase, ChevronDown, ClipboardList, Crosshair, DollarSign, Eye, Inbox,
+  BarChart3, Briefcase, ChevronDown, ClipboardList, Crosshair, DollarSign, Eye, IdCard, Inbox,
   Link as LinkIcon, Monitor, MoreHorizontal, Music, Music2, PartyPopper,
   Share2, Smartphone, Sparkles, Tablet, Timer, Users, Wallet,
 } from "lucide-react";
@@ -28,6 +28,7 @@ export interface TopBarMenuActions {
   onOpenCategory: () => void;
   onOpenSubscribers: () => void;
   onOpenPortalLink: () => void;
+  onOpenBizad: () => void;
   onOpenIntroAudio: () => void;
   onOpenBgAudio: () => void;
   onOpenAutoAdvance: () => void;
@@ -125,7 +126,8 @@ export function TopBarPortalMenu({
   flyerId,
   onOpenSubscribers,
   onOpenPortalLink,
-}: Pick<TopBarMenuActions, "flyerId" | "onOpenSubscribers" | "onOpenPortalLink">) {
+  onOpenBizad,
+}: Pick<TopBarMenuActions, "flyerId" | "onOpenSubscribers" | "onOpenPortalLink" | "onOpenBizad">) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -139,6 +141,9 @@ export function TopBarPortalMenu({
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onOpenPortalLink}>
           <LinkIcon className="mr-2 h-4 w-4" /> Portal link
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onOpenBizad}>
+          <IdCard className="mr-2 h-4 w-4" /> Digital business card
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link to={`/analytics/${flyerId}`} className="flex cursor-pointer items-center">
@@ -316,6 +321,9 @@ export function TopBarMobileMenu(actions: TopBarMenuActions) {
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={actions.onOpenPortalLink}>
           <LinkIcon className="mr-2 h-4 w-4" /> Portal link
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={actions.onOpenBizad}>
+          <IdCard className="mr-2 h-4 w-4" /> Digital business card
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link to={`/analytics/${flyerId}`} className="flex cursor-pointer items-center">

@@ -83,6 +83,11 @@ export function buildPublicFlyerUrl(slug: string): string {
   return `${getPublicAppOrigin().replace(/\/$/, "")}/f/${slug}`;
 }
 
+/** Public digital business card page. */
+export function buildPublicBizadUrl(slug: string): string {
+  return `${getPublicAppOrigin().replace(/\/$/, "")}/bizads/${slug}`;
+}
+
 /**
  * Marketing / social posts must always use the published public origin.
  * Local LAN URLs break Facebook/Instagram link previews because Meta cannot crawl them.
