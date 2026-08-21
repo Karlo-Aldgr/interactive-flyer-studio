@@ -144,9 +144,12 @@ export function buildBizadPage(flyerId: string, index: number, bizad: BizadRecor
     y += 450;
   }
 
-  if (bizad.copyright_text) {
+  const copyright =
+    bizad.copyright_text?.trim() ||
+    (bizad.business_name ? `© ${bizad.business_name} ${new Date().getFullYear()}` : null);
+  if (copyright) {
     layers.push(
-      text(pageId, z++, bizad.copyright_text, { x: 60, y, w: W - 120, h: 32, size: 14, weight: 400, color: "#94a3b8" }),
+      text(pageId, z++, copyright, { x: 60, y, w: W - 120, h: 32, size: 14, weight: 400, color: "#94a3b8" }),
     );
     y += 50;
   }

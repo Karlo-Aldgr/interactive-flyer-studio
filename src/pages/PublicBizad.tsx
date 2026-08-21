@@ -104,7 +104,7 @@ function BizadContent({ bizad }: { bizad: BizadRecord }) {
   const phoneDigits = bizad.phone?.replace(/[^\d+]/g, "") ?? "";
   const copyright =
     bizad.copyright_text?.trim() ||
-    (bizad.business_name ? `© ${bizad.business_name}` : "©");
+    (bizad.business_name ? `© ${bizad.business_name} ${new Date().getFullYear()}` : "©");
 
   const socials = [
     { key: "facebook", url: bizad.social_links?.facebook, icon: <Facebook className="h-5 w-5" />, label: "Facebook" },
