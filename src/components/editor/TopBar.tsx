@@ -82,6 +82,7 @@ export function TopBar({ saving }: Props) {
   const [useCustom, setUseCustom] = useState(false);
   const [mode, setMode] = useState<ResizeMode>("resize");
   const [shareOpen, setShareOpen] = useState(false);
+
   const [automationOpen, setAutomationOpen] = useState(false);
   const [autoPilotOpen, setAutoPilotOpen] = useState(false);
   const [facebookPostOpen, setFacebookPostOpen] = useState(false);
