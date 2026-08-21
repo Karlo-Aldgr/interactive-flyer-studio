@@ -15,6 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
 import { getMyOnboarding, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
+import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
+
 
 const schema = z.object({
   full_name: z.string().trim().min(1, "Your name is required").max(120),
