@@ -45,7 +45,8 @@ Deno.serve(async (req) => {
     const result = await adapter.deletePost(account, variant.remote_post_id);
     if (result.ok === false) return json({ error: result.message, code: result.code }, 400);
     await supabase.from("social_post_variants").update({
-      status: "deleted",
+      // there is no "deleted" variant status; cancelled marks it removed remotely
+      status: "cancelled",
       remote_post_url: null,
       last_error: null,
     }).eq("id", variantId);
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
   if (result.ok === false) return json({ error: result.message, code: result.code }, 400);
   await supabase.from("social_post_variants").update({
     remote_post_url: result.remote_post_url ?? variant.remote_post_url,
-    status: result.status === "deleted" ? "deleted" : variant.status,
+    status: result.status === "deleted" ? "cancelled" : variant.status,
   }).eq("id", variantId);
   return json({ ok: true, remote_status: result.status, remote_post_url: result.remote_post_url });
 });
