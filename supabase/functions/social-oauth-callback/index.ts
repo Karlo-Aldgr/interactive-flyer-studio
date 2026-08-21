@@ -5,16 +5,13 @@ import { saveAccounts, serviceClient } from "../_shared/social/store.ts";
 import { getAdapter } from "../_shared/social/registry.ts";
 import { sha256Hex } from "../_shared/social/crypto.ts";
 import { isSocialPlatform } from "../_shared/social/types.ts";
+import { callbackUrlFor } from "../_shared/social/redirect.ts";
 
 function appBaseUrl() {
   return (Deno.env.get("SOCIAL_APP_BASE_URL")?.trim() || "https://tapthatflyer.com").replace(/\/$/, "");
 }
 
-function callbackUrl() {
-  const explicit = Deno.env.get("SOCIAL_OAUTH_CALLBACK_URL")?.trim();
-  if (explicit) return explicit;
-  return `${Deno.env.get("SUPABASE_URL")!.replace(/\/$/, "")}/functions/v1/social-oauth-callback`;
-}
+
 
 function bounce(path: string, params: Record<string, string>) {
   const url = new URL(appBaseUrl() + path);
@@ -66,7 +63,7 @@ Deno.serve(async (req) => {
   try {
     const result = await adapter.handleCallback({
       code,
-      redirectUri: callbackUrl(),
+      redirectUri: callbackUrlFor(row.platform),
       codeVerifier: row.code_verifier,
     });
     if (result.ok === false) {
