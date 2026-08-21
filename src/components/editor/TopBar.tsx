@@ -97,6 +97,8 @@ export function TopBar({ saving }: Props) {
   const [paySettingsOpen, setPaySettingsOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
   const [bizadOpen, setBizadOpen] = useState(false);
+  const [bizadShareUrl, setBizadShareUrl] = useState<string | null>(null);
+
   const [socialOpen, setSocialOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [autoAdvanceOpen, setAutoAdvanceOpen] = useState(false);
