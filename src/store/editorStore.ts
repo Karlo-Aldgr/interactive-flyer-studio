@@ -503,6 +503,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  setPageBackgroundImage: (id, image) => {
+    const s = get();
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) =>
+        p.id === id ? { ...p, background: { ...p.background, image: image ?? undefined } } : p
+      ),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
   setPageLink: (id, linkPageId) => {
     const s = get();
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
