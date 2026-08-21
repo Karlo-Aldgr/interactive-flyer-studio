@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.flyers_create_job() FROM anon, authenticated;

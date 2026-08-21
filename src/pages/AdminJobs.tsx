@@ -379,6 +379,101 @@ export default function AdminJobs() {
     }
   };
 
+  const renderJobCard = (j: any, opts?: { onDelete?: () => void }) => {
+    const isNew = j.status === "new" && (Date.now() - new Date(j.created_at).getTime() < NEW_BADGE_MS);
+    const linkedFlyer = flyers.find((f) => f.id === j.flyer_id);
+    const customerDeleted = jobIsCustomerDeleted(j);
+    const assignedEditorEmail = j.assigned_editor_id ? editorEmails.get(j.assigned_editor_id) : null;
+    return (
+      <Card
+        key={j.id}
+        role="button"
+        tabIndex={customerDeleted ? -1 : 0}
+        onClick={() => !customerDeleted && openJob(j)}
+        onKeyDown={(e) => {
+          if (customerDeleted) return;
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j); }
+        }}
+        className={`p-5 transition cursor-pointer hover:border-primary/50 hover:shadow-md ${isNew ? "ring-2 ring-primary/60 shadow-glow" : ""} ${customerDeleted ? "border-destructive/30 cursor-default" : ""}`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {isNew && <Badge className="bg-primary text-primary-foreground"><Sparkles className="mr-1 h-3 w-3" />NEW</Badge>}
+              <h3 className="font-semibold">{j.title}</h3>
+              <Badge variant="secondary">{STATUS_LABEL[j.status]}</Badge>
+              <Badge variant={j.assigned_editor_id ? "default" : "outline"}>
+                Editor: {j.assigned_editor_id ? displayFirstName(assignedEditorEmail) : "Unassigned"}
+              </Badge>
+              <Badge variant="outline">{j.type}</Badge>
+              <JobStaffBadges job={j} />
+              {openingJobId === j.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {j.customer_email ?? "—"} · {format(new Date(j.created_at), "PPp")}
+              {j.updated_at && j.updated_at !== j.created_at && (
+                <span> · updated {formatDistanceToNow(new Date(j.updated_at))} ago</span>
+              )}
+            </p>
+            <p className="mt-1 text-xs">
+              <span className="font-medium text-primary">Editor handling project:</span>{" "}
+              <span className="text-muted-foreground">
+                {j.assigned_editor_id ? displayFirstName(assignedEditorEmail) : "Not assigned yet"}
+              </span>
+              {j.assigned_at && (
+                <span className="text-muted-foreground"> · started {format(new Date(j.assigned_at), "PPp")}</span>
+              )}
+            </p>
+            {j.brief && <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{j.brief}</p>}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(j.selected_actions ?? []).map((id: string) => (
+                <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">{labelFor(id)}</span>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              {typeof j.price_cents === "number" && <span className="font-semibold">${(j.price_cents / 100).toFixed(2)}</span>}
+              {j.payment_link && <a href={j.payment_link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary underline-offset-2 hover:underline inline-flex items-center">Pay link <ExternalLink className="ml-1 h-3 w-3" /></a>}
+              {j.upload_url && (
+                <button type="button" onClick={async (e) => {
+                  e.stopPropagation();
+                  const url = await getJobUploadSignedUrl(j.upload_url);
+                  if (!url) return toast.error("Could not open upload");
+                  window.open(url, "_blank", "noreferrer");
+                }} className="inline-flex items-center text-muted-foreground hover:text-foreground"><FileText className="mr-1 h-3.5 w-3.5" />Upload</button>
+              )}
+
+              {linkedFlyer && <Link to={`/editor/${linkedFlyer.id}`} onClick={(e) => e.stopPropagation()} className="text-primary underline-offset-2 hover:underline">Open editor</Link>}
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={(e) => { e.stopPropagation(); openEdit(j); }}><Pencil className="mr-1 h-3.5 w-3.5" />Manage</Button>
+              <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); opts?.onDelete ? opts.onDelete() : deleteJob(j.id); }}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5"
+                checked={!!j.mini_ad_enabled}
+                onChange={async (e) => {
+                  const next = e.target.checked;
+                  const { data, error } = await supabase.rpc("admin_set_job_mini_ad" as any, { _job_id: j.id, _enabled: next });
+                  if (error) return toast.error(error.message);
+                  const r = data as { ok: boolean; error?: string };
+                  if (!r?.ok) return toast.error(r?.error || "Failed");
+                  toast.success(next ? "Mini-ad enabled" : "Mini-ad disabled");
+                  setJobs((prev) => prev.map((x) => x.id === j.id ? { ...x, mini_ad_enabled: next } as any : x));
+                }}
+              />
+              Mini-ad banner
+            </label>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+
   if (authLoading || isAdmin === null) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
@@ -488,95 +583,30 @@ export default function AdminJobs() {
             <Card className="mt-6 p-10 text-center text-muted-foreground">No jobs.</Card>
           ) : (
             <div className="mt-6 space-y-3">
-              {filtered.map((j) => {
-                const isNew = j.status === "new" && (Date.now() - new Date(j.created_at).getTime() < NEW_BADGE_MS);
-                const linkedFlyer = flyers.find((f) => f.id === j.flyer_id);
-                const customerDeleted = jobIsCustomerDeleted(j);
-                const assignedEditorEmail = j.assigned_editor_id ? editorEmails.get(j.assigned_editor_id) : null;
-                return (
-                  <Card
-                    key={j.id}
-                    role="button"
-                    tabIndex={customerDeleted ? -1 : 0}
-                    onClick={() => !customerDeleted && openJob(j)}
-                    onKeyDown={(e) => {
-                      if (customerDeleted) return;
-                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j); }
-                    }}
-                    className={`p-5 transition cursor-pointer hover:border-primary/50 hover:shadow-md ${isNew ? "ring-2 ring-primary/60 shadow-glow" : ""} ${customerDeleted ? "border-destructive/30 cursor-default" : ""}`}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {isNew && <Badge className="bg-primary text-primary-foreground"><Sparkles className="mr-1 h-3 w-3" />NEW</Badge>}
-                          <h3 className="font-semibold">{j.title}</h3>
-                          <Badge variant="secondary">{STATUS_LABEL[j.status]}</Badge>
-                          <Badge variant={j.assigned_editor_id ? "default" : "outline"}>
-                            Editor: {j.assigned_editor_id ? displayFirstName(assignedEditorEmail) : "Unassigned"}
-                          </Badge>
-                          <Badge variant="outline">{j.type}</Badge>
-                          <JobStaffBadges job={j} />
-                          {openingJobId === j.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {j.customer_email ?? "—"} · {format(new Date(j.created_at), "PPp")}
-                          {j.updated_at && j.updated_at !== j.created_at && (
-                            <span> · updated {formatDistanceToNow(new Date(j.updated_at))} ago</span>
-                          )}
-                        </p>
-                        <p className="mt-1 text-xs">
-                          <span className="font-medium text-primary">Editor handling project:</span>{" "}
-                          <span className="text-muted-foreground">
-                            {j.assigned_editor_id ? displayFirstName(assignedEditorEmail) : "Not assigned yet"}
-                          </span>
-                          {j.assigned_at && (
-                            <span className="text-muted-foreground"> · started {format(new Date(j.assigned_at), "PPp")}</span>
-                          )}
-                        </p>
-                        {j.brief && <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{j.brief}</p>}
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {(j.selected_actions ?? []).map((id: string) => (
-                            <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">{labelFor(id)}</span>
-                          ))}
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                          {typeof j.price_cents === "number" && <span className="font-semibold">${(j.price_cents / 100).toFixed(2)}</span>}
-                          {j.payment_link && <a href={j.payment_link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary underline-offset-2 hover:underline inline-flex items-center">Pay link <ExternalLink className="ml-1 h-3 w-3" /></a>}
-                          {j.upload_url && (
-                            <button type="button" onClick={async (e) => {
-                              e.stopPropagation();
-                              const url = await getJobUploadSignedUrl(j.upload_url);
-                              if (!url) return toast.error("Could not open upload");
-                              window.open(url, "_blank", "noreferrer");
-                            }} className="inline-flex items-center text-muted-foreground hover:text-foreground"><FileText className="mr-1 h-3.5 w-3.5" />Upload</button>
-                          )}
+              {filtered.map((j) => renderJobCard(j))}
+            </div>
+          )}
+        </section>
 
-                          {linkedFlyer && <Link to={`/editor/${linkedFlyer.id}`} onClick={(e) => e.stopPropagation()} className="text-primary underline-offset-2 hover:underline">Open editor</Link>}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={(e) => { e.stopPropagation(); openEdit(j); }}><Pencil className="mr-1 h-3.5 w-3.5" />Manage</Button>
-                          <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteJob(j.id); }}><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            className="h-3.5 w-3.5"
-                            checked={!!(j as any).mini_ad_enabled}
-                            onChange={async (e) => {
-                              const next = e.target.checked;
-                              const { data, error } = await supabase.rpc("admin_set_job_mini_ad" as any, { _job_id: j.id, _enabled: next });
-                              if (error) return toast.error(error.message);
-                              const r = data as { ok: boolean; error?: string };
-                              if (!r?.ok) return toast.error(r?.error || "Failed");
-                              toast.success(next ? "Mini-ad enabled" : "Mini-ad disabled");
-                              setJobs((prev) => prev.map((x) => x.id === j.id ? { ...x, mini_ad_enabled: next } as any : x));
-                            }}
-                          />
-                          Mini-ad banner
-                        </label>
-                      </div>
+        <section>
+          <h2 className="font-display text-2xl font-bold">All flyers</h2>
+          <p className="text-sm text-muted-foreground">Every flyer in the system, with the same project options.</p>
+          {flyers.length === 0 ? (
+            <Card className="mt-4 p-8 text-center text-muted-foreground">No flyers yet.</Card>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {flyers.map((f) => {
+                const job = jobs.find((j) => j.flyer_id === f.id);
+                if (job) return renderJobCard(job, { onDelete: () => setDeleteFlyerId(f.id) });
+                return (
+                  <Card key={f.id} className="flex items-center justify-between gap-3 p-3">
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{f.title}</div>
+                      <div className="text-xs text-muted-foreground">{f.status}{f.public_slug ? ` · /${f.public_slug}` : ""}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button asChild size="sm" variant="outline"><Link to={`/editor/${f.id}`}>Open</Link></Button>
+                      <Button size="sm" variant="ghost" onClick={() => setDeleteFlyerId(f.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </Card>
                 );
@@ -585,28 +615,6 @@ export default function AdminJobs() {
           )}
         </section>
 
-        <section>
-          <h2 className="font-display text-2xl font-bold">All flyers</h2>
-          <p className="text-sm text-muted-foreground">Super admin can open or remove any flyer in the system.</p>
-          {flyers.length === 0 ? (
-            <Card className="mt-4 p-8 text-center text-muted-foreground">No flyers yet.</Card>
-          ) : (
-            <div className="mt-4 grid gap-2">
-              {flyers.map((f) => (
-                <Card key={f.id} className="flex items-center justify-between gap-3 p-3">
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{f.title}</div>
-                    <div className="text-xs text-muted-foreground">{f.status}{f.public_slug ? ` · /${f.public_slug}` : ""}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button asChild size="sm" variant="outline"><Link to={`/editor/${f.id}`}>Open</Link></Button>
-                    <Button size="sm" variant="ghost" onClick={() => setDeleteFlyerId(f.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
 
       {/* Manage job dialog */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>

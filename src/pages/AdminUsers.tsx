@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Link, Navigate } from "react-router-dom";
-import { Briefcase, FileText, Loader2, Users, Home } from "lucide-react";
+import { Briefcase, FileText, Loader2, Users, Home, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,6 +84,22 @@ export default function AdminUsers() {
     toast.success(isRealtor ? "Realtor role revoked" : "Realtor role granted");
     refresh();
   };
+
+  const toggleAdmin = async (row: AdminUserRow) => {
+    const isAdminRow = row.roles.includes("admin");
+    if (isAdminRow && !confirm(`Remove admin access from ${row.email}?`)) return;
+    setPendingId(row.user_id);
+    const rpc = isAdminRow ? "revoke_admin_by_email" : "grant_admin_by_email";
+    const { data, error } = await supabase.rpc(rpc as any, { _email: row.email });
+    setPendingId(null);
+    if (error || (data as any)?.ok === false) {
+      toast.error(error?.message || (data as any)?.error || "Failed");
+      return;
+    }
+    toast.success(isAdminRow ? "Admin access removed" : "Admin access granted");
+    refresh();
+  };
+
 
 
   if (authLoading || isAdmin === null) {
@@ -193,6 +209,15 @@ export default function AdminUsers() {
                     )}
                     <Button
                       size="sm"
+                      variant={row.roles.includes("admin") ? "secondary" : "outline"}
+                      disabled={pendingId === row.user_id || row.user_id === user?.id}
+                      onClick={() => toggleAdmin(row)}
+                    >
+                      <ShieldCheck className="mr-1 h-3.5 w-3.5" />
+                      {row.roles.includes("admin") ? "Revoke admin" : "Make admin"}
+                    </Button>
+                    <Button
+                      size="sm"
                       variant={row.roles.includes("realtor") ? "secondary" : "outline"}
                       disabled={pendingId === row.user_id}
                       onClick={() => toggleRealtor(row)}
@@ -200,6 +225,8 @@ export default function AdminUsers() {
                       <Home className="mr-1 h-3.5 w-3.5" />
                       {row.roles.includes("realtor") ? "Revoke realtor" : "Grant realtor"}
                     </Button>
+
+
 
                   </div>
                 </div>
