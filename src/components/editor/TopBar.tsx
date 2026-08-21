@@ -118,6 +118,24 @@ export function TopBar({ saving }: Props) {
     void supabase.from("flyers").update({ public_slug: slug }).eq("id", flyer.id);
   }, [flyer, setFlyer]);
 
+  // Digital business card link for the share dialog.
+  useEffect(() => {
+    if (!shareOpen || !flyer?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const bizad = await getBizadForFlyer(flyer.id);
+        if (!cancelled) {
+          setBizadShareUrl(bizad?.slug && bizad.enabled ? buildPublicBizadUrl(bizad.slug) : null);
+        }
+      } catch {
+        if (!cancelled) setBizadShareUrl(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [shareOpen, flyer?.id]);
+
+
   function openCategory() {
     setEditCategory(((flyer as any)?.category as FlyerCategory) || "business");
     setEditEventDate((flyer as any)?.event_date ? new Date(((flyer as any).event_date as string) + "T00:00:00") : undefined);
