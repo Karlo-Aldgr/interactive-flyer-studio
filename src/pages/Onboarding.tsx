@@ -15,6 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
 import { getMyOnboarding, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
+import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
+
 
 const schema = z.object({
   full_name: z.string().trim().min(1, "Your name is required").max(120),
@@ -73,6 +76,9 @@ export default function Onboarding() {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const social = useSocialAccounts();
   const [postingPermission, setPostingPermission] = useState(false);
+  const [existingFlyer, setExistingFlyer] = useState<{ title: string; url: string } | null>(null);
+  const [scanning, setScanning] = useState(false);
+
 
   useEffect(() => {
     if (!user) return;
@@ -118,11 +124,67 @@ export default function Onboarding() {
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
+  // Latest flyer already in the system for this user (used by "Get info").
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("flyers")
+        .select("id, title, thumbnail_url")
+        .eq("owner_id", user.id)
+        .not("thumbnail_url", "is", null)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      const row = data?.[0];
+      if (row?.thumbnail_url) setExistingFlyer({ title: row.title ?? "Your flyer", url: row.thumbnail_url });
+    })();
+  }, [user]);
+
+  const readAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result));
+      fr.onerror = () => reject(new Error("Could not read the flyer file"));
+      fr.readAsDataURL(file);
+    });
+
+  const scanFlyerForInfo = async () => {
+    const source = flyerFile ? await readAsDataUrl(flyerFile).catch(() => null) : existingFlyer?.url;
+    if (!source) {
+      toast.error("No flyer available to scan");
+      return;
+    }
+    setScanning(true);
+    try {
+      const { info } = await invokeEdgeFunction<{ info: Partial<FormState> }>("flyer-info-scan", {
+        imageUrl: source,
+      });
+      let filled = 0;
+      setForm((f) => {
+        const next = { ...f };
+        (Object.keys(emptyForm) as (keyof FormState)[]).forEach((k) => {
+          const val = (info as Record<string, unknown>)[k];
+          if (typeof val === "string" && val.trim() && !String(next[k] ?? "").trim()) {
+            next[k] = val.trim() as FormState[keyof FormState];
+            filled += 1;
+          }
+        });
+        return next;
+      });
+      toast.success(filled ? `Filled ${filled} field${filled === 1 ? "" : "s"} from your flyer` : "No new details found on the flyer");
+    } catch (err: any) {
+      toast.error(err.message || "Could not scan the flyer");
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const websiteBlank = useMemo(() => !form.website_url.trim(), [form.website_url]);
   const missingSocials = useMemo(
     () => !form.facebook_url.trim() && !form.instagram_url.trim() && !form.tiktok_url.trim(),
     [form],
   );
+
 
   const onSubmit = async () => {
     if (!user) return;
@@ -211,6 +273,35 @@ export default function Onboarding() {
       </div>
 
       <div className="mt-8 space-y-6">
+        {(existingFlyer || flyerFile) && (
+          <Card className="flex flex-col gap-3 border-primary/30 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              {existingFlyer && !flyerFile && (
+                <img
+                  src={existingFlyer.url}
+                  alt="Your flyer"
+                  loading="lazy"
+                  className="h-14 w-14 rounded-md object-cover"
+                />
+              )}
+              <div>
+                <p className="font-semibold">Use your flyer to fill this form</p>
+                <p className="text-sm text-muted-foreground">
+                  {flyerFile ? flyerFile.name : existingFlyer?.title} — our AI reads the flyer and fills in any
+                  blank fields below.
+                </p>
+              </div>
+            </div>
+            <Button type="button" onClick={scanFlyerForInfo} disabled={scanning} className="shrink-0">
+              {scanning ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scanning…</>
+              ) : (
+                <><Sparkles className="mr-2 h-4 w-4" /> Get info</>
+              )}
+            </Button>
+          </Card>
+        )}
+
         <Card className="p-5 space-y-4">
           <h2 className="font-semibold">About you</h2>
           <div className="grid gap-4 sm:grid-cols-2">
