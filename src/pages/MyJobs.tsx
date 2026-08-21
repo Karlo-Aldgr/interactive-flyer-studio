@@ -91,7 +91,16 @@ export default function MyJobs() {
         projects={selectedJobs}
       />
 
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : jobs.length === 0 ? (
+        <Card className="mt-8 p-10 text-center">
+          <p className="text-muted-foreground">You haven't submitted any projects yet.</p>
+          <Button asChild className="mt-4"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit your first project</Link></Button>
+        </Card>
+      ) : (
         <div className="mt-8 space-y-4">
+
           {jobs.map((j) => {
             const status = getUnifiedStatusLabel(j);
             const price = formatPrice(j.price_cents);
