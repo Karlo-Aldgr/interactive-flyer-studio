@@ -253,6 +253,49 @@ export function PagesPanel() {
               onChange={(e) => setPageBackground(activePage.id, e.target.value)}
             />
           </div>
+
+          <div className="space-y-2">
+            <div className="text-[11px] font-medium text-muted-foreground">Background image</div>
+            {activePage.background.image && (
+              <div
+                className="h-16 w-full rounded border border-border bg-cover bg-center"
+                style={{ backgroundImage: `url(${activePage.background.image})` }}
+              />
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 flex-1 text-xs"
+                disabled={uploadingBg}
+                onClick={() => bgFileRef.current?.click()}
+              >
+                {uploadingBg ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                {activePage.background.image ? "Replace" : "Upload image"}
+              </Button>
+              {activePage.background.image && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-xs text-destructive"
+                  onClick={() => setPageBackgroundImage(activePage.id, null)}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+            <input
+              ref={bgFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) uploadBackground(f);
+              }}
+            />
+          </div>
         </div>
       )}
 
