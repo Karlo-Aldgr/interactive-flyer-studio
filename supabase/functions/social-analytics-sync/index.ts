@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       synced.push({ variant_id: variant.id, ok: false, message: result.message, code: result.code });
       continue;
     }
-    const m = result.metrics;
+    const m = result;
     const { error } = await supabase.from("social_post_analytics").insert({
       user_id: variant.user_id,
       post_id: variant.post_id,
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       shares: m.shares ?? null,
       clicks: m.clicks ?? null,
       video_views: m.video_views ?? null,
-      platform_metrics: m.raw ?? {},
+      platform_metrics: m.platform_metrics ?? {},
     });
     synced.push({ variant_id: variant.id, ok: !error, message: error?.message });
   }
