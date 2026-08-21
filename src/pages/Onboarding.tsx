@@ -76,6 +76,9 @@ export default function Onboarding() {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const social = useSocialAccounts();
   const [postingPermission, setPostingPermission] = useState(false);
+  const [existingFlyer, setExistingFlyer] = useState<{ title: string; url: string } | null>(null);
+  const [scanning, setScanning] = useState(false);
+
 
   useEffect(() => {
     if (!user) return;
