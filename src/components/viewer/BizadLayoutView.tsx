@@ -149,7 +149,7 @@ function LayerView({ layer, bizad }: { layer: Layer; bizad: BizadRecord }) {
         alt={(layer.content as any).alt || ""}
         loading="lazy"
         onClick={onClick}
-        style={{ ...base, objectFit: "cover", borderRadius: s.cornerRadius ?? 0 }}
+        style={{ ...base, objectFit: "contain", objectPosition: "center", borderRadius: s.cornerRadius ?? 0 }}
       />
     );
   }

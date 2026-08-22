@@ -150,7 +150,7 @@ function BizadContent({ bizad }: { bizad: BizadRecord }) {
             <img
               src={bizad.flyer_image_url}
               alt={bizad.business_name || "Flyer"}
-              className="aspect-[4/5] w-full object-cover"
+              className="h-auto w-full object-contain"
             />
           </div>
         )}
