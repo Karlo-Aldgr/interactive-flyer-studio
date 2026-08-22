@@ -9,7 +9,11 @@ import { Switch } from "@/components/ui/switch";
 import { ActionEditor } from "./ActionEditor";
 import { CutoutLayerBanner } from "./CutoutLayerBanner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Play, Sparkles } from "lucide-react";
+import { Play, Sparkles, Upload, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { uploadFlyerAsset } from "@/lib/uploadFlyerAsset";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
 
 const INTRO_PRESETS: { value: IntroPreset; label: string }[] = [
