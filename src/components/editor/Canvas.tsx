@@ -477,7 +477,54 @@ export function Canvas() {
           </Button>
         </div>
       )}
+      {selectedLayerIds.length > 1 && !drawMode && (
+        <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 flex-wrap items-center gap-1 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
+          <span className="mr-1 font-medium">{selectedLayerIds.length} selected</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align left" onClick={() => alignLayers(selectedLayerIds, "left")}>
+            <AlignStartVertical className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align horizontal centers" onClick={() => alignLayers(selectedLayerIds, "hcenter")}>
+            <AlignCenterVertical className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align right" onClick={() => alignLayers(selectedLayerIds, "right")}>
+            <AlignEndVertical className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align top" onClick={() => alignLayers(selectedLayerIds, "top")}>
+            <AlignStartHorizontal className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align vertical centers" onClick={() => alignLayers(selectedLayerIds, "vcenter")}>
+            <AlignCenterHorizontal className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align bottom" onClick={() => alignLayers(selectedLayerIds, "bottom")}>
+            <AlignEndHorizontal className="h-3.5 w-3.5" />
+          </Button>
+          <span className="mx-1 h-4 w-px bg-border" />
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Distribute horizontally" disabled={selectedLayerIds.length < 3} onClick={() => distributeLayers(selectedLayerIds, "h")}>
+            <MoveHorizontal className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Distribute vertically" disabled={selectedLayerIds.length < 3} onClick={() => distributeLayers(selectedLayerIds, "v")}>
+            <MoveVertical className="h-3.5 w-3.5" />
+          </Button>
+          <span className="mx-1 h-4 w-px bg-border" />
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Bring to front" onClick={() => orderLayersBulk(selectedLayerIds, "front")}>
+            <ChevronsUp className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Send to back" onClick={() => orderLayersBulk(selectedLayerIds, "back")}>
+            <ChevronsDown className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Duplicate" onClick={() => duplicateLayers(selectedLayerIds)}>
+            <CopyIcon className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Delete" onClick={() => deleteLayers(selectedLayerIds)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Clear selection" onClick={clearSelection}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
       <div className="shadow-elegant" style={containerStyle}>
+
         <div
           style={{
             position: "relative",
