@@ -273,5 +273,14 @@ export function useFlyerData(flyerId: string | undefined) {
     }
   }
 
-  return { loading, saving };
+  async function saveNow() {
+    const st = useEditorStore.getState();
+    if (!st.flyer) return;
+    await save(st.flyer, st.pages);
+    markSaved();
+    toast.success("All changes saved");
+  }
+
+  return { loading, saving, saveNow };
+
 }
