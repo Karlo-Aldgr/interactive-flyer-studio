@@ -296,13 +296,12 @@ export function Canvas() {
 
   useEffect(() => {
     if (!trRef.current) return;
-    if (selectedLayerId && nodeRefs.current[selectedLayerId] && !drawMode) {
-      trRef.current.nodes([nodeRefs.current[selectedLayerId]]);
-    } else {
-      trRef.current.nodes([]);
-    }
+    const ids = selectedLayerIds.length ? selectedLayerIds : selectedLayerId ? [selectedLayerId] : [];
+    const nodes = drawMode ? [] : ids.map((id) => nodeRefs.current[id]).filter(Boolean);
+    trRef.current.nodes(nodes);
     trRef.current.getLayer()?.batchDraw();
-  }, [selectedLayerId, sortedLayers, drawMode]);
+  }, [selectedLayerId, selectedLayerIds, sortedLayers, drawMode]);
+
 
   // Attach transformer to crop rect when in crop mode
   useEffect(() => {
