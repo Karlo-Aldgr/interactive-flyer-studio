@@ -226,8 +226,11 @@ export function ShareDialog({
 
 
         <div className="flex items-start gap-3">
-          <div className="rounded-md bg-white p-2 shadow-sm shrink-0">
+          <div className="relative rounded-md bg-white p-2 shadow-sm shrink-0">
             <QRCodeCanvas id={qrId} value={section.url} size={104} level="M" includeMargin={false} />
+            <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
+              <QRCodeCanvas id={`${qrId}-hd`} value={section.url} size={512} level="M" includeMargin={false} />
+            </div>
           </div>
           <div className="flex flex-1 flex-col gap-2">
             <Input
