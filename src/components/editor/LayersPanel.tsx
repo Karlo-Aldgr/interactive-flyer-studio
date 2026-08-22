@@ -35,12 +35,12 @@ export function LayersPanel() {
           const label = isCutout
             ? (l.content.label || l.content.subjectLabel || "Cutout")
             : (l.content.text || l.content.label || l.content.iconName || l.type);
-          const active = l.id === selectedLayerId;
+          const active = selectedLayerIds.length ? selectedLayerIds.includes(l.id) : l.id === selectedLayerId;
           return (
             <div
               key={l.id}
               className={`group flex items-center gap-2 border-b border-border px-3 py-2 text-sm cursor-pointer ${active ? "bg-primary/10" : "hover:bg-muted/60"}`}
-              onClick={() => selectLayer(l.id)}
+              onClick={(e) => (e.shiftKey || e.ctrlKey || e.metaKey ? toggleLayerSelection(l.id) : selectLayer(l.id))}
             >
               <Icon className={`h-4 w-4 shrink-0 ${isCutout ? "text-primary" : "text-muted-foreground"}`} />
               <span className="flex-1 truncate">{label}</span>
