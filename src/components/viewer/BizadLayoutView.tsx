@@ -352,7 +352,33 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
   const [gallery, setGallery] = useState<LayerAction | null>(null);
   const [carousel, setCarousel] = useState<LayerAction | null>(null);
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
+  const [formAction, setFormAction] = useState<LayerAction | null>(null);
+  const [subscribeAction, setSubscribeAction] = useState<LayerAction | null>(null);
+  const [pollAction, setPollAction] = useState<LayerAction | null>(null);
+  const [appointmentAction, setAppointmentAction] = useState<LayerAction | null>(null);
+  const [newInteraction, setNewInteraction] = useState<LayerAction | null>(null);
+  const [realtorGallery, setRealtorGallery] = useState<LayerAction | null>(null);
+  const [productGrid, setProductGrid] = useState<LayerAction | null>(null);
+  const [airMessages, setAirMessages] = useState<LayerAction | null>(null);
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const flyerId = (bizad as any).flyer_id || null;
+  const sessionId = useMemo(() => {
+    try {
+      const key = "bizad_session_id";
+      let id = localStorage.getItem(key);
+      if (!id) {
+        id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+          ? crypto.randomUUID()
+          : "anon-" + Math.random().toString(36).slice(2);
+        localStorage.setItem(key, id);
+      }
+      return id;
+    } catch {
+      return "anon-" + Math.random().toString(36).slice(2);
+    }
+  }, []);
+
 
   useEffect(() => {
     const el = wrapRef.current;
