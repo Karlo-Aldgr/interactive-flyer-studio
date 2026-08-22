@@ -33,6 +33,12 @@ export function Inspector() {
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
+  const selectedLayerIds = useEditorStore((s) => s.selectedLayerIds);
+  const updateLayersStyle = useEditorStore((s) => s.updateLayersStyle);
+  const alignLayers = useEditorStore((s) => s.alignLayers);
+  const duplicateLayers = useEditorStore((s) => s.duplicateLayers);
+  const deleteLayers = useEditorStore((s) => s.deleteLayers);
+  const clearSelection = useEditorStore((s) => s.clearSelection);
   const updateLayerStyle = useEditorStore((s) => s.updateLayerStyle);
   const updateLayerContent = useEditorStore((s) => s.updateLayerContent);
   const setLayerAction = useEditorStore((s) => s.setLayerAction);
