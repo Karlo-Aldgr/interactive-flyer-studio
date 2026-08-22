@@ -37,11 +37,20 @@ function metaApp(): { appId: string; appSecret: string } | AdapterError {
   return { appId: e[SECRETS[0]], appSecret: e[SECRETS[1]] };
 }
 
-export const FACEBOOK_SCOPES = [
-  "pages_show_list",
-  "pages_manage_posts",
-  "pages_read_engagement",
-];
+/**
+ * Facebook Page permissions requested during OAuth.
+ * `pages_manage_posts` is rejected ("Invalid Scopes") by apps whose use case does not
+ * expose it, so publishing relies on the Page access token returned by /me/accounts
+ * together with `pages_read_engagement`. Override per-app with SOCIAL_FACEBOOK_SCOPES
+ * (comma separated) if the app has advanced access to additional permissions.
+ */
+export const FACEBOOK_SCOPES = (
+  Deno.env.get("SOCIAL_FACEBOOK_SCOPES")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [
+    "pages_show_list",
+    "pages_read_engagement",
+  ]
+);
+
 
 
 /** Shared with the Instagram adapter: exchange the code for a long-lived user token. */
@@ -100,7 +109,7 @@ export const facebookAdapter: SocialPlatformAdapter = {
   requiredSecrets: SECRETS,
   defaultScopes: FACEBOOK_SCOPES,
   approvalNotes:
-    "Meta app must have the Facebook Login product plus advanced access to pages_show_list, pages_manage_posts and pages_read_engagement (App Review) before non-admin users can connect.",
+    "Meta app must have the Facebook Login product plus advanced access to pages_show_list and pages_read_engagement (App Review) before non-admin users can connect.",
   developerConsoleUrl: "https://developers.facebook.com/apps",
 
   startOAuth({ redirectUri, state, scopes }: AuthStartInput) {
