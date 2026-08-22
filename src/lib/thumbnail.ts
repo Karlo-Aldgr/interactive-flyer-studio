@@ -242,6 +242,39 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
+ * True when a captured data URL is a single flat colour (e.g. an all-white
+ * frame captured before the flyer finished rendering). Prevents blank previews
+ * from being saved as the flyer/business-card image.
+ */
+async function isBlankDataUrl(dataUrl: string): Promise<boolean> {
+  try {
+    const img = await loadImage(dataUrl);
+    const S = 32;
+    const c = document.createElement("canvas");
+    c.width = S;
+    c.height = S;
+    const ctx = c.getContext("2d");
+    if (!ctx) return false;
+    ctx.drawImage(img, 0, 0, S, S);
+    const { data } = ctx.getImageData(0, 0, S, S);
+    const [r0, g0, b0] = [data[0], data[1], data[2]];
+    for (let i = 4; i < data.length; i += 4) {
+      if (
+        Math.abs(data[i] - r0) > 6 ||
+        Math.abs(data[i + 1] - g0) > 6 ||
+        Math.abs(data[i + 2] - b0) > 6
+      ) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+
+/**
  * Render the current first-page Konva stage, upload to Supabase storage,
  * write the CLEAN public URL (no cache-buster) to flyers.thumbnail_url,
  * and return a cache-busted URL for immediate UI display.
