@@ -12,7 +12,7 @@ import { useCanEdit } from "@/hooks/useCanEdit";
 export default function Editor() {
   const { flyerId } = useParams();
   const { canEdit, loading: accessLoading } = useCanEdit();
-  const { loading, saving } = useFlyerData(flyerId);
+  const { loading, saving, saveNow } = useFlyerData(flyerId);
 
   if (accessLoading) {
     return (
@@ -36,7 +36,7 @@ export default function Editor() {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <TopBar saving={saving} />
+      <TopBar saving={saving} onSave={saveNow} />
       <div className="flex flex-1 overflow-hidden">
         <Toolbar />
         <aside className="hidden md:flex w-60 flex-col border-r border-border bg-card overflow-y-auto">
