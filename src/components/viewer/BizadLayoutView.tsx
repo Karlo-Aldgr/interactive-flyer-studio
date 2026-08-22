@@ -172,6 +172,25 @@ function LayerView({
     );
   }
 
+  if (layer.type === "video") {
+    const c = layer.content as any;
+    return (
+      <video
+        src={c.src || c.videoUrl}
+        poster={c.poster}
+        autoPlay={c.autoplay !== false}
+        loop={c.loop !== false}
+        muted={c.muted !== false}
+        playsInline
+        controls={!!c.controls}
+        onClick={onClick}
+        style={{ ...base, objectFit: "contain", borderRadius: s.cornerRadius ?? 0 }}
+      />
+    );
+  }
+
+
+
   if (layer.type === "text") {
     return (
       <div
