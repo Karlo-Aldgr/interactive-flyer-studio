@@ -400,6 +400,15 @@ export function TopBar({ saving }: Props) {
     }
   }
 
+  /**
+   * Pages that carry their own size (digital business card, landing/menu pages)
+   * must be resized page-by-page — the flyer-level setting does not affect them.
+   */
+  function applySize(w: number, h: number, resizeMode: ResizeMode) {
+    if (activePage && activePageHasOwnSize) setPageSize(activePage.id, w, h, resizeMode);
+    else setCanvasSize(w, h, resizeMode);
+  }
+
   function applyResize() {
     if (mode === "fit") {
       const pages = useEditorStore.getState().pages;
