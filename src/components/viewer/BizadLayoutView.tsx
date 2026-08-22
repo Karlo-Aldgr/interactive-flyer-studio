@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
+import { toast } from "sonner";
 import type { IntroPreset, Layer, LayerAction, PageIntro } from "@/types/flyer";
 import type { BizadAudioSettings } from "@/lib/bizadPage";
 import type { BizadRecord } from "@/lib/bizad";
 import { downloadVCard } from "@/lib/bizad";
+import { runAddToCalendar } from "@/lib/calendarHelpers";
+import CarouselDialog from "@/components/viewer/CarouselDialog";
+
 
 export type BizadLayout = {
   width: number;
@@ -103,31 +108,32 @@ export function isBizadLayout(v: unknown): v is BizadLayout {
   return !!l && Array.isArray(l.layers) && l.layers.length > 0 && !!l.width && !!l.height;
 }
 
-function runAction(action: LayerAction | null | undefined, bizad: BizadRecord) {
-  if (!action) return;
-  const p = action.payload || {};
-  switch (action.type) {
-    case "call":
-      if (p.phone) window.location.href = `tel:${p.phone}`;
-      break;
-    case "sms":
-      if (p.phone) window.location.href = `sms:${p.phone}`;
-      break;
-    case "video":
-      if (p.videoUrl) window.open(p.videoUrl, "_blank", "noopener");
-      break;
-    case "open_url":
-      if (p.url) {
-        if (p.url.startsWith("mailto:") || p.url.startsWith("tel:")) window.location.href = p.url;
-        else window.open(p.url, "_blank", "noopener");
-      }
-      break;
-    default:
-      downloadVCard(bizad);
+function buildMapLink(p: LayerAction["payload"]) {
+  const { mapAddress, mapLat, mapLng, mapProvider } = p;
+  const isApple =
+    mapProvider === "apple"
+      ? true
+      : mapProvider === "google"
+        ? false
+        : /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+  const hasCoords = typeof mapLat === "number" && typeof mapLng === "number";
+  if (isApple) {
+    if (hasCoords) return `https://maps.apple.com/?ll=${mapLat},${mapLng}${mapAddress ? `&q=${encodeURIComponent(mapAddress)}` : ""}`;
+    if (mapAddress) return `https://maps.apple.com/?q=${encodeURIComponent(mapAddress)}`;
+  } else {
+    if (hasCoords) return `https://www.google.com/maps/search/?api=1&query=${mapLat},${mapLng}`;
+    if (mapAddress) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapAddress)}`;
   }
+  return "";
 }
 
-function LayerView({ layer, bizad }: { layer: Layer; bizad: BizadRecord }) {
+function LayerView({
+  layer,
+  onAction,
+}: {
+  layer: Layer;
+  onAction: (a: LayerAction) => void;
+}) {
   const s = layer.style || {};
   const clickable = !!layer.action;
   const base: React.CSSProperties = {
@@ -140,7 +146,8 @@ function LayerView({ layer, bizad }: { layer: Layer; bizad: BizadRecord }) {
     opacity: s.opacity ?? 1,
     cursor: clickable ? "pointer" : undefined,
   };
-  const onClick = clickable ? () => runAction(layer.action, bizad) : undefined;
+  const onClick = clickable ? () => onAction(layer.action as LayerAction) : undefined;
+
 
   if (layer.type === "image") {
     return (
@@ -202,9 +209,41 @@ function LayerView({ layer, bizad }: { layer: Layer; bizad: BizadRecord }) {
   return <div onClick={onClick} style={{ ...base, background: "transparent" }} />;
 }
 
+function Overlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-background p-4 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="absolute right-2 top-2 rounded-full bg-muted p-1.5 text-muted-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad: BizadRecord }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [popup, setPopup] = useState<LayerAction | null>(null);
+  const [video, setVideo] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<LayerAction | null>(null);
+  const [carousel, setCarousel] = useState<LayerAction | null>(null);
+  const [coupon, setCoupon] = useState<LayerAction | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -216,7 +255,84 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
     return () => ro.disconnect();
   }, [layout.width]);
 
+  const runAction = useCallback(
+    (a: LayerAction) => {
+      if (!a) return;
+      const p = a.payload || {};
+      switch (a.type) {
+        case "open_url":
+          if (p.url) {
+            if (/^(mailto:|tel:|sms:)/.test(p.url)) window.location.href = p.url;
+            else window.open(p.url, p.newTab === false ? "_self" : "_blank", "noopener,noreferrer");
+          }
+          break;
+        case "call":
+          if (p.phone) window.location.href = `tel:${p.phone}`;
+          break;
+        case "sms":
+          if (p.phone)
+            window.location.href = `sms:${p.phone}${p.message ? `?body=${encodeURIComponent(p.message)}` : ""}`;
+          break;
+        case "video":
+          if (p.videoUrl) setVideo(p.videoUrl);
+          break;
+        case "audio": {
+          const url = p.audioUrl;
+          if (!url) break;
+          if (audioRef.current && !audioRef.current.paused && audioRef.current.src === url) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            break;
+          }
+          audioRef.current?.pause();
+          const el = new Audio(url);
+          el.loop = !!p.audioLoop;
+          el.play().catch(() => toast.error("Could not play audio"));
+          audioRef.current = el;
+          break;
+        }
+        case "popup":
+        case "buy_ticket":
+        case "buy_product":
+          setPopup(a);
+          break;
+        case "gallery":
+          setGallery(a);
+          break;
+        case "carousel":
+          setCarousel(a);
+          break;
+        case "coupon":
+          setCoupon(a);
+          break;
+        case "add_to_calendar":
+          runAddToCalendar(p);
+          break;
+        case "map": {
+          const url = buildMapLink(p);
+          if (url) window.open(url, "_blank", "noopener,noreferrer");
+          break;
+        }
+        case "checkout":
+          if (p.checkoutUrl) window.open(p.checkoutUrl, "_blank", "noopener,noreferrer");
+          break;
+        default: {
+          // Interactions that need the full flyer viewer open the live flyer instead,
+          // so a tap never dead-ends. Contact-style buttons still save the vCard.
+          const label = (p.title || "").toLowerCase();
+          if (label.includes("contact")) downloadVCard(bizad);
+          else if (bizad.gallery_url) window.open(bizad.gallery_url, "_blank", "noopener,noreferrer");
+          break;
+        }
+      }
+    },
+    [bizad],
+  );
+
+  useEffect(() => () => audioRef.current?.pause(), []);
+
   const ordered = [...layout.layers].sort((a, b) => a.z_index - b.z_index);
+  const galleryImages = gallery?.payload.galleryImages || [];
 
   return (
     <div
@@ -242,12 +358,111 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
           >
             {ordered.map((l, i) => (
               <IntroWrap key={l.id} intro={l.intro} index={i} pageIntro={layout.intro}>
-                <LayerView layer={l} bizad={bizad} />
+                <LayerView layer={l} onAction={runAction} />
               </IntroWrap>
             ))}
           </div>
         </div>
       </div>
+
+      {video && (
+        <Overlay onClose={() => setVideo(null)}>
+          {/youtube\.com|youtu\.be|vimeo\.com/.test(video) ? (
+            <iframe
+              src={
+                video.includes("watch?v=")
+                  ? video.replace("watch?v=", "embed/")
+                  : video.replace("youtu.be/", "www.youtube.com/embed/")
+              }
+              title="Video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
+              allowFullScreen
+              className="aspect-video w-full rounded-lg"
+            />
+          ) : (
+            <video src={video} controls autoPlay playsInline className="w-full rounded-lg" />
+          )}
+        </Overlay>
+      )}
+
+      {popup && (
+        <Overlay onClose={() => setPopup(null)}>
+          <div style={{ color: popup.payload.popupTextColor || undefined }}>
+            {(popup.payload.mediaUrl || popup.payload.ticketImageUrl) && (
+              <img
+                src={popup.payload.mediaUrl || popup.payload.ticketImageUrl}
+                alt={popup.payload.title || "Details"}
+                className="mb-3 w-full rounded-lg object-contain"
+              />
+            )}
+            {popup.payload.title && <h2 className="mb-1 text-lg font-semibold">{popup.payload.title}</h2>}
+            {popup.payload.body && <p className="whitespace-pre-wrap text-sm">{popup.payload.body}</p>}
+            <div className="mt-3 flex flex-col gap-2">
+              {(popup.payload.buttons || []).map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  style={{ background: b.bgColor || undefined, color: b.textColor || undefined }}
+                  onClick={() => {
+                    setPopup(null);
+                    runAction(b.action);
+                  }}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Overlay>
+      )}
+
+      {gallery && (
+        <Overlay onClose={() => setGallery(null)}>
+          {gallery.payload.galleryTitle && (
+            <h2 className="mb-3 text-lg font-semibold">{gallery.payload.galleryTitle}</h2>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            {galleryImages.map((img) => (
+              <button
+                key={img.id}
+                type="button"
+                className="overflow-hidden rounded-lg"
+                onClick={() => (img.action ? runAction(img.action) : window.open(img.url, "_blank", "noopener"))}
+              >
+                <img src={img.url} alt={img.caption || ""} className="h-32 w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </Overlay>
+      )}
+
+      {coupon && (
+        <Overlay onClose={() => setCoupon(null)}>
+          {coupon.payload.couponImageUrl && (
+            <img src={coupon.payload.couponImageUrl} alt="Coupon" className="mb-3 w-full rounded-lg" />
+          )}
+          {coupon.payload.title && <h2 className="mb-1 text-lg font-semibold">{coupon.payload.title}</h2>}
+          {coupon.payload.body && <p className="whitespace-pre-wrap text-sm">{coupon.payload.body}</p>}
+          {coupon.payload.couponCode && (
+            <div className="mt-3 rounded-lg border border-dashed p-3 text-center text-lg font-bold tracking-widest">
+              {coupon.payload.couponCode}
+            </div>
+          )}
+          {coupon.payload.couponRedeemUrl && (
+            <a
+              href={coupon.payload.couponRedeemUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 block rounded-lg bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground"
+            >
+              Redeem
+            </a>
+          )}
+        </Overlay>
+      )}
+
+      <CarouselDialog action={carousel} onClose={() => setCarousel(null)} onRunAction={runAction} />
     </div>
   );
 }
