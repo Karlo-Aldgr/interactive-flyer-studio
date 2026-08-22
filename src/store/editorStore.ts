@@ -100,6 +100,34 @@ interface EditorState {
   addShapeLayer: (variant: ShapeVariant) => void;
   addButtonLayer: (presetId: ButtonPresetId) => void;
   addImageLayer: (src: string, w: number, h: number) => void;
+  addVideoLayer: (src: string, w?: number, h?: number) => void;
+  addVideoLayer: (src, w, h) => {
+    const s = get();
+    const pageId = s.selectedPageId;
+    if (!pageId) return;
+    const page = s.pages.find((p) => p.id === pageId);
+    if (!page) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const max = 480;
+    const ratio = w && h ? w / h : 16 / 9;
+    const width = Math.min(max, w || max);
+    const height = width / ratio;
+    const base = defaultLayer("video", pageId, page.layers.length);
+    const layer: Layer = {
+      ...base,
+      size: { width, height },
+      content: { ...base.content, videoUrl: src },
+    };
+    set({
+      pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
+      selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
   addHotspotLayer: (rect: { x: number; y: number; width: number; height: number }, shape?: "rect" | "ellipse") => void;
   addExtractedLayer: (args: {
     src: string;
