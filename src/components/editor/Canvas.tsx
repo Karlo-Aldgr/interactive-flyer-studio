@@ -167,6 +167,67 @@ export function Canvas() {
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
   const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
   const [hoveredDetectionId, setHoveredDetectionId] = useState<string | null>(null);
+  // Rubber-band (marquee) selection state, in canvas coordinates.
+  const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number; additive: boolean } | null>(null);
+
+  const selectionRef = useRef<string[]>(selectedLayerIds);
+  selectionRef.current = selectedLayerIds;
+  // Group-drag bookkeeping: origin of the dragged node + starting positions of the rest.
+  const dragOrigin = useRef<{ id: string; x: number; y: number } | null>(null);
+  const dragStartPositions = useRef<Record<string, { x: number; y: number }>>({});
+  // Buffers per-node changes during a multi-select drag/transform into one history entry.
+  const patchBuffer = useRef<Record<string, any>>({});
+  const flushTimer = useRef<any>(null);
+
+  function handleLayerChange(id: string, patch: any) {
+    const sel = selectionRef.current;
+    if (sel.length > 1 && sel.includes(id)) {
+      patchBuffer.current[id] = { ...(patchBuffer.current[id] || {}), ...patch };
+      clearTimeout(flushTimer.current);
+      flushTimer.current = setTimeout(() => {
+        const buf = patchBuffer.current;
+        patchBuffer.current = {};
+        applyLayerPatches(buf);
+      }, 0);
+      return;
+    }
+    updateLayer(id, patch);
+  }
+
+  function handleDragStartNode(id: string, node: any) {
+    const sel = selectionRef.current;
+    if (sel.length < 2 || !sel.includes(id)) return;
+    dragOrigin.current = { id, x: node.x(), y: node.y() };
+    const starts: Record<string, { x: number; y: number }> = {};
+    for (const otherId of sel) {
+      const n = nodeRefs.current[otherId];
+      if (n && otherId !== id) starts[otherId] = { x: n.x(), y: n.y() };
+    }
+    dragStartPositions.current = starts;
+  }
+
+  function handleDragMoveNode(id: string, node: any) {
+    const origin = dragOrigin.current;
+    if (!origin || origin.id !== id) return;
+    const dx = node.x() - origin.x;
+    const dy = node.y() - origin.y;
+    for (const [otherId, start] of Object.entries(dragStartPositions.current)) {
+      const n = nodeRefs.current[otherId];
+      if (n) n.position({ x: start.x + dx, y: start.y + dy });
+    }
+    node.getLayer()?.batchDraw();
+  }
+
+  function handleLayerClick(id: string, evt: any) {
+    const native = evt?.evt;
+    if (native && (native.shiftKey || native.ctrlKey || native.metaKey)) {
+      toggleLayerSelection(id);
+      return;
+    }
+    if (selectionRef.current.length > 1 && selectionRef.current.includes(id)) return;
+    selectLayer(id);
+  }
+
 
   const page = pages.find((p) => p.id === selectedPageId);
   const W = page?.background?.size?.width ?? flyer?.settings.width ?? 900;
