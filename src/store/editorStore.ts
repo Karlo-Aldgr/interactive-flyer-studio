@@ -229,14 +229,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (mode === "scale") {
       const sx = w / oldW;
       const sy = h / oldH;
-      newPages = s.pages.map((p) => ({
-        ...p,
-        layers: p.layers.map((l) => ({
-          ...l,
-          position: { x: l.position.x * sx, y: l.position.y * sy },
-          size: { width: l.size.width * sx, height: l.size.height * sy },
-        })),
-      }));
+      // Pages that carry their own canvas size (digital business card, landing,
+      // scanned menu) are sized independently of the flyer — leave them alone.
+      newPages = s.pages.map((p) =>
+        p.background?.size
+          ? p
+          : {
+              ...p,
+              layers: p.layers.map((l) => ({
+                ...l,
+                position: { x: l.position.x * sx, y: l.position.y * sy },
+                size: { width: l.size.width * sx, height: l.size.height * sy },
+              })),
+            },
+      );
     }
 
     set({
@@ -252,7 +258,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const s = get();
     if (!s.flyer) return;
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
-    const newPages = s.pages.map((p) => ({
+    const newPages = s.pages.map((p) => p.background?.size ? p : ({
       ...p,
       layers: p.layers
         .map((l) => ({
