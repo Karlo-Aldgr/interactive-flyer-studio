@@ -300,10 +300,17 @@ export async function generateAndUploadThumbnail(
   }
   if (!raw) throw new Error("Canvas returned an empty image.");
 
+  if (await isBlankDataUrl(raw)) {
+    throw new Error(
+      "The preview came out blank — open the flyer page you want as the preview, wait for it to finish loading, then try again."
+    );
+  }
+
   // Store the canonical `thumbnail_url` as the same 1200×630 social card that
   // Facebook requires. This makes the Worker fallback safe even when a newer
   // per-page/direct variant has not been generated yet.
   const blob = await composeSocialCard(raw, flyerW, flyerH, background);
   return uploadThumbnailBlob(blob, flyerId);
+
 }
 
