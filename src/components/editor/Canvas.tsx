@@ -675,10 +675,12 @@ export function Canvas() {
                   >
                     <LayerRenderer
                       layer={l}
-                      isSelected={selectedLayerId === l.id}
+                      isSelected={selectedLayerIds.includes(l.id) || selectedLayerId === l.id}
                       draggable={!drawMode}
-                      onSelect={() => !drawMode && selectLayer(l.id)}
-                      onChange={(patch) => updateLayer(l.id, patch)}
+                      onSelect={(evt) => !drawMode && handleLayerClick(l.id, evt)}
+                      onChange={(patch) => handleLayerChange(l.id, patch)}
+                      onDragStartNode={handleDragStartNode}
+                      onDragMoveNode={handleDragMoveNode}
                       onHoverStart={() => !drawMode && setHoveredLayerId(l.id)}
                       onHoverEnd={() => setHoveredLayerId((id) => (id === l.id ? null : id))}
                       refSetter={(node) => {
