@@ -670,6 +670,53 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
       )}
 
       <CarouselDialog action={carousel} onClose={() => setCarousel(null)} onRunAction={runAction} />
+
+      <BizadFormDialog action={formAction} flyerId={flyerId} onClose={() => setFormAction(null)} />
+      <BizadSubscribeDialog action={subscribeAction} flyerId={flyerId} onClose={() => setSubscribeAction(null)} />
+      <BizadPollDialog action={pollAction} flyerId={flyerId} onClose={() => setPollAction(null)} />
+      <BizadRealtorGalleryDialog action={realtorGallery} onClose={() => setRealtorGallery(null)} />
+      <BizadProductGridDialog
+        action={productGrid}
+        onClose={() => setProductGrid(null)}
+        onBuy={(product, size, qty) => {
+          setProductGrid(null);
+          const url = product.paymentUrl || product.buyUrl;
+          if (url) {
+            window.open(url, "_blank", "noopener,noreferrer");
+            return;
+          }
+          setPopup({
+            id: `pg-${product.id}`,
+            type: "buy_product",
+            payload: {
+              title: product.name,
+              body: [size ? `Size: ${size}` : "", `Quantity: ${qty}`, product.description || ""]
+                .filter(Boolean)
+                .join("\n"),
+              mediaUrl: product.imageUrl,
+            },
+          } as unknown as LayerAction);
+        }}
+      />
+      <BizadAirMessages action={airMessages} onClose={() => setAirMessages(null)} />
+
+      {appointmentAction && flyerId && (
+        <AppointmentBookingDialog
+          flyerId={flyerId}
+          layerId={null}
+          action={appointmentAction}
+          open
+          onClose={() => setAppointmentAction(null)}
+        />
+      )}
+
+      <NewInteractionDialogs
+        action={newInteraction}
+        flyerId={flyerId}
+        sessionId={sessionId}
+        onClose={() => setNewInteraction(null)}
+      />
     </div>
+
   );
 }
