@@ -438,8 +438,11 @@ export function ShareDialog({
                           )}
                         </div>
                         <div className="flex items-start gap-3">
-                          <div className="rounded-lg bg-white p-2 shadow-sm shrink-0">
+                          <div className="relative rounded-lg bg-white p-2 shadow-sm shrink-0">
                             <QRCodeCanvas id={canvasId} value={l.url} size={96} level="M" includeMargin={false} />
+                            <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
+                              <QRCodeCanvas id={`${canvasId}-hd`} value={l.url} size={512} level="M" includeMargin={false} />
+                            </div>
                           </div>
                           <div className="flex flex-1 flex-col gap-2">
                             <Input
