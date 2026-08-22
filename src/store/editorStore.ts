@@ -22,6 +22,8 @@ interface EditorState {
   pages: FlyerPage[];
   selectedPageId: string | null;
   selectedLayerId: string | null;
+  /** Full multi-selection. Always contains selectedLayerId as its first entry when non-empty. */
+  selectedLayerIds: string[];
   zoom: number;
   past: Snapshot[];
   future: Snapshot[];
@@ -45,6 +47,18 @@ interface EditorState {
   setZoom: (z: number) => void;
   selectPage: (id: string) => void;
   selectLayer: (id: string | null) => void;
+  selectLayers: (ids: string[]) => void;
+  toggleLayerSelection: (id: string) => void;
+  clearSelection: () => void;
+  selectAllLayers: () => void;
+  applyLayerPatches: (patches: Record<string, Partial<Layer>>) => void;
+  updateLayersStyle: (ids: string[], patch: Partial<LayerStyle>) => void;
+  moveLayersBy: (ids: string[], dx: number, dy: number) => void;
+  deleteLayers: (ids: string[]) => void;
+  duplicateLayers: (ids: string[]) => void;
+  orderLayersBulk: (ids: string[], direction: "front" | "forward" | "backward" | "back") => void;
+  alignLayers: (ids: string[], mode: "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom") => void;
+  distributeLayers: (ids: string[], axis: "h" | "v") => void;
   setDrawMode: (mode: DrawMode) => void;
   startObjectExtract: (sourceLayerId: string) => void;
   startAutoSubjectExtract: (sourceLayerId: string, detections: SubjectDetection[]) => void;
@@ -129,6 +143,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   pages: [],
   selectedPageId: null,
   selectedLayerId: null,
+  selectedLayerIds: [],
   zoom: 0.6,
   past: [],
   future: [],
@@ -152,6 +167,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pages,
       selectedPageId: pages[0]?.id ?? null,
       selectedLayerId: null,
+      selectedLayerIds: [],
       past: [],
       future: [],
       dirty: false,
@@ -162,8 +178,234 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setZoom: (z) => set({ zoom: Math.max(0.1, Math.min(2, z)) }),
 
-  selectPage: (id) => set({ selectedPageId: id, selectedLayerId: null }),
-  selectLayer: (id) => set({ selectedLayerId: id }),
+  selectPage: (id) => set({ selectedPageId: id, selectedLayerId: null, selectedLayerIds: [] }),
+  selectLayer: (id) => set({ selectedLayerId: id, selectedLayerIds: id ? [id] : [] }),
+
+  selectLayers: (ids) => set({ selectedLayerIds: ids, selectedLayerId: ids[0] ?? null }),
+
+  toggleLayerSelection: (id) => {
+    const s = get();
+    const has = s.selectedLayerIds.includes(id);
+    const next = has ? s.selectedLayerIds.filter((x) => x !== id) : [...s.selectedLayerIds, id];
+    set({ selectedLayerIds: next, selectedLayerId: next[0] ?? null });
+  },
+
+  clearSelection: () => set({ selectedLayerIds: [], selectedLayerId: null }),
+
+  selectAllLayers: () => {
+    const s = get();
+    const page = s.pages.find((p) => p.id === s.selectedPageId);
+    const ids = page ? page.layers.map((l) => l.id) : [];
+    set({ selectedLayerIds: ids, selectedLayerId: ids[0] ?? null });
+  },
+
+  /** Apply a patch per layer id in one history entry (used for group drag/transform). */
+  applyLayerPatches: (patches) => {
+    const s = get();
+    const ids = Object.keys(patches);
+    if (!ids.length) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => ({
+        ...p,
+        layers: p.layers.map((l) => (patches[l.id] ? { ...l, ...patches[l.id] } : l)),
+      })),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  updateLayersStyle: (ids, patch) => {
+    const s = get();
+    if (!ids.length) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => ({
+        ...p,
+        layers: p.layers.map((l) => (ids.includes(l.id) ? { ...l, style: { ...l.style, ...patch } } : l)),
+      })),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  moveLayersBy: (ids, dx, dy) => {
+    const s = get();
+    if (!ids.length || (dx === 0 && dy === 0)) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => ({
+        ...p,
+        layers: p.layers.map((l) =>
+          ids.includes(l.id)
+            ? { ...l, position: { x: l.position.x + dx, y: l.position.y + dy } }
+            : l
+        ),
+      })),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  deleteLayers: (ids) => {
+    const s = get();
+    if (!ids.length) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => ({ ...p, layers: p.layers.filter((l) => !ids.includes(l.id)) })),
+      selectedLayerId: null,
+      selectedLayerIds: [],
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  duplicateLayers: (ids) => {
+    const s = get();
+    if (!ids.length) return;
+    const page = s.pages.find((p) => p.id === s.selectedPageId);
+    if (!page) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const source = page.layers.filter((l) => ids.includes(l.id));
+    let z = page.layers.reduce((m, l) => Math.max(m, l.z_index), 0);
+    const clones: Layer[] = source.map((l) => ({
+      ...JSON.parse(JSON.stringify(l)),
+      id: uid(),
+      z_index: ++z,
+      position: { x: l.position.x + 16, y: l.position.y + 16 },
+      action: l.action ? { ...JSON.parse(JSON.stringify(l.action)), id: ensureUuid(undefined) } : l.action,
+    }));
+    set({
+      pages: s.pages.map((p) => (p.id === page.id ? { ...p, layers: [...p.layers, ...clones] } : p)),
+      selectedLayerIds: clones.map((c) => c.id),
+      selectedLayerId: clones[0]?.id ?? null,
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  orderLayersBulk: (ids, direction) => {
+    const s = get();
+    if (!ids.length) return;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) => {
+        if (!p.layers.some((l) => ids.includes(l.id))) return p;
+        let sorted = orderLayersByZ(p.layers);
+        if (direction === "front") {
+          const moving = sorted.filter((l) => ids.includes(l.id));
+          sorted = [...sorted.filter((l) => !ids.includes(l.id)), ...moving];
+        } else if (direction === "back") {
+          const moving = sorted.filter((l) => ids.includes(l.id));
+          sorted = [...moving, ...sorted.filter((l) => !ids.includes(l.id))];
+        } else if (direction === "forward") {
+          for (let i = sorted.length - 2; i >= 0; i--) {
+            if (ids.includes(sorted[i].id) && !ids.includes(sorted[i + 1].id)) {
+              [sorted[i], sorted[i + 1]] = [sorted[i + 1], sorted[i]];
+            }
+          }
+        } else {
+          for (let i = 1; i < sorted.length; i++) {
+            if (ids.includes(sorted[i].id) && !ids.includes(sorted[i - 1].id)) {
+              [sorted[i], sorted[i - 1]] = [sorted[i - 1], sorted[i]];
+            }
+          }
+        }
+        return { ...p, layers: resequenceLayers(sorted) };
+      }),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  alignLayers: (ids, mode) => {
+    const s = get();
+    if (ids.length < 2) return;
+    const page = s.pages.find((p) => p.id === s.selectedPageId);
+    if (!page) return;
+    const target = page.layers.filter((l) => ids.includes(l.id));
+    if (target.length < 2) return;
+    const minX = Math.min(...target.map((l) => l.position.x));
+    const maxX = Math.max(...target.map((l) => l.position.x + l.size.width));
+    const minY = Math.min(...target.map((l) => l.position.y));
+    const maxY = Math.max(...target.map((l) => l.position.y + l.size.height));
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) =>
+        p.id !== page.id
+          ? p
+          : {
+              ...p,
+              layers: p.layers.map((l) => {
+                if (!ids.includes(l.id)) return l;
+                const pos = { ...l.position };
+                if (mode === "left") pos.x = minX;
+                if (mode === "right") pos.x = maxX - l.size.width;
+                if (mode === "hcenter") pos.x = (minX + maxX) / 2 - l.size.width / 2;
+                if (mode === "top") pos.y = minY;
+                if (mode === "bottom") pos.y = maxY - l.size.height;
+                if (mode === "vcenter") pos.y = (minY + maxY) / 2 - l.size.height / 2;
+                return { ...l, position: pos };
+              }),
+            }
+      ),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+  distributeLayers: (ids, axis) => {
+    const s = get();
+    if (ids.length < 3) return;
+    const page = s.pages.find((p) => p.id === s.selectedPageId);
+    if (!page) return;
+    const target = page.layers
+      .filter((l) => ids.includes(l.id))
+      .sort((a, b) => (axis === "h" ? a.position.x - b.position.x : a.position.y - b.position.y));
+    if (target.length < 3) return;
+    const first = target[0];
+    const last = target[target.length - 1];
+    const startEdge = axis === "h" ? first.position.x + first.size.width : first.position.y + first.size.height;
+    const endEdge = axis === "h" ? last.position.x : last.position.y;
+    const inner = target.slice(1, -1);
+    const totalInner = inner.reduce((sum, l) => sum + (axis === "h" ? l.size.width : l.size.height), 0);
+    const gap = (endEdge - startEdge - totalInner) / (inner.length + 1);
+    const positions = new Map<string, number>();
+    let cursor = startEdge + gap;
+    for (const l of inner) {
+      positions.set(l.id, cursor);
+      cursor += (axis === "h" ? l.size.width : l.size.height) + gap;
+    }
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) =>
+        p.id !== page.id
+          ? p
+          : {
+              ...p,
+              layers: p.layers.map((l) => {
+                const v = positions.get(l.id);
+                if (v === undefined) return l;
+                return {
+                  ...l,
+                  position: axis === "h" ? { ...l.position, x: v } : { ...l.position, y: v },
+                };
+              }),
+            }
+      ),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
   setDrawMode: (mode) => {
     const keepExtract = mode === "extract-rect" || mode === "extract-auto";
     set({
@@ -178,6 +420,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       subjectDetections: [],
       drawMode: "extract-rect",
       selectedLayerId: null,
+      selectedLayerIds: [],
       previewAction: null,
     }),
   startAutoSubjectExtract: (sourceLayerId, detections) =>
@@ -186,6 +429,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       subjectDetections: detections,
       drawMode: "extract-auto",
       selectedLayerId: null,
+      selectedLayerIds: [],
       previewAction: null,
     }),
   markSubjectExtracted: (detectionId) =>
@@ -215,7 +459,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ extractSourceLayerId: null, subjectDetections: [], drawMode: null }),
   toggleHitboxes: () => set((s) => ({ showHitboxes: !s.showHitboxes })),
   setDeviceFrame: (f) => set({ deviceFrame: f }),
-  startCrop: (size) => set({ pendingCrop: size, drawMode: "crop", selectedLayerId: null }),
+  startCrop: (size) => set({ pendingCrop: size, drawMode: "crop", selectedLayerId: null, selectedLayerIds: [] }),
   cancelCrop: () => set({ pendingCrop: null, drawMode: null }),
 
   setCanvasSize: (w, h, mode) => {
@@ -456,6 +700,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pages: [...s.pages, page],
       selectedPageId: page.id,
       selectedLayerId: null,
+      selectedLayerIds: [],
       past,
       future: [],
       dirty: true,
@@ -486,6 +731,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pages: filtered,
       selectedPageId: filtered[0].id,
       selectedLayerId: null,
+      selectedLayerIds: [],
       past,
       future: [],
       dirty: true,
@@ -609,6 +855,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
       past,
       future: [],
       dirty: true,
@@ -655,6 +902,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
       past,
       future: [],
       dirty: true,
@@ -680,6 +928,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
       past,
       future: [],
       dirty: true,
@@ -703,6 +952,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
       drawMode: null,
       past,
       future: [],
@@ -734,6 +984,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
       extractSourceLayerId: stayInAutoMode ? sourceLayerId : null,
       subjectDetections: stayInAutoMode ? s.subjectDetections : [],
       drawMode: stayInAutoMode ? "extract-auto" : null,

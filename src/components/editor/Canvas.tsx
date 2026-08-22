@@ -6,7 +6,12 @@ import { LayerRenderer } from "./LayerRenderer";
 import { HighlightOverlay } from "./HighlightOverlay";
 import { IntroAnimatedGroup, resolveIntro } from "./IntroAnimatedGroup";
 import { Button } from "@/components/ui/button";
-import { X, Check, Loader2 } from "lucide-react";
+import {
+  X, Check, Loader2, Trash2, Copy as CopyIcon, ChevronsUp, ChevronsDown,
+  AlignStartVertical, AlignCenterVertical, AlignEndVertical,
+  AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
+  MoveHorizontal, MoveVertical,
+} from "lucide-react";
 import type { AirMessageBubble, Layer as FlyerLayer } from "@/types/flyer";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { useObjectExtract } from "@/hooks/useObjectExtract";
@@ -118,7 +123,19 @@ export function Canvas() {
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
+  const selectedLayerIds = useEditorStore((s) => s.selectedLayerIds);
   const selectLayer = useEditorStore((s) => s.selectLayer);
+  const selectLayers = useEditorStore((s) => s.selectLayers);
+  const toggleLayerSelection = useEditorStore((s) => s.toggleLayerSelection);
+  const clearSelection = useEditorStore((s) => s.clearSelection);
+  const selectAllLayers = useEditorStore((s) => s.selectAllLayers);
+  const applyLayerPatches = useEditorStore((s) => s.applyLayerPatches);
+  const moveLayersBy = useEditorStore((s) => s.moveLayersBy);
+  const deleteLayers = useEditorStore((s) => s.deleteLayers);
+  const duplicateLayers = useEditorStore((s) => s.duplicateLayers);
+  const alignLayers = useEditorStore((s) => s.alignLayers);
+  const distributeLayers = useEditorStore((s) => s.distributeLayers);
+  const orderLayersBulk = useEditorStore((s) => s.orderLayersBulk);
   const updateLayer = useEditorStore((s) => s.updateLayer);
   const deleteLayer = useEditorStore((s) => s.deleteLayer);
   const zoom = useEditorStore((s) => s.zoom);
@@ -155,6 +172,82 @@ export function Canvas() {
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
   const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
   const [hoveredDetectionId, setHoveredDetectionId] = useState<string | null>(null);
+  // Rubber-band (marquee) selection state, in canvas coordinates.
+  const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number; additive: boolean } | null>(null);
+
+  const selectionRef = useRef<string[]>(selectedLayerIds);
+  selectionRef.current = selectedLayerIds;
+  // Group-drag bookkeeping: origin of the dragged node + starting positions of the rest.
+  const dragOrigin = useRef<{ id: string; x: number; y: number } | null>(null);
+  const dragStartPositions = useRef<Record<string, { x: number; y: number }>>({});
+  // Buffers per-node changes during a multi-select drag/transform into one history entry.
+  const patchBuffer = useRef<Record<string, any>>({});
+  const flushTimer = useRef<any>(null);
+
+  function handleLayerChange(id: string, patch: any) {
+    const sel = selectionRef.current;
+    if (sel.length > 1 && sel.includes(id)) {
+      patchBuffer.current[id] = { ...(patchBuffer.current[id] || {}), ...patch };
+      // End of a group drag: carry the same delta over to the other selected layers.
+      const origin = dragOrigin.current;
+      if (origin && origin.id === id && patch.position) {
+        const dx = patch.position.x - origin.x;
+        const dy = patch.position.y - origin.y;
+        for (const [otherId, start] of Object.entries(dragStartPositions.current)) {
+          patchBuffer.current[otherId] = {
+            ...(patchBuffer.current[otherId] || {}),
+            position: { x: start.x + dx, y: start.y + dy },
+          };
+        }
+        dragOrigin.current = null;
+        dragStartPositions.current = {};
+      }
+      clearTimeout(flushTimer.current);
+      flushTimer.current = setTimeout(() => {
+        const buf = patchBuffer.current;
+        patchBuffer.current = {};
+        applyLayerPatches(buf);
+      }, 0);
+      return;
+    }
+    updateLayer(id, patch);
+  }
+
+
+  function handleDragStartNode(id: string, node: any) {
+    const sel = selectionRef.current;
+    if (sel.length < 2 || !sel.includes(id)) return;
+    dragOrigin.current = { id, x: node.x(), y: node.y() };
+    const starts: Record<string, { x: number; y: number }> = {};
+    for (const otherId of sel) {
+      const n = nodeRefs.current[otherId];
+      if (n && otherId !== id) starts[otherId] = { x: n.x(), y: n.y() };
+    }
+    dragStartPositions.current = starts;
+  }
+
+  function handleDragMoveNode(id: string, node: any) {
+    const origin = dragOrigin.current;
+    if (!origin || origin.id !== id) return;
+    const dx = node.x() - origin.x;
+    const dy = node.y() - origin.y;
+    for (const [otherId, start] of Object.entries(dragStartPositions.current)) {
+      const n = nodeRefs.current[otherId];
+      if (n) n.position({ x: start.x + dx, y: start.y + dy });
+    }
+    node.getLayer()?.batchDraw();
+  }
+
+  function handleLayerClick(id: string, evt: any) {
+    const native = evt?.evt;
+    if (native && (native.shiftKey || native.ctrlKey || native.metaKey)) {
+      toggleLayerSelection(id);
+      return;
+    }
+    if (selectionRef.current.length > 1 && selectionRef.current.includes(id)) return;
+    selectLayer(id);
+  }
+
 
   const page = pages.find((p) => p.id === selectedPageId);
   const W = page?.background?.size?.width ?? flyer?.settings.width ?? 900;
@@ -208,13 +301,12 @@ export function Canvas() {
 
   useEffect(() => {
     if (!trRef.current) return;
-    if (selectedLayerId && nodeRefs.current[selectedLayerId] && !drawMode) {
-      trRef.current.nodes([nodeRefs.current[selectedLayerId]]);
-    } else {
-      trRef.current.nodes([]);
-    }
+    const ids = selectedLayerIds.length ? selectedLayerIds : selectedLayerId ? [selectedLayerId] : [];
+    const nodes = drawMode ? [] : ids.map((id) => nodeRefs.current[id]).filter(Boolean);
+    trRef.current.nodes(nodes);
     trRef.current.getLayer()?.batchDraw();
-  }, [selectedLayerId, sortedLayers, drawMode]);
+  }, [selectedLayerId, selectedLayerIds, sortedLayers, drawMode]);
+
 
   // Attach transformer to crop rect when in crop mode
   useEffect(() => {
@@ -249,22 +341,42 @@ export function Canvas() {
         cropCanvas(cropRect);
         return;
       }
-      if (!selectedLayerId) return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        selectAllLayers();
+        return;
+      }
+      const sel = selectedLayerIds.length ? selectedLayerIds : selectedLayerId ? [selectedLayerId] : [];
+      if (!sel.length) return;
+      if (mod && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        duplicateLayers(sel);
+        return;
+      }
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
-        deleteLayer(selectedLayerId);
+        if (sel.length > 1) deleteLayers(sel);
+        else deleteLayer(sel[0]);
+        return;
       }
-      const layer = page?.layers.find((l) => l.id === selectedLayerId);
-      if (!layer) return;
       const step = e.shiftKey ? 10 : 1;
-      if (e.key === "ArrowLeft") updateLayer(selectedLayerId, { position: { ...layer.position, x: layer.position.x - step } });
-      if (e.key === "ArrowRight") updateLayer(selectedLayerId, { position: { ...layer.position, x: layer.position.x + step } });
-      if (e.key === "ArrowUp") updateLayer(selectedLayerId, { position: { ...layer.position, y: layer.position.y - step } });
-      if (e.key === "ArrowDown") updateLayer(selectedLayerId, { position: { ...layer.position, y: layer.position.y + step } });
+      const deltas: Record<string, [number, number]> = {
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step],
+      };
+      const d = deltas[e.key];
+      if (d) {
+        e.preventDefault();
+        moveLayersBy(sel, d[0], d[1]);
+      }
     }
     window.addEventListener("keydown", onKey);
+
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedLayerId, page, deleteLayer, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop, cancelObjectExtract]);
+  }, [selectedLayerId, selectedLayerIds, page, deleteLayer, deleteLayers, duplicateLayers, moveLayersBy, selectAllLayers, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop, cancelObjectExtract]);
 
   if (!page || !flyer) return null;
 
@@ -370,7 +482,54 @@ export function Canvas() {
           </Button>
         </div>
       )}
+      {selectedLayerIds.length > 1 && !drawMode && (
+        <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 flex-wrap items-center gap-1 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
+          <span className="mr-1 font-medium">{selectedLayerIds.length} selected</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align left" onClick={() => alignLayers(selectedLayerIds, "left")}>
+            <AlignStartVertical className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align horizontal centers" onClick={() => alignLayers(selectedLayerIds, "hcenter")}>
+            <AlignCenterVertical className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align right" onClick={() => alignLayers(selectedLayerIds, "right")}>
+            <AlignEndVertical className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align top" onClick={() => alignLayers(selectedLayerIds, "top")}>
+            <AlignStartHorizontal className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align vertical centers" onClick={() => alignLayers(selectedLayerIds, "vcenter")}>
+            <AlignCenterHorizontal className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Align bottom" onClick={() => alignLayers(selectedLayerIds, "bottom")}>
+            <AlignEndHorizontal className="h-3.5 w-3.5" />
+          </Button>
+          <span className="mx-1 h-4 w-px bg-border" />
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Distribute horizontally" disabled={selectedLayerIds.length < 3} onClick={() => distributeLayers(selectedLayerIds, "h")}>
+            <MoveHorizontal className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Distribute vertically" disabled={selectedLayerIds.length < 3} onClick={() => distributeLayers(selectedLayerIds, "v")}>
+            <MoveVertical className="h-3.5 w-3.5" />
+          </Button>
+          <span className="mx-1 h-4 w-px bg-border" />
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Bring to front" onClick={() => orderLayersBulk(selectedLayerIds, "front")}>
+            <ChevronsUp className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Send to back" onClick={() => orderLayersBulk(selectedLayerIds, "back")}>
+            <ChevronsDown className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Duplicate" onClick={() => duplicateLayers(selectedLayerIds)}>
+            <CopyIcon className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Delete" onClick={() => deleteLayers(selectedLayerIds)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Clear selection" onClick={clearSelection}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
       <div className="shadow-elegant" style={containerStyle}>
+
         <div
           style={{
             position: "relative",
@@ -402,7 +561,10 @@ export function Canvas() {
               }
               if (drawMode === "crop") return;
               if (e.target === e.target.getStage()) {
-                selectLayer(null);
+                const p = getStagePos(e);
+                const additive = !!(e.evt?.shiftKey || e.evt?.ctrlKey || e.evt?.metaKey);
+                if (p) setMarquee({ x1: p.x, y1: p.y, x2: p.x, y2: p.y, additive });
+                if (!additive) selectLayer(null);
                 setHoveredLayerId(null);
               }
             }}
@@ -410,9 +572,41 @@ export function Canvas() {
               if ((isRectDrawMode || drawMode === "hotspot-ellipse") && drawStart && !extracting) {
                 const p = getStagePos(e);
                 if (p) setDrawCurrent(p);
+                return;
+              }
+              if (marquee) {
+                const p = getStagePos(e);
+                if (p) setMarquee((m) => (m ? { ...m, x2: p.x, y2: p.y } : m));
               }
             }}
             onMouseUp={() => {
+              if (marquee) {
+                const box = {
+                  x: Math.min(marquee.x1, marquee.x2),
+                  y: Math.min(marquee.y1, marquee.y2),
+                  w: Math.abs(marquee.x2 - marquee.x1),
+                  h: Math.abs(marquee.y2 - marquee.y1),
+                };
+                const additive = marquee.additive;
+                setMarquee(null);
+                if (box.w >= 5 && box.h >= 5) {
+                  const hits = (page?.layers ?? [])
+                    .filter(
+                      (l) =>
+                        l.position.x < box.x + box.w &&
+                        l.position.x + l.size.width > box.x &&
+                        l.position.y < box.y + box.h &&
+                        l.position.y + l.size.height > box.y
+                    )
+                    .map((l) => l.id);
+                  const next = additive
+                    ? Array.from(new Set([...selectionRef.current, ...hits]))
+                    : hits;
+                  selectLayers(next);
+                  return;
+                }
+              }
+
               if (drawMode === "extract-rect" && drawStart && drawCurrent && !extracting) {
                 const w = Math.abs(drawCurrent.x - drawStart.x);
                 const h = Math.abs(drawCurrent.y - drawStart.y);
@@ -533,10 +727,12 @@ export function Canvas() {
                   >
                     <LayerRenderer
                       layer={l}
-                      isSelected={selectedLayerId === l.id}
+                      isSelected={selectedLayerIds.includes(l.id) || selectedLayerId === l.id}
                       draggable={!drawMode}
-                      onSelect={() => !drawMode && selectLayer(l.id)}
-                      onChange={(patch) => updateLayer(l.id, patch)}
+                      onSelect={(evt) => !drawMode && handleLayerClick(l.id, evt)}
+                      onChange={(patch) => handleLayerChange(l.id, patch)}
+                      onDragStartNode={handleDragStartNode}
+                      onDragMoveNode={handleDragMoveNode}
                       onHoverStart={() => !drawMode && setHoveredLayerId(l.id)}
                       onHoverEnd={() => setHoveredLayerId((id) => (id === l.id ? null : id))}
                       refSetter={(node) => {
@@ -570,12 +766,26 @@ export function Canvas() {
                   />
                 )
               )}
+              {marquee && (
+                <Rect
+                  x={Math.min(marquee.x1, marquee.x2)}
+                  y={Math.min(marquee.y1, marquee.y2)}
+                  width={Math.abs(marquee.x2 - marquee.x1)}
+                  height={Math.abs(marquee.y2 - marquee.y1)}
+                  fill="rgba(59,130,246,0.12)"
+                  stroke="#3b82f6"
+                  strokeWidth={1}
+                  dash={[4, 4]}
+                  listening={false}
+                />
+              )}
               <Transformer
                 ref={trRef}
-                rotateEnabled
+                rotateEnabled={selectedLayerIds.length < 2}
                 boundBoxFunc={(oldBox, newBox) => (newBox.width < 10 || newBox.height < 10 ? oldBox : newBox)}
               />
             </KLayer>
+
 
             {(drawMode === "extract-rect" || drawMode === "extract-auto") && extractSourceLayer && (
               <KLayer listening={false}>

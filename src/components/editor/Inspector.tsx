@@ -33,6 +33,12 @@ export function Inspector() {
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
+  const selectedLayerIds = useEditorStore((s) => s.selectedLayerIds);
+  const updateLayersStyle = useEditorStore((s) => s.updateLayersStyle);
+  const alignLayers = useEditorStore((s) => s.alignLayers);
+  const duplicateLayers = useEditorStore((s) => s.duplicateLayers);
+  const deleteLayers = useEditorStore((s) => s.deleteLayers);
+  const clearSelection = useEditorStore((s) => s.clearSelection);
   const updateLayerStyle = useEditorStore((s) => s.updateLayerStyle);
   const updateLayerContent = useEditorStore((s) => s.updateLayerContent);
   const setLayerAction = useEditorStore((s) => s.setLayerAction);
@@ -67,6 +73,47 @@ export function Inspector() {
   const sourceLayer = layer?.content.extractedFrom
     ? page?.layers.find((l) => l.id === layer.content.extractedFrom)
     : undefined;
+
+  if (selectedLayerIds.length > 1) {
+    return (
+      <div className="space-y-4 p-4">
+        <div className="text-xs font-semibold uppercase text-muted-foreground">
+          {selectedLayerIds.length} layers selected
+        </div>
+        <div>
+          <Label className="text-xs">Opacity</Label>
+          <Input
+            type="number"
+            min={0}
+            max={1}
+            step={0.05}
+            className="mt-1 h-9"
+            placeholder="1"
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (!Number.isNaN(v)) updateLayersStyle(selectedLayerIds, { opacity: Math.max(0, Math.min(1, v)) });
+            }}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => alignLayers(selectedLayerIds, "left")}>Align left</Button>
+          <Button size="sm" variant="outline" onClick={() => alignLayers(selectedLayerIds, "hcenter")}>Center H</Button>
+          <Button size="sm" variant="outline" onClick={() => alignLayers(selectedLayerIds, "right")}>Align right</Button>
+          <Button size="sm" variant="outline" onClick={() => alignLayers(selectedLayerIds, "top")}>Align top</Button>
+          <Button size="sm" variant="outline" onClick={() => alignLayers(selectedLayerIds, "vcenter")}>Center V</Button>
+          <Button size="sm" variant="outline" onClick={() => alignLayers(selectedLayerIds, "bottom")}>Align bottom</Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => duplicateLayers(selectedLayerIds)}>Duplicate</Button>
+          <Button size="sm" variant="destructive" onClick={() => deleteLayers(selectedLayerIds)}>Delete all</Button>
+          <Button size="sm" variant="ghost" onClick={clearSelection}>Clear selection</Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Shift-click layers to add or remove them, or drag on empty canvas to marquee-select.
+        </p>
+      </div>
+    );
+  }
 
   if (!layer) {
     return (

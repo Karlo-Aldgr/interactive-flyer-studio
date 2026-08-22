@@ -7,13 +7,16 @@ import { useMemo } from "react";
 
 interface Props {
   layer: Layer;
-  onSelect: () => void;
+  onSelect: (evt?: any) => void;
   onChange: (patch: Partial<Layer>) => void;
   isSelected: boolean;
   draggable: boolean;
   refSetter?: (node: any) => void;
   onHoverStart?: () => void;
   onHoverEnd?: () => void;
+  /** Group-drag hooks — used when several layers are selected at once. */
+  onDragStartNode?: (id: string, node: any) => void;
+  onDragMoveNode?: (id: string, node: any) => void;
 }
 
 function ImageLayer({ layer, ...rest }: Props & { commonProps: any }) {
@@ -42,7 +45,7 @@ function IconLayer({ layer, commonProps }: { layer: Layer; commonProps: any }) {
 }
 
 export function LayerRenderer(props: Props) {
-  const { layer, onSelect, onChange, draggable, refSetter, onHoverStart, onHoverEnd } = props;
+  const { layer, onSelect, onChange, draggable, refSetter, onHoverStart, onHoverEnd, onDragStartNode, onDragMoveNode } = props;
 
   const commonProps: any = {
     x: layer.position.x,
@@ -52,11 +55,13 @@ export function LayerRenderer(props: Props) {
     rotation: layer.rotation,
     opacity: layer.style.opacity ?? 1,
     draggable,
-    onClick: onSelect,
-    onTap: onSelect,
+    onClick: (e: any) => onSelect(e),
+    onTap: (e: any) => onSelect(e),
     onMouseEnter: onHoverStart,
     onMouseLeave: onHoverEnd,
     ref: refSetter,
+    onDragStart: (e: any) => onDragStartNode?.(layer.id, e.target),
+    onDragMove: (e: any) => onDragMoveNode?.(layer.id, e.target),
     onDragEnd: (e: any) => onChange({ position: { x: e.target.x(), y: e.target.y() } }),
     onTransformEnd: (e: any) => {
       const node = e.target;
