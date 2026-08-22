@@ -6,7 +6,12 @@ import { LayerRenderer } from "./LayerRenderer";
 import { HighlightOverlay } from "./HighlightOverlay";
 import { IntroAnimatedGroup, resolveIntro } from "./IntroAnimatedGroup";
 import { Button } from "@/components/ui/button";
-import { X, Check, Loader2 } from "lucide-react";
+import {
+  X, Check, Loader2, Trash2, Copy as CopyIcon, ChevronsUp, ChevronsDown,
+  AlignStartVertical, AlignCenterVertical, AlignEndVertical,
+  AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
+  MoveHorizontal, MoveVertical,
+} from "lucide-react";
 import type { AirMessageBubble, Layer as FlyerLayer } from "@/types/flyer";
 import { SocialSlideout } from "@/components/viewer/SocialSlideout";
 import { useObjectExtract } from "@/hooks/useObjectExtract";
