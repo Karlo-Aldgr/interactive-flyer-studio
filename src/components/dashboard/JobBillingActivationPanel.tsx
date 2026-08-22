@@ -45,7 +45,9 @@ export function JobBillingActivationPanel({ job, onJobChanged }: Props) {
   };
 
   const downloadQR = () => {
-    const canvas = qrRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
+    const id = `job-qr-${job.id}`;
+    const hdCanvas = document.getElementById(`${id}-hd`) as HTMLCanvasElement | null;
+    const canvas = hdCanvas ?? (qrRef.current?.querySelector("canvas") as HTMLCanvasElement | null);
     if (!canvas) return;
     const url = canvas.toDataURL("image/png");
     const a = document.createElement("a");
@@ -175,8 +177,11 @@ export function JobBillingActivationPanel({ job, onJobChanged }: Props) {
           </div>
           {publicLive && shareUrl ? (
             <div className="flex flex-col items-center gap-2">
-              <div ref={qrRef} className="rounded-md bg-white p-2">
-                <QRCodeCanvas value={shareUrl} size={112} includeMargin={false} />
+              <div ref={qrRef} className="relative rounded-md bg-white p-2">
+                <QRCodeCanvas id={`job-qr-${job.id}`} value={shareUrl} size={112} includeMargin={false} />
+                <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
+                  <QRCodeCanvas id={`job-qr-${job.id}-hd`} value={shareUrl} size={512} includeMargin={false} />
+                </div>
               </div>
               <Button size="sm" variant="outline" onClick={downloadQR}>
                 <Download className="mr-1 h-3.5 w-3.5" /> PNG

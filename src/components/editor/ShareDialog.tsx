@@ -101,7 +101,8 @@ export function ShareDialog({
   }
 
   function downloadQR(canvasId = "share-qr-canvas", suffix = "") {
-    const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
+    const hdCanvas = document.getElementById(`${canvasId}-hd`) as HTMLCanvasElement | null;
+    const canvas = hdCanvas ?? (document.getElementById(canvasId) as HTMLCanvasElement | null);
     if (!canvas) return;
     const link = document.createElement("a");
     const base = (title || "flyer").replace(/[^a-z0-9]+/gi, "-");
@@ -225,8 +226,11 @@ export function ShareDialog({
 
 
         <div className="flex items-start gap-3">
-          <div className="rounded-md bg-white p-2 shadow-sm shrink-0">
+          <div className="relative rounded-md bg-white p-2 shadow-sm shrink-0">
             <QRCodeCanvas id={qrId} value={section.url} size={104} level="M" includeMargin={false} />
+            <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
+              <QRCodeCanvas id={`${qrId}-hd`} value={section.url} size={512} level="M" includeMargin={false} />
+            </div>
           </div>
           <div className="flex flex-1 flex-col gap-2">
             <Input
@@ -401,9 +405,12 @@ export function ShareDialog({
             )}
 
             <div className="flex flex-col items-center gap-4">
-              <div className="rounded-lg bg-white p-4 shadow-sm">
-                <QRCodeCanvas id="share-qr-canvas" value={safeSocialUrl} size={160} level="M" includeMargin={false} />
+            <div className="relative rounded-lg bg-white p-4 shadow-sm">
+              <QRCodeCanvas id="share-qr-canvas" value={safeSocialUrl} size={160} level="M" includeMargin={false} />
+              <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
+                <QRCodeCanvas id="share-qr-canvas-hd" value={safeSocialUrl} size={512} level="M" includeMargin={false} />
               </div>
+            </div>
               <div className="flex w-full gap-2">
                 <Input readOnly value={safeSocialUrl} className="flex-1 text-xs" onFocus={(e) => e.target.select()} />
                 <Button size="sm" variant="outline" onClick={() => copyText("primary", safeSocialUrl, "Share link copied")}>
@@ -431,8 +438,11 @@ export function ShareDialog({
                           )}
                         </div>
                         <div className="flex items-start gap-3">
-                          <div className="rounded-lg bg-white p-2 shadow-sm shrink-0">
+                          <div className="relative rounded-lg bg-white p-2 shadow-sm shrink-0">
                             <QRCodeCanvas id={canvasId} value={l.url} size={96} level="M" includeMargin={false} />
+                            <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
+                              <QRCodeCanvas id={`${canvasId}-hd`} value={l.url} size={512} level="M" includeMargin={false} />
+                            </div>
                           </div>
                           <div className="flex flex-1 flex-col gap-2">
                             <Input
