@@ -129,7 +129,7 @@ export const facebookAdapter: SocialPlatformAdapter = {
     if (configId) {
       // Login for Business: the saved configuration defines the permissions.
       url.searchParams.set("config_id", configId);
-ional_setup:    } else {
+} else {
       url.searchParams.set(
         "scope",
         scopes.filter((s) => s !== "pages_manage_posts").join(","),
