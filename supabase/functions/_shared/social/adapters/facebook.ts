@@ -1,5 +1,6 @@
 import {
   adapterError,
+  type AdapterError,
   type AdapterAccount,
   type AdapterResult,
   type AnalyticsSnapshot,
@@ -47,13 +48,13 @@ export const FACEBOOK_SCOPES = [
 export async function exchangeFacebookCode(
   input: CallbackInput,
 ): Promise<AdapterResult<{ userToken: string; expiresAt: string | null }>> {
-  const env = requireEnv(SECRETS);
-  if ("ok" in env && env.ok === false) return env;
-  const secrets = env as Record<string, string>;
+  const app = metaApp();
+  if ("ok" in app && (app as AdapterError).ok === false) return app as AdapterError;
+  const secrets = app as { appId: string; appSecret: string };
 
   const url = new URL(`https://graph.facebook.com/${GRAPH()}/oauth/access_token`);
-  url.searchParams.set("client_id", secrets.SOCIAL_META_APP_ID);
-  url.searchParams.set("client_secret", secrets.SOCIAL_META_APP_SECRET);
+  url.searchParams.set("client_id", secrets.appId);
+  url.searchParams.set("client_secret", secrets.appSecret);
   url.searchParams.set("redirect_uri", input.redirectUri);
   url.searchParams.set("code", input.code);
   const res = await fetchJson(url);
@@ -65,8 +66,8 @@ export async function exchangeFacebookCode(
   // Upgrade to a long-lived (~60 day) user token.
   const ll = new URL(`https://graph.facebook.com/${GRAPH()}/oauth/access_token`);
   ll.searchParams.set("grant_type", "fb_exchange_token");
-  ll.searchParams.set("client_id", secrets.SOCIAL_META_APP_ID);
-  ll.searchParams.set("client_secret", secrets.SOCIAL_META_APP_SECRET);
+  ll.searchParams.set("client_id", secrets.appId);
+  ll.searchParams.set("client_secret", secrets.appSecret);
   ll.searchParams.set("fb_exchange_token", shortToken);
   const llRes = await fetchJson(ll);
   const longToken = typeof llRes.body.access_token === "string" ? llRes.body.access_token : shortToken;
@@ -103,10 +104,10 @@ export const facebookAdapter: SocialPlatformAdapter = {
   developerConsoleUrl: "https://developers.facebook.com/apps",
 
   startOAuth({ redirectUri, state, scopes }: AuthStartInput) {
-    const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    const app = metaApp();
+    if ("ok" in app && (app as AdapterError).ok === false) return app as AdapterError;
     const url = new URL(`https://www.facebook.com/${GRAPH()}/dialog/oauth`);
-    url.searchParams.set("client_id", (env as Record<string, string>).SOCIAL_META_APP_ID);
+    url.searchParams.set("client_id", (app as { appId: string }).appId);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
     url.searchParams.set("response_type", "code");
