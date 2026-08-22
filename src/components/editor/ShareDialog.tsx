@@ -405,9 +405,12 @@ export function ShareDialog({
             )}
 
             <div className="flex flex-col items-center gap-4">
-              <div className="rounded-lg bg-white p-4 shadow-sm">
-                <QRCodeCanvas id="share-qr-canvas" value={safeSocialUrl} size={160} level="M" includeMargin={false} />
+            <div className="relative rounded-lg bg-white p-4 shadow-sm">
+              <QRCodeCanvas id="share-qr-canvas" value={safeSocialUrl} size={160} level="M" includeMargin={false} />
+              <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
+                <QRCodeCanvas id="share-qr-canvas-hd" value={safeSocialUrl} size={512} level="M" includeMargin={false} />
               </div>
+            </div>
               <div className="flex w-full gap-2">
                 <Input readOnly value={safeSocialUrl} className="flex-1 text-xs" onFocus={(e) => e.target.select()} />
                 <Button size="sm" variant="outline" onClick={() => copyText("primary", safeSocialUrl, "Share link copied")}>
