@@ -79,8 +79,11 @@ export function RealtorProfileCard({ profile, activeCount, onSaved }: Props) {
       {publicUrl && (
         <div className="flex flex-col items-start gap-3 border-t border-border bg-muted/30 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <div className="rounded-lg border border-border bg-background p-2">
-              <QRCodeCanvas value={publicUrl} size={96} includeMargin={false} />
+            <div className="relative rounded-lg border border-border bg-background p-2">
+              <QRCodeCanvas id="realtor-qr" value={publicUrl} size={96} includeMargin={false} />
+              <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
+                <QRCodeCanvas id="realtor-qr-hd" value={publicUrl} size={512} includeMargin={false} />
+              </div>
             </div>
             <div className="min-w-0">
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your public page</div>
@@ -90,16 +93,34 @@ export function RealtorProfileCard({ profile, activeCount, onSaved }: Props) {
               <div className="mt-1 text-xs text-muted-foreground">Scan or share to send buyers to your listings page.</div>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              navigator.clipboard.writeText(publicUrl);
-              toast.success("Link copied");
-            }}
-          >
-            <Copy className="mr-1 h-3.5 w-3.5" />Copy link
-          </Button>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(publicUrl);
+                toast.success("Link copied");
+              }}
+            >
+              <Copy className="mr-1 h-3.5 w-3.5" />Copy link
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const hdCanvas = document.getElementById("realtor-qr-hd") as HTMLCanvasElement | null;
+                const canvas = hdCanvas ?? document.getElementById("realtor-qr") as HTMLCanvasElement | null;
+                if (!canvas) return;
+                const link = document.createElement("a");
+                const base = (profile.full_name || "realtor").replace(/[^a-z0-9]+/gi, "-");
+                link.download = `${base}-qr.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+              }}
+            >
+              <Download className="mr-1 h-3.5 w-3.5" />Download QR
+            </Button>
+          </div>
         </div>
       )}
 
