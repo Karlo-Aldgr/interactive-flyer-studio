@@ -129,6 +129,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   pages: [],
   selectedPageId: null,
   selectedLayerId: null,
+      selectedLayerIds: [],
   zoom: 0.6,
   past: [],
   future: [],
@@ -152,6 +153,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pages,
       selectedPageId: pages[0]?.id ?? null,
       selectedLayerId: null,
+      selectedLayerIds: [],
       past: [],
       future: [],
       dirty: false,
@@ -162,8 +164,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setZoom: (z) => set({ zoom: Math.max(0.1, Math.min(2, z)) }),
 
-  selectPage: (id) => set({ selectedPageId: id, selectedLayerId: null }),
-  selectLayer: (id) => set({ selectedLayerId: id }),
+  selectPage: (id) => set({ selectedPageId: id, selectedLayerId: null, selectedLayerIds: [] }),
+  selectLayer: (id) => set({ selectedLayerId: id, selectedLayerIds: id ? [id] : [] }),
   setDrawMode: (mode) => {
     const keepExtract = mode === "extract-rect" || mode === "extract-auto";
     set({
@@ -178,6 +180,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       subjectDetections: [],
       drawMode: "extract-rect",
       selectedLayerId: null,
+      selectedLayerIds: [],
       previewAction: null,
     }),
   startAutoSubjectExtract: (sourceLayerId, detections) =>
@@ -186,6 +189,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       subjectDetections: detections,
       drawMode: "extract-auto",
       selectedLayerId: null,
+      selectedLayerIds: [],
       previewAction: null,
     }),
   markSubjectExtracted: (detectionId) =>
@@ -215,7 +219,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ extractSourceLayerId: null, subjectDetections: [], drawMode: null }),
   toggleHitboxes: () => set((s) => ({ showHitboxes: !s.showHitboxes })),
   setDeviceFrame: (f) => set({ deviceFrame: f }),
-  startCrop: (size) => set({ pendingCrop: size, drawMode: "crop", selectedLayerId: null }),
+  startCrop: (size) => set({ pendingCrop: size, drawMode: "crop", selectedLayerId: null, selectedLayerIds: [] }),
   cancelCrop: () => set({ pendingCrop: null, drawMode: null }),
 
   setCanvasSize: (w, h, mode) => {
@@ -456,6 +460,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pages: [...s.pages, page],
       selectedPageId: page.id,
       selectedLayerId: null,
+      selectedLayerIds: [],
       past,
       future: [],
       dirty: true,
@@ -486,6 +491,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pages: filtered,
       selectedPageId: filtered[0].id,
       selectedLayerId: null,
+      selectedLayerIds: [],
       past,
       future: [],
       dirty: true,
@@ -609,6 +615,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
       past,
       future: [],
       dirty: true,
@@ -655,6 +662,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
       past,
       future: [],
       dirty: true,
@@ -680,6 +688,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
       past,
       future: [],
       dirty: true,
@@ -703,6 +712,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
       drawMode: null,
       past,
       future: [],
@@ -734,6 +744,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       pages: s.pages.map((p) => (p.id === pageId ? { ...p, layers: [...p.layers, layer] } : p)),
       selectedLayerId: layer.id,
+      selectedLayerIds: [layer.id],
       extractSourceLayerId: stayInAutoMode ? sourceLayerId : null,
       subjectDetections: stayInAutoMode ? s.subjectDetections : [],
       drawMode: stayInAutoMode ? "extract-auto" : null,
