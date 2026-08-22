@@ -206,10 +206,39 @@ export function Inspector() {
 
         {layer.type === "image" && !layer.content.extractedFrom && (
           <div>
-            <Label className="text-xs">Image URL</Label>
+            <Label className="text-xs">Image</Label>
+            {layer.content.src && (
+              <div
+                className="mt-1 h-16 w-full rounded border border-border bg-cover bg-center"
+                style={{ backgroundImage: `url(${layer.content.src})` }}
+              />
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2 h-8 w-full text-xs"
+              disabled={uploadingImage}
+              onClick={() => imageFileRef.current?.click()}
+            >
+              {uploadingImage ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Upload className="mr-1 h-3 w-3" />}
+              {layer.content.src ? "Replace photo" : "Upload photo"}
+            </Button>
+            <input
+              ref={imageFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) uploadLayerImage(f, layer.id);
+              }}
+            />
+            <Label className="mt-3 block text-xs">Image URL</Label>
             <Input className="mt-1" value={layer.content.src || ""} onChange={(e) => updateLayerContent(layer.id, { src: e.target.value })} />
           </div>
         )}
+
 
         {layer.type === "image" && layer.content.extractedFrom && (
           <p className="text-[11px] text-muted-foreground">
