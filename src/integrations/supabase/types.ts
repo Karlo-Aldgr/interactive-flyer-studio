@@ -3643,7 +3643,14 @@ export type Database = {
         | "delivered"
         | "cancelled"
       job_type: "upload" | "design"
-      layer_type: "text" | "image" | "icon" | "shape" | "button" | "hotspot"
+      layer_type:
+        | "text"
+        | "image"
+        | "icon"
+        | "shape"
+        | "button"
+        | "hotspot"
+        | "video"
       social_connection_status:
         | "connected"
         | "reconnect_required"
@@ -3858,7 +3865,15 @@ export const Constants = {
         "cancelled",
       ],
       job_type: ["upload", "design"],
-      layer_type: ["text", "image", "icon", "shape", "button", "hotspot"],
+      layer_type: [
+        "text",
+        "image",
+        "icon",
+        "shape",
+        "button",
+        "hotspot",
+        "video",
+      ],
       social_connection_status: [
         "connected",
         "reconnect_required",

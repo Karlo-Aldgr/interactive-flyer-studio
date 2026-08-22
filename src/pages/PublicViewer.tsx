@@ -99,6 +99,7 @@ import Konva from "konva";
 import useImage from "use-image";
 import * as LucideIcons from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { useKonvaVideo } from "@/hooks/useKonvaVideo";
 import { supabase } from "@/integrations/supabase/client";
 import { Flyer, FlyerPage, Layer, LayerAction, AirMessageBubble } from "@/types/flyer";
 import { IntroAnimatedGroup, resolveIntro } from "@/components/editor/IntroAnimatedGroup";
@@ -584,6 +585,24 @@ function useKonvaDisplayImage(src?: string) {
   return anonymousImg || plainImg;
 }
 
+function VideoNode({ layer, props }: { layer: Layer; props: any }) {
+  const { video, nodeRef } = useKonvaVideo(layer.content.videoUrl, {
+    autoplay: layer.content.videoAutoplay !== false,
+    loop: layer.content.videoLoop !== false,
+    muted: layer.content.videoMuted !== false,
+  });
+  return (
+    <KonvaImage
+      {...props}
+      ref={(node: any) => {
+        nodeRef.current = node;
+      }}
+      image={(video as any) || undefined}
+      cornerRadius={layer.style.cornerRadius}
+    />
+  );
+}
+
 function ImageNode({ layer, props, showHoverOutline }: { layer: Layer; props: any; showHoverOutline?: boolean }) {
   const img = useKonvaDisplayImage(layer.content.src);
   const [hovered, setHovered] = useState(false);
@@ -676,6 +695,8 @@ function renderLayer(l: Layer, onClick: () => void, hidden: boolean) {
       );
     case "image":
       return <ImageNode key={l.id} layer={l} props={common} showHoverOutline={!!l.content.extractedFrom && hasAction} />;
+    case "video":
+      return <VideoNode key={l.id} layer={l} props={common} />;
     case "icon":
       return <IconNode key={l.id} layer={l} props={common} />;
     case "shape":

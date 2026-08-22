@@ -1,11 +1,11 @@
 import { useEditorStore } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Trash2, Type, Image, Square, MousePointerClick, Star, SquareDashed, Scissors } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Trash2, Type, Image, Square, MousePointerClick, Star, SquareDashed, Scissors, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Layer } from "@/types/flyer";
 
 const ICON: Record<Layer["type"], any> = {
-  text: Type, image: Image, shape: Square, button: MousePointerClick, icon: Star, hotspot: SquareDashed,
+  text: Type, image: Image, shape: Square, button: MousePointerClick, icon: Star, hotspot: SquareDashed, video: Video,
 };
 
 export function LayersPanel() {

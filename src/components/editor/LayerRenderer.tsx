@@ -4,6 +4,7 @@ import useImage from "use-image";
 import * as LucideIcons from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { useMemo } from "react";
+import { useKonvaVideo } from "@/hooks/useKonvaVideo";
 
 interface Props {
   layer: Layer;
@@ -42,6 +43,30 @@ function IconLayer({ layer, commonProps }: { layer: Layer; commonProps: any }) {
   }, [layer.content.iconName, layer.style.color]);
   const [img] = useImage(dataUrl);
   return <KonvaImage {...commonProps} image={img} />;
+}
+
+function VideoLayer({ layer, commonProps }: { layer: Layer; commonProps: any }) {
+  const { video, nodeRef } = useKonvaVideo(layer.content.videoUrl, {
+    autoplay: layer.content.videoAutoplay !== false,
+    loop: layer.content.videoLoop !== false,
+    muted: layer.content.videoMuted !== false,
+  });
+  const [poster] = useImage(layer.content.posterUrl ?? "", "anonymous");
+  const outerRef = commonProps.ref;
+  return (
+    <>
+      <KonvaImage
+        {...commonProps}
+        ref={(node: any) => {
+          nodeRef.current = node;
+          if (typeof outerRef === "function") outerRef(node);
+        }}
+        image={(video as any) || poster || undefined}
+        fill={video ? undefined : "#0f172a"}
+        cornerRadius={layer.style.cornerRadius}
+      />
+    </>
+  );
 }
 
 export function LayerRenderer(props: Props) {
@@ -95,6 +120,8 @@ export function LayerRenderer(props: Props) {
       );
     case "image":
       return <ImageLayer {...props} commonProps={commonProps} />;
+    case "video":
+      return <VideoLayer layer={layer} commonProps={commonProps} />;
     case "icon":
       return <IconLayer layer={layer} commonProps={commonProps} />;
     case "shape":
