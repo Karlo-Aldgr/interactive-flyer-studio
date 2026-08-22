@@ -12,7 +12,9 @@ export function LayersPanel() {
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
+  const selectedLayerIds = useEditorStore((s) => s.selectedLayerIds);
   const selectLayer = useEditorStore((s) => s.selectLayer);
+  const toggleLayerSelection = useEditorStore((s) => s.toggleLayerSelection);
   const deleteLayer = useEditorStore((s) => s.deleteLayer);
   const bringForward = useEditorStore((s) => s.bringForward);
   const sendBackward = useEditorStore((s) => s.sendBackward);
