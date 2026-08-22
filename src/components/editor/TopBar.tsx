@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Globe, Loader2, ZoomIn, ZoomOut, Crop, Share2, Sparkles,
-  Briefcase, PartyPopper, CalendarIcon, LayoutDashboard, PenTool,
+  Briefcase, PartyPopper, CalendarIcon, LayoutDashboard, PenTool, Save,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
