@@ -7,13 +7,16 @@ import { useMemo } from "react";
 
 interface Props {
   layer: Layer;
-  onSelect: () => void;
+  onSelect: (evt?: any) => void;
   onChange: (patch: Partial<Layer>) => void;
   isSelected: boolean;
   draggable: boolean;
   refSetter?: (node: any) => void;
   onHoverStart?: () => void;
   onHoverEnd?: () => void;
+  /** Group-drag hooks — used when several layers are selected at once. */
+  onDragStartNode?: (id: string, node: any) => void;
+  onDragMoveNode?: (id: string, node: any) => void;
 }
 
 function ImageLayer({ layer, ...rest }: Props & { commonProps: any }) {
