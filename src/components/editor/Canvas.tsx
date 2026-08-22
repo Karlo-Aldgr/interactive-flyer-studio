@@ -336,20 +336,40 @@ export function Canvas() {
         cropCanvas(cropRect);
         return;
       }
-      if (!selectedLayerId) return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        selectAllLayers();
+        return;
+      }
+      const sel = selectedLayerIds.length ? selectedLayerIds : selectedLayerId ? [selectedLayerId] : [];
+      if (!sel.length) return;
+      if (mod && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        duplicateLayers(sel);
+        return;
+      }
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
-        deleteLayer(selectedLayerId);
+        if (sel.length > 1) deleteLayers(sel);
+        else deleteLayer(sel[0]);
+        return;
       }
-      const layer = page?.layers.find((l) => l.id === selectedLayerId);
-      if (!layer) return;
       const step = e.shiftKey ? 10 : 1;
-      if (e.key === "ArrowLeft") updateLayer(selectedLayerId, { position: { ...layer.position, x: layer.position.x - step } });
-      if (e.key === "ArrowRight") updateLayer(selectedLayerId, { position: { ...layer.position, x: layer.position.x + step } });
-      if (e.key === "ArrowUp") updateLayer(selectedLayerId, { position: { ...layer.position, y: layer.position.y - step } });
-      if (e.key === "ArrowDown") updateLayer(selectedLayerId, { position: { ...layer.position, y: layer.position.y + step } });
+      const deltas: Record<string, [number, number]> = {
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step],
+      };
+      const d = deltas[e.key];
+      if (d) {
+        e.preventDefault();
+        moveLayersBy(sel, d[0], d[1]);
+      }
     }
     window.addEventListener("keydown", onKey);
+
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedLayerId, page, deleteLayer, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop, cancelObjectExtract]);
 
