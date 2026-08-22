@@ -129,7 +129,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   pages: [],
   selectedPageId: null,
   selectedLayerId: null,
-      selectedLayerIds: [],
+  selectedLayerIds: [],
   zoom: 0.6,
   past: [],
   future: [],
