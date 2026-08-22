@@ -45,7 +45,9 @@ export function JobBillingActivationPanel({ job, onJobChanged }: Props) {
   };
 
   const downloadQR = () => {
-    const canvas = qrRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
+    const id = `job-qr-${job.id}`;
+    const hdCanvas = document.getElementById(`${id}-hd`) as HTMLCanvasElement | null;
+    const canvas = hdCanvas ?? (qrRef.current?.querySelector("canvas") as HTMLCanvasElement | null);
     if (!canvas) return;
     const url = canvas.toDataURL("image/png");
     const a = document.createElement("a");
