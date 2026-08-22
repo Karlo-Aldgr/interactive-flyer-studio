@@ -426,7 +426,7 @@ export function TopBar({ saving }: Props) {
         toast.error("No image layers found to fit to.");
         return;
       }
-      setCanvasSize(best.w, best.h, "resize");
+      applySize(best.w, best.h, "resize");
       toast.success(`Canvas fit to largest image: ${best.w} × ${best.h}`);
       setResizeOpen(false);
       return;
@@ -438,7 +438,7 @@ export function TopBar({ saving }: Props) {
       startCrop({ width: target.w, height: target.h });
       toast.message("Drag the crop area on the canvas, then confirm.");
     } else {
-      setCanvasSize(target.w, target.h, mode);
+      applySize(target.w, target.h, mode);
       toast.success(`Canvas resized to ${target.w} × ${target.h}`);
     }
     setResizeOpen(false);
@@ -564,7 +564,7 @@ export function TopBar({ saving }: Props) {
             onClick={() => setResizeOpen(true)}
           >
             <Crop className="mr-1 h-3.5 w-3.5" />
-            <span className="tabular-nums">{flyer.settings.width}×{flyer.settings.height}</span>
+            <span className="tabular-nums">{activeWidth}×{activeHeight}</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>Change canvas size or crop</TooltipContent>
