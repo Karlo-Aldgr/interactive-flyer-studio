@@ -371,7 +371,7 @@ export function Canvas() {
     window.addEventListener("keydown", onKey);
 
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedLayerId, page, deleteLayer, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop, cancelObjectExtract]);
+  }, [selectedLayerId, selectedLayerIds, page, deleteLayer, deleteLayers, duplicateLayers, moveLayersBy, selectAllLayers, updateLayer, drawMode, setDrawMode, cropRect, cropCanvas, cancelCrop, cancelObjectExtract]);
 
   if (!page || !flyer) return null;
 
