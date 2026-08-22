@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Mail, Phone, Building2, Edit3, ExternalLink, UserCircle2, Copy } from "lucide-react";
+import { Mail, Phone, Building2, Edit3, ExternalLink, UserCircle2, Copy, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
