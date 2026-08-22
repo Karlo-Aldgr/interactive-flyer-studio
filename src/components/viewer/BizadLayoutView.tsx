@@ -209,7 +209,105 @@ function LayerView({
   return <div onClick={onClick} style={{ ...base, background: "transparent" }} />;
 }
 
+/** CSS equivalent of the flyer viewer's tappable-hotspot highlight rings. */
+function TapHighlight({ layer }: { layer: Layer }) {
+  const hl = layer.action?.highlight ?? {};
+  const style = hl.style ?? "pulse";
+  if (hl.enabled === false || style === "none") return null;
+  const color = hl.color ?? "#7c3aed";
+  const thickness = hl.thickness ?? 3;
+  const opacity = hl.opacity ?? 0.85;
+  const { x, y } = layer.position;
+  const { width: w, height: h } = layer.size;
+  const isEllipse = layer.type === "hotspot" && (layer.content as any)?.hotspotShape === "ellipse";
+  const radius = isEllipse ? "50%" : `${layer.style?.cornerRadius ?? 12}px`;
+  const base: React.CSSProperties = {
+    position: "absolute",
+    left: x,
+    top: y,
+    width: w,
+    height: h,
+    pointerEvents: "none",
+    boxSizing: "border-box",
+    transform: layer.rotation ? `rotate(${layer.rotation}deg)` : undefined,
+  };
+
+  if (style === "circle") {
+    const d = Math.max(w, h) + thickness * 4;
+    return (
+      <div
+        style={{
+          ...base,
+          left: x + w / 2 - d / 2,
+          top: y + h / 2 - d / 2,
+          width: d,
+          height: d,
+          border: `${thickness}px solid ${color}`,
+          borderRadius: "50%",
+          opacity,
+        }}
+      />
+    );
+  }
+
+  if (style === "corners") {
+    const len = Math.max(10, Math.min(w, h) * 0.18);
+    const corner = (cs: React.CSSProperties): React.CSSProperties => ({
+      position: "absolute",
+      width: len,
+      height: len,
+      ...cs,
+    });
+    return (
+      <div style={{ ...base, opacity }}>
+        <div style={corner({ left: 0, top: 0, borderLeft: `${thickness}px solid ${color}`, borderTop: `${thickness}px solid ${color}` })} />
+        <div style={corner({ right: 0, top: 0, borderRight: `${thickness}px solid ${color}`, borderTop: `${thickness}px solid ${color}` })} />
+        <div style={corner({ left: 0, bottom: 0, borderLeft: `${thickness}px solid ${color}`, borderBottom: `${thickness}px solid ${color}` })} />
+        <div style={corner({ right: 0, bottom: 0, borderRight: `${thickness}px solid ${color}`, borderBottom: `${thickness}px solid ${color}` })} />
+      </div>
+    );
+  }
+
+  const borderStyle = style === "dashed" ? "dashed" : "solid";
+  return (
+    <div style={{ ...base }}>
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          border: `${thickness}px ${borderStyle} ${color}`,
+          borderRadius: radius,
+          opacity,
+          boxShadow: style === "glow" ? `0 0 12px ${color}` : undefined,
+          animation:
+            style === "pulse"
+              ? "bizadTapPulse 1.6s ease-in-out infinite"
+              : style === "glow"
+                ? "bizadTapGlow 1.6s ease-in-out infinite"
+                : undefined,
+        }}
+      />
+      {style === "pulse" && (
+        <>
+          <div style={{ position: "absolute", inset: 0, border: `${thickness}px solid ${color}`, borderRadius: radius, animation: "bizadTapPing 1.6s ease-out infinite" }} />
+          <div style={{ position: "absolute", inset: 0, border: `${thickness}px solid ${color}`, borderRadius: radius, animation: "bizadTapPing 1.6s ease-out infinite", animationDelay: "0.8s" }} />
+        </>
+      )}
+    </div>
+  );
+}
+
+const HIGHLIGHT_KEYFRAMES = `
+@keyframes bizadTapPulse { 0%,100% { opacity: .5 } 50% { opacity: 1 } }
+@keyframes bizadTapGlow { 0%,100% { box-shadow: 0 0 6px currentColor; opacity: .6 } 50% { box-shadow: 0 0 22px currentColor; opacity: 1 } }
+@keyframes bizadTapPing { 0% { transform: scale(1); opacity: .8 } 100% { transform: scale(1.35); opacity: 0 } }
+@media (prefers-reduced-motion: reduce) {
+  [data-bizad-highlights] * { animation: none !important; }
+}
+`;
+
 function Overlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
@@ -361,7 +459,16 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
                 <LayerView layer={l} onAction={runAction} />
               </IntroWrap>
             ))}
+            <div data-bizad-highlights style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+              <style>{HIGHLIGHT_KEYFRAMES}</style>
+              {ordered
+                .filter((l) => !!l.action || l.type === "hotspot")
+                .map((l) => (
+                  <TapHighlight key={"hl-" + l.id} layer={l} />
+                ))}
+            </div>
           </div>
+
         </div>
       </div>
 
