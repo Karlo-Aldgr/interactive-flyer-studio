@@ -459,7 +459,16 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
                 <LayerView layer={l} onAction={runAction} />
               </IntroWrap>
             ))}
+            <div data-bizad-highlights style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+              <style>{HIGHLIGHT_KEYFRAMES}</style>
+              {ordered
+                .filter((l) => !!l.action || l.type === "hotspot")
+                .map((l) => (
+                  <TapHighlight key={"hl-" + l.id} layer={l} />
+                ))}
+            </div>
           </div>
+
         </div>
       </div>
 
