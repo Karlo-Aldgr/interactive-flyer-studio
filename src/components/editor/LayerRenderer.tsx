@@ -45,7 +45,7 @@ function IconLayer({ layer, commonProps }: { layer: Layer; commonProps: any }) {
 }
 
 export function LayerRenderer(props: Props) {
-  const { layer, onSelect, onChange, draggable, refSetter, onHoverStart, onHoverEnd } = props;
+  const { layer, onSelect, onChange, draggable, refSetter, onHoverStart, onHoverEnd, onDragStartNode, onDragMoveNode } = props;
 
   const commonProps: any = {
     x: layer.position.x,
@@ -55,11 +55,13 @@ export function LayerRenderer(props: Props) {
     rotation: layer.rotation,
     opacity: layer.style.opacity ?? 1,
     draggable,
-    onClick: onSelect,
-    onTap: onSelect,
+    onClick: (e: any) => onSelect(e),
+    onTap: (e: any) => onSelect(e),
     onMouseEnter: onHoverStart,
     onMouseLeave: onHoverEnd,
     ref: refSetter,
+    onDragStart: (e: any) => onDragStartNode?.(layer.id, e.target),
+    onDragMove: (e: any) => onDragMoveNode?.(layer.id, e.target),
     onDragEnd: (e: any) => onChange({ position: { x: e.target.x(), y: e.target.y() } }),
     onTransformEnd: (e: any) => {
       const node = e.target;
