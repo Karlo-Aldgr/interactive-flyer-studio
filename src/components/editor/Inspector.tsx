@@ -40,6 +40,27 @@ export function Inspector() {
   const setPageBackground = useEditorStore((s) => s.setPageBackground);
   const replayIntro = useEditorStore((s) => s.replayIntro);
   const selectLayer = useEditorStore((s) => s.selectLayer);
+  const flyer = useEditorStore((s) => s.flyer);
+  const { user } = useAuth();
+  const imageFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  async function uploadLayerImage(file: File, layerId: string) {
+    if (!user) { toast.error("Sign in required"); return; }
+    if (!flyer) { toast.error("Open a flyer first"); return; }
+    setUploadingImage(true);
+    try {
+      const url = await uploadFlyerAsset(user.id, flyer.id, file, "images");
+      updateLayerContent(layerId, { src: url });
+      toast.success("Image uploaded");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not upload image");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+
 
   const page = pages.find((p) => p.id === selectedPageId);
   const layer = page?.layers.find((l) => l.id === selectedLayerId);
