@@ -714,12 +714,26 @@ export function Canvas() {
                   />
                 )
               )}
+              {marquee && (
+                <Rect
+                  x={Math.min(marquee.x1, marquee.x2)}
+                  y={Math.min(marquee.y1, marquee.y2)}
+                  width={Math.abs(marquee.x2 - marquee.x1)}
+                  height={Math.abs(marquee.y2 - marquee.y1)}
+                  fill="rgba(59,130,246,0.12)"
+                  stroke="#3b82f6"
+                  strokeWidth={1}
+                  dash={[4, 4]}
+                  listening={false}
+                />
+              )}
               <Transformer
                 ref={trRef}
-                rotateEnabled
+                rotateEnabled={selectedLayerIds.length < 2}
                 boundBoxFunc={(oldBox, newBox) => (newBox.width < 10 || newBox.height < 10 ? oldBox : newBox)}
               />
             </KLayer>
+
 
             {(drawMode === "extract-rect" || drawMode === "extract-auto") && extractSourceLayer && (
               <KLayer listening={false}>
