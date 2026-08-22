@@ -466,6 +466,3 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
     </div>
   );
 }
-
-  );
-}
