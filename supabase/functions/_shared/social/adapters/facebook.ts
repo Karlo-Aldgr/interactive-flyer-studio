@@ -20,15 +20,22 @@ const GRAPH = () =>
   Deno.env.get("SOCIAL_META_GRAPH_API_VERSION")?.trim() ||
   Deno.env.get("META_GRAPH_API_VERSION")?.trim() ||
   "v23.0";
-// Prefer the dedicated social-stack Meta app when it is configured; otherwise
-// reuse the Meta app already set up for this project. Legacy Meta functions are
-// untouched — they read the same secrets independently.
+// The social stack has its own dedicated Meta app (TapThatFlyer Social). Only
+// fall back to the project's legacy Meta app when the dedicated one is absent.
+// Legacy Meta functions are untouched — they read their own secrets.
 const hasDedicated = Boolean(
   Deno.env.get("SOCIAL_META_APP_ID")?.trim() && Deno.env.get("SOCIAL_META_APP_SECRET")?.trim(),
 );
 const SECRETS = hasDedicated
   ? ["SOCIAL_META_APP_ID", "SOCIAL_META_APP_SECRET"]
   : ["META_APP_ID", "META_APP_SECRET"];
+
+/**
+ * Facebook Login for Business configuration ID. When present, the authorization
+ * dialog is driven by the saved configuration (which already carries the Page
+ * permissions, including publishing) and we must NOT send a `scope` parameter.
+ */
+const FACEBOOK_CONFIG_ID = () => Deno.env.get("SOCIAL_FACEBOOK_CONFIG_ID")?.trim() || "";
 
 function metaApp(): { appId: string; appSecret: string } | AdapterError {
   const env = requireEnv(SECRETS);
@@ -38,11 +45,8 @@ function metaApp(): { appId: string; appSecret: string } | AdapterError {
 }
 
 /**
- * Facebook Page permissions requested during OAuth.
- * `pages_manage_posts` is rejected ("Invalid Scopes") by apps whose use case does not
- * expose it, so publishing relies on the Page access token returned by /me/accounts
- * together with `pages_read_engagement`. Override per-app with SOCIAL_FACEBOOK_SCOPES
- * (comma separated) if the app has advanced access to additional permissions.
+ * Fallback scopes used only when no Login for Business configuration is set.
+ * `pages_manage_posts` is never requested directly in the scope parameter.
  */
 export const FACEBOOK_SCOPES = (
   Deno.env.get("SOCIAL_FACEBOOK_SCOPES")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [
@@ -50,6 +54,7 @@ export const FACEBOOK_SCOPES = (
     "pages_read_engagement",
   ]
 );
+
 
 
 
