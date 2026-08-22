@@ -108,31 +108,32 @@ export function isBizadLayout(v: unknown): v is BizadLayout {
   return !!l && Array.isArray(l.layers) && l.layers.length > 0 && !!l.width && !!l.height;
 }
 
-function runAction(action: LayerAction | null | undefined, bizad: BizadRecord) {
-  if (!action) return;
-  const p = action.payload || {};
-  switch (action.type) {
-    case "call":
-      if (p.phone) window.location.href = `tel:${p.phone}`;
-      break;
-    case "sms":
-      if (p.phone) window.location.href = `sms:${p.phone}`;
-      break;
-    case "video":
-      if (p.videoUrl) window.open(p.videoUrl, "_blank", "noopener");
-      break;
-    case "open_url":
-      if (p.url) {
-        if (p.url.startsWith("mailto:") || p.url.startsWith("tel:")) window.location.href = p.url;
-        else window.open(p.url, "_blank", "noopener");
-      }
-      break;
-    default:
-      downloadVCard(bizad);
+function buildMapLink(p: LayerAction["payload"]) {
+  const { mapAddress, mapLat, mapLng, mapProvider } = p;
+  const isApple =
+    mapProvider === "apple"
+      ? true
+      : mapProvider === "google"
+        ? false
+        : /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+  const hasCoords = typeof mapLat === "number" && typeof mapLng === "number";
+  if (isApple) {
+    if (hasCoords) return `https://maps.apple.com/?ll=${mapLat},${mapLng}${mapAddress ? `&q=${encodeURIComponent(mapAddress)}` : ""}`;
+    if (mapAddress) return `https://maps.apple.com/?q=${encodeURIComponent(mapAddress)}`;
+  } else {
+    if (hasCoords) return `https://www.google.com/maps/search/?api=1&query=${mapLat},${mapLng}`;
+    if (mapAddress) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapAddress)}`;
   }
+  return "";
 }
 
-function LayerView({ layer, bizad }: { layer: Layer; bizad: BizadRecord }) {
+function LayerView({
+  layer,
+  onAction,
+}: {
+  layer: Layer;
+  onAction: (a: LayerAction) => void;
+}) {
   const s = layer.style || {};
   const clickable = !!layer.action;
   const base: React.CSSProperties = {
@@ -145,7 +146,8 @@ function LayerView({ layer, bizad }: { layer: Layer; bizad: BizadRecord }) {
     opacity: s.opacity ?? 1,
     cursor: clickable ? "pointer" : undefined,
   };
-  const onClick = clickable ? () => runAction(layer.action, bizad) : undefined;
+  const onClick = clickable ? () => onAction(layer.action as LayerAction) : undefined;
+
 
   if (layer.type === "image") {
     return (
