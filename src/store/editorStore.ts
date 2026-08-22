@@ -22,6 +22,8 @@ interface EditorState {
   pages: FlyerPage[];
   selectedPageId: string | null;
   selectedLayerId: string | null;
+  /** Full multi-selection. Always contains selectedLayerId as its first entry when non-empty. */
+  selectedLayerIds: string[];
   zoom: number;
   past: Snapshot[];
   future: Snapshot[];
