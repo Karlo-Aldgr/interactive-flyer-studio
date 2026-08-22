@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Globe, Loader2, ZoomIn, ZoomOut, Crop, Share2, Sparkles,
-  Briefcase, PartyPopper, CalendarIcon, LayoutDashboard, PenTool,
+  Briefcase, PartyPopper, CalendarIcon, LayoutDashboard, PenTool, Save,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
@@ -47,7 +47,7 @@ import {
   TopBarPortalMenu, TopBarPreviewButton, TopBarViewMenu, type TopBarMenuActions,
 } from "./TopBarActionMenus";
 
-interface Props { saving: boolean }
+interface Props { saving: boolean; onSave?: () => void | Promise<void> }
 
 const PRESETS: { label: string; w: number; h: number }[] = [
   { label: "Story 9:16 (1080×1920)", w: 1080, h: 1920 },
@@ -58,7 +58,7 @@ const PRESETS: { label: string; w: number; h: number }[] = [
   { label: "Default (900×1200)", w: 900, h: 1200 },
 ];
 
-export function TopBar({ saving }: Props) {
+export function TopBar({ saving, onSave }: Props) {
   const flyer = useEditorStore((s) => s.flyer);
   const setFlyer = useEditorStore((s) => s.setFlyer);
   const undo = useEditorStore((s) => s.undo);
@@ -596,6 +596,24 @@ export function TopBar({ saving }: Props) {
           "Saved"
         )}
       </span>
+
+      {onSave && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={dirty ? "default" : "outline"}
+              size="sm"
+              className="shrink-0"
+              onClick={() => onSave()}
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <span className="ml-1 hidden sm:inline">Save</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Save all changes</TooltipContent>
+        </Tooltip>
+      )}
 
       {/* Primary actions — always visible */}
       <div className="lg:hidden">
