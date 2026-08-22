@@ -114,20 +114,30 @@ export const facebookAdapter: SocialPlatformAdapter = {
   requiredSecrets: SECRETS,
   defaultScopes: FACEBOOK_SCOPES,
   approvalNotes:
-    "Meta app must have the Facebook Login product plus advanced access to pages_show_list and pages_read_engagement (App Review) before non-admin users can connect.",
+    "Facebook connects through the Meta Facebook Login for Business configuration (SOCIAL_FACEBOOK_CONFIG_ID); Page permissions, including publishing, come from that configuration rather than the OAuth scope parameter.",
   developerConsoleUrl: "https://developers.facebook.com/apps",
 
   startOAuth({ redirectUri, state, scopes }: AuthStartInput) {
     const app = metaApp();
     if ("ok" in app && (app as AdapterError).ok === false) return app as AdapterError;
+    const configId = FACEBOOK_CONFIG_ID();
     const url = new URL(`https://www.facebook.com/${GRAPH()}/dialog/oauth`);
     url.searchParams.set("client_id", (app as { appId: string }).appId);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
     url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", scopes.join(","));
+    if (configId) {
+      // Login for Business: the saved configuration defines the permissions.
+      url.searchParams.set("config_id", configId);
+ional_setup:    } else {
+      url.searchParams.set(
+        "scope",
+        scopes.filter((s) => s !== "pages_manage_posts").join(","),
+      );
+    }
     return { ok: true, authorize_url: url.toString() };
   },
+
 
   async handleCallback(input) {
     const exchanged = await exchangeFacebookCode(input);
