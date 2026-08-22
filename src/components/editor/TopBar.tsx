@@ -416,7 +416,9 @@ export function TopBar({ saving }: Props) {
 
   function applyResize() {
     if (mode === "fit") {
-      const pages = useEditorStore.getState().pages;
+      const allPages = useEditorStore.getState().pages;
+      // A page with its own canvas size fits to its own images only.
+      const pages = activePage && activePageHasOwnSize ? [activePage] : allPages;
       let best: { w: number; h: number; area: number } | null = null;
       for (const p of pages) {
         for (const l of p.layers) {
