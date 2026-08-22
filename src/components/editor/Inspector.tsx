@@ -9,7 +9,11 @@ import { Switch } from "@/components/ui/switch";
 import { ActionEditor } from "./ActionEditor";
 import { CutoutLayerBanner } from "./CutoutLayerBanner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Play, Sparkles } from "lucide-react";
+import { Play, Sparkles, Upload, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { uploadFlyerAsset } from "@/lib/uploadFlyerAsset";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
 
 const INTRO_PRESETS: { value: IntroPreset; label: string }[] = [
@@ -36,6 +40,27 @@ export function Inspector() {
   const setPageBackground = useEditorStore((s) => s.setPageBackground);
   const replayIntro = useEditorStore((s) => s.replayIntro);
   const selectLayer = useEditorStore((s) => s.selectLayer);
+  const flyer = useEditorStore((s) => s.flyer);
+  const { user } = useAuth();
+  const imageFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  async function uploadLayerImage(file: File, layerId: string) {
+    if (!user) { toast.error("Sign in required"); return; }
+    if (!flyer) { toast.error("Open a flyer first"); return; }
+    setUploadingImage(true);
+    try {
+      const url = await uploadFlyerAsset(user.id, flyer.id, file, "images");
+      updateLayerContent(layerId, { src: url });
+      toast.success("Image uploaded");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not upload image");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+
 
   const page = pages.find((p) => p.id === selectedPageId);
   const layer = page?.layers.find((l) => l.id === selectedLayerId);
@@ -206,10 +231,39 @@ export function Inspector() {
 
         {layer.type === "image" && !layer.content.extractedFrom && (
           <div>
-            <Label className="text-xs">Image URL</Label>
+            <Label className="text-xs">Image</Label>
+            {layer.content.src && (
+              <div
+                className="mt-1 h-16 w-full rounded border border-border bg-cover bg-center"
+                style={{ backgroundImage: `url(${layer.content.src})` }}
+              />
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2 h-8 w-full text-xs"
+              disabled={uploadingImage}
+              onClick={() => imageFileRef.current?.click()}
+            >
+              {uploadingImage ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Upload className="mr-1 h-3 w-3" />}
+              {layer.content.src ? "Replace photo" : "Upload photo"}
+            </Button>
+            <input
+              ref={imageFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) uploadLayerImage(f, layer.id);
+              }}
+            />
+            <Label className="mt-3 block text-xs">Image URL</Label>
             <Input className="mt-1" value={layer.content.src || ""} onChange={(e) => updateLayerContent(layer.id, { src: e.target.value })} />
           </div>
         )}
+
 
         {layer.type === "image" && layer.content.extractedFrom && (
           <p className="text-[11px] text-muted-foreground">
