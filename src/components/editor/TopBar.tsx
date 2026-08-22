@@ -77,6 +77,11 @@ export function TopBar({ saving }: Props) {
   const pagesForLinks = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
 
+  const activePage = pagesForLinks.find((p) => p.id === selectedPageId) ?? pagesForLinks[0];
+  const activePageHasOwnSize = !!activePage?.background?.size;
+  const activeWidth = activePage?.background?.size?.width ?? flyer?.settings.width ?? 1080;
+  const activeHeight = activePage?.background?.size?.height ?? flyer?.settings.height ?? 1920;
+
   const [resizeOpen, setResizeOpen] = useState(false);
   const [presetIdx, setPresetIdx] = useState<string>("0");
   const [customW, setCustomW] = useState(1080);
