@@ -450,6 +450,54 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
         }
         case "checkout":
           if (p.checkoutUrl) window.open(p.checkoutUrl, "_blank", "noopener,noreferrer");
+          else setPopup({ ...a, type: "buy_product" } as LayerAction);
+          break;
+        case "form":
+        case "rsvp":
+          setFormAction(a);
+          break;
+        case "subscribe":
+          setSubscribeAction(a);
+          break;
+        case "poll":
+          setPollAction(a);
+          break;
+        case "book_appointment":
+          if (!flyerId) {
+            toast.error("Booking isn't available yet");
+            break;
+          }
+          setAppointmentAction(a);
+          break;
+        case "realtor_gallery":
+          setRealtorGallery(a);
+          break;
+        case "product_grid":
+          setProductGrid(a);
+          break;
+        case "air_messages":
+          setAirMessages(a);
+          break;
+        case "reveal":
+          setRevealed((prev) => {
+            const next = new Set(prev);
+            (p.targetLayerIds || []).forEach((id) => next.add(id));
+            return next;
+          });
+          break;
+        case "survey":
+        case "testimonial":
+        case "reserve_table":
+        case "schedule_consultation":
+        case "show_menu":
+        case "join_challenge":
+        case "business_rating":
+        case "novel":
+          if (!flyerId) {
+            if (bizad.gallery_url) window.open(bizad.gallery_url, "_blank", "noopener,noreferrer");
+            break;
+          }
+          setNewInteraction(a);
           break;
         default: {
           // Interactions that need the full flyer viewer open the live flyer instead,
@@ -461,13 +509,28 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
         }
       }
     },
-    [bizad],
+    [bizad, flyerId],
   );
 
   useEffect(() => () => audioRef.current?.pause(), []);
 
-  const ordered = [...layout.layers].sort((a, b) => a.z_index - b.z_index);
+  const hiddenIds = useMemo(() => {
+    const ids = new Set<string>();
+    layout.layers.forEach((l) => {
+      if (l.action?.type === "reveal") {
+        (l.action.payload.targetLayerIds || []).forEach((id) => {
+          if (!revealed.has(id)) ids.add(id);
+        });
+      }
+    });
+    return ids;
+  }, [layout.layers, revealed]);
+
+  const ordered = [...layout.layers]
+    .filter((l) => !hiddenIds.has(l.id))
+    .sort((a, b) => a.z_index - b.z_index);
   const galleryImages = gallery?.payload.galleryImages || [];
+
 
   return (
     <div
