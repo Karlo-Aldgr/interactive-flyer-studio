@@ -183,6 +183,20 @@ export function Canvas() {
     const sel = selectionRef.current;
     if (sel.length > 1 && sel.includes(id)) {
       patchBuffer.current[id] = { ...(patchBuffer.current[id] || {}), ...patch };
+      // End of a group drag: carry the same delta over to the other selected layers.
+      const origin = dragOrigin.current;
+      if (origin && origin.id === id && patch.position) {
+        const dx = patch.position.x - origin.x;
+        const dy = patch.position.y - origin.y;
+        for (const [otherId, start] of Object.entries(dragStartPositions.current)) {
+          patchBuffer.current[otherId] = {
+            ...(patchBuffer.current[otherId] || {}),
+            position: { x: start.x + dx, y: start.y + dy },
+          };
+        }
+        dragOrigin.current = null;
+        dragStartPositions.current = {};
+      }
       clearTimeout(flushTimer.current);
       flushTimer.current = setTimeout(() => {
         const buf = patchBuffer.current;
@@ -193,6 +207,7 @@ export function Canvas() {
     }
     updateLayer(id, patch);
   }
+
 
   function handleDragStartNode(id: string, node: any) {
     const sel = selectionRef.current;
