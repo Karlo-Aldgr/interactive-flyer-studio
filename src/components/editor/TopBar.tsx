@@ -72,8 +72,10 @@ export function TopBar({ saving }: Props) {
   const deviceFrame = useEditorStore((s) => s.deviceFrame);
   const setDeviceFrame = useEditorStore((s) => s.setDeviceFrame);
   const setCanvasSize = useEditorStore((s) => s.setCanvasSize);
+  const setPageSize = useEditorStore((s) => s.setPageSize);
   const startCrop = useEditorStore((s) => s.startCrop);
   const pagesForLinks = useEditorStore((s) => s.pages);
+  const selectedPageId = useEditorStore((s) => s.selectedPageId);
 
   const [resizeOpen, setResizeOpen] = useState(false);
   const [presetIdx, setPresetIdx] = useState<string>("0");
