@@ -72,8 +72,15 @@ export function TopBar({ saving }: Props) {
   const deviceFrame = useEditorStore((s) => s.deviceFrame);
   const setDeviceFrame = useEditorStore((s) => s.setDeviceFrame);
   const setCanvasSize = useEditorStore((s) => s.setCanvasSize);
+  const setPageSize = useEditorStore((s) => s.setPageSize);
   const startCrop = useEditorStore((s) => s.startCrop);
   const pagesForLinks = useEditorStore((s) => s.pages);
+  const selectedPageId = useEditorStore((s) => s.selectedPageId);
+
+  const activePage = pagesForLinks.find((p) => p.id === selectedPageId) ?? pagesForLinks[0];
+  const activePageHasOwnSize = !!activePage?.background?.size;
+  const activeWidth = activePage?.background?.size?.width ?? flyer?.settings.width ?? 1080;
+  const activeHeight = activePage?.background?.size?.height ?? flyer?.settings.height ?? 1920;
 
   const [resizeOpen, setResizeOpen] = useState(false);
   const [presetIdx, setPresetIdx] = useState<string>("0");
@@ -398,6 +405,15 @@ export function TopBar({ saving }: Props) {
     }
   }
 
+  /**
+   * Pages that carry their own size (digital business card, landing/menu pages)
+   * must be resized page-by-page — the flyer-level setting does not affect them.
+   */
+  function applySize(w: number, h: number, resizeMode: ResizeMode) {
+    if (activePage && activePageHasOwnSize) setPageSize(activePage.id, w, h, resizeMode);
+    else setCanvasSize(w, h, resizeMode);
+  }
+
   function applyResize() {
     if (mode === "fit") {
       const pages = useEditorStore.getState().pages;
@@ -415,7 +431,7 @@ export function TopBar({ saving }: Props) {
         toast.error("No image layers found to fit to.");
         return;
       }
-      setCanvasSize(best.w, best.h, "resize");
+      applySize(best.w, best.h, "resize");
       toast.success(`Canvas fit to largest image: ${best.w} × ${best.h}`);
       setResizeOpen(false);
       return;
@@ -427,7 +443,7 @@ export function TopBar({ saving }: Props) {
       startCrop({ width: target.w, height: target.h });
       toast.message("Drag the crop area on the canvas, then confirm.");
     } else {
-      setCanvasSize(target.w, target.h, mode);
+      applySize(target.w, target.h, mode);
       toast.success(`Canvas resized to ${target.w} × ${target.h}`);
     }
     setResizeOpen(false);
@@ -553,7 +569,7 @@ export function TopBar({ saving }: Props) {
             onClick={() => setResizeOpen(true)}
           >
             <Crop className="mr-1 h-3.5 w-3.5" />
-            <span className="tabular-nums">{flyer.settings.width}×{flyer.settings.height}</span>
+            <span className="tabular-nums">{activeWidth}×{activeHeight}</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>Change canvas size or crop</TooltipContent>

@@ -4,8 +4,8 @@ import type { BizadRecord } from "@/lib/bizad";
 import { buildMapsUrl } from "@/lib/bizad";
 
 export const BIZAD_PAGE_NAME = "Digital business card";
-export const BIZAD_PAGE_WIDTH = 800;
-export const BIZAD_PAGE_HEIGHT = 1400;
+export const BIZAD_PAGE_WIDTH = 1080;
+export const BIZAD_PAGE_HEIGHT = 1920;
 
 export const isBizadPage = (p: FlyerPage) => !!p.background?.bizadPage;
 
@@ -46,7 +46,7 @@ function button(
     ...defaultLayer("button", pageId, z),
     position: { x: opts.x, y: opts.y },
     size: { width: opts.w, height: opts.h },
-    style: { fill: color, color: "#ffffff", cornerRadius: 18, fontSize: 20, fontWeight: 600, align: "center" },
+    style: { fill: color, color: "#ffffff", cornerRadius: 24, fontSize: 27, fontWeight: 600, align: "center" },
     content: { label },
     action,
   };
@@ -59,34 +59,34 @@ export function buildBizadPage(flyerId: string, index: number, bizad: BizadRecor
   const color = bizad.button_color || "#2563eb";
   const layers: Layer[] = [];
   let z = 0;
-  let y = 60;
+  let y = 90;
 
   if (bizad.logo_url) {
     layers.push({
       ...defaultLayer("image", pageId, z++),
-      position: { x: (W - 200) / 2, y },
-      size: { width: 200, height: 200 },
+      position: { x: (W - 280) / 2, y },
+      size: { width: 280, height: 280 },
       content: { src: bizad.logo_url },
-      style: { cornerRadius: 100 },
+      style: { cornerRadius: 140 },
     });
-    y += 230;
+    y += 320;
   }
 
   if (bizad.business_name) {
-    layers.push(text(pageId, z++, bizad.business_name, { x: 60, y, w: W - 120, h: 54, size: 40, weight: 800 }));
-    y += 64;
+    layers.push(text(pageId, z++, bizad.business_name, { x: 80, y, w: W - 160, h: 72, size: 54, weight: 800 }));
+    y += 86;
   }
   if (bizad.owner_name) {
     layers.push(
-      text(pageId, z++, bizad.owner_name, { x: 60, y, w: W - 120, h: 36, size: 24, weight: 500, color: "#475569" }),
+      text(pageId, z++, bizad.owner_name, { x: 80, y, w: W - 160, h: 48, size: 32, weight: 500, color: "#475569" }),
     );
-    y += 48;
+    y += 64;
   }
   if (bizad.about_text) {
     layers.push(
-      text(pageId, z++, bizad.about_text, { x: 60, y, w: W - 120, h: 110, size: 18, weight: 400, color: "#475569" }),
+      text(pageId, z++, bizad.about_text, { x: 80, y, w: W - 160, h: 148, size: 24, weight: 400, color: "#475569" }),
     );
-    y += 130;
+    y += 176;
   }
 
   // Contact buttons — two per row.
@@ -102,15 +102,15 @@ export function buildBizadPage(flyerId: string, index: number, bizad: BizadRecor
   if (bizad.video_url)
     entries.push({ label: "Watch video", action: act("video", { videoUrl: bizad.video_url }) });
 
-  const bw = (W - 120 - 24) / 2;
+  const bw = (W - 160 - 32) / 2;
   entries.forEach((e, i) => {
     const col = i % 2;
     const row = Math.floor(i / 2);
     layers.push(
-      button(pageId, z++, e.label, color, { x: 60 + col * (bw + 24), y: y + row * 92, w: bw, h: 72 }, e.action),
+      button(pageId, z++, e.label, color, { x: 80 + col * (bw + 32), y: y + row * 120, w: bw, h: 96 }, e.action),
     );
   });
-  y += Math.ceil(entries.length / 2) * 92 + 20;
+  y += Math.ceil(entries.length / 2) * 120 + 28;
 
   // Social buttons.
   const socials = bizad.social_links || {};
@@ -126,22 +126,22 @@ export function buildBizadPage(flyerId: string, index: number, bizad: BizadRecor
     const col = i % 2;
     const row = Math.floor(i / 2);
     layers.push(
-      button(pageId, z++, s.label, "#0f172a", { x: 60 + col * (bw + 24), y: y + row * 82, w: bw, h: 62 },
+      button(pageId, z++, s.label, "#0f172a", { x: 80 + col * (bw + 32), y: y + row * 108, w: bw, h: 84 },
         act("open_url", { url: s.url, newTab: true })),
     );
   });
-  y += Math.ceil(socialEntries.length / 2) * 82 + 20;
+  y += Math.ceil(socialEntries.length / 2) * 108 + 28;
 
   if (bizad.flyer_image_url) {
     layers.push({
       ...defaultLayer("image", pageId, z++),
-      position: { x: 60, y },
-      size: { width: W - 120, height: 420 },
+      position: { x: 80, y },
+      size: { width: W - 160, height: 560 },
       content: { src: bizad.flyer_image_url },
-      style: { cornerRadius: 18 },
+      style: { cornerRadius: 24 },
       action: bizad.gallery_url ? act("open_url", { url: bizad.gallery_url, newTab: true }) : null,
     });
-    y += 450;
+    y += 600;
   }
 
   const copyright =
@@ -149,12 +149,12 @@ export function buildBizadPage(flyerId: string, index: number, bizad: BizadRecor
     (bizad.business_name ? `© ${bizad.business_name} ${new Date().getFullYear()}` : null);
   if (copyright) {
     layers.push(
-      text(pageId, z++, copyright, { x: 60, y, w: W - 120, h: 32, size: 14, weight: 400, color: "#94a3b8" }),
+      text(pageId, z++, copyright, { x: 80, y, w: W - 160, h: 42, size: 19, weight: 400, color: "#94a3b8" }),
     );
-    y += 50;
+    y += 66;
   }
 
-  const height = Math.max(BIZAD_PAGE_HEIGHT, Math.round(y + 60));
+  const height = Math.max(BIZAD_PAGE_HEIGHT, Math.round(y + 80));
 
   return {
     id: pageId,
