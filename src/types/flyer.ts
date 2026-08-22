@@ -1,6 +1,6 @@
 // TapThatFlyer shared domain types
 
-export type LayerType = "text" | "image" | "icon" | "shape" | "button" | "hotspot";
+export type LayerType = "text" | "image" | "icon" | "shape" | "button" | "hotspot" | "video";
 
 export type ActionType =
   | "open_url"
@@ -419,6 +419,12 @@ export interface LayerContent {
   lineStyle?: "solid" | "dashed";
   hidden?: boolean; // for reveal action targets
   hotspotShape?: "rect" | "ellipse";
+  /** video layer */
+  videoUrl?: string;
+  posterUrl?: string;
+  videoAutoplay?: boolean;
+  videoLoop?: boolean;
+  videoMuted?: boolean;
   /** Source image layer id when this layer is a non-destructive cutout */
   extractedFrom?: string;
   /** Normalized 0..1 region within the source image layer */

@@ -45,6 +45,13 @@ export function defaultLayer(type: LayerType, pageId: string, zIndex: number): L
         style: { fill: "#7c3aed", color: "#ffffff", cornerRadius: 999, fontSize: 16, fontWeight: 600, align: "center" },
         content: { label: "Click me" },
       };
+    case "video":
+      return {
+        ...base,
+        size: { width: 320, height: 180 },
+        style: { cornerRadius: 12, opacity: 1 },
+        content: { videoUrl: "", videoAutoplay: true, videoLoop: true, videoMuted: true },
+      };
     case "hotspot":
       return {
         ...base,
