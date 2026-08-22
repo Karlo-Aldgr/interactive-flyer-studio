@@ -23,3 +23,5 @@ Wire the real appointment booking flow into the business card viewer:
 ## Not included unless you want it
 
 The other unsupported action types (form, poll, menu order, chatbot, novel) will still open the live flyer. Say the word and they can be brought over the same way.
+
+I WANT ALL ACTIONS THAT APPLIES TO FLYERS TO WORK WITH DIGITAL BUSINESS CARDS, 
