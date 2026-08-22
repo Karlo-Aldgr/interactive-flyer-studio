@@ -258,6 +258,42 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const s = get();
     if (!s.flyer) return;
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+
+    const cropLayers = (layers: Layer[]) =>
+      layers
+        .map((l) => ({
+          ...l,
+          position: { x: l.position.x - rect.x, y: l.position.y - rect.y },
+        }))
+        .filter((l) => {
+          const right = l.position.x + l.size.width;
+          const bottom = l.position.y + l.size.height;
+          return right > 0 && bottom > 0 && l.position.x < rect.width && l.position.y < rect.height;
+        });
+
+    // A page with its own canvas size (digital business card, landing, menu)
+    // crops independently — the flyer size and the other pages stay untouched.
+    const active = s.pages.find((p) => p.id === s.selectedPageId);
+    if (active?.background?.size) {
+      set({
+        pages: s.pages.map((p) =>
+          p.id === active.id
+            ? {
+                ...p,
+                background: { ...p.background, size: { width: rect.width, height: rect.height } },
+                layers: cropLayers(p.layers),
+              }
+            : p,
+        ),
+        pendingCrop: null,
+        drawMode: null,
+        past,
+        future: [],
+        dirty: true,
+      });
+      return;
+    }
+
     const newPages = s.pages.map((p) => p.background?.size ? p : ({
       ...p,
       layers: p.layers
