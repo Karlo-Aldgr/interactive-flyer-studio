@@ -101,7 +101,8 @@ export function ShareDialog({
   }
 
   function downloadQR(canvasId = "share-qr-canvas", suffix = "") {
-    const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
+    const hdCanvas = document.getElementById(`${canvasId}-hd`) as HTMLCanvasElement | null;
+    const canvas = hdCanvas ?? (document.getElementById(canvasId) as HTMLCanvasElement | null);
     if (!canvas) return;
     const link = document.createElement("a");
     const base = (title || "flyer").replace(/[^a-z0-9]+/gi, "-");
