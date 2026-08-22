@@ -109,7 +109,7 @@ export const facebookAdapter: SocialPlatformAdapter = {
   requiredSecrets: SECRETS,
   defaultScopes: FACEBOOK_SCOPES,
   approvalNotes:
-    "Meta app must have the Facebook Login product plus advanced access to pages_show_list, pages_manage_posts and pages_read_engagement (App Review) before non-admin users can connect.",
+    "Meta app must have the Facebook Login product plus advanced access to pages_show_list and pages_read_engagement (App Review) before non-admin users can connect.",
   developerConsoleUrl: "https://developers.facebook.com/apps",
 
   startOAuth({ redirectUri, state, scopes }: AuthStartInput) {
