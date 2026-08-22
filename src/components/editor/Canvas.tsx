@@ -509,7 +509,10 @@ export function Canvas() {
               }
               if (drawMode === "crop") return;
               if (e.target === e.target.getStage()) {
-                selectLayer(null);
+                const p = getStagePos(e);
+                const additive = !!(e.evt?.shiftKey || e.evt?.ctrlKey || e.evt?.metaKey);
+                if (p) setMarquee({ x1: p.x, y1: p.y, x2: p.x, y2: p.y, additive });
+                if (!additive) selectLayer(null);
                 setHoveredLayerId(null);
               }
             }}
@@ -517,9 +520,41 @@ export function Canvas() {
               if ((isRectDrawMode || drawMode === "hotspot-ellipse") && drawStart && !extracting) {
                 const p = getStagePos(e);
                 if (p) setDrawCurrent(p);
+                return;
+              }
+              if (marquee) {
+                const p = getStagePos(e);
+                if (p) setMarquee((m) => (m ? { ...m, x2: p.x, y2: p.y } : m));
               }
             }}
             onMouseUp={() => {
+              if (marquee) {
+                const box = {
+                  x: Math.min(marquee.x1, marquee.x2),
+                  y: Math.min(marquee.y1, marquee.y2),
+                  w: Math.abs(marquee.x2 - marquee.x1),
+                  h: Math.abs(marquee.y2 - marquee.y1),
+                };
+                const additive = marquee.additive;
+                setMarquee(null);
+                if (box.w >= 5 && box.h >= 5) {
+                  const hits = (page?.layers ?? [])
+                    .filter(
+                      (l) =>
+                        l.position.x < box.x + box.w &&
+                        l.position.x + l.size.width > box.x &&
+                        l.position.y < box.y + box.h &&
+                        l.position.y + l.size.height > box.y
+                    )
+                    .map((l) => l.id);
+                  const next = additive
+                    ? Array.from(new Set([...selectionRef.current, ...hits]))
+                    : hits;
+                  selectLayers(next);
+                  return;
+                }
+              }
+
               if (drawMode === "extract-rect" && drawStart && drawCurrent && !extracting) {
                 const w = Math.abs(drawCurrent.x - drawStart.x);
                 const h = Math.abs(drawCurrent.y - drawStart.y);
