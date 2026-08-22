@@ -19,14 +19,29 @@ const GRAPH = () =>
   Deno.env.get("SOCIAL_META_GRAPH_API_VERSION")?.trim() ||
   Deno.env.get("META_GRAPH_API_VERSION")?.trim() ||
   "v23.0";
-const SECRETS = ["SOCIAL_META_APP_ID", "SOCIAL_META_APP_SECRET"];
+// Prefer the dedicated social-stack Meta app when it is configured; otherwise
+// reuse the Meta app already set up for this project. Legacy Meta functions are
+// untouched — they read the same secrets independently.
+const hasDedicated = Boolean(
+  Deno.env.get("SOCIAL_META_APP_ID")?.trim() && Deno.env.get("SOCIAL_META_APP_SECRET")?.trim(),
+);
+const SECRETS = hasDedicated
+  ? ["SOCIAL_META_APP_ID", "SOCIAL_META_APP_SECRET"]
+  : ["META_APP_ID", "META_APP_SECRET"];
+
+function metaApp(): { appId: string; appSecret: string } | AdapterError {
+  const env = requireEnv(SECRETS);
+  if ("ok" in env && env.ok === false) return env as AdapterError;
+  const e = env as Record<string, string>;
+  return { appId: e[SECRETS[0]], appSecret: e[SECRETS[1]] };
+}
 
 export const FACEBOOK_SCOPES = [
   "pages_show_list",
   "pages_manage_posts",
   "pages_read_engagement",
-  "business_management",
 ];
+
 
 /** Shared with the Instagram adapter: exchange the code for a long-lived user token. */
 export async function exchangeFacebookCode(
