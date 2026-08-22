@@ -276,6 +276,52 @@ export function Inspector() {
           </div>
         )}
 
+        {layer.type === "video" && (
+          <div className="space-y-2">
+            <Label className="text-xs">Video URL</Label>
+            <Input
+              className="mt-1"
+              value={layer.content.videoUrl || ""}
+              placeholder="https://…/clip.mp4"
+              onChange={(e) => updateLayerContent(layer.id, { videoUrl: e.target.value })}
+            />
+            <Label className="text-xs">Poster image URL (optional)</Label>
+            <Input
+              className="mt-1"
+              value={layer.content.posterUrl || ""}
+              onChange={(e) => updateLayerContent(layer.id, { posterUrl: e.target.value })}
+            />
+            <div className="flex items-center justify-between pt-1">
+              <Label className="text-xs">Autoplay</Label>
+              <Switch
+                checked={layer.content.videoAutoplay !== false}
+                onCheckedChange={(v) => updateLayerContent(layer.id, { videoAutoplay: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Loop</Label>
+              <Switch
+                checked={layer.content.videoLoop !== false}
+                onCheckedChange={(v) => updateLayerContent(layer.id, { videoLoop: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Muted</Label>
+              <Switch
+                checked={layer.content.videoMuted !== false}
+                onCheckedChange={(v) => updateLayerContent(layer.id, { videoMuted: v })}
+              />
+            </div>
+            <Label className="text-xs">Corner radius</Label>
+            <Input
+              type="number"
+              className="mt-1"
+              value={layer.style.cornerRadius ?? 12}
+              onChange={(e) => updateLayerStyle(layer.id, { cornerRadius: Number(e.target.value) })}
+            />
+          </div>
+        )}
+
         {layer.type === "image" && !layer.content.extractedFrom && (
           <div>
             <Label className="text-xs">Image</Label>
