@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import type { IntroPreset, Layer, LayerAction, PageIntro } from "@/types/flyer";
@@ -7,6 +7,17 @@ import type { BizadRecord } from "@/lib/bizad";
 import { downloadVCard } from "@/lib/bizad";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import CarouselDialog from "@/components/viewer/CarouselDialog";
+import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
+import NewInteractionDialogs from "@/components/viewer/NewInteractionDialogs";
+import {
+  BizadAirMessages,
+  BizadFormDialog,
+  BizadPollDialog,
+  BizadProductGridDialog,
+  BizadRealtorGalleryDialog,
+  BizadSubscribeDialog,
+} from "@/components/viewer/BizadInteractionDialogs";
+
 
 
 export type BizadLayout = {
@@ -341,7 +352,33 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
   const [gallery, setGallery] = useState<LayerAction | null>(null);
   const [carousel, setCarousel] = useState<LayerAction | null>(null);
   const [coupon, setCoupon] = useState<LayerAction | null>(null);
+  const [formAction, setFormAction] = useState<LayerAction | null>(null);
+  const [subscribeAction, setSubscribeAction] = useState<LayerAction | null>(null);
+  const [pollAction, setPollAction] = useState<LayerAction | null>(null);
+  const [appointmentAction, setAppointmentAction] = useState<LayerAction | null>(null);
+  const [newInteraction, setNewInteraction] = useState<LayerAction | null>(null);
+  const [realtorGallery, setRealtorGallery] = useState<LayerAction | null>(null);
+  const [productGrid, setProductGrid] = useState<LayerAction | null>(null);
+  const [airMessages, setAirMessages] = useState<LayerAction | null>(null);
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const flyerId = (bizad as any).flyer_id || null;
+  const sessionId = useMemo(() => {
+    try {
+      const key = "bizad_session_id";
+      let id = localStorage.getItem(key);
+      if (!id) {
+        id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+          ? crypto.randomUUID()
+          : "anon-" + Math.random().toString(36).slice(2);
+        localStorage.setItem(key, id);
+      }
+      return id;
+    } catch {
+      return "anon-" + Math.random().toString(36).slice(2);
+    }
+  }, []);
+
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -413,6 +450,54 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
         }
         case "checkout":
           if (p.checkoutUrl) window.open(p.checkoutUrl, "_blank", "noopener,noreferrer");
+          else setPopup({ ...a, type: "buy_product" } as LayerAction);
+          break;
+        case "form":
+        case "rsvp":
+          setFormAction(a);
+          break;
+        case "subscribe":
+          setSubscribeAction(a);
+          break;
+        case "poll":
+          setPollAction(a);
+          break;
+        case "book_appointment":
+          if (!flyerId) {
+            toast.error("Booking isn't available yet");
+            break;
+          }
+          setAppointmentAction(a);
+          break;
+        case "realtor_gallery":
+          setRealtorGallery(a);
+          break;
+        case "product_grid":
+          setProductGrid(a);
+          break;
+        case "air_messages":
+          setAirMessages(a);
+          break;
+        case "reveal":
+          setRevealed((prev) => {
+            const next = new Set(prev);
+            (p.targetLayerIds || []).forEach((id) => next.add(id));
+            return next;
+          });
+          break;
+        case "survey":
+        case "testimonial":
+        case "reserve_table":
+        case "schedule_consultation":
+        case "show_menu":
+        case "join_challenge":
+        case "business_rating":
+        case "novel":
+          if (!flyerId) {
+            if (bizad.gallery_url) window.open(bizad.gallery_url, "_blank", "noopener,noreferrer");
+            break;
+          }
+          setNewInteraction(a);
           break;
         default: {
           // Interactions that need the full flyer viewer open the live flyer instead,
@@ -424,13 +509,28 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
         }
       }
     },
-    [bizad],
+    [bizad, flyerId],
   );
 
   useEffect(() => () => audioRef.current?.pause(), []);
 
-  const ordered = [...layout.layers].sort((a, b) => a.z_index - b.z_index);
+  const hiddenIds = useMemo(() => {
+    const ids = new Set<string>();
+    layout.layers.forEach((l) => {
+      if (l.action?.type === "reveal") {
+        (l.action.payload.targetLayerIds || []).forEach((id) => {
+          if (!revealed.has(id)) ids.add(id);
+        });
+      }
+    });
+    return ids;
+  }, [layout.layers, revealed]);
+
+  const ordered = [...layout.layers]
+    .filter((l) => !hiddenIds.has(l.id))
+    .sort((a, b) => a.z_index - b.z_index);
   const galleryImages = gallery?.payload.galleryImages || [];
+
 
   return (
     <div
@@ -570,6 +670,53 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
       )}
 
       <CarouselDialog action={carousel} onClose={() => setCarousel(null)} onRunAction={runAction} />
+
+      <BizadFormDialog action={formAction} flyerId={flyerId} onClose={() => setFormAction(null)} />
+      <BizadSubscribeDialog action={subscribeAction} flyerId={flyerId} onClose={() => setSubscribeAction(null)} />
+      <BizadPollDialog action={pollAction} flyerId={flyerId} onClose={() => setPollAction(null)} />
+      <BizadRealtorGalleryDialog action={realtorGallery} onClose={() => setRealtorGallery(null)} />
+      <BizadProductGridDialog
+        action={productGrid}
+        onClose={() => setProductGrid(null)}
+        onBuy={(product, size, qty) => {
+          setProductGrid(null);
+          const url = product.paymentUrl || product.buyUrl;
+          if (url) {
+            window.open(url, "_blank", "noopener,noreferrer");
+            return;
+          }
+          setPopup({
+            id: `pg-${product.id}`,
+            type: "buy_product",
+            payload: {
+              title: product.name,
+              body: [size ? `Size: ${size}` : "", `Quantity: ${qty}`, product.description || ""]
+                .filter(Boolean)
+                .join("\n"),
+              mediaUrl: product.imageUrl,
+            },
+          } as unknown as LayerAction);
+        }}
+      />
+      <BizadAirMessages action={airMessages} onClose={() => setAirMessages(null)} />
+
+      {appointmentAction && flyerId && (
+        <AppointmentBookingDialog
+          flyerId={flyerId}
+          layerId={null}
+          action={appointmentAction}
+          open
+          onClose={() => setAppointmentAction(null)}
+        />
+      )}
+
+      <NewInteractionDialogs
+        action={newInteraction}
+        flyerId={flyerId}
+        sessionId={sessionId}
+        onClose={() => setNewInteraction(null)}
+      />
     </div>
+
   );
 }
