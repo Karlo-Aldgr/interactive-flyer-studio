@@ -15,6 +15,7 @@ import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 
 // Lazy-loaded routes — keeps Konva/Recharts/etc out of the initial bundle
 const Auth = lazy(() => import("./pages/Auth"));
+const InstagramCallback = lazy(() => import("./pages/InstagramCallback"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -105,6 +106,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/instagram/callback" element={<InstagramCallback />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/reset-password" element={<ResetPassword />} />
               <Route path="/privacy" element={<Privacy />} />
