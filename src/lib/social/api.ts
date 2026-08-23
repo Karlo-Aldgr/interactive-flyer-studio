@@ -9,30 +9,14 @@ import type {
   SocialVariant,
 } from "./types";
 
-async function signedIn() {
-  const { data } = await supabase.auth.getSession();
-  return !!data.session?.access_token;
-}
-
 /** Tokens never reach the browser: this RPC returns metadata columns only. */
 export async function fetchAccounts(): Promise<SocialAccount[]> {
-  if (!(await signedIn())) return [];
   const { data, error } = await supabase.rpc("my_social_accounts");
   if (error) throw error;
   return (data ?? []) as unknown as SocialAccount[];
 }
 
 export async function fetchIntegrationStatus(): Promise<IntegrationStatusResponse> {
-  // Signed-out visitors would otherwise get a 401 from the function and crash
-  // the panel; return an inert status instead.
-  if (!(await signedIn())) {
-    return {
-      encryption_configured: false,
-      callback_url: "",
-      scheduler_configured: false,
-      platforms: [],
-    };
-  }
   const { data, error } = await supabase.functions.invoke("social-accounts", {
     body: { action: "status" },
   });
