@@ -173,6 +173,7 @@ export default function AdminJobs() {
     setEPayLink(j.payment_link ?? "");
     setEFlyerId(j.flyer_id ?? "");
     setEPreviewReady(!!j.preview_ready);
+    setEPaid(!!j.share_unlocked || j.status === "paid");
     setENotes(j.admin_notes ?? "");
   };
 
@@ -186,6 +187,7 @@ export default function AdminJobs() {
       payment_link: ePayLink || null,
       flyer_id: eFlyerId || null,
       preview_ready: ePreviewReady,
+      share_unlocked: ePaid,
       admin_notes: eNotes || null,
     }).eq("id", editing.id);
     if (error) { toast.error(error.message); return; }
@@ -198,6 +200,16 @@ export default function AdminJobs() {
     }
     toast.success("Job updated");
     setEditing(null);
+    refresh();
+  };
+
+  /** Superadmin override: mark a project/flyer as paid (or revert to unpaid). */
+  const setJobPaid = async (j: any, paid: boolean) => {
+    const patch: Record<string, unknown> = { share_unlocked: paid };
+    if (paid && ["new", "reviewing", "quoted"].includes(j.status)) patch.status = "paid";
+    const { error } = await supabase.from("jobs").update(patch as any).eq("id", j.id);
+    if (error) return toast.error(error.message);
+    toast.success(paid ? "Marked as paid — share link & QR unlocked" : "Marked as unpaid");
     refresh();
   };
 
