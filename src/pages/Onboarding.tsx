@@ -138,7 +138,7 @@ export default function Onboarding() {
         setLoading(false);
       }
     })();
-  }, [user]);
+  }, [user, jobParam, flyerParam]);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
