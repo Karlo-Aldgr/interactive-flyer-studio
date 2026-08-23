@@ -221,6 +221,7 @@ export default function Onboarding() {
       const { jobId } = await submitOnboarding({
         userId: user.id,
         userEmail: user.email,
+        jobId: projectJobId,
         input: {
           full_name: parsed.data.full_name,
           phone: parsed.data.phone,
