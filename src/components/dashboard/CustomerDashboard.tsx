@@ -95,7 +95,8 @@ export function CustomerDashboard({ jobs, userEmail }: CustomerDashboardProps) {
               </Button>
             </div>
             <div className="mt-3 space-y-2">
-              {jobs.map((j) => (
+              {projects.map((j) => (
+
                 <JobProjectRow key={j.id} job={j} />
               ))}
             </div>
