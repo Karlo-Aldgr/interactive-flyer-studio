@@ -103,11 +103,11 @@ export default function MyJobs() {
         }
       />
 
-      {jobs.length > 0 && (
+      {readyJobs.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-sm">
           <label className="flex cursor-pointer items-center gap-2">
             <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
-            Select all
+            Select all ready projects
           </label>
           <span className="text-muted-foreground">{selectedJobs.length} selected</span>
           {selectedJobs.length > 0 && (
@@ -132,86 +132,33 @@ export default function MyJobs() {
           <Button asChild className="mt-4"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit your first project</Link></Button>
         </Card>
       ) : (
-        <div className="mt-8 space-y-4">
+        <div className="mt-8 space-y-10">
+          {readyJobs.length > 0 && (
+            <section className="space-y-4">
+              <div>
+                <h2 className="font-display text-lg font-semibold">Ready to share</h2>
+                <p className="text-sm text-muted-foreground">
+                  Check the projects you want to include in Post to Socials.
+                </p>
+              </div>
+              {readyJobs.map((j) => renderCard(j, true))}
+            </section>
+          )}
 
-          {jobs.map((j) => {
-            const status = getUnifiedStatusLabel(j);
-            const price = formatPrice(j.price_cents);
-            const paid = !!j.share_unlocked || j.status === "paid";
-            const active = j.flyer_active !== false;
-            const previewHref = paid && active && j.flyer?.public_slug
-              ? `/f/${j.flyer.public_slug}`
-              : j.flyer_id
-                ? `/preview/${j.flyer_id}`
-                : null;
-            return (
-              <Card key={j.id} className="p-5">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <Checkbox
-                    className="mt-1"
-                    checked={!!selected[j.id]}
-                    onCheckedChange={(v) => setSelected((s) => ({ ...s, [j.id]: v === true }))}
-                    aria-label={`Select ${j.title}`}
-                  />
-                  <div className="min-w-0 flex-1">
-
-                    <Link to={`/my-jobs/${j.id}`} className="group inline-flex items-center gap-2">
-                      <h3 className="font-semibold group-hover:underline">{j.title}</h3>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Link>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <Badge className={status.className}><span className="mr-1">{status.emoji}</span>{status.label}</Badge>
-                      <Badge variant="outline">{j.type === "upload" ? "Upload" : "Design"}</Badge>
-                      {paid && (
-                        <Badge variant="outline" className={active ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : ""}>
-                          {active ? "Active" : "Inactive"}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Submitted {format(new Date(j.created_at), "PPp")}
-                    </p>
-                    {j.brief && <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{j.brief}</p>}
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {(j.selected_actions ?? []).map((id: string) => (
-                        <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">{labelFor(id)}</span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-2">
-                    {price && <div className="font-display text-2xl font-bold">{price}</div>}
-                    {!paid && j.payment_link && price && (
-                      <Button asChild size="sm" className="shadow-glow">
-                        <a href={j.payment_link} target="_blank" rel="noreferrer">
-                          Pay now <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                        </a>
-                      </Button>
-                    )}
-                    {previewHref && (
-                      <Button asChild size="sm" variant="outline">
-                        <a href={previewHref} target="_blank" rel="noreferrer">
-                          <Eye className="mr-1 h-3.5 w-3.5" />Preview
-                        </a>
-                      </Button>
-                    )}
-                    {j.upload_url && (
-                      <Button size="sm" variant="outline" onClick={async () => {
-                        const url = await getJobUploadSignedUrl(j.upload_url);
-                        if (!url) return toast.error("Could not open upload");
-                        window.open(url, "_blank", "noreferrer");
-                      }}>View upload</Button>
-                    )}
-                    <Button asChild size="sm" variant="ghost">
-                      <Link to={`/my-jobs/${j.id}`}>Manage →</Link>
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
+          {pendingJobs.length > 0 && (
+            <section className="space-y-4">
+              <div>
+                <h2 className="font-display text-lg font-semibold">In progress</h2>
+                <p className="text-sm text-muted-foreground">
+                  These become shareable once they're completed and paid.
+                </p>
+              </div>
+              {pendingJobs.map((j) => renderCard(j, false))}
+            </section>
+          )}
         </div>
       )}
+
     </CustomerPortalShell>
   );
 }
