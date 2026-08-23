@@ -393,7 +393,9 @@ export default function AdminJobs() {
   };
 
   const renderJobCard = (j: any, opts?: { onDelete?: () => void }) => {
-    const isNew = j.status === "new" && (Date.now() - new Date(j.created_at).getTime() < NEW_BADGE_MS);
+    const age = Date.now() - new Date(j.created_at).getTime();
+    const isNew = j.status === "new" && age < NEW_BADGE_MS;
+    const isWaiting = j.status === "new" && age > NEW_BADGE_MS;
     const linkedFlyer = flyers.find((f) => f.id === j.flyer_id);
     const customerDeleted = jobIsCustomerDeleted(j);
     const assignedEditorEmail = j.assigned_editor_id ? editorEmails.get(j.assigned_editor_id) : null;
@@ -407,12 +409,13 @@ export default function AdminJobs() {
           if (customerDeleted) return;
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j); }
         }}
-        className={`p-5 transition cursor-pointer hover:border-primary/50 hover:shadow-md ${isNew ? "ring-2 ring-primary/60 shadow-glow" : ""} ${customerDeleted ? "border-destructive/30 cursor-default" : ""}`}
+        className={`p-5 transition cursor-pointer hover:border-primary/50 hover:shadow-md ${isNew ? "ring-2 ring-primary/60 shadow-glow" : ""} ${isWaiting ? "border-red-500 ring-2 ring-red-500/60 shadow-sm" : ""} ${customerDeleted ? "border-destructive/30 cursor-default" : ""}`}
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              {isNew && <Badge className="bg-primary text-primary-foreground"><Sparkles className="mr-1 h-3 w-3" />NEW</Badge>}
+              {isWaiting && <Badge className="bg-red-500 text-white">Waiting</Badge>}
+              {isNew && !isWaiting && <Badge className="bg-primary text-primary-foreground"><Sparkles className="mr-1 h-3 w-3" />NEW</Badge>}
               <h3 className="font-semibold">{j.title}</h3>
               <Badge variant="secondary">{STATUS_LABEL[j.status]}</Badge>
               <Badge variant={j.assigned_editor_id ? "default" : "outline"}>
