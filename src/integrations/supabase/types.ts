@@ -3577,6 +3577,7 @@ export type Database = {
         Args: { _flyer_id: string }
         Returns: boolean
       }
+      user_owns_flyer: { Args: { _flyer_id: string }; Returns: boolean }
       waiter_pin_hash: {
         Args: { p_flyer_id: string; p_pin: string }
         Returns: string
