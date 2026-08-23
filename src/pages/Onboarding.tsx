@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { Loader2, Upload, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +14,14 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
-import { getMyOnboarding, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
+import {
+  getOnboardingForJob,
+  getMyOnboarding,
+  getJobIdForFlyer,
+  submitOnboarding,
+  extractSpreadsheetId,
+  type OnboardingHelp,
+} from "@/lib/onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 
@@ -78,13 +85,24 @@ export default function Onboarding() {
   const [postingPermission, setPostingPermission] = useState(false);
   const [existingFlyer, setExistingFlyer] = useState<{ title: string; url: string } | null>(null);
   const [scanning, setScanning] = useState(false);
-
+  const [searchParams] = useSearchParams();
+  const jobParam = searchParams.get("job");
+  const flyerParam = searchParams.get("flyer");
+  const [projectJobId, setProjectJobId] = useState<string | null>(jobParam);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       try {
-        const existing = await getMyOnboarding(user.id);
+        // Onboarding is per project. Only fall back to the account-level record
+        // when this page is opened without a project in the URL.
+        let scopedJobId = jobParam;
+        if (!scopedJobId && flyerParam) scopedJobId = await getJobIdForFlyer(flyerParam);
+        setProjectJobId(scopedJobId);
+
+        const existing = scopedJobId
+          ? await getOnboardingForJob(scopedJobId)
+          : await getMyOnboarding(user.id);
         if (existing) {
           setForm({
             full_name: existing.full_name ?? "",
@@ -120,7 +138,7 @@ export default function Onboarding() {
         setLoading(false);
       }
     })();
-  }, [user]);
+  }, [user, jobParam, flyerParam]);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -203,6 +221,7 @@ export default function Onboarding() {
       const { jobId } = await submitOnboarding({
         userId: user.id,
         userEmail: user.email,
+        jobId: projectJobId,
         input: {
           full_name: parsed.data.full_name,
           phone: parsed.data.phone,

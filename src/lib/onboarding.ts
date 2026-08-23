@@ -111,9 +111,10 @@ export async function getMyOnboarding(userId: string): Promise<OnboardingSubmiss
     .from("onboarding_submissions" as any)
     .select("*")
     .eq("user_id", userId)
-    .maybeSingle();
+    .order("updated_at", { ascending: false })
+    .limit(1);
   if (error) throw error;
-  return (data as unknown as OnboardingSubmission | null) ?? null;
+  return ((data as any)?.[0] as OnboardingSubmission | undefined) ?? null;
 }
 
 export async function getOnboardingForJob(jobId: string): Promise<OnboardingSubmission | null> {
@@ -172,6 +173,20 @@ export interface SubmitOnboardingArgs {
   input: OnboardingInput;
   logoFile: File | null;
   flyerFile: File | null;
+  /** Attach this onboarding to a specific project (job). One onboarding per project. */
+  jobId?: string | null;
+}
+
+/** The job that owns a flyer, used to scope onboarding to a single project. */
+export async function getJobIdForFlyer(flyerId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("flyer_id", flyerId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) return null;
+  return (data?.[0] as any)?.id ?? null;
 }
 
 export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jobId: string | null }> {
@@ -186,17 +201,16 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
   }
 
   const title = input.business_name?.trim() || "Onboarding project";
-  const existing = await getMyOnboarding(userId);
-  let jobId: string | null = null;
+  let jobId: string | null = args.jobId ?? null;
 
-  if (existing?.flyer_job_id && !flyerFile) {
-    jobId = existing.flyer_job_id;
+  if (jobId) {
     const { error: jobUpdateErr } = await supabase
       .from("jobs")
       .update({
         title,
         brief: input.business_description || null,
         customer_email: userEmail ?? null,
+        ...(flyerPath ? { upload_url: flyerPath } : {}),
       })
       .eq("id", jobId);
     if (jobUpdateErr) throw jobUpdateErr;
@@ -218,6 +232,7 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     if (jobErr) throw jobErr;
     jobId = job?.id ?? null;
   }
+
 
   const row = {
     user_id: userId,
@@ -244,13 +259,13 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     posting_permission: input.posting_permission,
     posting_permission_name: input.posting_permission_name,
     posting_permission_at: input.posting_permission_at,
-    flyer_upload_url: flyerPath,
+    ...(flyerPath ? { flyer_upload_url: flyerPath } : {}),
     flyer_job_id: jobId,
   };
 
   const { error: upsertErr } = await supabase
     .from("onboarding_submissions" as any)
-    .upsert(row, { onConflict: "user_id" });
+    .upsert(row, { onConflict: "flyer_job_id" });
   if (upsertErr) throw upsertErr;
 
   await supabase
