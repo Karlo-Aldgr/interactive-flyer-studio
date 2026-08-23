@@ -30,23 +30,56 @@ export default function MyJobs() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data, error } = await supabase
-        .from("jobs")
-        .select("*, flyer:flyers(public_slug, status)")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (!error) setJobs(data ?? []);
+      const [ownJobs, flyerJobs] = await Promise.all([
+        supabase
+          .from("jobs")
+          .select("*, flyer:flyers(public_slug, status, owner_id)")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("jobs")
+          .select("*, flyer:flyers!inner(public_slug, status, owner_id)")
+          .eq("flyer.owner_id", user.id)
+          .order("created_at", { ascending: false }),
+      ]);
+
+      const merged = [...(ownJobs.data ?? []), ...(flyerJobs.data ?? [])];
+      const byId = new Map<string, any>();
+      merged.forEach((j) => byId.set(j.id, j));
+
+      // Collapse duplicate job rows pointing at the same flyer, keeping the
+      // most advanced one (paid/completed beats a leftover "new" duplicate).
+      const rank = (j: any) =>
+        (j.share_unlocked ? 2 : 0) +
+        (["paid", "completed", "delivered"].includes(j.status) ? 1 : 0);
+      const byFlyer = new Map<string, any>();
+      const rows: any[] = [];
+      for (const j of byId.values()) {
+        if (!j.flyer_id) { rows.push(j); continue; }
+        const prev = byFlyer.get(j.flyer_id);
+        if (!prev || rank(j) > rank(prev)) byFlyer.set(j.flyer_id, j);
+      }
+      const all = [...rows, ...byFlyer.values()].sort(
+        (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
+      );
+      setJobs(all);
       setLoading(false);
     })();
   }, [user]);
 
+  const isReady = (j: any) =>
+    !!j.share_unlocked || ["paid", "completed", "delivered"].includes(j.status);
+  const readyJobs = useMemo(() => jobs.filter(isReady), [jobs]);
+  const pendingJobs = useMemo(() => jobs.filter((j) => !isReady(j)), [jobs]);
+
   const selectedJobs = useMemo(
-    () => jobs.filter((j) => selected[j.id]).map((j) => ({ id: j.id, title: j.title })),
-    [jobs, selected],
+    () => readyJobs.filter((j) => selected[j.id]).map((j) => ({ id: j.id, title: j.title })),
+    [readyJobs, selected],
   );
-  const allSelected = jobs.length > 0 && selectedJobs.length === jobs.length;
+  const allSelected = readyJobs.length > 0 && selectedJobs.length === readyJobs.length;
   const toggleAll = () =>
-    setSelected(allSelected ? {} : Object.fromEntries(jobs.map((j) => [j.id, true])));
+    setSelected(allSelected ? {} : Object.fromEntries(readyJobs.map((j) => [j.id, true])));
+
 
   return (
     <CustomerPortalShell maxWidth="4xl">
