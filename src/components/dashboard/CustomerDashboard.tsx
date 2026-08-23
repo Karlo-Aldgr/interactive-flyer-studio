@@ -15,10 +15,32 @@ type CustomerDashboardProps = {
   userEmail?: string | null;
 };
 
+const VISIBLE_STATUSES = ["new", "paid", "delivered"];
+
+/** Keep only submitted / paid / completed projects, collapsing duplicates. */
+function visibleProjects(jobs: UserJob[]): UserJob[] {
+  const rank = (j: UserJob) =>
+    (j.share_unlocked ? 4 : 0) +
+    (j.status === "paid" ? 3 : j.status === "delivered" ? 2 : 1);
+  const byKey = new Map<string, UserJob>();
+  jobs
+    .filter((j) => !j.deleted_at && VISIBLE_STATUSES.includes(j.status))
+    .forEach((j) => {
+      const key = j.flyer_id ?? `${j.title.trim().toLowerCase()}`;
+      const prev = byKey.get(key);
+      if (!prev || rank(j) > rank(prev)) byKey.set(key, j);
+    });
+  return [...byKey.values()].sort(
+    (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
+  );
+}
+
 export function CustomerDashboard({ jobs, userEmail }: CustomerDashboardProps) {
+  const projects = visibleProjects(jobs);
   const hasJobs = jobs.length > 0;
   const displayName = greetingName(userEmail);
   const banner = getCustomerStatusBanner(jobs);
+
 
   const bannerIcon = (() => {
     if (!banner) return MailCheck;
