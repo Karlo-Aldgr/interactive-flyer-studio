@@ -80,6 +80,91 @@ export default function MyJobs() {
   const toggleAll = () =>
     setSelected(allSelected ? {} : Object.fromEntries(readyJobs.map((j) => [j.id, true])));
 
+  const renderCard = (j: any, selectable: boolean) => {
+    const status = getUnifiedStatusLabel(j);
+    const price = formatPrice(j.price_cents);
+    const paid = isReady(j);
+    const active = j.flyer_active !== false;
+    const checked = !!selected[j.id];
+    const previewHref = paid && active && j.flyer?.public_slug
+      ? `/f/${j.flyer.public_slug}`
+      : j.flyer_id
+        ? `/preview/${j.flyer_id}`
+        : null;
+    return (
+      <Card
+        key={j.id}
+        className={`p-5 transition-colors ${checked ? "border-primary ring-1 ring-primary/40" : ""}`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          {selectable ? (
+            <label className="mt-0.5 flex cursor-pointer items-center gap-2 rounded-md border border-border/60 px-2 py-1 text-xs font-medium">
+              <Checkbox
+                checked={checked}
+                onCheckedChange={(v) => setSelected((s) => ({ ...s, [j.id]: v === true }))}
+                aria-label={`Select ${j.title} for posting`}
+              />
+              {checked ? "Selected" : "Post"}
+            </label>
+          ) : (
+            <span className="mt-1 text-xs text-muted-foreground">Available after payment</span>
+          )}
+          <div className="min-w-0 flex-1">
+            <Link to={`/my-jobs/${j.id}`} className="group inline-flex items-center gap-2">
+              <h3 className="font-semibold group-hover:underline">{j.title}</h3>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            </Link>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <Badge className={status.className}><span className="mr-1">{status.emoji}</span>{status.label}</Badge>
+              <Badge variant="outline">{j.type === "upload" ? "Upload" : "Design"}</Badge>
+              {paid && (
+                <Badge variant="outline" className={active ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : ""}>
+                  {active ? "Active" : "Inactive"}
+                </Badge>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Submitted {format(new Date(j.created_at), "PPp")}
+            </p>
+            {j.brief && <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{j.brief}</p>}
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {(j.selected_actions ?? []).map((id: string) => (
+                <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">{labelFor(id)}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end gap-2">
+            {price && <div className="font-display text-2xl font-bold">{price}</div>}
+            {!paid && j.payment_link && price && (
+              <Button asChild size="sm" className="shadow-glow">
+                <a href={j.payment_link} target="_blank" rel="noreferrer">
+                  Pay now <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                </a>
+              </Button>
+            )}
+            {previewHref && (
+              <Button asChild size="sm" variant="outline">
+                <a href={previewHref} target="_blank" rel="noreferrer">
+                  <Eye className="mr-1 h-3.5 w-3.5" />Preview
+                </a>
+              </Button>
+            )}
+            {j.upload_url && (
+              <Button size="sm" variant="outline" onClick={async () => {
+                const url = await getJobUploadSignedUrl(j.upload_url);
+                if (!url) return toast.error("Could not open upload");
+                window.open(url, "_blank", "noreferrer");
+              }}>View upload</Button>
+            )}
+            <Button asChild size="sm" variant="ghost">
+              <Link to={`/my-jobs/${j.id}`}>Manage →</Link>
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  };
 
   return (
     <CustomerPortalShell maxWidth="4xl">
