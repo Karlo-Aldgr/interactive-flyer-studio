@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ExternalLink, Copy, Loader2, IdCard } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMyOnboarding } from "@/lib/onboarding";
+import { getOnboardingForFlyer } from "@/lib/onboarding";
 import {
   buildBizadPayloadFromOnboarding,
   getBizadForFlyer,
