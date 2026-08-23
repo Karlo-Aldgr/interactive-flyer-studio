@@ -111,9 +111,10 @@ export async function getMyOnboarding(userId: string): Promise<OnboardingSubmiss
     .from("onboarding_submissions" as any)
     .select("*")
     .eq("user_id", userId)
-    .maybeSingle();
+    .order("updated_at", { ascending: false })
+    .limit(1);
   if (error) throw error;
-  return (data as unknown as OnboardingSubmission | null) ?? null;
+  return ((data as any)?.[0] as OnboardingSubmission | undefined) ?? null;
 }
 
 export async function getOnboardingForJob(jobId: string): Promise<OnboardingSubmission | null> {
