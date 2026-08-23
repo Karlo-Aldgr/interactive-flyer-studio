@@ -258,13 +258,13 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     posting_permission: input.posting_permission,
     posting_permission_name: input.posting_permission_name,
     posting_permission_at: input.posting_permission_at,
-    flyer_upload_url: flyerPath,
+    ...(flyerPath ? { flyer_upload_url: flyerPath } : {}),
     flyer_job_id: jobId,
   };
 
   const { error: upsertErr } = await supabase
     .from("onboarding_submissions" as any)
-    .upsert(row, { onConflict: "user_id" });
+    .upsert(row, { onConflict: "flyer_job_id" });
   if (upsertErr) throw upsertErr;
 
   await supabase
