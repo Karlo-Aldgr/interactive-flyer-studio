@@ -126,6 +126,27 @@ export async function getOnboardingForJob(jobId: string): Promise<OnboardingSubm
   return (data as unknown as OnboardingSubmission | null) ?? null;
 }
 
+/**
+ * Onboarding that belongs to THIS flyer only (via its job). Never falls back to
+ * another flyer's or the account-level onboarding.
+ */
+export async function getOnboardingForFlyer(flyerId: string): Promise<OnboardingSubmission | null> {
+  const { data: jobs, error: jobsError } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("flyer_id", flyerId);
+  if (jobsError || !jobs?.length) return null;
+
+  const { data, error } = await supabase
+    .from("onboarding_submissions" as any)
+    .select("*")
+    .in("flyer_job_id", jobs.map((j: any) => j.id))
+    .order("updated_at", { ascending: false })
+    .limit(1);
+  if (error) return null;
+  return ((data as any)?.[0] as OnboardingSubmission | undefined) ?? null;
+}
+
 async function uploadLogo(userId: string, file: File): Promise<string> {
   const ext = file.name.split(".").pop() || "png";
   const path = `${userId}/logos/${Date.now()}.${ext}`;
