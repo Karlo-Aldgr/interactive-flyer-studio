@@ -24,29 +24,18 @@ export default function MyJobs() {
   const { user } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [postOpen, setPostOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    (async () => {
-      const [ownJobs, flyerJobs] = await Promise.all([
-        supabase
-          .from("jobs")
-          .select("*, flyer:flyers(public_slug, status, owner_id)")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("jobs")
-          .select("*, flyer:flyers!inner(public_slug, status, owner_id)")
-          .eq("flyer.owner_id", user.id)
-          .order("created_at", { ascending: false }),
-      ]);
+    let cancelled = false;
 
-      const merged = [...(ownJobs.data ?? []), ...(flyerJobs.data ?? [])];
+    const dedupe = (merged: any[]) => {
       const byId = new Map<string, any>();
       merged.forEach((j) => byId.set(j.id, j));
-
       // Collapse duplicate job rows pointing at the same flyer, keeping the
       // most advanced one (paid/completed beats a leftover "new" duplicate).
       const rank = (j: any) =>
@@ -59,13 +48,69 @@ export default function MyJobs() {
         const prev = byFlyer.get(j.flyer_id);
         if (!prev || rank(j) > rank(prev)) byFlyer.set(j.flyer_id, j);
       }
-      const all = [...rows, ...byFlyer.values()].sort(
+      return [...rows, ...byFlyer.values()].sort(
         (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
       );
-      setJobs(all);
-      setLoading(false);
+    };
+
+    // Fallback: no embed — load jobs, then attach flyer info separately.
+    const loadWithoutJoin = async () => {
+      const [own, myFlyers] = await Promise.all([
+        supabase.from("jobs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("flyers").select("id, public_slug, status, owner_id").eq("owner_id", user.id),
+      ]);
+      if (own.error) throw own.error;
+      const flyerMap = new Map((myFlyers.data ?? []).map((f: any) => [f.id, f]));
+      const flyerIds = [...flyerMap.keys()];
+      let extra: any[] = [];
+      if (flyerIds.length) {
+        const res = await supabase.from("jobs").select("*").in("flyer_id", flyerIds);
+        extra = res.data ?? [];
+      }
+      return dedupe([...(own.data ?? []), ...extra]).map((j) => ({
+        ...j,
+        flyer: j.flyer_id ? flyerMap.get(j.flyer_id) ?? null : null,
+      }));
+    };
+
+    (async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const [ownJobs, flyerJobs] = await Promise.all([
+          supabase
+            .from("jobs")
+            .select("*, flyer:flyers(public_slug, status, owner_id)")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("jobs")
+            .select("*, flyer:flyers!inner(public_slug, status, owner_id)")
+            .eq("flyer.owner_id", user.id)
+            .order("created_at", { ascending: false }),
+        ]);
+
+        let all: any[];
+        if (ownJobs.error || flyerJobs.error) {
+          all = await loadWithoutJoin();
+        } else {
+          all = dedupe([...(ownJobs.data ?? []), ...(flyerJobs.data ?? [])]);
+        }
+        if (cancelled) return;
+        setJobs(all);
+      } catch (e: any) {
+        if (cancelled) return;
+        const msg = e?.message ?? "Could not load your projects.";
+        setLoadError(msg);
+        toast.error("Could not load your projects", { description: msg });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
-  }, [user]);
+
+    return () => { cancelled = true; };
+  }, [user, reloadKey]);
+
 
   const isReady = (j: any) =>
     !!j.share_unlocked || ["paid", "completed", "delivered"].includes(j.status);
@@ -211,7 +256,16 @@ export default function MyJobs() {
 
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : loadError ? (
+        <Card className="mt-8 p-10 text-center">
+          <p className="font-medium">We couldn't load your projects.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{loadError}</p>
+          <Button className="mt-4" variant="outline" onClick={() => setReloadKey((k) => k + 1)}>
+            Retry
+          </Button>
+        </Card>
       ) : jobs.length === 0 ? (
+
         <Card className="mt-8 p-10 text-center">
           <p className="text-muted-foreground">You haven't submitted any projects yet.</p>
           <Button asChild className="mt-4"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit your first project</Link></Button>

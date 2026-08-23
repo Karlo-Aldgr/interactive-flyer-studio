@@ -1257,7 +1257,15 @@ export type Database = {
           upload_url?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jobs_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       layers: {
         Row: {
