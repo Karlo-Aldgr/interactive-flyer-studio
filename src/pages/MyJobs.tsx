@@ -256,7 +256,16 @@ export default function MyJobs() {
 
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : loadError ? (
+        <Card className="mt-8 p-10 text-center">
+          <p className="font-medium">We couldn't load your projects.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{loadError}</p>
+          <Button className="mt-4" variant="outline" onClick={() => setReloadKey((k) => k + 1)}>
+            Retry
+          </Button>
+        </Card>
       ) : jobs.length === 0 ? (
+
         <Card className="mt-8 p-10 text-center">
           <p className="text-muted-foreground">You haven't submitted any projects yet.</p>
           <Button asChild className="mt-4"><Link to="/submit-job"><Plus className="mr-1 h-4 w-4" />Submit your first project</Link></Button>
