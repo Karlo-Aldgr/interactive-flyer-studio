@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { Loader2, Upload, Sparkles } from "lucide-react";
 import { toast } from "sonner";
