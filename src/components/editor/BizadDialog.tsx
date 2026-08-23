@@ -75,7 +75,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
     if (!user) return toast.error("Sign in to enable your digital card");
     setSaving(true);
     try {
-      const onboarding = await getMyOnboarding(user.id);
+      const onboarding = await getOnboardingForFlyer(flyer.id);
       const base = buildBizadPayloadFromOnboarding(onboarding, {
         id: flyer.id,
         public_slug: flyer.public_slug,
