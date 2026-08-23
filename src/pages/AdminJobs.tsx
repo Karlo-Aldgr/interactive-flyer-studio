@@ -709,6 +709,10 @@ export default function AdminJobs() {
                 <input type="checkbox" checked={ePreviewReady} onChange={(e) => setEPreviewReady(e.target.checked)} />
                 Preview ready (let customer view the linked flyer)
               </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={ePaid} onChange={(e) => setEPaid(e.target.checked)} />
+                Paid — unlock the customer's share link & QR code
+              </label>
               <div>
                 <Label htmlFor="notes">Note to customer</Label>
                 <Textarea id="notes" rows={4} value={eNotes} onChange={(e) => setENotes(e.target.value)} className="mt-2" />
