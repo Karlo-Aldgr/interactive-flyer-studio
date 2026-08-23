@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Loader2, ExternalLink, Trash2, Pencil, FileText, Database, X, Sparkles } from "lucide-react";
+import { Loader2, ExternalLink, Trash2, Pencil, FileText, Database, X, Sparkles, BadgeDollarSign } from "lucide-react";
 import { INTERACTIONS } from "@/lib/interactionsCatalog";
 import { format, formatDistanceToNow } from "date-fns";
 import { AdminLayout } from "@/components/admin/AdminLayout";
