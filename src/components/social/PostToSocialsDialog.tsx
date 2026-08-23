@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, Send, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
@@ -43,6 +43,24 @@ export function PostToSocialsDialog({ open, onOpenChange, projects, onPosted }: 
   const missing = SOCIAL_PLATFORMS.filter(
     (p) => !connected.some((a) => a.platform === p),
   ) as SocialPlatform[];
+
+  // Default to every connected account so "Post Now" posts the checked
+  // projects to all of the customer's socials without extra clicks.
+  useEffect(() => {
+    if (!open) return;
+    setSelected((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const a of connected) {
+        if (next[a.id] === undefined) {
+          next[a.id] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [open, connected]);
+
 
   const post = async () => {
     setPosting(true);
