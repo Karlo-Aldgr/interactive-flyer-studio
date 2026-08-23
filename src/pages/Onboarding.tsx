@@ -85,13 +85,24 @@ export default function Onboarding() {
   const [postingPermission, setPostingPermission] = useState(false);
   const [existingFlyer, setExistingFlyer] = useState<{ title: string; url: string } | null>(null);
   const [scanning, setScanning] = useState(false);
-
+  const [searchParams] = useSearchParams();
+  const jobParam = searchParams.get("job");
+  const flyerParam = searchParams.get("flyer");
+  const [projectJobId, setProjectJobId] = useState<string | null>(jobParam);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       try {
-        const existing = await getMyOnboarding(user.id);
+        // Onboarding is per project. Only fall back to the account-level record
+        // when this page is opened without a project in the URL.
+        let scopedJobId = jobParam;
+        if (!scopedJobId && flyerParam) scopedJobId = await getJobIdForFlyer(flyerParam);
+        setProjectJobId(scopedJobId);
+
+        const existing = scopedJobId
+          ? await getOnboardingForJob(scopedJobId)
+          : await getMyOnboarding(user.id);
         if (existing) {
           setForm({
             full_name: existing.full_name ?? "",
