@@ -60,6 +60,7 @@ export default function AdminJobs() {
   const [eStatus, setEStatus] = useState<string>("new");
   const [ePrice, setEPrice] = useState<string>("");
   const [ePayLink, setEPayLink] = useState<string>("");
+  const [ePaid, setEPaid] = useState<boolean>(false);
   const [eFlyerId, setEFlyerId] = useState<string>("");
   const [ePreviewReady, setEPreviewReady] = useState<boolean>(false);
   const [eNotes, setENotes] = useState<string>("");
