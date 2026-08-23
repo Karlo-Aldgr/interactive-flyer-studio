@@ -156,7 +156,7 @@ export function TopBarPortalMenu({
           <Users className="mr-2 h-4 w-4" /> Subscribers
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/onboarding" className="flex cursor-pointer items-center">
+          <Link to={`/onboarding?flyer=${flyerId}`} className="flex cursor-pointer items-center">
             <ClipboardList className="mr-2 h-4 w-4" /> Onboarding
           </Link>
         </DropdownMenuItem>
@@ -335,7 +335,7 @@ export function TopBarMobileMenu(actions: TopBarMenuActions) {
           <Users className="mr-2 h-4 w-4" /> Subscribers
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/onboarding" className="flex cursor-pointer items-center">
+          <Link to={`/onboarding?flyer=${flyerId}`} className="flex cursor-pointer items-center">
             <ClipboardList className="mr-2 h-4 w-4" /> Onboarding
           </Link>
         </DropdownMenuItem>
