@@ -459,7 +459,16 @@ export default function AdminJobs() {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              {(!!j.share_unlocked || j.status === "paid") ? (
+                <Button size="sm" variant="outline" className="text-emerald-600" onClick={(e) => { e.stopPropagation(); setJobPaid(j, false); }}>
+                  <BadgeDollarSign className="mr-1 h-3.5 w-3.5" />Paid — undo
+                </Button>
+              ) : (
+                <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setJobPaid(j, true); }}>
+                  <BadgeDollarSign className="mr-1 h-3.5 w-3.5" />Mark paid
+                </Button>
+              )}
               <Button size="sm" onClick={(e) => { e.stopPropagation(); openEdit(j); }}><Pencil className="mr-1 h-3.5 w-3.5" />Manage</Button>
               <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); opts?.onDelete ? opts.onDelete() : deleteJob(j.id); }}><Trash2 className="h-4 w-4" /></Button>
             </div>
