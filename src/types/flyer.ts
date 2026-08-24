@@ -565,7 +565,11 @@ export interface Flyer {
   title: string;
   status: "draft" | "published";
   public_slug: string | null;
+  /** Publishing state of this project's Website page (independent of the flyer). */
+  website_status?: "draft" | "published";
+  website_slug?: string | null;
   settings: FlyerSettings;
+
   thumbnail_url: string | null;
   category: FlyerCategory;
   event_date: string | null;        // YYYY-MM-DD
