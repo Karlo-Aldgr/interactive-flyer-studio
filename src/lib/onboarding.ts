@@ -183,6 +183,8 @@ export interface SubmitOnboardingArgs {
   input: OnboardingInput;
   logoFile: File | null;
   flyerFile: File | null;
+  /** Project this onboarding belongs to. When omitted, a new project is created. */
+  jobId?: string | null;
 }
 
 export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jobId: string | null }> {
@@ -197,17 +199,18 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
   }
 
   const title = input.business_name?.trim() || "Onboarding project";
-  const existing = await getMyOnboarding(userId);
-  let jobId: string | null = null;
+  // Onboarding is scoped to a single project — never reuse another project's record.
+  const existing = args.jobId ? await getOnboardingForJob(args.jobId) : null;
+  let jobId: string | null = args.jobId ?? null;
 
-  if (existing?.flyer_job_id && !flyerFile) {
-    jobId = existing.flyer_job_id;
+  if (jobId) {
     const { error: jobUpdateErr } = await supabase
       .from("jobs")
       .update({
         title,
         brief: input.business_description || null,
         customer_email: userEmail ?? null,
+        ...(flyerPath ? { upload_url: flyerPath } : {}),
       })
       .eq("id", jobId);
     if (jobUpdateErr) throw jobUpdateErr;
@@ -239,6 +242,7 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     business_address: input.business_address,
     business_slogan: input.business_slogan,
     business_description: input.business_description,
+    ai_description: input.ai_description,
     website_url: input.website_url,
     website_help: input.website_help,
     facebook_url: input.facebook_url,
@@ -255,13 +259,13 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     posting_permission: input.posting_permission,
     posting_permission_name: input.posting_permission_name,
     posting_permission_at: input.posting_permission_at,
-    flyer_upload_url: flyerPath,
+    flyer_upload_url: flyerPath ?? existing?.flyer_upload_url ?? null,
     flyer_job_id: jobId,
   };
 
   const { error: upsertErr } = await supabase
     .from("onboarding_submissions" as any)
-    .upsert(row, { onConflict: "user_id" });
+    .upsert(row, { onConflict: "flyer_job_id" });
   if (upsertErr) throw upsertErr;
 
   await supabase
