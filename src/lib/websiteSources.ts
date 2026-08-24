@@ -76,7 +76,7 @@ export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> 
 
   const clientId = ownerId ?? projectOnboarding?.user_id ?? null;
 
-  const [clientProfile, dashboardOnboarding, job, socialAccounts] = await Promise.all([
+  const [clientProfile, dashboardOnboarding, job, socialAccounts, testimonials] = await Promise.all([
     clientId
       ? safe(
           supabase
@@ -111,7 +111,19 @@ export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> 
           [] as ConnectedSocial[]
         )
       : Promise.resolve([] as ConnectedSocial[]),
+    safe(
+      supabase
+        .from("testimonials")
+        .select("name, body, rating, photo_url")
+        .eq("flyer_id", flyer.id)
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(6)
+        .then((r) => ((r.data as ProjectTestimonial[] | null) ?? [])),
+      [] as ProjectTestimonial[]
+    ),
   ]);
 
-  return { clientProfile, projectOnboarding, dashboardOnboarding, bizad, job, socialAccounts };
+  return { clientProfile, projectOnboarding, dashboardOnboarding, bizad, job, socialAccounts, testimonials };
+
 }
