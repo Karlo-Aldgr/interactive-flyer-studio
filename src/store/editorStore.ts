@@ -6,6 +6,7 @@ import type { SubjectDetection, NormalizedPoint } from "@/lib/subjectDetect";
 import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant } from "@/lib/editorToolPresets";
 import { buildBizadPage } from "@/lib/bizadPage";
 import { buildWebsitePage, WEBSITE_DEVICES, type WebsiteDevice } from "@/lib/websitePage";
+import type { WebsiteProfile } from "@/lib/websiteProfile";
 
 import type { BizadRecord } from "@/lib/bizad";
 
@@ -81,7 +82,7 @@ interface EditorState {
   addScannedMenuPage: (args: { imageUrl: string; imgWidth: number; imgHeight: number; items: Array<{ id?: string; name: string; price?: number; description?: string; category?: string; color?: string; bbox: { x: number; y: number; w: number; h: number } }>; }) => string;
   addBizadPage: (bizad: BizadRecord) => string;
   setBizadPageHidden: (hidden: boolean) => void;
-  addWebsitePage: () => string;
+  addWebsitePage: (profile: WebsiteProfile) => string;
   setWebsiteDevice: (device: WebsiteDevice) => void;
   setPageSize: (id: string, w: number, h: number, mode: ResizeMode) => void;
 
@@ -728,7 +729,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   /** Creates the single long-scrolling Website page (or selects it if it already exists). */
-  addWebsitePage: () => {
+  addWebsitePage: (profile) => {
     const s = get();
     if (!s.flyer) return "";
     const existing = s.pages.find((p) => p.background?.websitePage);
@@ -737,7 +738,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return existing.id;
     }
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
-    const page = buildWebsitePage(s.flyer.id, s.pages.length);
+    const page = buildWebsitePage(s.flyer.id, s.pages.length, profile);
     set({
       pages: [...s.pages, page],
       selectedPageId: page.id,
