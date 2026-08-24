@@ -99,6 +99,7 @@ import Konva from "konva";
 import useImage from "use-image";
 import * as LucideIcons from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { useKonvaVideo } from "@/hooks/useKonvaVideo";
 import { supabase } from "@/integrations/supabase/client";
 import { Flyer, FlyerPage, Layer, LayerAction, AirMessageBubble } from "@/types/flyer";
 import { IntroAnimatedGroup, resolveIntro } from "@/components/editor/IntroAnimatedGroup";
@@ -584,6 +585,24 @@ function useKonvaDisplayImage(src?: string) {
   return anonymousImg || plainImg;
 }
 
+function VideoNode({ layer, props }: { layer: Layer; props: any }) {
+  const { video, nodeRef } = useKonvaVideo(layer.content.videoUrl, {
+    autoplay: layer.content.videoAutoplay !== false,
+    loop: layer.content.videoLoop !== false,
+    muted: layer.content.videoMuted !== false,
+  });
+  return (
+    <KonvaImage
+      {...props}
+      ref={(node: any) => {
+        nodeRef.current = node;
+      }}
+      image={(video as any) || undefined}
+      cornerRadius={layer.style.cornerRadius}
+    />
+  );
+}
+
 function ImageNode({ layer, props, showHoverOutline }: { layer: Layer; props: any; showHoverOutline?: boolean }) {
   const img = useKonvaDisplayImage(layer.content.src);
   const [hovered, setHovered] = useState(false);
@@ -676,6 +695,8 @@ function renderLayer(l: Layer, onClick: () => void, hidden: boolean) {
       );
     case "image":
       return <ImageNode key={l.id} layer={l} props={common} showHoverOutline={!!l.content.extractedFrom && hasAction} />;
+    case "video":
+      return <VideoNode key={l.id} layer={l} props={common} />;
     case "icon":
       return <IconNode key={l.id} layer={l} props={common} />;
     case "shape":
@@ -934,7 +955,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         .eq("flyer_id", f.id)
         .order("index", { ascending: true });
 
-      const mapped: FlyerPage[] = (pgs ?? []).map((p: any) => ({
+      const mapped: FlyerPage[] = (pgs ?? []).filter((p: any) => !p.background?.bizadPage).map((p: any) => ({
         id: p.id,
         flyer_id: p.flyer_id,
         index: p.index,
@@ -1829,7 +1850,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
   return (
     <div
       className={`min-h-screen ${isLinkedPage ? "overflow-hidden" : "overflow-auto"}`}
-      style={{ background: page.background.color || "#fff", touchAction: enlarged ? "pan-x pan-y pinch-zoom" : "pinch-zoom" }}
+      style={{ background: page.background.color || "#fff", backgroundImage: page.background.image ? `url(${page.background.image})` : undefined, backgroundSize: "cover", backgroundPosition: "center", touchAction: enlarged ? "pan-x pan-y pinch-zoom" : "pinch-zoom" }}
     >
       {previewMode && (
         <div className="fixed top-3 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-4 py-1.5 text-xs font-medium shadow-elegant backdrop-blur">
@@ -1843,10 +1864,12 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           </button>
         </div>
       )}
-      <div ref={stageWrapRef} style={{ position: "relative", width: W * scale, height: H * scale, margin: "0 auto", background: page.background.color || "#fff" }}>
+      <div ref={stageWrapRef} style={{ position: "relative", width: W * scale, height: H * scale, margin: "0 auto", background: page.background.color || "#fff", backgroundImage: page.background.image ? `url(${page.background.image})` : undefined, backgroundSize: "cover", backgroundPosition: "center" }}>
         <Stage width={W * scale} height={H * scale} scaleX={scale} scaleY={scale}>
           <KLayer>
-            <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
+            {!page.background.image && (
+              <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
+            )}
             {(() => {
               const pageCfg = resolveIntro(page.intro);
               const sorted = [...page.layers].sort((a, b) => a.z_index - b.z_index);

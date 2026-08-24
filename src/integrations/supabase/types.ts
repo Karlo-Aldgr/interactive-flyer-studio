@@ -843,6 +843,7 @@ export type Database = {
           flyer_image_url: string | null
           gallery_url: string | null
           id: string
+          layout: Json | null
           logo_url: string | null
           owner_name: string | null
           owner_photo_url: string | null
@@ -866,6 +867,7 @@ export type Database = {
           flyer_image_url?: string | null
           gallery_url?: string | null
           id?: string
+          layout?: Json | null
           logo_url?: string | null
           owner_name?: string | null
           owner_photo_url?: string | null
@@ -889,6 +891,7 @@ export type Database = {
           flyer_image_url?: string | null
           gallery_url?: string | null
           id?: string
+          layout?: Json | null
           logo_url?: string | null
           owner_name?: string | null
           owner_photo_url?: string | null
@@ -1254,7 +1257,15 @@ export type Database = {
           upload_url?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jobs_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       layers: {
         Row: {
@@ -2019,6 +2030,8 @@ export type Database = {
       }
       onboarding_submissions: {
         Row: {
+          ai_description: string | null
+          ai_details: string | null
           business_address: string | null
           business_description: string | null
           business_name: string | null
@@ -2055,6 +2068,8 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          ai_description?: string | null
+          ai_details?: string | null
           business_address?: string | null
           business_description?: string | null
           business_name?: string | null
@@ -2091,6 +2106,8 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          ai_description?: string | null
+          ai_details?: string | null
           business_address?: string | null
           business_description?: string | null
           business_name?: string | null
@@ -2130,7 +2147,7 @@ export type Database = {
           {
             foreignKeyName: "onboarding_submissions_flyer_job_id_fkey"
             columns: ["flyer_job_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
@@ -3574,6 +3591,7 @@ export type Database = {
         Args: { _flyer_id: string }
         Returns: boolean
       }
+      user_owns_flyer: { Args: { _flyer_id: string }; Returns: boolean }
       waiter_pin_hash: {
         Args: { p_flyer_id: string; p_pin: string }
         Returns: string
@@ -3640,7 +3658,14 @@ export type Database = {
         | "delivered"
         | "cancelled"
       job_type: "upload" | "design"
-      layer_type: "text" | "image" | "icon" | "shape" | "button" | "hotspot"
+      layer_type:
+        | "text"
+        | "image"
+        | "icon"
+        | "shape"
+        | "button"
+        | "hotspot"
+        | "video"
       social_connection_status:
         | "connected"
         | "reconnect_required"
@@ -3855,7 +3880,15 @@ export const Constants = {
         "cancelled",
       ],
       job_type: ["upload", "design"],
-      layer_type: ["text", "image", "icon", "shape", "button", "hotspot"],
+      layer_type: [
+        "text",
+        "image",
+        "icon",
+        "shape",
+        "button",
+        "hotspot",
+        "video",
+      ],
       social_connection_status: [
         "connected",
         "reconnect_required",

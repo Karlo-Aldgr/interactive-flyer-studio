@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed } from "lucide-react";
+import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed, IdCard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +43,7 @@ export function PagesPanel() {
   const reorderPages = useEditorStore((s) => s.reorderPages);
   const setPageIntro = useEditorStore((s) => s.setPageIntro);
   const setPageBackground = useEditorStore((s) => s.setPageBackground);
+  const setPageBackgroundImage = useEditorStore((s) => s.setPageBackgroundImage);
   const applyIntroToAllPages = useEditorStore((s) => s.applyIntroToAllPages);
   const replayIntro = useEditorStore((s) => s.replayIntro);
   const setPageLink = useEditorStore((s) => s.setPageLink);
@@ -52,6 +53,29 @@ export function PagesPanel() {
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
+  const bgFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingBg, setUploadingBg] = useState(false);
+
+  async function uploadBackground(file: File) {
+    const pageId = selectedPageId;
+    if (!flyer || !pageId) return;
+    if (!user) { toast.error("Sign in required"); return; }
+    setUploadingBg(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/${flyer.id}/bg-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("flyer-assets").upload(path, file);
+      if (error) throw error;
+      const { data } = supabase.storage.from("flyer-assets").getPublicUrl(path);
+      setPageBackgroundImage(pageId, data.publicUrl);
+      toast.success("Background image added");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not upload background");
+    } finally {
+      setUploadingBg(false);
+    }
+  }
+
 
   async function handleScanMenu(file: File) {
     if (!flyer) return;
@@ -170,9 +194,10 @@ export function PagesPanel() {
       </div>
       <div className="max-h-64 overflow-y-auto">
         {(() => { let flyerCount = 0; return pages.map((p, i) => {
-          const isLanding = !!p.background?.linkPageId;
-          if (!isLanding) flyerCount += 1;
-          const label = isLanding ? "L" : String(flyerCount);
+          const isBizad = !!p.background?.bizadPage;
+          const isLanding = !isBizad && !!p.background?.linkPageId;
+          if (!isLanding && !isBizad) flyerCount += 1;
+          const label = isBizad ? "B" : isLanding ? "L" : String(flyerCount);
           const active = p.id === selectedPageId;
           const editing = editingId === p.id;
           return (
@@ -181,8 +206,11 @@ export function PagesPanel() {
               onClick={() => selectPage(p.id)}
               className={`group flex items-center gap-2 border-b border-border px-3 py-2 text-sm cursor-pointer ${active ? "bg-primary/10" : "hover:bg-muted/60"}`}
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold" title={isLanding ? "Landing page (not counted)" : `Page ${flyerCount}`}>
-                {label}
+              <span
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold"
+                title={isBizad ? "Digital business card page (editor only)" : isLanding ? "Landing page (not counted)" : `Page ${flyerCount}`}
+              >
+                {isBizad ? <IdCard className="h-3.5 w-3.5" /> : label}
               </span>
               {editing ? (
                 <Input
@@ -199,7 +227,8 @@ export function PagesPanel() {
                 />
               ) : (
                 <span
-                  className="flex-1 truncate"
+                  className={`flex-1 truncate ${isBizad && p.background?.bizadHidden ? "text-muted-foreground line-through" : ""}`}
+                  title={isBizad && p.background?.bizadHidden ? "Card is turned off — enable it in the Digital business card dialog" : undefined}
                   onDoubleClick={(e) => { e.stopPropagation(); setEditingId(p.id); setEditValue(p.name); }}
                 >
                   {p.name}
@@ -246,6 +275,49 @@ export function PagesPanel() {
               className="h-9 flex-1 text-xs"
               value={activePage.background.color || "#ffffff"}
               onChange={(e) => setPageBackground(activePage.id, e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-[11px] font-medium text-muted-foreground">Background image</div>
+            {activePage.background.image && (
+              <div
+                className="h-16 w-full rounded border border-border bg-cover bg-center"
+                style={{ backgroundImage: `url(${activePage.background.image})` }}
+              />
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 flex-1 text-xs"
+                disabled={uploadingBg}
+                onClick={() => bgFileRef.current?.click()}
+              >
+                {uploadingBg ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                {activePage.background.image ? "Replace" : "Upload image"}
+              </Button>
+              {activePage.background.image && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-xs text-destructive"
+                  onClick={() => setPageBackgroundImage(activePage.id, null)}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+            <input
+              ref={bgFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) uploadBackground(f);
+              }}
             />
           </div>
         </div>

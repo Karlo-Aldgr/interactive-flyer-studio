@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Loader2, ExternalLink, Trash2, Pencil, FileText, Database, X, Sparkles } from "lucide-react";
+import { Loader2, ExternalLink, Trash2, Pencil, FileText, Database, X, Sparkles, BadgeDollarSign } from "lucide-react";
 import { INTERACTIONS } from "@/lib/interactionsCatalog";
 import { format, formatDistanceToNow } from "date-fns";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -60,6 +60,7 @@ export default function AdminJobs() {
   const [eStatus, setEStatus] = useState<string>("new");
   const [ePrice, setEPrice] = useState<string>("");
   const [ePayLink, setEPayLink] = useState<string>("");
+  const [ePaid, setEPaid] = useState<boolean>(false);
   const [eFlyerId, setEFlyerId] = useState<string>("");
   const [ePreviewReady, setEPreviewReady] = useState<boolean>(false);
   const [eNotes, setENotes] = useState<string>("");
@@ -172,6 +173,7 @@ export default function AdminJobs() {
     setEPayLink(j.payment_link ?? "");
     setEFlyerId(j.flyer_id ?? "");
     setEPreviewReady(!!j.preview_ready);
+    setEPaid(!!j.share_unlocked || j.status === "paid");
     setENotes(j.admin_notes ?? "");
   };
 
@@ -185,6 +187,7 @@ export default function AdminJobs() {
       payment_link: ePayLink || null,
       flyer_id: eFlyerId || null,
       preview_ready: ePreviewReady,
+      share_unlocked: ePaid,
       admin_notes: eNotes || null,
     }).eq("id", editing.id);
     if (error) { toast.error(error.message); return; }
@@ -197,6 +200,16 @@ export default function AdminJobs() {
     }
     toast.success("Job updated");
     setEditing(null);
+    refresh();
+  };
+
+  /** Superadmin override: mark a project/flyer as paid (or revert to unpaid). */
+  const setJobPaid = async (j: any, paid: boolean) => {
+    const patch: Record<string, unknown> = { share_unlocked: paid };
+    if (paid && ["new", "reviewing", "quoted"].includes(j.status)) patch.status = "paid";
+    const { error } = await supabase.from("jobs").update(patch as any).eq("id", j.id);
+    if (error) return toast.error(error.message);
+    toast.success(paid ? "Marked as paid — share link & QR unlocked" : "Marked as unpaid");
     refresh();
   };
 
@@ -446,7 +459,16 @@ export default function AdminJobs() {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              {(!!j.share_unlocked || j.status === "paid") ? (
+                <Button size="sm" variant="outline" className="text-emerald-600" onClick={(e) => { e.stopPropagation(); setJobPaid(j, false); }}>
+                  <BadgeDollarSign className="mr-1 h-3.5 w-3.5" />Paid — undo
+                </Button>
+              ) : (
+                <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setJobPaid(j, true); }}>
+                  <BadgeDollarSign className="mr-1 h-3.5 w-3.5" />Mark paid
+                </Button>
+              )}
               <Button size="sm" onClick={(e) => { e.stopPropagation(); openEdit(j); }}><Pencil className="mr-1 h-3.5 w-3.5" />Manage</Button>
               <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); opts?.onDelete ? opts.onDelete() : deleteJob(j.id); }}><Trash2 className="h-4 w-4" /></Button>
             </div>
@@ -686,6 +708,10 @@ export default function AdminJobs() {
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={ePreviewReady} onChange={(e) => setEPreviewReady(e.target.checked)} />
                 Preview ready (let customer view the linked flyer)
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={ePaid} onChange={(e) => setEPaid(e.target.checked)} />
+                Paid — unlock the customer's share link & QR code
               </label>
               <div>
                 <Label htmlFor="notes">Note to customer</Label>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Copy, Loader2, IdCard } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMyOnboarding, type OnboardingSubmission } from "@/lib/onboarding";
+import { getOnboardingForFlyer, type OnboardingSubmission } from "@/lib/onboarding";
 import {
   buildBizadPayloadFromOnboarding,
   getBizadForFlyer,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/bizad";
 import { BIZAD_DEFAULT_BACKGROUND_COLOR, BIZAD_DEFAULT_BUTTON_COLOR } from "@/lib/bizadDefaults";
 import { buildPublicBizadUrl } from "@/lib/utils";
+import { useEditorStore } from "@/store/editorStore";
 import type { Flyer } from "@/types/flyer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,9 @@ interface Props {
 
 export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   const { user } = useAuth();
+  const addBizadPage = useEditorStore((s) => s.addBizadPage);
+  const setBizadPageHidden = useEditorStore((s) => s.setBizadPageHidden);
+  const pages = useEditorStore((s) => s.pages);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [bizad, setBizad] = useState<BizadRecord | null>(null);
@@ -53,7 +57,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       try {
         const [existing, onboardingRow] = await Promise.all([
           getBizadForFlyer(flyer.id),
-          user ? getMyOnboarding(user.id) : Promise.resolve(null),
+          getOnboardingForFlyer(flyer.id),
         ]);
         setOnboarding(onboardingRow);
         if (existing) {
@@ -78,7 +82,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
         setLoading(false);
       }
     })();
-  }, [open, flyer.id, flyerContext, user]);
+  }, [open, flyer.id, flyerContext]);
 
   const previewBizad = useMemo((): BizadRecord | null => {
     if (loading) return null;
@@ -112,7 +116,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
     if (!user) return toast.error("Sign in to enable your digital card");
     setSaving(true);
     try {
-      const onboardingRow = onboarding ?? await getMyOnboarding(user.id);
+      const onboardingRow = onboarding ?? await getOnboardingForFlyer(flyer.id);
       const base = buildBizadPayloadFromOnboarding(onboardingRow, flyerContext, bizad);
 
       const saved = await upsertBizad({
@@ -125,6 +129,16 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       });
       setBizad(saved);
       setEnabled(saved.enabled);
+
+      const hasPage = pages.some((p) => p.background?.bizadPage);
+      if (saved.enabled) {
+        addBizadPage(saved);
+        if (!hasPage) {
+          toast.success("Digital business card page added to your flyer pages");
+        }
+      } else {
+        setBizadPageHidden(true);
+      }
       toast.success(nextEnabled ? "Digital business card enabled" : "Digital business card saved");
     } catch (e: any) {
       toast.error(e?.message || "Could not save bizad");
@@ -166,7 +180,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
               <div className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div>
                   <Label htmlFor="bizad-enabled" className="text-sm font-medium">Add bizad to this flyer</Label>
-                  <p className="text-xs text-muted-foreground">Creates a public /bizads page from onboarding data</p>
+                  <p className="text-xs text-muted-foreground">Creates a public /bizads page from this project&apos;s onboarding data</p>
                 </div>
                 <Switch
                   id="bizad-enabled"

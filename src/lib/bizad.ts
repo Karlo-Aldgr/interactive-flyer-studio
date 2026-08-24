@@ -31,6 +31,8 @@ export type BizadRecord = {
   gallery_url: string | null;
   video_url: string | null;
   copyright_text: string | null;
+  /** Saved editor page layout (elements/size/background) rendered on the public card. */
+  layout?: any | null;
   created_at: string;
   updated_at: string;
 };
@@ -91,8 +93,20 @@ export function buildBizadPayloadFromOnboarding(
     video_url: existing?.video_url ?? null,
     copyright_text:
       existing?.copyright_text ??
-      (onboarding?.business_name ? `© ${onboarding.business_name}` : null),
+      (onboarding?.business_name
+        ? `© ${onboarding.business_name} ${new Date().getFullYear()}`
+        : existing?.business_name
+          ? `© ${existing.business_name} ${new Date().getFullYear()}`
+          : null),
   };
+}
+
+export async function updateBizadLayout(flyerId: string, layout: unknown): Promise<void> {
+  const { error } = await supabase
+    .from("bizads" as any)
+    .update({ layout: layout as any, updated_at: new Date().toISOString() })
+    .eq("flyer_id", flyerId);
+  if (error) throw error;
 }
 
 export async function getBizadForFlyer(flyerId: string): Promise<BizadRecord | null> {
@@ -188,6 +202,7 @@ export const DEMO_BIZAD: BizadRecord = {
   gallery_url: "https://tapthatflyer.com",
   video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   copyright_text: "© Biggs Auto Repair",
+  layout: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };

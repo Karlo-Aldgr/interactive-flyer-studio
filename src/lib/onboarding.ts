@@ -12,6 +12,8 @@ export interface OnboardingSubmission {
   business_address: string | null;
   business_slogan: string | null;
   business_description: string | null;
+  /** Second, free-form description written specifically for the AI. */
+  ai_description: string | null;
   website_url: string | null;
   website_help: OnboardingHelp;
   facebook_url: string | null;
@@ -66,7 +68,7 @@ export type OnboardingKnowledgeSource = Pick<
   | "instagram_url"
   | "tiktok_url"
   | "other_social_url"
->;
+> & { ai_description?: string | null };
 
 /** Text block fed to Ask AI from onboarding fields. */
 export function buildChatbotKnowledgeFromOnboarding(source: OnboardingKnowledgeSource): string {
@@ -75,6 +77,9 @@ export function buildChatbotKnowledgeFromOnboarding(source: OnboardingKnowledgeS
   if (source.business_slogan?.trim()) lines.push(`Slogan: ${source.business_slogan.trim()}`);
   if (source.business_description?.trim()) {
     lines.push(`About the business:\n${source.business_description.trim()}`);
+  }
+  if (source.ai_description?.trim()) {
+    lines.push(`Extra details for AI:\n${source.ai_description.trim()}`);
   }
   if (source.business_address?.trim()) lines.push(`Address: ${source.business_address.trim()}`);
   if (source.phone?.trim()) lines.push(`Phone: ${source.phone.trim()}`);
@@ -106,14 +111,19 @@ export async function syncOnboardingChatbotKnowledgeForJob(jobId: string): Promi
   await syncOnboardingToFlyerChatbot(job.flyer_id, onboarding);
 }
 
+/**
+ * Most recent onboarding for a user. Onboarding is per project — use
+ * getOnboardingForJob / getOnboardingForFlyer whenever a project is known.
+ */
 export async function getMyOnboarding(userId: string): Promise<OnboardingSubmission | null> {
   const { data, error } = await supabase
     .from("onboarding_submissions" as any)
     .select("*")
     .eq("user_id", userId)
-    .maybeSingle();
+    .order("updated_at", { ascending: false })
+    .limit(1);
   if (error) throw error;
-  return (data as unknown as OnboardingSubmission | null) ?? null;
+  return ((data as unknown as OnboardingSubmission[] | null)?.[0]) ?? null;
 }
 
 export async function getOnboardingForJob(jobId: string): Promise<OnboardingSubmission | null> {
@@ -124,6 +134,31 @@ export async function getOnboardingForJob(jobId: string): Promise<OnboardingSubm
     .maybeSingle();
   if (error) return null;
   return (data as unknown as OnboardingSubmission | null) ?? null;
+}
+
+/** Onboarding that belongs to the project (job) of a given flyer. Never falls back to another project. */
+export async function getOnboardingForFlyer(flyerId: string): Promise<OnboardingSubmission | null> {
+  const { data: jobs, error } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("flyer_id", flyerId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) return null;
+  const jobId = jobs?.[0]?.id;
+  if (!jobId) return null;
+  return getOnboardingForJob(jobId);
+}
+
+/** Job id of the onboarding that belongs to a flyer, if any. */
+export async function getJobIdForFlyer(flyerId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("flyer_id", flyerId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  return data?.[0]?.id ?? null;
 }
 
 async function uploadLogo(userId: string, file: File): Promise<string> {
@@ -151,6 +186,8 @@ export interface SubmitOnboardingArgs {
   input: OnboardingInput;
   logoFile: File | null;
   flyerFile: File | null;
+  /** Project this onboarding belongs to. When omitted, a new project is created. */
+  jobId?: string | null;
 }
 
 export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jobId: string | null }> {
@@ -165,17 +202,18 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
   }
 
   const title = input.business_name?.trim() || "Onboarding project";
-  const existing = await getMyOnboarding(userId);
-  let jobId: string | null = null;
+  // Onboarding is scoped to a single project — never reuse another project's record.
+  const existing = args.jobId ? await getOnboardingForJob(args.jobId) : null;
+  let jobId: string | null = args.jobId ?? null;
 
-  if (existing?.flyer_job_id && !flyerFile) {
-    jobId = existing.flyer_job_id;
+  if (jobId) {
     const { error: jobUpdateErr } = await supabase
       .from("jobs")
       .update({
         title,
         brief: input.business_description || null,
         customer_email: userEmail ?? null,
+        ...(flyerPath ? { upload_url: flyerPath } : {}),
       })
       .eq("id", jobId);
     if (jobUpdateErr) throw jobUpdateErr;
@@ -207,6 +245,7 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     business_address: input.business_address,
     business_slogan: input.business_slogan,
     business_description: input.business_description,
+    ai_description: input.ai_description,
     website_url: input.website_url,
     website_help: input.website_help,
     facebook_url: input.facebook_url,
@@ -223,13 +262,13 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     posting_permission: input.posting_permission,
     posting_permission_name: input.posting_permission_name,
     posting_permission_at: input.posting_permission_at,
-    flyer_upload_url: flyerPath,
+    flyer_upload_url: flyerPath ?? existing?.flyer_upload_url ?? null,
     flyer_job_id: jobId,
   };
 
   const { error: upsertErr } = await supabase
     .from("onboarding_submissions" as any)
-    .upsert(row, { onConflict: "user_id" });
+    .upsert(row, { onConflict: "flyer_job_id" });
   if (upsertErr) throw upsertErr;
 
   await supabase
@@ -265,7 +304,7 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
           await supabase
             .from("onboarding_submissions" as any)
             .update({ hotspot_suggestions: data })
-            .eq("user_id", userId);
+            .eq("flyer_job_id", jobId);
         }
       } catch (err) {
         console.warn("smart-detect background run failed", err);

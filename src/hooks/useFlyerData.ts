@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEditorStore } from "@/store/editorStore";
 import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import { toast } from "sonner";
+import { updateBizadLayout } from "@/lib/bizad";
+import { layoutFromPage } from "@/lib/bizadPage";
 import { generateAndUploadThumbnail } from "@/lib/thumbnail";
 import { ensureUuid, isUuid } from "@/lib/safeBrowser";
 
@@ -254,6 +256,16 @@ export function useFlyerData(flyerId: string | undefined) {
         }]);
         if (insertError) throw insertError;
       }
+
+      // 8. Keep the public digital business card in sync with its editor page
+      const bizadPage = pagesToSave.find((p) => p.background?.bizadPage);
+      if (bizadPage) {
+        try {
+          await updateBizadLayout(f.id, bizadPage.background?.bizadHidden ? null : layoutFromPage(bizadPage, f.settings));
+        } catch {
+          /* card sync is best-effort */
+        }
+      }
     } catch (e: any) {
       toast.error("Save failed: " + e.message);
     } finally {
@@ -261,5 +273,14 @@ export function useFlyerData(flyerId: string | undefined) {
     }
   }
 
-  return { loading, saving };
+  async function saveNow() {
+    const st = useEditorStore.getState();
+    if (!st.flyer) return;
+    await save(st.flyer, st.pages);
+    markSaved();
+    toast.success("All changes saved");
+  }
+
+  return { loading, saving, saveNow };
+
 }

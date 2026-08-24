@@ -1,0 +1,1 @@
+ALTER TYPE public.layer_type ADD VALUE IF NOT EXISTS 'video';

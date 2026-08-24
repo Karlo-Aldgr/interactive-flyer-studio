@@ -4,16 +4,20 @@ import useImage from "use-image";
 import * as LucideIcons from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { useMemo } from "react";
+import { useKonvaVideo } from "@/hooks/useKonvaVideo";
 
 interface Props {
   layer: Layer;
-  onSelect: () => void;
+  onSelect: (evt?: any) => void;
   onChange: (patch: Partial<Layer>) => void;
   isSelected: boolean;
   draggable: boolean;
   refSetter?: (node: any) => void;
   onHoverStart?: () => void;
   onHoverEnd?: () => void;
+  /** Group-drag hooks — used when several layers are selected at once. */
+  onDragStartNode?: (id: string, node: any) => void;
+  onDragMoveNode?: (id: string, node: any) => void;
 }
 
 function ImageLayer({ layer, ...rest }: Props & { commonProps: any }) {
@@ -41,8 +45,32 @@ function IconLayer({ layer, commonProps }: { layer: Layer; commonProps: any }) {
   return <KonvaImage {...commonProps} image={img} />;
 }
 
+function VideoLayer({ layer, commonProps }: { layer: Layer; commonProps: any }) {
+  const { video, nodeRef } = useKonvaVideo(layer.content.videoUrl, {
+    autoplay: layer.content.videoAutoplay !== false,
+    loop: layer.content.videoLoop !== false,
+    muted: layer.content.videoMuted !== false,
+  });
+  const [poster] = useImage(layer.content.posterUrl ?? "", "anonymous");
+  const outerRef = commonProps.ref;
+  return (
+    <>
+      <KonvaImage
+        {...commonProps}
+        ref={(node: any) => {
+          nodeRef.current = node;
+          if (typeof outerRef === "function") outerRef(node);
+        }}
+        image={(video as any) || poster || undefined}
+        fill={video ? undefined : "#0f172a"}
+        cornerRadius={layer.style.cornerRadius}
+      />
+    </>
+  );
+}
+
 export function LayerRenderer(props: Props) {
-  const { layer, onSelect, onChange, draggable, refSetter, onHoverStart, onHoverEnd } = props;
+  const { layer, onSelect, onChange, draggable, refSetter, onHoverStart, onHoverEnd, onDragStartNode, onDragMoveNode } = props;
 
   const commonProps: any = {
     x: layer.position.x,
@@ -52,11 +80,13 @@ export function LayerRenderer(props: Props) {
     rotation: layer.rotation,
     opacity: layer.style.opacity ?? 1,
     draggable,
-    onClick: onSelect,
-    onTap: onSelect,
+    onClick: (e: any) => onSelect(e),
+    onTap: (e: any) => onSelect(e),
     onMouseEnter: onHoverStart,
     onMouseLeave: onHoverEnd,
     ref: refSetter,
+    onDragStart: (e: any) => onDragStartNode?.(layer.id, e.target),
+    onDragMove: (e: any) => onDragMoveNode?.(layer.id, e.target),
     onDragEnd: (e: any) => onChange({ position: { x: e.target.x(), y: e.target.y() } }),
     onTransformEnd: (e: any) => {
       const node = e.target;
@@ -90,6 +120,8 @@ export function LayerRenderer(props: Props) {
       );
     case "image":
       return <ImageLayer {...props} commonProps={commonProps} />;
+    case "video":
+      return <VideoLayer layer={layer} commonProps={commonProps} />;
     case "icon":
       return <IconLayer layer={layer} commonProps={commonProps} />;
     case "shape":

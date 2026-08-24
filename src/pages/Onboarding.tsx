@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { Loader2, Upload, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
-import { getMyOnboarding, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
+import { getOnboardingForJob, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
+import { supabase } from "@/integrations/supabase/client";
+import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
+
 
 const schema = z.object({
   full_name: z.string().trim().min(1, "Your name is required").max(120),
@@ -24,6 +27,7 @@ const schema = z.object({
   business_address: z.string().trim().max(300).optional().or(z.literal("")),
   business_slogan: z.string().trim().max(200).optional().or(z.literal("")),
   business_description: z.string().trim().max(2000).optional().or(z.literal("")),
+  ai_description: z.string().trim().max(4000).optional().or(z.literal("")),
   website_url: z.string().trim().max(300).optional().or(z.literal("")),
   facebook_url: z.string().trim().max(300).optional().or(z.literal("")),
   instagram_url: z.string().trim().max(300).optional().or(z.literal("")),
@@ -46,6 +50,7 @@ const emptyForm: FormState = {
   business_address: "",
   business_slogan: "",
   business_description: "",
+  ai_description: "",
   website_url: "",
   facebook_url: "",
   instagram_url: "",
@@ -61,6 +66,8 @@ const emptyForm: FormState = {
 export default function Onboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const jobId = searchParams.get("job");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -73,12 +80,15 @@ export default function Onboarding() {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const social = useSocialAccounts();
   const [postingPermission, setPostingPermission] = useState(false);
+  const [existingFlyer, setExistingFlyer] = useState<{ title: string; url: string } | null>(null);
+  const [scanning, setScanning] = useState(false);
+
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       try {
-        const existing = await getMyOnboarding(user.id);
+        const existing = jobId ? await getOnboardingForJob(jobId) : null;
         if (existing) {
           setForm({
             full_name: existing.full_name ?? "",
@@ -88,6 +98,7 @@ export default function Onboarding() {
             business_address: existing.business_address ?? "",
             business_slogan: existing.business_slogan ?? "",
             business_description: existing.business_description ?? "",
+            ai_description: existing.ai_description ?? "",
             website_url: existing.website_url ?? "",
             facebook_url: existing.facebook_url ?? "",
             instagram_url: existing.instagram_url ?? "",
@@ -114,15 +125,85 @@ export default function Onboarding() {
         setLoading(false);
       }
     })();
-  }, [user]);
+  }, [user, jobId]);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Latest flyer already in the system for this user (used by "Get info").
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      let row: { title: string | null; thumbnail_url: string | null } | undefined;
+      if (jobId) {
+        // Only this project's flyer — onboarding never crosses projects.
+        const { data: job } = await supabase.from("jobs").select("flyer_id").eq("id", jobId).maybeSingle();
+        if (job?.flyer_id) {
+          const { data } = await supabase
+            .from("flyers")
+            .select("title, thumbnail_url")
+            .eq("id", job.flyer_id)
+            .maybeSingle();
+          row = data ?? undefined;
+        }
+      } else {
+        const { data } = await supabase
+          .from("flyers")
+          .select("title, thumbnail_url")
+          .eq("owner_id", user.id)
+          .not("thumbnail_url", "is", null)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        row = data?.[0];
+      }
+      if (row?.thumbnail_url) setExistingFlyer({ title: row.title ?? "Your flyer", url: row.thumbnail_url });
+    })();
+  }, [user, jobId]);
+
+  const readAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result));
+      fr.onerror = () => reject(new Error("Could not read the flyer file"));
+      fr.readAsDataURL(file);
+    });
+
+  const scanFlyerForInfo = async () => {
+    const source = flyerFile ? await readAsDataUrl(flyerFile).catch(() => null) : existingFlyer?.url;
+    if (!source) {
+      toast.error("No flyer available to scan");
+      return;
+    }
+    setScanning(true);
+    try {
+      const { info } = await invokeEdgeFunction<{ info: Partial<FormState> }>("flyer-info-scan", {
+        imageUrl: source,
+      });
+      let filled = 0;
+      setForm((f) => {
+        const next = { ...f };
+        (Object.keys(emptyForm) as (keyof FormState)[]).forEach((k) => {
+          const val = (info as Record<string, unknown>)[k];
+          if (typeof val === "string" && val.trim() && !String(next[k] ?? "").trim()) {
+            next[k] = val.trim() as FormState[keyof FormState];
+            filled += 1;
+          }
+        });
+        return next;
+      });
+      toast.success(filled ? `Filled ${filled} field${filled === 1 ? "" : "s"} from your flyer` : "No new details found on the flyer");
+    } catch (err: any) {
+      toast.error(err.message || "Could not scan the flyer");
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const websiteBlank = useMemo(() => !form.website_url.trim(), [form.website_url]);
   const missingSocials = useMemo(
     () => !form.facebook_url.trim() && !form.instagram_url.trim() && !form.tiktok_url.trim(),
     [form],
   );
+
 
   const onSubmit = async () => {
     if (!user) return;
@@ -138,7 +219,7 @@ export default function Onboarding() {
     }
     setSaving(true);
     try {
-      const { jobId } = await submitOnboarding({
+      const { jobId: savedJobId } = await submitOnboarding({
         userId: user.id,
         userEmail: user.email,
         input: {
@@ -149,6 +230,7 @@ export default function Onboarding() {
           business_address: parsed.data.business_address || null,
           business_slogan: parsed.data.business_slogan || null,
           business_description: parsed.data.business_description || null,
+          ai_description: parsed.data.ai_description || null,
           website_url: parsed.data.website_url || null,
           website_help: websiteBlank ? websiteHelp : null,
           facebook_url: parsed.data.facebook_url || null,
@@ -170,13 +252,14 @@ export default function Onboarding() {
         },
         logoFile,
         flyerFile,
+        jobId,
       });
       toast.success(
         flyerFile
           ? "Thanks! Your flyer is in the queue — we'll get to work."
           : "Your project has been created. You can upload a flyer any time.",
       );
-      navigate(jobId ? `/my-jobs/${jobId}` : "/dashboard?view=customer");
+      navigate(savedJobId ? `/my-jobs/${savedJobId}` : "/dashboard?view=customer");
     } catch (err: any) {
       toast.error(err.message || "Could not submit");
     } finally {
@@ -211,6 +294,35 @@ export default function Onboarding() {
       </div>
 
       <div className="mt-8 space-y-6">
+        {(existingFlyer || flyerFile) && (
+          <Card className="flex flex-col gap-3 border-primary/30 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              {existingFlyer && !flyerFile && (
+                <img
+                  src={existingFlyer.url}
+                  alt="Your flyer"
+                  loading="lazy"
+                  className="h-14 w-14 rounded-md object-cover"
+                />
+              )}
+              <div>
+                <p className="font-semibold">Use your flyer to fill this form</p>
+                <p className="text-sm text-muted-foreground">
+                  {flyerFile ? flyerFile.name : existingFlyer?.title} — our AI reads the flyer and fills in any
+                  blank fields below.
+                </p>
+              </div>
+            </div>
+            <Button type="button" onClick={scanFlyerForInfo} disabled={scanning} className="shrink-0">
+              {scanning ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scanning…</>
+              ) : (
+                <><Sparkles className="mr-2 h-4 w-4" /> Get info</>
+              )}
+            </Button>
+          </Card>
+        )}
+
         <Card className="p-5 space-y-4">
           <h2 className="font-semibold">About you</h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -253,6 +365,21 @@ export default function Onboarding() {
                 onChange={(e) => set("business_description", e.target.value)}
                 placeholder="What do you do? Who's your customer? Anything special?"
                 className="mt-1"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="ai_description">Describe your business to AI</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Extra details just for the AI — services, prices, hours, specials, tone of voice,
+                anything it should know when writing your posts and answering customers.
+              </p>
+              <Textarea
+                id="ai_description"
+                rows={5}
+                value={form.ai_description}
+                onChange={(e) => set("ai_description", e.target.value)}
+                placeholder="Tell the AI everything it should know about your business."
+                className="mt-2"
               />
             </div>
           </div>

@@ -4,6 +4,9 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BizadPageContent } from "@/components/bizad/BizadPageContent";
 import { loadPublicBizad, DEMO_BIZAD, type BizadRecord } from "@/lib/bizad";
+import { BizadLayoutView, isBizadLayout } from "@/components/viewer/BizadLayoutView";
+import { BizadAudio } from "@/components/viewer/BizadAudio";
+import type { BizadAudioSettings } from "@/lib/bizadPage";
 
 export default function PublicBizad() {
   const { slug } = useParams<{ slug: string }>();
@@ -49,5 +52,21 @@ export default function PublicBizad() {
     );
   }
 
-  return <BizadPageContent bizad={bizad} />;
+  const audio = (bizad.layout as { audio?: BizadAudioSettings } | null)?.audio ?? null;
+
+  if (isBizadLayout(bizad.layout)) {
+    return (
+      <>
+        <BizadAudio audio={audio} />
+        <BizadLayoutView layout={bizad.layout} bizad={bizad} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <BizadAudio audio={audio} />
+      <BizadPageContent bizad={bizad} />
+    </>
+  );
 }

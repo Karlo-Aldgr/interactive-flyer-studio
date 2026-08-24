@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, Undo2, Redo2, Globe, Loader2, ZoomIn, ZoomOut, Crop, Share2, Sparkles,
-  Briefcase, PartyPopper, CalendarIcon, LayoutDashboard, PenTool,
+  Briefcase, PartyPopper, CalendarIcon, LayoutDashboard, PenTool, Save,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { buildPublicFlyerUrl, buildSocialLandingShareUrl, buildSocialShareUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
+import { buildPublicBizadUrl, buildPublicFlyerUrl, buildSocialLandingShareUrl, buildSocialShareUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
+import { getBizadForFlyer } from "@/lib/bizad";
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -46,7 +47,7 @@ import {
   TopBarPortalMenu, TopBarPreviewButton, TopBarViewMenu, type TopBarMenuActions,
 } from "./TopBarActionMenus";
 
-interface Props { saving: boolean }
+interface Props { saving: boolean; onSave?: () => void | Promise<void> }
 
 const PRESETS: { label: string; w: number; h: number }[] = [
   { label: "Story 9:16 (1080×1920)", w: 1080, h: 1920 },
@@ -57,7 +58,7 @@ const PRESETS: { label: string; w: number; h: number }[] = [
   { label: "Default (900×1200)", w: 900, h: 1200 },
 ];
 
-export function TopBar({ saving }: Props) {
+export function TopBar({ saving, onSave }: Props) {
   const flyer = useEditorStore((s) => s.flyer);
   const setFlyer = useEditorStore((s) => s.setFlyer);
   const undo = useEditorStore((s) => s.undo);
@@ -71,8 +72,15 @@ export function TopBar({ saving }: Props) {
   const deviceFrame = useEditorStore((s) => s.deviceFrame);
   const setDeviceFrame = useEditorStore((s) => s.setDeviceFrame);
   const setCanvasSize = useEditorStore((s) => s.setCanvasSize);
+  const setPageSize = useEditorStore((s) => s.setPageSize);
   const startCrop = useEditorStore((s) => s.startCrop);
   const pagesForLinks = useEditorStore((s) => s.pages);
+  const selectedPageId = useEditorStore((s) => s.selectedPageId);
+
+  const activePage = pagesForLinks.find((p) => p.id === selectedPageId) ?? pagesForLinks[0];
+  const activePageHasOwnSize = !!activePage?.background?.size;
+  const activeWidth = activePage?.background?.size?.width ?? flyer?.settings.width ?? 1080;
+  const activeHeight = activePage?.background?.size?.height ?? flyer?.settings.height ?? 1920;
 
   const [resizeOpen, setResizeOpen] = useState(false);
   const [presetIdx, setPresetIdx] = useState<string>("0");
@@ -81,6 +89,7 @@ export function TopBar({ saving }: Props) {
   const [useCustom, setUseCustom] = useState(false);
   const [mode, setMode] = useState<ResizeMode>("resize");
   const [shareOpen, setShareOpen] = useState(false);
+
   const [automationOpen, setAutomationOpen] = useState(false);
   const [autoPilotOpen, setAutoPilotOpen] = useState(false);
   const [facebookPostOpen, setFacebookPostOpen] = useState(false);
@@ -97,6 +106,8 @@ export function TopBar({ saving }: Props) {
   const [paySettingsOpen, setPaySettingsOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
   const [bizadOpen, setBizadOpen] = useState(false);
+  const [bizadShareUrl, setBizadShareUrl] = useState<string | null>(null);
+
   const [socialOpen, setSocialOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [autoAdvanceOpen, setAutoAdvanceOpen] = useState(false);
@@ -113,6 +124,24 @@ export function TopBar({ saving }: Props) {
     setFlyer({ public_slug: slug });
     void supabase.from("flyers").update({ public_slug: slug }).eq("id", flyer.id);
   }, [flyer, setFlyer]);
+
+  // Digital business card link for the share dialog.
+  useEffect(() => {
+    if (!shareOpen || !flyer?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const bizad = await getBizadForFlyer(flyer.id);
+        if (!cancelled) {
+          setBizadShareUrl(bizad?.slug && bizad.enabled ? buildPublicBizadUrl(bizad.slug) : null);
+        }
+      } catch {
+        if (!cancelled) setBizadShareUrl(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [shareOpen, flyer?.id]);
+
 
   function openCategory() {
     setEditCategory(((flyer as any)?.category as FlyerCategory) || "business");
@@ -376,9 +405,20 @@ export function TopBar({ saving }: Props) {
     }
   }
 
+  /**
+   * Pages that carry their own size (digital business card, landing/menu pages)
+   * must be resized page-by-page — the flyer-level setting does not affect them.
+   */
+  function applySize(w: number, h: number, resizeMode: ResizeMode) {
+    if (activePage && activePageHasOwnSize) setPageSize(activePage.id, w, h, resizeMode);
+    else setCanvasSize(w, h, resizeMode);
+  }
+
   function applyResize() {
     if (mode === "fit") {
-      const pages = useEditorStore.getState().pages;
+      const allPages = useEditorStore.getState().pages;
+      // A page with its own canvas size fits to its own images only.
+      const pages = activePage && activePageHasOwnSize ? [activePage] : allPages;
       let best: { w: number; h: number; area: number } | null = null;
       for (const p of pages) {
         for (const l of p.layers) {
@@ -393,7 +433,7 @@ export function TopBar({ saving }: Props) {
         toast.error("No image layers found to fit to.");
         return;
       }
-      setCanvasSize(best.w, best.h, "resize");
+      applySize(best.w, best.h, "resize");
       toast.success(`Canvas fit to largest image: ${best.w} × ${best.h}`);
       setResizeOpen(false);
       return;
@@ -405,7 +445,7 @@ export function TopBar({ saving }: Props) {
       startCrop({ width: target.w, height: target.h });
       toast.message("Drag the crop area on the canvas, then confirm.");
     } else {
-      setCanvasSize(target.w, target.h, mode);
+      applySize(target.w, target.h, mode);
       toast.success(`Canvas resized to ${target.w} × ${target.h}`);
     }
     setResizeOpen(false);
@@ -531,7 +571,7 @@ export function TopBar({ saving }: Props) {
             onClick={() => setResizeOpen(true)}
           >
             <Crop className="mr-1 h-3.5 w-3.5" />
-            <span className="tabular-nums">{flyer.settings.width}×{flyer.settings.height}</span>
+            <span className="tabular-nums">{activeWidth}×{activeHeight}</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>Change canvas size or crop</TooltipContent>
@@ -556,6 +596,24 @@ export function TopBar({ saving }: Props) {
           "Saved"
         )}
       </span>
+
+      {onSave && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={dirty ? "default" : "outline"}
+              size="sm"
+              className="shrink-0"
+              onClick={() => onSave()}
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <span className="ml-1 hidden sm:inline">Save</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Save all changes</TooltipContent>
+        </Tooltip>
+      )}
 
       {/* Primary actions — always visible */}
       <div className="lg:hidden">
@@ -792,6 +850,16 @@ export function TopBar({ saving }: Props) {
         regenerating={regenerating}
         isPublished={flyer.status === "published" && !!flyer.public_slug}
         flyerPreview={flyerPreviewSection}
+        extraLinks={
+          bizadShareUrl
+            ? [{
+                label: "Digital business card",
+                url: bizadShareUrl,
+                description: "Opens your tappable business card.",
+              }]
+            : undefined
+        }
+
         landingPreviewMeta={{
           label: "Landing page link",
           description: "Opens the landing page first.",
