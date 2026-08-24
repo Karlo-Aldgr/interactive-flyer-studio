@@ -77,7 +77,7 @@ export const instagramAdapter: SocialPlatformAdapter = {
 
   startOAuth({ redirectUri, state, scopes }: AuthStartInput) {
     const env = creds();
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const url = new URL("https://www.instagram.com/oauth/authorize");
     url.searchParams.set("client_id", (env as Record<string, string>).INSTAGRAM_APP_ID);
     url.searchParams.set("redirect_uri", redirectUri);
@@ -89,7 +89,7 @@ export const instagramAdapter: SocialPlatformAdapter = {
 
   async handleCallback(input) {
     const env = creds();
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const { INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET } = env as Record<string, string>;
 
     // 1. Authorization code -> short-lived Instagram user token.

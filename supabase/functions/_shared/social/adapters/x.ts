@@ -27,7 +27,7 @@ export const xAdapter: SocialPlatformAdapter = {
 
   startOAuth({ redirectUri, state, scopes }: AuthStartInput) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const url = new URL("https://twitter.com/i/oauth2/authorize");
     url.searchParams.set("response_type", "code");
     url.searchParams.set("client_id", (env as Record<string, string>).X_CLIENT_ID);
@@ -40,7 +40,7 @@ export const xAdapter: SocialPlatformAdapter = {
 
   async handleCallback(input) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const secrets = env as Record<string, string>;
     if (!input.codeVerifier) {
       return adapterError("validation", "The PKCE verifier for this X connection is missing or expired.");
@@ -88,7 +88,7 @@ export const xAdapter: SocialPlatformAdapter = {
 
   async refreshToken(account) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     if (!account.refresh_token) {
       return adapterError("auth_expired", "Reconnect X — no refresh token is stored (offline.access scope required).");
     }
@@ -209,7 +209,7 @@ export const xAdapter: SocialPlatformAdapter = {
 
   async revoke(account) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const secrets = env as Record<string, string>;
     const res = await fetchJson("https://api.twitter.com/2/oauth2/revoke", {
       method: "POST",
