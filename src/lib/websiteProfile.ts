@@ -42,7 +42,16 @@ export interface WebsiteProfile {
   brandColors?: { accent?: string; background?: string };
   socials: { label: string; url: string }[];
   ctas: { label: string; action: LayerAction }[];
+  /** Real people connected to the project (never invented). */
+  team: { name: string; role?: string; body?: string; photo?: string }[];
+  /** Counts derived from real project data only. */
+  stats: { value: string; label: string }[];
+  /** Approved reviews left on this project. */
+  testimonials: { name?: string; body: string; rating?: number; photo?: string }[];
+  /** Announcements / updates taken from the project's own pages. */
+  news: { title: string; body?: string; image?: string }[];
 }
+
 
 const clean = (v?: string | null) => {
   const s = (v ?? "").toString().replace(/\s+/g, " ").trim();
