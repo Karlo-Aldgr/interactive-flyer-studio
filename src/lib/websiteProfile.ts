@@ -315,15 +315,13 @@ export function buildWebsiteProfile(args: {
       case "open_url": {
         const url = clean(p.url);
         if (url && isHttp(url)) {
-          if (!profile.website) profile.website = url;
-          const sl = socialLabel(url);
-          if (sl !== "Website" && !profile.socials.some((s) => s.url === url)) {
-            profile.socials.push({ label: sl, url });
-          }
+          if (!profile.website && socialLabel(url) === "Website") profile.website = url;
+          addSocial(url);
         }
         addCta(label, a);
         break;
       }
+
       case "buy_product": {
         const name = clean(p.productName);
         if (name) {

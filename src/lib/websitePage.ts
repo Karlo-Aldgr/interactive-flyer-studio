@@ -160,8 +160,67 @@ function eyebrow(pageId: string, label: string, x: number, y: number, width: num
 
 const cloneAction = (a: LayerAction): LayerAction => ({ ...a, id: uid(), payload: { ...a.payload } });
 
+/** Tints a hex colour so brand backgrounds get consistent surface shades. */
+function shade(hex: string, amount: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const dark = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000 < 128;
+  const parts = rgb.map((c) => {
+    const v = dark ? c + (255 - c) * amount : c * (1 - amount);
+    return Math.max(0, Math.min(255, Math.round(v)));
+  });
+  return `#${parts.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+type ThemeCopy = {
+  aboutLabel: string;
+  servicesLabel: string;
+  servicesTitle: string;
+  workLabel: string;
+  workTitle: string;
+  pricingTitle: string;
+  contactLabel: string;
+  primaryCta: string;
+};
+
+/** Section wording per business theme/category from the client's dashboard. */
+function themeCopy(theme?: string): ThemeCopy {
+  const baseCopy: ThemeCopy = {
+    aboutLabel: "About",
+    servicesLabel: "Services",
+    servicesTitle: "What we offer",
+    workLabel: "Our work",
+    workTitle: "Gallery",
+    pricingTitle: "Our prices",
+    contactLabel: "Contact",
+    primaryCta: "Get in touch",
+  };
+  switch (theme) {
+    case "restaurant":
+      return { ...baseCopy, servicesLabel: "Menu", servicesTitle: "On the menu", workLabel: "Gallery", workTitle: "From our kitchen", pricingTitle: "Menu prices", primaryCta: "View menu" };
+    case "realtor":
+      return { ...baseCopy, servicesTitle: "How we help you move", workLabel: "Listings", workTitle: "Featured properties", pricingTitle: "Listing prices", primaryCta: "Book a viewing" };
+    case "beauty":
+      return { ...baseCopy, servicesLabel: "Treatments", servicesTitle: "Our treatments", workTitle: "Recent looks", pricingTitle: "Price list", primaryCta: "Book now" };
+    case "construction":
+      return { ...baseCopy, servicesTitle: "What we build", workLabel: "Projects", workTitle: "Completed projects", pricingTitle: "Estimates", primaryCta: "Request a quote" };
+    case "event":
+      return { ...baseCopy, servicesLabel: "Packages", servicesTitle: "Event packages", workLabel: "Events", workTitle: "Past events", pricingTitle: "Packages", primaryCta: "Reserve your spot" };
+    case "fitness":
+      return { ...baseCopy, servicesLabel: "Programs", servicesTitle: "Training programs", workLabel: "Results", workTitle: "In the gym", pricingTitle: "Memberships", primaryCta: "Start training" };
+    case "retail":
+      return { ...baseCopy, servicesLabel: "Products", servicesTitle: "Shop our products", workLabel: "Lookbook", workTitle: "Featured items", pricingTitle: "Prices", primaryCta: "Shop now" };
+    case "personal":
+      return { ...baseCopy, servicesTitle: "What I do", workLabel: "Portfolio", workTitle: "Selected work", pricingTitle: "Packages", primaryCta: "Work with me" };
+    default:
+      return baseCopy;
+  }
+}
+
 /**
- * Builds the Website page for the CURRENT project.
+ * Builds the Website page for the CURRENT client and project.
  * Only sections backed by real project data are generated.
  */
 export function buildWebsitePage(flyerId: string, index: number, profile: WebsiteProfile): FlyerPage {
@@ -171,6 +230,15 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   const add = (...l: Layer[]) => L.push(...l);
   let y = 0;
 
+  /* Brand colours from the client's project (business card) fall back to template. */
+  const A = profile.brandColors?.accent || ACCENT;
+  const PBG = profile.brandColors?.background || BG;
+  const S1 = profile.brandColors?.background ? shade(PBG, 0.12) : SURFACE;
+  const S2 = profile.brandColors?.background ? shade(PBG, 0.2) : SURFACE_2;
+
+  /* Section wording driven by the client's business theme/category. */
+  const T = themeCopy(profile.theme);
+
   const name = profile.businessName?.trim() || "Your business";
   const images = profile.images ?? [];
   const heroImage = profile.heroImage || images[0];
@@ -178,7 +246,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   const hasServices = (profile.services?.length ?? 0) > 0;
   const hasPortfolio = (profile.portfolio?.length ?? 0) > 0;
   const hasPricing = (profile.pricing?.length ?? 0) > 0;
-  const hasContact = !!(profile.phone || profile.email || profile.address);
+  const hasContact = !!(profile.phone || profile.email || profile.address || profile.whatsapp || profile.hours?.length);
   const primaryCta = profile.ctas?.[0];
   const secondaryCta = profile.ctas?.[1];
 
@@ -190,11 +258,11 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   if (hasPricing) navItems.push(["Pricing", "pricing"]);
   if (hasContact) navItems.push(["Contact", "contact"]);
 
-  add(rect(pageId, 0, 0, W, 92, { fill: SURFACE, radius: 0, opacity: 0.95 }));
+  add(rect(pageId, 0, 0, W, 92, { fill: S1, radius: 0, opacity: 0.95 }));
   if (profile.logoUrl) {
     add(image(pageId, profile.logoUrl, PAD, 22, 48, 48, 12));
   } else {
-    add(icon(pageId, "Sparkles", PAD, 26, 40, ACCENT));
+    add(icon(pageId, "Sparkles", PAD, 26, 40, A));
   }
   add(text(pageId, name, PAD + 60, 34, 320, { size: 22, weight: 800 }));
   const navStart = W - PAD - 150 - 24 - navItems.length * 96;
@@ -210,43 +278,59 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   /* ---------------- Hero ---------------- */
   y = 92;
   const heroH = 700;
-  add(rect(pageId, 0, y, W, heroH, { fill: BG, radius: 0 }));
+  add(rect(pageId, 0, y, W, heroH, { fill: PBG, radius: 0 }));
   if (heroImage) {
     add(image(pageId, heroImage, 0, y, W, heroH, 0));
     add(rect(pageId, 0, y, W, heroH, { fill: "#050912", radius: 0, opacity: 0.7 }));
   }
-  if (profile.tagline) add(eyebrow(pageId, profile.tagline.slice(0, 60), PAD, y + 150, 620));
-  add(text(pageId, profile.headline || name, PAD, y + 190, 820, { size: 68, weight: 800, height: 220 }));
-  if (profile.description) {
-    add(text(pageId, profile.description.slice(0, 220), PAD, y + 430, 660, { size: 19, color: MUTED }));
+  // Business name from the client's dashboard/profile sits above the flyer headline.
+  add(eyebrow(pageId, name, PAD, y + 140, 640));
+  const heroHeadline = profile.headline && profile.headline !== name ? profile.headline : profile.tagline || name;
+  add(text(pageId, heroHeadline, PAD, y + 178, 820, { size: 68, weight: 800, height: 220 }));
+  const heroSupport = profile.description || (heroHeadline !== profile.tagline ? profile.tagline : undefined);
+  if (heroSupport) {
+    add(text(pageId, heroSupport.slice(0, 220), PAD, y + 420, 660, { size: 19, color: MUTED }));
+  }
+  if (profile.offer) {
+    add(rect(pageId, PAD, y + 500, Math.min(640, profile.offer.length * 12 + 60), 44, { fill: A, radius: 999 }));
+    add(text(pageId, profile.offer, PAD + 24, y + 512, 600, { size: 16, weight: 700, color: "#FFFFFF" }));
   }
   let bx = PAD;
   if (primaryCta) {
-    add(button(pageId, primaryCta.label, bx, y + 540, 230, 58, { action: cloneAction(primaryCta.action) }));
+    add(button(pageId, primaryCta.label, bx, y + 570, 230, 58, { action: cloneAction(primaryCta.action) }));
     bx += 250;
   } else if (hasContact) {
-    add(button(pageId, "Get in touch", bx, y + 540, 210, 58, { action: anchor("contact") }));
-    bx += 230;
+    add(button(pageId, T.primaryCta, bx, y + 570, 230, 58, { action: anchor("contact") }));
+    bx += 250;
   }
   if (secondaryCta) {
     add(
-      button(pageId, secondaryCta.label, bx, y + 540, 220, 58, {
+      button(pageId, secondaryCta.label, bx, y + 570, 220, 58, {
         fill: "#FFFFFF",
         color: "#0B1220",
         action: cloneAction(secondaryCta.action),
       })
     );
+  } else if (profile.whatsapp) {
+    add(
+      button(pageId, "WhatsApp us", bx, y + 570, 210, 58, {
+        fill: "#25D366",
+        color: "#08240F",
+        action: { id: uid(), type: "open_url", payload: { url: profile.whatsapp, newTab: true } },
+      })
+    );
   }
   y += heroH;
+
 
   /* ---------------- About ---------------- */
   if (hasAbout) {
     const aboutImg = images[1] || images[0];
-    add(rect(pageId, 0, y, W, 560, { fill: BG, radius: 0 }));
+    add(rect(pageId, 0, y, W, 560, { fill: PBG, radius: 0 }));
     if (aboutImg) add(image(pageId, aboutImg, PAD, y + 80, 540, 400, 28));
     const tx = aboutImg ? 720 : PAD;
     const tw = aboutImg ? 600 : COL;
-    add(eyebrow(pageId, "About", tx, y + 100, tw));
+    add(eyebrow(pageId, T.aboutLabel, tx, y + 100, tw));
     add(text(pageId, `About ${name}`, tx, y + 132, tw, { size: 42, weight: 800, height: 120 }));
     add(text(pageId, profile.description!, tx, y + 270, tw - 20, { size: 17, color: MUTED }));
     y += 560;
@@ -256,15 +340,15 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   if (hasServices) {
     const rows = Math.ceil(profile.services.length / 3);
     const h = 200 + rows * 220;
-    add(rect(pageId, 0, y, W, h, { fill: SURFACE, radius: 0 }));
-    add(eyebrow(pageId, "Services", PAD, y + 80, COL, "center"));
-    add(text(pageId, "What we offer", PAD, y + 112, COL, { size: 42, weight: 800, align: "center", height: 70 }));
+    add(rect(pageId, 0, y, W, h, { fill: S1, radius: 0 }));
+    add(eyebrow(pageId, T.servicesLabel, PAD, y + 80, COL, "center"));
+    add(text(pageId, T.servicesTitle, PAD, y + 112, COL, { size: 42, weight: 800, align: "center", height: 70 }));
     profile.services.forEach((s, i) => {
       const col = i % 3;
       const row = Math.floor(i / 3);
       const x = PAD + col * 400;
       const cy = y + 200 + row * 220;
-      add(rect(pageId, x, cy, 370, 190, { fill: SURFACE_2, radius: 22 }));
+      add(rect(pageId, x, cy, 370, 190, { fill: S2, radius: 22 }));
       if (s.image) add(image(pageId, s.image, x + 32, cy + 26, 56, 56, 14));
       else add(icon(pageId, "Sparkles", x + 32, cy + 26, 40));
       add(text(pageId, s.title, x + 32, cy + 96, 300, { size: 20, weight: 700 }));
@@ -277,17 +361,17 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   if (hasPortfolio) {
     const rows = Math.ceil(profile.portfolio.length / 2);
     const h = 200 + rows * 330;
-    add(rect(pageId, 0, y, W, h, { fill: BG, radius: 0 }));
-    add(eyebrow(pageId, "Our work", PAD, y + 70, COL, "center"));
-    add(text(pageId, "Gallery", PAD, y + 102, COL, { size: 42, weight: 800, align: "center", height: 70 }));
+    add(rect(pageId, 0, y, W, h, { fill: PBG, radius: 0 }));
+    add(eyebrow(pageId, T.workLabel, PAD, y + 70, COL, "center"));
+    add(text(pageId, T.workTitle, PAD, y + 102, COL, { size: 42, weight: 800, align: "center", height: 70 }));
     profile.portfolio.forEach((p, i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
       const x = PAD + col * 620;
       const cy = y + 190 + row * 330;
       if (p.image) add(image(pageId, p.image, x, cy, 580, 220, 22));
-      else add(rect(pageId, x, cy, 580, 220, { fill: SURFACE_2, radius: 22 }));
-      if (p.category) add(text(pageId, p.category.toUpperCase(), x, cy + 236, 300, { size: 12, weight: 700, color: ACCENT }));
+      else add(rect(pageId, x, cy, 580, 220, { fill: S2, radius: 22 }));
+      if (p.category) add(text(pageId, p.category.toUpperCase(), x, cy + 236, 300, { size: 12, weight: 700, color: A }));
       add(text(pageId, p.title, x, cy + 256, 480, { size: 22, weight: 700 }));
       if (p.description) add(text(pageId, p.description.slice(0, 160), x, cy + 288, 560, { size: 14, color: MUTED }));
     });
@@ -297,15 +381,15 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   /* ---------------- Pricing (from project products) ---------------- */
   if (hasPricing) {
     const h = 640;
-    add(rect(pageId, 0, y, W, h, { fill: SURFACE, radius: 0 }));
+    add(rect(pageId, 0, y, W, h, { fill: S1, radius: 0 }));
     add(eyebrow(pageId, "Pricing", PAD, y + 70, COL, "center"));
-    add(text(pageId, "Our prices", PAD, y + 102, COL, { size: 42, weight: 800, align: "center", height: 70 }));
+    add(text(pageId, T.pricingTitle, PAD, y + 102, COL, { size: 42, weight: 800, align: "center", height: 70 }));
     profile.pricing.forEach((plan, i) => {
       const x = PAD + i * 400;
       const cy = y + 200;
-      add(rect(pageId, x, cy, 370, 340, { fill: SURFACE_2, radius: 24 }));
+      add(rect(pageId, x, cy, 370, 340, { fill: S2, radius: 24 }));
       add(text(pageId, plan.name, x + 32, cy + 32, 300, { size: 20, weight: 700, color: "#FFFFFF" }));
-      add(text(pageId, plan.price, x + 32, cy + 66, 300, { size: 36, weight: 800, color: ACCENT }));
+      add(text(pageId, plan.price, x + 32, cy + 66, 300, { size: 36, weight: 800, color: A }));
       plan.features.forEach((f, fi) => {
         add(text(pageId, `•  ${f}`, x + 32, cy + 140 + fi * 34, 300, { size: 15, color: MUTED }));
       });
@@ -322,46 +406,70 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
 
   /* ---------------- Contact ---------------- */
   if (hasContact) {
-    const h = 560;
-    add(rect(pageId, 0, y, W, h, { fill: BG, radius: 0 }));
-    add(eyebrow(pageId, "Contact", PAD, y + 80, 520));
-    add(text(pageId, `Get in touch with ${name}`, PAD, y + 112, 560, { size: 40, weight: 800, height: 120 }));
-
     const rows: Array<[string, string]> = [];
     if (profile.phone) rows.push(["Phone", profile.phone]);
+    if (profile.whatsapp) rows.push(["MessageCircle", "WhatsApp"]);
     if (profile.email) rows.push(["Mail", profile.email]);
     if (profile.address) rows.push(["MapPin", profile.address]);
+    (profile.hours ?? []).forEach((line) => rows.push(["Clock", line]));
+
+    const h = Math.max(560, 300 + rows.length * 52 + 160);
+    add(rect(pageId, 0, y, W, h, { fill: PBG, radius: 0 }));
+    add(eyebrow(pageId, T.contactLabel, PAD, y + 80, 520));
+    add(text(pageId, `Get in touch with ${name}`, PAD, y + 112, 560, { size: 40, weight: 800, height: 120 }));
+
     rows.forEach(([ic, value], i) => {
-      const cy = y + 250 + i * 60;
-      add(icon(pageId, ic, PAD, cy, 26, ACCENT));
+      const cy = y + 240 + i * 52;
+      add(icon(pageId, ic, PAD, cy, 24, A));
       add(text(pageId, value, PAD + 44, cy + 2, 520, { size: 16 }));
     });
 
+    const ctaY = y + 260 + rows.length * 52;
     let cx = PAD;
     if (profile.phone) {
       add(
-        button(pageId, "Call us", cx, y + 450, 160, 52, {
+        button(pageId, "Call us", cx, ctaY, 160, 52, {
           action: { id: uid(), type: "call", payload: { phone: profile.phone } },
         })
       );
       cx += 180;
     }
+    if (profile.whatsapp) {
+      add(
+        button(pageId, "WhatsApp", cx, ctaY, 170, 52, {
+          fill: "#25D366",
+          color: "#08240F",
+          action: { id: uid(), type: "open_url", payload: { url: profile.whatsapp, newTab: true } },
+        })
+      );
+      cx += 190;
+    }
+    if (profile.email) {
+      add(
+        button(pageId, "Email us", cx, ctaY, 170, 52, {
+          fill: S2,
+          action: { id: uid(), type: "open_url", payload: { url: `mailto:${profile.email}`, newTab: false } },
+        })
+      );
+      cx += 190;
+    }
     if (profile.address) {
       add(
-        button(pageId, "Get directions", cx, y + 450, 200, 52, {
+        button(pageId, "Get directions", cx, ctaY, 200, 52, {
           fill: ACCENT_2,
           action: { id: uid(), type: "map", payload: { mapAddress: profile.address, mapProvider: "auto" } },
         })
       );
     }
 
+
     // Message form — collects leads into the existing form submissions flow
-    add(rect(pageId, 760, y + 90, 560, 380, { fill: SURFACE, radius: 26 }));
+    add(rect(pageId, 760, y + 90, 560, 380, { fill: S1, radius: 26 }));
     add(text(pageId, "Send us a message", 800, y + 126, 480, { size: 22, weight: 700 }));
     ["Your name", "Email address", "Message"].forEach((label, i) => {
       const fy = y + 180 + i * 74;
       const hh = i === 2 ? 96 : 52;
-      add(rect(pageId, 800, fy, 480, hh, { fill: SURFACE_2, radius: 12 }));
+      add(rect(pageId, 800, fy, 480, hh, { fill: S2, radius: 12 }));
       add(text(pageId, label, 818, fy + 17, 440, { size: 15, color: MUTED }));
     });
     add(
@@ -383,9 +491,9 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
 
   /* ---------------- Footer ---------------- */
   const footerH = 300;
-  add(rect(pageId, 0, y, W, footerH, { fill: SURFACE, radius: 0 }));
+  add(rect(pageId, 0, y, W, footerH, { fill: S1, radius: 0 }));
   if (profile.logoUrl) add(image(pageId, profile.logoUrl, PAD, y + 50, 44, 44, 10));
-  else add(icon(pageId, "Sparkles", PAD, y + 54, 36, ACCENT));
+  else add(icon(pageId, "Sparkles", PAD, y + 54, 36, A));
   add(text(pageId, name, PAD + 56, y + 60, 300, { size: 20, weight: 800 }));
   if (profile.description) {
     add(text(pageId, profile.description.slice(0, 140), PAD, y + 116, 380, { size: 14, color: MUTED }));
@@ -427,7 +535,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
     index,
     name: "Website",
     background: {
-      color: BG,
+      color: PBG,
       size: { width: W, height: y },
       websitePage: true,
       websiteDevice: "desktop",
