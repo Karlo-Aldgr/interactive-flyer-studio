@@ -23,7 +23,7 @@ export async function createFlyerFromTemplate(
       title: GODS_WARRIOR_META.title,
       category: GODS_WARRIOR_META.category,
       thumbnail_url: GODS_WARRIOR_META.thumbnailUrl,
-      settings: GODS_WARRIOR_CANVAS,
+      settings: GODS_WARRIOR_CANVAS as unknown as Record<string, unknown>,
     }])
     .select("id")
     .single();
@@ -80,7 +80,7 @@ export async function createFlyerFromTemplate(
     const { error: actErr } = await supabase.from("actions").insert([{
       layer_id: hotspot.id,
       type: spot.action.type,
-      payload: spot.action.payload,
+      payload: spot.action.payload as unknown as Record<string, unknown>,
     }]);
 
     if (actErr) throw actErr;

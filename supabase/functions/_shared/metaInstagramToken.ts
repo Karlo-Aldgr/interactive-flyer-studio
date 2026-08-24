@@ -116,11 +116,12 @@ export async function resolveStoredInstagramToken(
   preferredUserId?: string | null,
   refreshIfWithinDays = 7,
 ): Promise<StoredInstagramToken | { error: string }> {
-  let row: {
+  type IgSecretRow = {
     user_id: string;
     instagram_user_access_token: string | null;
     instagram_token_expires_at: string | null;
-  } | null = null;
+  };
+  let row: IgSecretRow | null = null;
 
   if (preferredUserId) {
     const { data } = await supabase
@@ -128,7 +129,7 @@ export async function resolveStoredInstagramToken(
       .select("user_id, instagram_user_access_token, instagram_token_expires_at")
       .eq("user_id", preferredUserId)
       .maybeSingle();
-    if (data?.instagram_user_access_token) row = data as typeof row;
+    if (data?.instagram_user_access_token) row = data as unknown as IgSecretRow;
   }
 
   if (!row?.instagram_user_access_token) {
@@ -139,8 +140,9 @@ export async function resolveStoredInstagramToken(
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (data?.instagram_user_access_token) row = data as typeof row;
+    if (data?.instagram_user_access_token) row = data as unknown as IgSecretRow;
   }
+
 
   let accessToken = row?.instagram_user_access_token?.trim() || "";
   let expiresAt = row?.instagram_token_expires_at || null;

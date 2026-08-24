@@ -1,5 +1,6 @@
 import {
   adapterError,
+  type AdapterError,
   type AdapterAccount,
   type AdapterResult,
   type AuthStartInput,
@@ -82,7 +83,7 @@ export const youtubeAdapter: SocialPlatformAdapter = {
 
   startOAuth({ redirectUri, state, scopes }: AuthStartInput) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     url.searchParams.set("client_id", (env as Record<string, string>).YOUTUBE_CLIENT_ID);
     url.searchParams.set("redirect_uri", redirectUri);
@@ -97,7 +98,7 @@ export const youtubeAdapter: SocialPlatformAdapter = {
 
   async handleCallback(input) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const secrets = env as Record<string, string>;
     const res = await fetchJson("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -147,7 +148,7 @@ export const youtubeAdapter: SocialPlatformAdapter = {
 
   async refreshToken(account) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     if (!account.refresh_token) {
       return adapterError("auth_expired", "Reconnect YouTube — no Google refresh token is stored.");
     }

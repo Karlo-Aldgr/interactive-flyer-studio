@@ -1,5 +1,6 @@
 import {
   adapterError,
+  type AdapterError,
   type AdapterAccount,
   type AdapterResult,
   type AuthStartInput,
@@ -37,7 +38,7 @@ export const tiktokAdapter: SocialPlatformAdapter = {
 
   startOAuth({ redirectUri, state, scopes }: AuthStartInput) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const url = new URL("https://www.tiktok.com/v2/auth/authorize/");
     url.searchParams.set("client_key", (env as Record<string, string>).TIKTOK_CLIENT_KEY);
     url.searchParams.set("scope", scopes.join(","));
@@ -49,7 +50,7 @@ export const tiktokAdapter: SocialPlatformAdapter = {
 
   async handleCallback(input) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const secrets = env as Record<string, string>;
     const res = await fetchJson(`${API}/oauth/token/`, {
       method: "POST",
@@ -90,7 +91,7 @@ export const tiktokAdapter: SocialPlatformAdapter = {
 
   async refreshToken(account) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     if (!account.refresh_token) {
       return adapterError("auth_expired", "Reconnect TikTok — no refresh token is stored.");
     }
@@ -222,7 +223,7 @@ export const tiktokAdapter: SocialPlatformAdapter = {
 
   async revoke(account) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const secrets = env as Record<string, string>;
     const res = await fetchJson(`${API}/oauth/revoke/`, {
       method: "POST",

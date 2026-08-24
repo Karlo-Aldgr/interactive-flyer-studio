@@ -1,5 +1,6 @@
 import {
   adapterError,
+  type AdapterError,
   type AdapterAccount,
   type AdapterResult,
   type AuthStartInput,
@@ -78,7 +79,7 @@ export const linkedinAdapter: SocialPlatformAdapter = {
 
   startOAuth({ redirectUri, state, scopes }: AuthStartInput) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const url = new URL("https://www.linkedin.com/oauth/v2/authorization");
     url.searchParams.set("response_type", "code");
     url.searchParams.set("client_id", (env as Record<string, string>).LINKEDIN_CLIENT_ID);
@@ -90,7 +91,7 @@ export const linkedinAdapter: SocialPlatformAdapter = {
 
   async handleCallback(input) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     const secrets = env as Record<string, string>;
     const res = await fetchJson("https://www.linkedin.com/oauth/v2/accessToken", {
       method: "POST",
@@ -129,7 +130,7 @@ export const linkedinAdapter: SocialPlatformAdapter = {
 
   async refreshToken(account) {
     const env = requireEnv(SECRETS);
-    if ("ok" in env && env.ok === false) return env;
+    if ("ok" in env && env.ok === false) return env as AdapterError;
     if (!account.refresh_token) {
       return adapterError(
         "auth_expired",
