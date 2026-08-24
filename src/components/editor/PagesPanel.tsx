@@ -203,9 +203,10 @@ export function PagesPanel() {
       <div className="max-h-64 overflow-y-auto">
         {(() => { let flyerCount = 0; return pages.map((p, i) => {
           const isBizad = !!p.background?.bizadPage;
-          const isLanding = !isBizad && !!p.background?.linkPageId;
-          if (!isLanding && !isBizad) flyerCount += 1;
-          const label = isBizad ? "B" : isLanding ? "L" : String(flyerCount);
+          const isWebsite = !!p.background?.websitePage;
+          const isLanding = !isBizad && !isWebsite && !!p.background?.linkPageId;
+          if (!isLanding && !isBizad && !isWebsite) flyerCount += 1;
+          const label = isBizad ? "B" : isWebsite ? "W" : isLanding ? "L" : String(flyerCount);
           const active = p.id === selectedPageId;
           const editing = editingId === p.id;
           return (
@@ -216,10 +217,11 @@ export function PagesPanel() {
             >
               <span
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold"
-                title={isBizad ? "Digital business card page (editor only)" : isLanding ? "Landing page (not counted)" : `Page ${flyerCount}`}
+                title={isBizad ? "Digital business card page (editor only)" : isWebsite ? "Website page (long scrolling)" : isLanding ? "Landing page (not counted)" : `Page ${flyerCount}`}
               >
-                {isBizad ? <IdCard className="h-3.5 w-3.5" /> : label}
+                {isBizad ? <IdCard className="h-3.5 w-3.5" /> : isWebsite ? <Globe className="h-3.5 w-3.5" /> : label}
               </span>
+
               {editing ? (
                 <Input
                   autoFocus
