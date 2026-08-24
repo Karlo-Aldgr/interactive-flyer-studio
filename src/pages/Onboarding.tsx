@@ -34,6 +34,7 @@ const schema = z.object({
   business_address: z.string().trim().max(300).optional().or(z.literal("")),
   business_slogan: z.string().trim().max(200).optional().or(z.literal("")),
   business_description: z.string().trim().max(2000).optional().or(z.literal("")),
+  ai_details: z.string().trim().max(5000).optional().or(z.literal("")),
   website_url: z.string().trim().max(300).optional().or(z.literal("")),
   facebook_url: z.string().trim().max(300).optional().or(z.literal("")),
   instagram_url: z.string().trim().max(300).optional().or(z.literal("")),
@@ -56,6 +57,7 @@ const emptyForm: FormState = {
   business_address: "",
   business_slogan: "",
   business_description: "",
+  ai_details: "",
   website_url: "",
   facebook_url: "",
   instagram_url: "",
@@ -112,6 +114,7 @@ export default function Onboarding() {
             business_address: existing.business_address ?? "",
             business_slogan: existing.business_slogan ?? "",
             business_description: existing.business_description ?? "",
+            ai_details: (existing as any).ai_details ?? "",
             website_url: existing.website_url ?? "",
             facebook_url: existing.facebook_url ?? "",
             instagram_url: existing.instagram_url ?? "",
@@ -230,6 +233,7 @@ export default function Onboarding() {
           business_address: parsed.data.business_address || null,
           business_slogan: parsed.data.business_slogan || null,
           business_description: parsed.data.business_description || null,
+          ai_details: parsed.data.ai_details || null,
           website_url: parsed.data.website_url || null,
           website_help: websiteBlank ? websiteHelp : null,
           facebook_url: parsed.data.facebook_url || null,
@@ -363,6 +367,22 @@ export default function Onboarding() {
                 onChange={(e) => set("business_description", e.target.value)}
                 placeholder="What do you do? Who's your customer? Anything special?"
                 className="mt-1"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="ai_details">Describe your business for AI assistance (give details)</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                The more detail you give, the better our AI writes your posts, captions, scripts and chatbot answers.
+                Include services and prices, hours, location/service area, your ideal customer, what makes you different,
+                current promotions, tone of voice, and anything AI should never say.
+              </p>
+              <Textarea
+                id="ai_details"
+                rows={7}
+                value={form.ai_details}
+                onChange={(e) => set("ai_details", e.target.value)}
+                placeholder="Services & prices, hours, service area, ideal customer, what makes you different, current specials, preferred tone, things to avoid..."
+                className="mt-2"
               />
             </div>
           </div>
