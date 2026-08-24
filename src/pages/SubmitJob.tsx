@@ -108,8 +108,27 @@ export default function SubmitJob() {
         </div>
 
         <div>
-          <Label>Pick your interactions ({selected.length} selected)</Label>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Label>Pick your interactions ({selected.length} selected)</Label>
+            <Button
+              type="button"
+              variant={adminChoose ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setAdminChoose((v) => !v);
+                if (!adminChoose) setSelected([]);
+              }}
+            >
+              {adminChoose ? "Admin will choose ✓" : "Admin choose"}
+            </Button>
+          </div>
+          {adminChoose && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Our team will pick the best interactions for your flyer.
+            </p>
+          )}
+          <div className={`mt-3 grid gap-2 sm:grid-cols-2 ${adminChoose ? "pointer-events-none opacity-50" : ""}`}>
+
             {INTERACTIONS.map((it) => {
               const on = selected.includes(it.id);
               return (
