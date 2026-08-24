@@ -244,19 +244,21 @@ function AbsLayer({
   s,
   doc,
   openForm,
+  fullBleed = false,
 }: {
   layer: Layer;
   band: Band;
   s: number;
   doc: WebsiteDocument;
   openForm: (r: WebsiteFormRequest) => void;
+  fullBleed?: boolean;
 }) {
   const clickable = !!layer.action;
   const box: React.CSSProperties = {
     position: "absolute",
-    left: layer.position.x * s,
+    left: fullBleed ? 0 : layer.position.x * s,
     top: (layer.position.y - band.top) * s,
-    width: layer.size.width * s,
+    width: fullBleed ? "100%" : layer.size.width * s,
     height: layer.size.height * s,
     opacity: layer.style.opacity ?? 1,
     transform: layer.rotation ? `rotate(${layer.rotation}deg)` : undefined,
@@ -264,6 +266,7 @@ function AbsLayer({
     cursor: clickable ? "pointer" : undefined,
   };
   const onClick = clickable ? () => runAction(layer.action, openForm, layer.id) : undefined;
+
 
   switch (layer.type) {
     case "text": {
@@ -459,6 +462,14 @@ function BandView({
 
   /* ------------------------------------------------ scaled (desktop) mode */
   if (scaled) {
+    const contentW = W * s;
+    // Full-bleed layers (section background photos / tint overlays) span the
+    // whole viewport; everything else lives in a centered content container.
+    const isBleed = (l: Layer) =>
+      (l.type === "image" || l.type === "shape") && isFullWidth(l, W) && l.size.height >= band.height - 12;
+    const bleed = ordered.filter(isBleed);
+    const content = ordered.filter((l) => !isBleed(l));
+
     return (
       <section
         id={band.anchor}
@@ -471,58 +482,75 @@ function BandView({
           scrollMarginTop: 80,
         }}
       >
-        {ordered.map((l) => {
-          if (form?.consumed.has(l.id)) return null;
-          return <AbsLayer key={l.id} layer={l} band={band} s={s} doc={doc} openForm={openForm} />;
-        })}
+        {bleed.map((l) => (
+          <AbsLayer key={l.id} layer={l} band={band} s={s} doc={doc} openForm={openForm} fullBleed />
+        ))}
 
-        {form?.fields.map((f) => {
-          const box = byId.get(f.boxId);
-          const label = byId.get(f.labelId);
-          if (!box) return null;
-          const common = {
-            placeholder: f.label,
-            value: values[f.key] ?? "",
-            onChange: (e: any) => set(f.key, e.target.value),
-            style: {
-              ...inputStyle(box, s, band, true),
-              color: label?.style.color || "#E2E8F0",
-              fontSize: (label?.style.fontSize ?? 15) * s,
-              fontFamily: doc.fontFamily,
-              padding: `${10 * s}px ${16 * s}px`,
-              outline: "none",
-              resize: "none" as const,
-            },
-          };
-          return f.multiline ? <textarea key={f.key} {...common} /> : <input key={f.key} {...common} />;
-        })}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: contentW,
+            maxWidth: "100%",
+            height: "100%",
+          }}
+        >
+          {content.map((l) => {
+            if (form?.consumed.has(l.id)) return null;
+            return <AbsLayer key={l.id} layer={l} band={band} s={s} doc={doc} openForm={openForm} />;
+          })}
 
-        {form && formButton && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={doSubmit}
-            style={{
-              position: "absolute",
-              left: formButton.position.x * s,
-              top: (formButton.position.y - band.top) * s,
-              width: formButton.size.width * s,
-              height: formButton.size.height * s,
-              background: formButton.style.fill || doc.accent,
-              color: formButton.style.color || "#fff",
-              border: "none",
-              borderRadius: (formButton.style.cornerRadius ?? 999) * s,
-              fontSize: (formButton.style.fontSize ?? 16) * s,
-              fontWeight: 700,
-              fontFamily: doc.fontFamily,
-              cursor: "pointer",
-            }}
-          >
-            {busy ? "Sending…" : formButton.content.label || "Send"}
-          </button>
-        )}
+          {form?.fields.map((f) => {
+            const box = byId.get(f.boxId);
+            const label = byId.get(f.labelId);
+            if (!box) return null;
+            const common = {
+              placeholder: f.label,
+              value: values[f.key] ?? "",
+              onChange: (e: any) => set(f.key, e.target.value),
+              style: {
+                ...inputStyle(box, s, band, true),
+                color: label?.style.color || "#E2E8F0",
+                fontSize: (label?.style.fontSize ?? 15) * s,
+                fontFamily: doc.fontFamily,
+                padding: `${10 * s}px ${16 * s}px`,
+                outline: "none",
+                resize: "none" as const,
+              },
+            };
+            return f.multiline ? <textarea key={f.key} {...common} /> : <input key={f.key} {...common} />;
+          })}
+
+          {form && formButton && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={doSubmit}
+              style={{
+                position: "absolute",
+                left: formButton.position.x * s,
+                top: (formButton.position.y - band.top) * s,
+                width: formButton.size.width * s,
+                height: formButton.size.height * s,
+                background: formButton.style.fill || doc.accent,
+                color: formButton.style.color || "#fff",
+                border: "none",
+                borderRadius: (formButton.style.cornerRadius ?? 999) * s,
+                fontSize: (formButton.style.fontSize ?? 16) * s,
+                fontWeight: 700,
+                fontFamily: doc.fontFamily,
+                cursor: "pointer",
+              }}
+            >
+              {busy ? "Sending…" : formButton.content.label || "Send"}
+            </button>
+          )}
+        </div>
       </section>
     );
+
   }
 
   /* ---------------------------------------------------- reflow (narrow) mode */
