@@ -611,7 +611,7 @@ export function buildWebsitePage(
     const categories = Array.from(
       new Set((profile.portfolio ?? []).map((p) => p.category).filter(Boolean) as string[])
     ).slice(0, 4);
-    const headH = heading(y + M.sectionPad, T.workLabel, T.workTitle, profile.tagline, false);
+    const headH = measureHead(T.workLabel, T.workTitle, profile.tagline);
     const filterH = categories.length ? 52 : 0;
     const tiles = galleryImages.slice(0, device === "mobile" ? 6 : 8);
     const g = gridOf(tiles.length, M.workCols, W, 0);
