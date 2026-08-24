@@ -49,21 +49,25 @@ export default function SubmitJob() {
         uploadUrl = path;
       }
 
-      const { error } = await supabase.from("jobs").insert({
-        user_id: user.id,
-        customer_email: user.email ?? null,
-        type,
-        title: title.trim(),
-        brief: [brief.trim(), adminChoose ? "[Customer asked our team to choose the interactions]" : ""]
-          .filter(Boolean)
-          .join("\n\n") || null,
-        upload_url: uploadUrl,
-        selected_actions: selected,
-        status: "new",
-      });
+      const { data: inserted, error } = await supabase
+        .from("jobs")
+        .insert({
+          user_id: user.id,
+          customer_email: user.email ?? null,
+          type,
+          title: title.trim(),
+          brief: [brief.trim(), adminChoose ? "[Customer asked our team to choose the interactions]" : ""]
+            .filter(Boolean)
+            .join("\n\n") || null,
+          upload_url: uploadUrl,
+          selected_actions: selected,
+          status: "new",
+        })
+        .select("id")
+        .single();
       if (error) throw error;
-      toast.success("Job submitted! We'll review and send you a quote.");
-      navigate("/my-jobs");
+      toast.success("Job submitted! Let's set up your onboarding details.");
+      navigate(`/onboarding?job=${inserted?.id}`);
     } catch (e: any) {
       toast.error(e.message ?? "Failed to submit");
     } finally {
