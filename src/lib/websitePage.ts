@@ -752,11 +752,12 @@ export function buildWebsitePage(
     const entryImgH = Math.round(g.cardW * 0.52);
     const entryH = entryImgH + 130;
     const rows = Math.ceil(profile.news.length / g.c);
-    const headH = heading(y + M.sectionPad, undefined, T.newsTitle, undefined, false);
+    const headH = measureHead(undefined, T.newsTitle, undefined);
     const h = M.sectionPad * 2 + headH + rows * entryH + (rows - 1) * M.gap;
-    const band = rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 });
-    L.splice(L.findIndex((l) => l.position.y >= y + M.sectionPad), 0, band);
+    add(rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 }));
+    heading(y + M.sectionPad, undefined, T.newsTitle, undefined, false);
     const top = y + M.sectionPad + headH;
+
     profile.news.forEach((n, i) => {
       const x = g.xOf(i);
       const cy = top + g.rowOf(i) * (entryH + M.gap);
