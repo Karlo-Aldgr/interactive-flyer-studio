@@ -405,7 +405,7 @@ export function Canvas() {
       : {};
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-auto bg-muted/40 p-8">
+    <div className={`relative flex h-full w-full justify-center overflow-auto bg-muted/40 p-8 ${page.background?.websitePage ? "items-start" : "items-center"}`}>
       {(drawMode === "hotspot" || drawMode === "hotspot-ellipse") && (
         <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs shadow-elegant backdrop-blur">
           <span className="font-medium">
