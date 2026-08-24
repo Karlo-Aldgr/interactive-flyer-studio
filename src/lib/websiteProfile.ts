@@ -433,9 +433,65 @@ export function buildWebsiteProfile(args: {
   };
   profile.services = dedupe(profile.services).slice(0, 6);
   profile.pricing = dedupe(profile.pricing).slice(0, 3);
-  profile.portfolio = dedupe(profile.portfolio).slice(0, 4);
+  profile.portfolio = dedupe(profile.portfolio).slice(0, 8);
   profile.images = profile.images.slice(0, 12);
   profile.ctas = profile.ctas.slice(0, 6);
 
+  /* ---- team: only real people attached to the client/project ---- */
+  const ownerName = profile.ownerName;
+  if (ownerName) {
+    profile.team.push({
+      name: ownerName,
+      role: clean(client?.headline) ?? clean(client?.brokerage) ?? (profile.businessName ? `${profile.businessName}` : undefined),
+      body: profile.tagline,
+      photo: clean(client?.photo_url) ?? profile.logoUrl,
+    });
+  }
+
+  /* ---- testimonials: approved reviews on this project ---- */
+  (src.testimonials ?? []).forEach((t) => {
+    const body = clean(t.body);
+    if (!body) return;
+    profile.testimonials.push({
+      name: clean(t.name),
+      body,
+      rating: t.rating ?? undefined,
+      photo: clean(t.photo_url),
+    });
+  });
+
+  /* ---- statistics: counts of REAL project data only ---- */
+  const statCandidates: Array<{ value: number; label: string }> = [
+    { value: profile.portfolio.length, label: profile.theme === "realtor" ? "Listings" : "Showcased works" },
+    { value: profile.services.length, label: profile.theme === "restaurant" ? "Menu items" : "Services" },
+    { value: profile.images.length, label: "Photos" },
+    { value: profile.socials.length, label: "Social channels" },
+    { value: profile.testimonials.length, label: "Reviews" },
+  ];
+  const usableStats = statCandidates.filter((s) => s.value > 0);
+  if (usableStats.length >= 3) {
+    profile.stats = usableStats.slice(0, 4).map((s) => ({ value: String(s.value), label: s.label }));
+  }
+
+  /* ---- news / updates: taken from the project's own pages + offer ---- */
+  if (profile.offer) profile.news.push({ title: profile.offer, body: profile.tagline, image: profile.images[1] });
+  [...pages]
+    .filter((p) => !p.background?.websitePage)
+    .sort((a, b) => a.index - b.index)
+    .forEach((p, i) => {
+      const pageTexts = p.layers
+        .filter((l) => l.type === "text" && clean(l.content?.text))
+        .sort((a, b) => (b.style?.fontSize ?? 0) - (a.style?.fontSize ?? 0));
+      const title = clean(pageTexts[0]?.content?.text);
+      if (!title) return;
+      const body = clean(pageTexts.find((l) => (clean(l.content?.text)?.length ?? 0) > 40)?.content?.text);
+      const img = p.layers.find((l) => l.type === "image" && isHttp(l.content?.src))?.content?.src;
+      if (profile.news.some((n) => n.title.toLowerCase() === title.toLowerCase())) return;
+      profile.news.push({ title, body, image: clean(img) });
+      void i;
+    });
+  profile.news = profile.news.slice(0, 4);
+
   return profile;
+
 }
