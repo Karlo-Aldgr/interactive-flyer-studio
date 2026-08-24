@@ -133,17 +133,31 @@ export default function Onboarding() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase
-        .from("flyers")
-        .select("id, title, thumbnail_url")
-        .eq("owner_id", user.id)
-        .not("thumbnail_url", "is", null)
-        .order("updated_at", { ascending: false })
-        .limit(1);
-      const row = data?.[0];
+      let row: { title: string | null; thumbnail_url: string | null } | undefined;
+      if (jobId) {
+        // Only this project's flyer — onboarding never crosses projects.
+        const { data: job } = await supabase.from("jobs").select("flyer_id").eq("id", jobId).maybeSingle();
+        if (job?.flyer_id) {
+          const { data } = await supabase
+            .from("flyers")
+            .select("title, thumbnail_url")
+            .eq("id", job.flyer_id)
+            .maybeSingle();
+          row = data ?? undefined;
+        }
+      } else {
+        const { data } = await supabase
+          .from("flyers")
+          .select("title, thumbnail_url")
+          .eq("owner_id", user.id)
+          .not("thumbnail_url", "is", null)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        row = data?.[0];
+      }
       if (row?.thumbnail_url) setExistingFlyer({ title: row.title ?? "Your flyer", url: row.thumbnail_url });
     })();
-  }, [user]);
+  }, [user, jobId]);
 
   const readAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -205,7 +219,7 @@ export default function Onboarding() {
     }
     setSaving(true);
     try {
-      const { jobId } = await submitOnboarding({
+      const { jobId: savedJobId } = await submitOnboarding({
         userId: user.id,
         userEmail: user.email,
         input: {
@@ -245,7 +259,7 @@ export default function Onboarding() {
           ? "Thanks! Your flyer is in the queue — we'll get to work."
           : "Your project has been created. You can upload a flyer any time.",
       );
-      navigate(jobId ? `/my-jobs/${jobId}` : "/dashboard?view=customer");
+      navigate(savedJobId ? `/my-jobs/${savedJobId}` : "/dashboard?view=customer");
     } catch (err: any) {
       toast.error(err.message || "Could not submit");
     } finally {
