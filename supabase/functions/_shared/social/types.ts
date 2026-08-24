@@ -170,7 +170,7 @@ export interface SocialPlatformAdapter {
     account: AdapterAccount,
     input: PublishInput,
   ): Promise<AdapterResult<PublishSuccess>>;
-  deletePost(account: AdapterAccount, remotePostId: string): Promise<AdapterResult<Record<string, never>>>;
+  deletePost(account: AdapterAccount, remotePostId: string): Promise<AdapterResult<Record<never, never>>>;
   getPostStatus(
     account: AdapterAccount,
     remotePostId: string,
@@ -179,7 +179,7 @@ export interface SocialPlatformAdapter {
     account: AdapterAccount,
     remotePostId: string,
   ): Promise<AdapterResult<AnalyticsSnapshot>>;
-  revoke(account: AdapterAccount): Promise<AdapterResult<Record<string, never>>>;
+  revoke(account: AdapterAccount): Promise<AdapterResult<Record<never, never>>>;
 }
 
 export function emptyAnalytics(

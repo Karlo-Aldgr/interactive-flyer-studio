@@ -52,7 +52,7 @@ function expiryFromSeconds(seconds: unknown): string | null {
 async function waitForContainer(
   containerId: string,
   token: string,
-): Promise<AdapterResult<Record<string, never>>> {
+): Promise<AdapterResult<Record<never, never>>> {
   for (let attempt = 0; attempt < 20; attempt++) {
     const url = new URL(`${IG_HOST}/${GRAPH()}/${containerId}`);
     url.searchParams.set("fields", "status_code,status");
