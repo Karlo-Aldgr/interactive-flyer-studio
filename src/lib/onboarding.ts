@@ -12,6 +12,8 @@ export interface OnboardingSubmission {
   business_address: string | null;
   business_slogan: string | null;
   business_description: string | null;
+  /** Second, free-form description written specifically for the AI. */
+  ai_description: string | null;
   website_url: string | null;
   website_help: OnboardingHelp;
   facebook_url: string | null;
@@ -106,14 +108,19 @@ export async function syncOnboardingChatbotKnowledgeForJob(jobId: string): Promi
   await syncOnboardingToFlyerChatbot(job.flyer_id, onboarding);
 }
 
+/**
+ * Most recent onboarding for a user. Onboarding is per project — use
+ * getOnboardingForJob / getOnboardingForFlyer whenever a project is known.
+ */
 export async function getMyOnboarding(userId: string): Promise<OnboardingSubmission | null> {
   const { data, error } = await supabase
     .from("onboarding_submissions" as any)
     .select("*")
     .eq("user_id", userId)
-    .maybeSingle();
+    .order("updated_at", { ascending: false })
+    .limit(1);
   if (error) throw error;
-  return (data as unknown as OnboardingSubmission | null) ?? null;
+  return ((data as unknown as OnboardingSubmission[] | null)?.[0]) ?? null;
 }
 
 export async function getOnboardingForJob(jobId: string): Promise<OnboardingSubmission | null> {
@@ -124,6 +131,31 @@ export async function getOnboardingForJob(jobId: string): Promise<OnboardingSubm
     .maybeSingle();
   if (error) return null;
   return (data as unknown as OnboardingSubmission | null) ?? null;
+}
+
+/** Onboarding that belongs to the project (job) of a given flyer. Never falls back to another project. */
+export async function getOnboardingForFlyer(flyerId: string): Promise<OnboardingSubmission | null> {
+  const { data: jobs, error } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("flyer_id", flyerId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) return null;
+  const jobId = jobs?.[0]?.id;
+  if (!jobId) return null;
+  return getOnboardingForJob(jobId);
+}
+
+/** Job id of the onboarding that belongs to a flyer, if any. */
+export async function getJobIdForFlyer(flyerId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("flyer_id", flyerId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  return data?.[0]?.id ?? null;
 }
 
 async function uploadLogo(userId: string, file: File): Promise<string> {
