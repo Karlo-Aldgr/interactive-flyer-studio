@@ -327,12 +327,21 @@ export function PagesPanel() {
               );
             })}
           </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-8 w-full text-xs"
+            onClick={() => window.open(`/website-preview/${flyer?.id ?? ""}`, "_blank", "noopener")}
+          >
+            <Globe className="mr-1 h-3.5 w-3.5" /> Preview website
+          </Button>
           <p className="text-[10px] text-muted-foreground">
-            One long scrolling page. Switching a width re-renders the responsive layout for that
-            viewport (columns, typography and stacking) — nothing is scaled. Height follows content.
+            Preview opens the saved website as a real public webpage — no editor UI. Save first so
+            the preview shows your latest edits.
           </p>
         </div>
       )}
+
 
 
 

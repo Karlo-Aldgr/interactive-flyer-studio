@@ -1073,6 +1073,8 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           updated_at: string
+          website_slug: string | null
+          website_status: string
         }
         Insert: {
           address?: string | null
@@ -1094,6 +1096,8 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           updated_at?: string
+          website_slug?: string | null
+          website_status?: string
         }
         Update: {
           address?: string | null
@@ -1115,6 +1119,8 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           updated_at?: string
+          website_slug?: string | null
+          website_status?: string
         }
         Relationships: []
       }

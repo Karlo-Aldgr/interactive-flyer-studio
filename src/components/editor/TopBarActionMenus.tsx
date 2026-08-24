@@ -393,7 +393,7 @@ export function TopBarMobileMenu(actions: TopBarMenuActions) {
   );
 }
 
-export function TopBarPreviewButton({ flyerId, compact }: { flyerId: string; compact?: boolean }) {
+export function TopBarPreviewButton({ flyerId, compact, hasWebsite }: { flyerId: string; compact?: boolean; hasWebsite?: boolean }) {
   const [bizadSlug, setBizadSlug] = useState<string | null>(null);
   const [bizadEnabled, setBizadEnabled] = useState(false);
 
@@ -433,6 +433,13 @@ export function TopBarPreviewButton({ flyerId, compact }: { flyerId: string; com
             <Eye className="mr-2 h-4 w-4" /> Flyer (private preview)
           </a>
         </DropdownMenuItem>
+        {hasWebsite && (
+          <DropdownMenuItem asChild>
+            <a href={`/website-preview/${flyerId}`} target="_blank" rel="noreferrer">
+              <Monitor className="mr-2 h-4 w-4" /> Website (public preview)
+            </a>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         {bizadSlug ? (
           <DropdownMenuItem asChild>
