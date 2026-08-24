@@ -1,5 +1,7 @@
 // Smart hotspot detection: uses Lovable AI (Gemini vision) to OCR a flyer image
-// and detect actionable items (phone, url, address, email, date) with bboxes.
+// and detect actionable items (phone, url, address, email, date/time) with bboxes.
+import { filterSmartDetections } from "../_shared/smartDetectFilters.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -14,15 +16,21 @@ interface Detection {
   suggestedLabel: string;
 }
 
-const SYSTEM_PROMPT = `You are an OCR + entity-detection assistant for a flyer-design tool.
-You will be given a single flyer image. Extract every visible piece of text that matches one of these categories:
-- "phone": phone numbers (any country format)
-- "url": web URLs (with or without protocol)
-- "email": email addresses
-- "address": physical street addresses (must include a street number AND street name; ignore standalone city names)
-- "date": event dates and times
+const SYSTEM_PROMPT = `You are an OCR assistant for a flyer-design tool. Your ONLY job is to find machine-readable contact/action text.
 
-For each detection, you MUST return a tight bounding box in normalized image coordinates (0.0-1.0) using TOP-LEFT origin: x = left, y = top, width and height are positive and (x+width) <= 1, (y+height) <= 1.
+Detect ONLY these categories:
+- "phone": phone numbers (any country format)
+- "url": website URLs (with or without protocol)
+- "email": email addresses
+- "address": physical street addresses (must include a street number AND street name; ignore standalone city/state names)
+- "date": event dates and/or times
+
+CRITICAL — DO NOT DETECT:
+- Logos, icons, brand marks, mascots, photos, illustrations, QR codes, or decorative graphics
+- Slogans, headlines, product names, or marketing copy unless they literally contain a phone, URL, email, address, or date/time
+- Entire logo regions — never outline artwork; only the readable characters of contact text
+
+Bounding boxes must tightly wrap ONLY the characters of the detected text (not surrounding graphics). Use normalized image coordinates (0.0-1.0), TOP-LEFT origin: x = left, y = top. When unsure, omit the detection.
 
 Return STRICTLY a JSON object via the provided tool. Do NOT include any prose.`;
 
@@ -108,7 +116,10 @@ Deno.serve(async (req) => {
           {
             role: "user",
             content: [
-              { type: "text", text: "Detect actionable items in this flyer." },
+              {
+                type: "text",
+                text: "Find ONLY phone numbers, street addresses, website URLs, email addresses, and event dates/times. Ignore logos, icons, photos, QR codes, and all other graphics.",
+              },
               { type: "image_url", image_url: { url: imageUrl } },
             ],
           },
@@ -145,7 +156,7 @@ Deno.serve(async (req) => {
       console.error("Failed to parse tool call", e, toolCall?.function?.arguments);
     }
 
-    const detections: Detection[] = (parsed.detections ?? [])
+    const rawDetections: Detection[] = (parsed.detections ?? [])
       .filter((d: any) => d && d.kind && d.text && d.bbox)
       .map((d: any) => {
         const x = clamp01(d.bbox.x);
@@ -162,6 +173,8 @@ Deno.serve(async (req) => {
         };
       })
       .filter((d: Detection) => d.bbox.width > 0.005 && d.bbox.height > 0.005);
+
+    const detections = filterSmartDetections(rawDetections);
 
     return new Response(JSON.stringify({ detections }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

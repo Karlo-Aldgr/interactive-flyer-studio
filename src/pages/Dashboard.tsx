@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Plus, Loader2, CalendarIcon, Briefcase, PartyPopper } from "lucide-react";
+import { Plus, Loader2, CalendarIcon, Briefcase, PartyPopper, Shield } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { CustomerDashboard } from "@/components/dashboard/CustomerDashboard";
@@ -24,6 +24,7 @@ import { useIsRealtor } from "@/hooks/useIsRealtor";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
 import { OnboardingPromptDialog } from "@/components/onboarding/OnboardingPromptDialog";
 import { useOnboardingStatus } from "@/hooks/useOnboardingStatus";
+import { createFlyerFromTemplate } from "@/lib/templates/createFlyerFromTemplate";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [newCategory, setNewCategory] = useState<FlyerCategory>("business");
+  const [useGodsWarriorTemplate, setUseGodsWarriorTemplate] = useState(false);
   const [newEventDate, setNewEventDate] = useState<Date | undefined>(undefined);
   const { canEdit, loading: accessLoading } = useCanEdit();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
@@ -116,12 +118,25 @@ export default function Dashboard() {
 
   const create = async () => {
     if (!user) return;
-    if (newCategory === "event" && !newEventDate) {
+    if (!useGodsWarriorTemplate && newCategory === "event" && !newEventDate) {
       toast.error("Please pick the event date");
       return;
     }
     setCreating(true);
     try {
+      if (useGodsWarriorTemplate) {
+        const { flyerId } = await createFlyerFromTemplate("gods-warrior", user.id);
+        setCreateOpen(false);
+        setUseGodsWarriorTemplate(false);
+        if (onboardingCompleted === false) {
+          setPendingFlyerId(flyerId);
+          setPromptOpen(true);
+        } else {
+          navigate(`/editor/${flyerId}`);
+        }
+        return;
+      }
+
       const payload: any = {
         owner_id: user.id,
         title: newCategory === "event" ? "Untitled event flyer" : "Untitled flyer",
@@ -154,6 +169,7 @@ export default function Dashboard() {
 
   const openCreate = () => {
     setNewCategory("business");
+    setUseGodsWarriorTemplate(false);
     setNewEventDate(undefined);
     setCreateOpen(true);
   };
@@ -272,17 +288,19 @@ export default function Dashboard() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New flyer</DialogTitle>
-            <DialogDescription>Pick a category to get started.</DialogDescription>
+            <DialogDescription>
+              Pick a category, or start from the God&apos;s Warrior apparel template.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setNewCategory("business")}
+                onClick={() => { setNewCategory("business"); setUseGodsWarriorTemplate(false); }}
                 className={cn(
                   "flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition",
-                  newCategory === "business" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+                  !useGodsWarriorTemplate && newCategory === "business" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
                 )}
               >
                 <Briefcase className="h-5 w-5 text-primary" />
@@ -291,10 +309,10 @@ export default function Dashboard() {
               </button>
               <button
                 type="button"
-                onClick={() => setNewCategory("event")}
+                onClick={() => { setNewCategory("event"); setUseGodsWarriorTemplate(false); }}
                 className={cn(
                   "flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition",
-                  newCategory === "event" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+                  !useGodsWarriorTemplate && newCategory === "event" ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
                 )}
               >
                 <PartyPopper className="h-5 w-5 text-primary" />
@@ -303,7 +321,31 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {newCategory === "event" && (
+            <button
+              type="button"
+              onClick={() => { setUseGodsWarriorTemplate(true); setNewCategory("business"); }}
+              className={cn(
+                "flex w-full items-start gap-3 rounded-lg border p-4 text-left transition",
+                useGodsWarriorTemplate ? "border-primary bg-primary/5 ring-2 ring-primary/40" : "border-border hover:border-primary/40"
+              )}
+            >
+              <img
+                src="/landing/flyer-warrior.png"
+                alt=""
+                className="h-16 w-12 shrink-0 rounded object-cover"
+              />
+              <div>
+                <div className="flex items-center gap-2 font-semibold">
+                  <Shield className="h-4 w-4 text-primary" />
+                  God&apos;s Warrior template
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Magazine apparel flyer with color gallery, shop link, and release-date signup hotspots pre-wired.
+                </p>
+              </div>
+            </button>
+
+            {newCategory === "event" && !useGodsWarriorTemplate && (
               <div className="space-y-2">
                 <Label>Event date</Label>
                 <Popover>

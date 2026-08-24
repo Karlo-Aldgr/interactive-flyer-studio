@@ -203,7 +203,7 @@ export function InteractiveToolsPanel() {
         <PopoverContent side="right" align="start" className="w-64 p-3">
           <div className="mb-2 text-sm font-semibold">Object extract</div>
           <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
-            Select part of an image to copy onto a new layer above the original. The source photo stays untouched.
+            Cut out part of an image onto a new layer (for logos, people, products). For phone/URL hotspots, use Detect hotspots (AI) instead.
           </p>
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Manual</div>
           <Button
@@ -224,7 +224,7 @@ export function InteractiveToolsPanel() {
             onClick={handleAutoDetect}
           >
             <Wand2 className="h-4 w-4" />
-            {drawMode === "extract-auto" ? "Detecting on canvas…" : "Auto detect subjects"}
+            {drawMode === "extract-auto" ? "Detecting on canvas…" : "Auto detect image subjects"}
           </Button>
 
           <p className="mt-2 text-[10px] text-muted-foreground">

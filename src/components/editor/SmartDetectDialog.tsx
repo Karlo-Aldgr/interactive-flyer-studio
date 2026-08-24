@@ -127,7 +127,7 @@ export function SmartDetectDialog({
             <Sparkles className="h-5 w-5 text-primary" /> Smart hotspot detection
           </DialogTitle>
           <DialogDescription>
-            AI scans your flyer image for phone numbers, URLs, addresses, and dates, then suggests interactive hotspots.
+            AI scans your flyer for phone numbers, websites, addresses, and dates/times only. Logos, photos, and other graphics are ignored.
           </DialogDescription>
         </DialogHeader>
 

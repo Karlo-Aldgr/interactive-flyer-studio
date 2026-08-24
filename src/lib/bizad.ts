@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { buildPublicFlyerUrl, slugBaseFromTitle } from "@/lib/utils";
 import type { OnboardingSubmission } from "@/lib/onboarding";
+import { BIZAD_DEFAULT_BACKGROUND_COLOR, BIZAD_DEFAULT_BUTTON_COLOR } from "@/lib/bizadDefaults";
 
 export type BizadSocialLinks = {
   website?: string | null;
@@ -80,12 +81,12 @@ export function buildBizadPayloadFromOnboarding(
     email: onboarding?.email ?? existing?.email ?? null,
     about_text: onboarding?.business_description ?? existing?.about_text ?? null,
     flyer_image_url: flyer.thumbnail_url ?? existing?.flyer_image_url ?? null,
-    owner_photo_url: onboarding?.logo_url ?? existing?.owner_photo_url ?? null,
+    owner_photo_url: existing?.owner_photo_url ?? null,
     logo_url: onboarding?.logo_url ?? existing?.logo_url ?? null,
     address: onboarding?.business_address ?? existing?.address ?? null,
     social_links: onboarding ? socialLinksFromOnboarding(onboarding) : (existing?.social_links ?? {}),
-    button_color: existing?.button_color ?? "#2563eb",
-    background_color: existing?.background_color ?? "#ffffff",
+    button_color: existing?.button_color ?? BIZAD_DEFAULT_BUTTON_COLOR,
+    background_color: existing?.background_color ?? BIZAD_DEFAULT_BACKGROUND_COLOR,
     gallery_url: galleryUrl,
     video_url: existing?.video_url ?? null,
     copyright_text:
@@ -182,8 +183,8 @@ export const DEMO_BIZAD: BizadRecord = {
     instagram: "https://instagram.com",
     website: "https://tapthatflyer.com",
   },
-  button_color: "#2563eb",
-  background_color: "#f8fafc",
+  button_color: BIZAD_DEFAULT_BUTTON_COLOR,
+  background_color: BIZAD_DEFAULT_BACKGROUND_COLOR,
   gallery_url: "https://tapthatflyer.com",
   video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   copyright_text: "© Biggs Auto Repair",
