@@ -58,6 +58,7 @@ const AffiliateApply = lazy(() => import("./pages/AffiliateApply"));
 const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
 const AdminAffiliates = lazy(() => import("./pages/AdminAffiliates"));
 const AffiliateTerms = lazy(() => import("./pages/AffiliateTerms"));
+const PublicWebsitePage = lazy(() => import("./pages/PublicWebsitePage"));
 
 
 const queryClient = new QueryClient({
@@ -118,6 +119,8 @@ const App = () => (
               <Route path="/analytics/:flyerId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/preview/:flyerId" element={<ProtectedRoute><PublicViewer previewMode /></ProtectedRoute>} />
               <Route path="/f/:slug" element={<PublicViewer />} />
+              <Route path="/site/:slug" element={<PublicWebsitePage />} />
+              <Route path="/website-preview/:flyerId" element={<ProtectedRoute><PublicWebsitePage previewMode /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
               <Route path="/admin/contacts" element={<ProtectedRoute><AdminContacts /></ProtectedRoute>} />
