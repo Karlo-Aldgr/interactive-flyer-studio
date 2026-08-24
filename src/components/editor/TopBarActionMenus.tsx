@@ -16,6 +16,7 @@ import type { Flyer } from "@/types/flyer";
 import { hasAnySocial } from "@/components/viewer/SocialSlideout";
 import { cn } from "@/lib/utils";
 import { getBizadForFlyer } from "@/lib/bizad";
+import { getJobIdForFlyer } from "@/lib/onboarding";
 import { format } from "date-fns";
 
 export interface TopBarMenuActions {
@@ -156,7 +157,7 @@ export function TopBarPortalMenu({
           <Users className="mr-2 h-4 w-4" /> Subscribers
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/onboarding" className="flex cursor-pointer items-center">
+          <Link to={onboardingHref} className="flex cursor-pointer items-center">
             <ClipboardList className="mr-2 h-4 w-4" /> Onboarding
           </Link>
         </DropdownMenuItem>
@@ -335,7 +336,7 @@ export function TopBarMobileMenu(actions: TopBarMenuActions) {
           <Users className="mr-2 h-4 w-4" /> Subscribers
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/onboarding" className="flex cursor-pointer items-center">
+          <Link to={onboardingHref} className="flex cursor-pointer items-center">
             <ClipboardList className="mr-2 h-4 w-4" /> Onboarding
           </Link>
         </DropdownMenuItem>
