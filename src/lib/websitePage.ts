@@ -1,6 +1,7 @@
 import { FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import { uid } from "@/lib/konvaHelpers";
 import type { WebsiteProfile } from "@/lib/websiteProfile";
+import { withWavexPlaceholders, placeholderClients, LOREM_NAME, LOREM_SHORT } from "@/lib/websitePlaceholders";
 
 /**
  * Website page = one long, vertically scrolling page inside the EXISTING editor.
@@ -296,9 +297,12 @@ function themeCopy(theme?: string): ThemeCopy {
 export function buildWebsitePage(
   flyerId: string,
   index: number,
-  profile: WebsiteProfile,
+  rawProfile: WebsiteProfile,
   device: WebsiteDevice = "desktop"
 ): FlyerPage {
+  /* WaveX structure is fixed: missing data becomes an editable Lorem Ipsum
+     placeholder layer, never a removed section. */
+  const profile = withWavexPlaceholders(rawProfile);
   Z = 0;
   const pageId = uid();
   const M = metricsFor(device);
@@ -315,18 +319,18 @@ export function buildWebsitePage(
   const heroImage = profile.heroImage || images[0];
   const photo = (i: number) => images[i % Math.max(1, images.length)];
 
-  const hasServices = (profile.services?.length ?? 0) > 0;
+  const hasServices = true;
   const galleryImages = Array.from(
     new Set([...(profile.portfolio ?? []).map((p) => p.image).filter(Boolean) as string[], ...images])
   );
-  const hasWork = galleryImages.length > 0;
-  const hasTeam = (profile.team?.length ?? 0) > 0;
-  const hasStats = (profile.stats?.length ?? 0) >= 3;
-  const hasTestimonials = (profile.testimonials?.length ?? 0) > 0;
-  const hasPricing = (profile.pricing?.length ?? 0) > 0;
-  const hasPackages = hasPricing || hasServices;
-  const hasNews = (profile.news?.length ?? 0) > 0;
-  const hasContact = !!(profile.phone || profile.email || profile.address || profile.whatsapp || profile.hours?.length);
+  const hasWork = true;
+  const hasTeam = true;
+  const hasStats = true;
+  const hasTestimonials = true;
+  const hasPricing = true;
+  const hasPackages = true;
+  const hasNews = true;
+  const hasContact = true;
   const primaryCta = profile.ctas?.[0];
   const secondaryCta = profile.ctas?.[1];
 
@@ -385,12 +389,12 @@ export function buildWebsitePage(
 
   /* ============================================================ 1. HEADER */
   const navItems: Array<[string, string]> = [["Home", "hero"]];
-  if (hasServices || profile.description) navItems.push([T.expertiseLabel.split(" ").pop() || "Expertise", "expertise"]);
-  if (hasTeam) navItems.push(["Team", "team"]);
-  if (hasWork) navItems.push(["Work", "work"]);
-  if (hasPackages) navItems.push([hasPricing ? "Pricing" : "Packages", "pricing"]);
-  if (hasNews) navItems.push(["News", "news"]);
-  if (hasContact) navItems.push(["Contact", "contact"]);
+  navItems.push([T.expertiseLabel.split(" ").pop() || "Expertise", "expertise"]);
+  navItems.push(["Team", "team"]);
+  navItems.push(["Work", "work"]);
+  navItems.push(["Pricing", "pricing"]);
+  navItems.push(["News", "news"]);
+  navItems.push(["Contact", "contact"]);
 
   const logoSize = device === "mobile" ? 34 : 40;
   let navH = M.navH;
@@ -613,7 +617,10 @@ export function buildWebsitePage(
     ).slice(0, 4);
     const headH = measureHead(T.workLabel, T.workTitle, profile.tagline);
     const filterH = categories.length ? 52 : 0;
-    const tiles = galleryImages.slice(0, device === "mobile" ? 6 : 8);
+    const tileCount = device === "mobile" ? 6 : 8;
+    const tiles: Array<string | undefined> = galleryImages.length
+      ? galleryImages.slice(0, tileCount)
+      : Array.from({ length: device === "mobile" ? 4 : 4 }, () => undefined);
     const g = gridOf(tiles.length, M.workCols, W, 0);
     const tileH = Math.round(g.cardW * 0.82);
     const rows = Math.ceil(tiles.length / g.c);
@@ -636,8 +643,11 @@ export function buildWebsitePage(
     tiles.forEach((src, i) => {
       const x = g.xOf(i);
       const cy = gridTop + g.rowOf(i) * tileH;
-      add(image(pageId, src, x, cy, g.cardW, tileH, 0));
-      const entry = (profile.portfolio ?? []).find((p) => p.image === src);
+      if (src) add(image(pageId, src, x, cy, g.cardW, tileH, 0));
+      else add(rect(pageId, x, cy, g.cardW, tileH, { fill: "#DCE1E5", radius: 0 }));
+      const entry = src
+        ? (profile.portfolio ?? []).find((p) => p.image === src) ?? (profile.portfolio ?? [])[i]
+        : (profile.portfolio ?? [])[i];
       if (entry?.title) {
         add(rect(pageId, x, cy + tileH - 52, g.cardW, 52, { fill: "#101418", radius: 0, opacity: 0.62 }));
         add(text(pageId, entry.title, x + 14, cy + tileH - 36, g.cardW - 28, { size: M.small + 1, weight: 700, color: ON_DARK }));
@@ -648,7 +658,7 @@ export function buildWebsitePage(
 
   /* ====================================================== 8. FEATURED WORK */
   const featuredImage = galleryImages[1] || galleryImages[0] || heroImage;
-  if (featuredImage) {
+  {
     const featured = (profile.portfolio ?? [])[0];
     const featSub = featured?.description ?? profile.tagline;
     const headH = measureHead(undefined, T.featuredTitle, featSub);
@@ -662,7 +672,11 @@ export function buildWebsitePage(
     const fx = PAD + Math.round((COL - showW) / 2);
     const fy = y + M.sectionPad + headH;
     add(rect(pageId, fx, fy, showW, showH + frame * 2, { fill: "#2C3235", radius: 8 }));
-    add(image(pageId, featuredImage, fx + frame, fy + frame, showW - frame * 2, showH, 2));
+    if (featuredImage) add(image(pageId, featuredImage, fx + frame, fy + frame, showW - frame * 2, showH, 2));
+    else {
+      add(rect(pageId, fx + frame, fy + frame, showW - frame * 2, showH, { fill: "#DCE1E5", radius: 2 }));
+      add(text(pageId, LOREM_SHORT, fx + frame + 20, fy + frame + Math.round(showH / 2) - 10, showW - frame * 2 - 40, { size: M.small + 1, color: MUTED, align: "center" }));
+    }
     y += h;
   }
 
@@ -729,18 +743,20 @@ export function buildWebsitePage(
   }
 
   /* ============================================= 11. CLIENTS / PARTNERS */
-  if (profile.socials.length >= 2) {
+  {
     const h = M.sectionPad * 2 + 150;
     photoBand(y, h, photo(4) || heroImage, "#3A4247", 0.74);
-    add(text(pageId, "Connect with us", PAD, y + M.sectionPad, COL, { size: M.h2 - 4, weight: 800, color: ON_DARK, align: "center" }));
-    const items = profile.socials.slice(0, 5);
+    add(text(pageId, profile.socials.length ? "Connect with us" : "Our clients", PAD, y + M.sectionPad, COL, { size: M.h2 - 4, weight: 800, color: ON_DARK, align: "center" }));
+    const items = profile.socials.length
+      ? profile.socials.slice(0, 5)
+      : placeholderClients(device === "mobile" ? 3 : 5).map((label) => ({ label, url: "" }));
     const iw = Math.min(150, Math.round(COL / items.length));
     const startX = PAD + Math.round((COL - items.length * iw) / 2);
     items.forEach((s, i) => {
       const l = text(pageId, s.label, startX + i * iw, y + M.sectionPad + 74, iw, {
         size: M.small + 1, weight: 700, color: ON_DARK, align: "center",
       });
-      l.action = { id: uid(), type: "open_url", payload: { url: s.url, newTab: true } };
+      if (s.url) l.action = { id: uid(), type: "open_url", payload: { url: s.url, newTab: true } };
       add(l);
     });
     y += h;
