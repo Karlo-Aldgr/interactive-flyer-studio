@@ -313,7 +313,13 @@ export function PagesPanel() {
                   size="sm"
                   variant={on ? "default" : "outline"}
                   className="h-8 flex-col gap-0 px-1 text-[10px] capitalize"
-                  onClick={() => setWebsiteDevice(device)}
+                  onClick={() => {
+                    if (!activePage.background?.websiteProfile) {
+                      toast.info("Re-create the website page to enable responsive viewport previews");
+                      return;
+                    }
+                    setWebsiteDevice(device);
+                  }}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {w}
