@@ -35,7 +35,7 @@ export default function SubmitJob() {
     if (!title.trim()) { toast.error("Please add a title for your job."); return; }
     if (type === "upload" && !file) { toast.error("Please upload your flyer file."); return; }
     if (type === "design" && !brief.trim()) { toast.error("Please share a short brief."); return; }
-    if (selected.length === 0) { toast.error("Pick at least one interaction."); return; }
+    if (!adminChoose && selected.length === 0) { toast.error("Pick at least one interaction, or tap Admin choose."); return; }
 
     setSubmitting(true);
     try {
