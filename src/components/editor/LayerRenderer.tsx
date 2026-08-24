@@ -22,14 +22,30 @@ interface Props {
 
 function ImageLayer({ layer, ...rest }: Props & { commonProps: any }) {
   const [img] = useImage(layer.content.src ?? "", "anonymous");
+  /* "cover" crops the source to fill the box instead of stretching it. */
+  const crop = useMemo(() => {
+    if (layer.style.fit !== "cover" || !img) return undefined;
+    const iw = (img as HTMLImageElement).naturalWidth || img.width;
+    const ih = (img as HTMLImageElement).naturalHeight || img.height;
+    const bw = Math.max(1, layer.size.width);
+    const bh = Math.max(1, layer.size.height);
+    if (!iw || !ih) return undefined;
+    const scale = Math.max(bw / iw, bh / ih);
+    const cw = bw / scale;
+    const ch = bh / scale;
+    return { x: (iw - cw) / 2, y: (ih - ch) / 2, width: cw, height: ch };
+  }, [img, layer.style.fit, layer.size.width, layer.size.height]);
+
   return (
     <KonvaImage
       {...rest.commonProps}
       image={img}
+      crop={crop}
       cornerRadius={layer.style.cornerRadius}
     />
   );
 }
+
 
 function IconLayer({ layer, commonProps }: { layer: Layer; commonProps: any }) {
   const dataUrl = useMemo(() => {
