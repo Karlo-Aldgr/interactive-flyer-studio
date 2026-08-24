@@ -727,6 +727,70 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  /** Creates the single long-scrolling Website page (or selects it if it already exists). */
+  addWebsitePage: () => {
+    const s = get();
+    if (!s.flyer) return "";
+    const existing = s.pages.find((p) => p.background?.websitePage);
+    if (existing) {
+      set({ selectedPageId: existing.id, selectedLayerId: null, selectedLayerIds: [] });
+      return existing.id;
+    }
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const page = buildWebsitePage(s.flyer.id, s.pages.length);
+    set({
+      pages: [...s.pages, page],
+      selectedPageId: page.id,
+      selectedLayerId: null,
+      selectedLayerIds: [],
+      past,
+      future: [],
+      dirty: true,
+    });
+    return page.id;
+  },
+
+  /** Switches the Website page between responsive widths, scaling its layout to fit. */
+  setWebsiteDevice: (device) => {
+    const s = get();
+    const page = s.pages.find((p) => p.background?.websitePage);
+    if (!page || !s.flyer) return;
+    const current = page.background?.websiteDevice ?? "desktop";
+    if (current === device) return;
+    const oldW = page.background?.size?.width ?? WEBSITE_DEVICES.desktop;
+    const oldH = page.background?.size?.height ?? s.flyer.settings.height;
+    const newW = WEBSITE_DEVICES[device];
+    const k = newW / oldW;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) =>
+        p.id === page.id
+          ? {
+              ...p,
+              layers: p.layers.map((l) => ({
+                ...l,
+                position: { x: l.position.x * k, y: l.position.y * k },
+                size: { width: l.size.width * k, height: l.size.height * k },
+                style: l.style.fontSize
+                  ? { ...l.style, fontSize: Math.max(8, Math.round(l.style.fontSize * k)) }
+                  : l.style,
+              })),
+              background: {
+                ...p.background,
+                size: { width: newW, height: Math.round(oldH * k) },
+                websiteDevice: device,
+              },
+            }
+          : p
+      ),
+      past,
+      future: [],
+      dirty: true,
+    });
+  },
+
+
+
   deletePage: (id) => {
 
     const s = get();
