@@ -54,7 +54,9 @@ export default function SubmitJob() {
         customer_email: user.email ?? null,
         type,
         title: title.trim(),
-        brief: brief.trim() || null,
+        brief: [brief.trim(), adminChoose ? "[Customer asked our team to choose the interactions]" : ""]
+          .filter(Boolean)
+          .join("\n\n") || null,
         upload_url: uploadUrl,
         selected_actions: selected,
         status: "new",
