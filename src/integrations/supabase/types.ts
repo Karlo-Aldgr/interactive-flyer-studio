@@ -2144,7 +2144,7 @@ export type Database = {
           {
             foreignKeyName: "onboarding_submissions_flyer_job_id_fkey"
             columns: ["flyer_job_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
