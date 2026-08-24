@@ -541,11 +541,13 @@ export function buildWebsitePage(
     .slice(0, 5);
   if (expertiseItems.length) {
     const barH = device === "mobile" ? 34 : 40;
-    const headH = heading(y + M.sectionPad, undefined, T.expertiseTitle, profile.description?.slice(0, 200), false);
+    const expSub = profile.description?.slice(0, 200);
+    const headH = measureHead(undefined, T.expertiseTitle, expSub);
     const h = M.sectionPad * 2 + headH + expertiseItems.length * (barH + 18);
-    const band = rect(pageId, 0, y, W, h, { fill: LIGHT_2, radius: 0 });
-    L.splice(L.length - (L.length - L.findIndex((l) => l.position.y >= y + M.sectionPad)), 0, band);
+    add(rect(pageId, 0, y, W, h, { fill: LIGHT_2, radius: 0 }));
+    heading(y + M.sectionPad, undefined, T.expertiseTitle, expSub, false);
     const top = y + M.sectionPad + headH;
+
     expertiseItems.forEach((label, i) => {
       const width = Math.round(COL * (i % 2 === 0 ? 1 : 0.82));
       add(rect(pageId, PAD, top + i * (barH + 18), width, barH, { fill: i % 2 === 0 ? A : "#6C757B", radius: 3 }));
