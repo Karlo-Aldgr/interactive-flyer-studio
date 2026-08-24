@@ -1,7 +1,7 @@
 import { FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import { uid } from "@/lib/konvaHelpers";
 import type { WebsiteProfile } from "@/lib/websiteProfile";
-import { withWavexPlaceholders, placeholderClients, LOREM_SHORT } from "@/lib/websitePlaceholders";
+import { withWavexPlaceholders, placeholderClients, LOREM_SHORT, LOREM_NAME, LOREM_LONG } from "@/lib/websitePlaceholders";
 
 /**
  * Website page = one long, vertically scrolling page inside the EXISTING editor.
@@ -188,10 +188,12 @@ function image(pageId: string, src: string, x: number, y: number, width: number,
     ...base(pageId, "image"),
     position: { x, y },
     size: { width, height },
-    style: { cornerRadius: radius },
+    /* cover = crop to the box, never stretch the client's photo */
+    style: { cornerRadius: radius, fit: "cover" },
     content: { src },
   };
 }
+
 
 function icon(pageId: string, name: string, x: number, y: number, size = 44, color = ACCENT): Layer {
   return {
@@ -444,24 +446,35 @@ export function buildWebsitePage(
   y = navH;
   const headlineText = profile.headline && profile.headline !== name ? profile.headline : profile.tagline || name;
   const heroSupport = profile.description || (headlineText !== profile.tagline ? profile.tagline : undefined);
-  const heroTextW = device === "desktop" ? Math.min(900, COL) : COL;
+  const heroTextW = device === "desktop" ? Math.min(1040, COL) : COL;
   const heroTextX = PAD + Math.round((COL - heroTextW) / 2);
   const headlineH = textHeight(headlineText.toUpperCase(), heroTextW, M.heroFont);
   const supportH = heroSupport ? textHeight(heroSupport.slice(0, 220), heroTextW, M.body + 1) : 0;
   const ctaCount = (primaryCta || hasContact ? 1 : 0) + (secondaryCta || profile.whatsapp ? 1 : 0);
   const ctaBlockH = ctaCount === 0 ? 0 : M.stackCta ? ctaCount * (M.btnH + 12) : M.btnH + 12;
-  const heroH = Math.max(M.heroH, 140 + headlineH + 22 + supportH + 34 + ctaBlockH + 120);
+  const heroH = Math.max(
+    device === "mobile" ? 660 : device === "tablet" ? 640 : 780,
+    160 + headlineH + 26 + supportH + 44 + ctaBlockH + 140
+  );
 
-  photoBand(y, heroH, heroImage, "#3A4247", 0.6);
+  /* Full-bleed client visual + WaveX dark wash (two stacked overlays so the
+     bottom of the hero reads darker, like the reference). */
+  photoBand(y, heroH, heroImage, "#3A4247", 0.58);
+  add(rect(pageId, 0, y + Math.round(heroH * 0.45), W, Math.round(heroH * 0.55), { fill: "#0C1116", radius: 0, opacity: 0.28 }));
 
-  let hy = y + Math.round((heroH - (headlineH + supportH + ctaBlockH + 80)) / 2);
+  let hy = y + Math.round((heroH - (headlineH + supportH + ctaBlockH + 120)) / 2);
   add(text(pageId, name.toUpperCase(), heroTextX, hy, heroTextW, { size: M.eyebrow, weight: 700, color: A, align: "center" }));
-  hy += M.eyebrow * 2 + 6;
+  hy += M.eyebrow * 2 + 4;
+  /* thin accent rule under the eyebrow (WaveX detail) */
+  add(rect(pageId, Math.round(W / 2 - 26), hy, 52, 3, { fill: A, radius: 2 }));
+  hy += 22;
   add(text(pageId, headlineText.toUpperCase(), heroTextX, hy, heroTextW, { size: M.heroFont, weight: 800, color: ON_DARK, align: "center", height: headlineH }));
-  hy += headlineH + 18;
+  hy += headlineH + 22;
   if (heroSupport) {
-    add(text(pageId, heroSupport.slice(0, 220), heroTextX, hy, heroTextW, { size: M.body + 1, color: ON_DARK_MUTED, align: "center", height: supportH }));
-    hy += supportH + 30;
+    const supW = device === "desktop" ? Math.min(760, heroTextW) : heroTextW;
+    const supX = PAD + Math.round((COL - supW) / 2);
+    add(text(pageId, heroSupport.slice(0, 220), supX, hy, supW, { size: M.body + 1, color: ON_DARK_MUTED, align: "center", height: supportH }));
+    hy += supportH + 40;
   }
 
   const heroBtnW = M.stackCta ? COL : device === "tablet" ? 190 : 210;
@@ -489,7 +502,7 @@ export function buildWebsitePage(
     }));
   }
   // Scroll indicator
-  add(icon(pageId, "ChevronDown", Math.round(W / 2 - 14), y + heroH - 58, 28, ON_DARK));
+  add(icon(pageId, "ChevronDown", Math.round(W / 2 - 14), y + heroH - 62, 28, ON_DARK));
   y += heroH;
 
   /* ================================================ 3. INTRO / HIGHLIGHTS */
@@ -512,11 +525,12 @@ export function buildWebsitePage(
 
   if (highlights.length) {
     const g = gridOf(highlights.length, Math.min(4, device === "mobile" ? 2 : 4));
-    const circleSize = device === "mobile" ? 92 : device === "tablet" ? 120 : 150;
+    const circleSize = device === "mobile" ? 96 : device === "tablet" ? 124 : 148;
     const rows = Math.ceil(highlights.length / g.c);
     const introSub = profile.tagline && profile.tagline !== headlineText ? profile.tagline : profile.description?.slice(0, 180);
     const headH = measureHead(`We are ${name}`, T.introTitle, introSub);
-    const itemH = circleSize + 24 + M.h3 + 60;
+    const bodyH = textHeight(LOREM_SHORT, g.cardW, M.small);
+    const itemH = circleSize + 26 + M.h3 + 12 + bodyH + 14;
     const h = M.sectionPad * 2 + headH + rows * itemH + (rows - 1) * M.gap;
     add(rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 }));
     heading(y + M.sectionPad, `We are ${name}`, T.introTitle, introSub, false);
@@ -525,39 +539,46 @@ export function buildWebsitePage(
     highlights.forEach((hl, i) => {
       const cx = g.xOf(i) + Math.round((g.cardW - circleSize) / 2);
       const cy = top + g.rowOf(i) * (itemH + M.gap);
-      const tint = i % 2 === 0 ? A : "#6C757B";
-      if (hl.image) add(image(pageId, hl.image, cx, cy, circleSize, circleSize, Math.round(circleSize / 2)));
-      else {
-        add(circle(pageId, cx, cy, circleSize, tint));
-        add(icon(pageId, hl.icon, cx + Math.round(circleSize / 2) - 18, cy + Math.round(circleSize / 2) - 18, 36, "#FFFFFF"));
+      if (hl.image) {
+        add(circle(pageId, cx - 6, cy - 6, circleSize + 12, "#EDF1F3"));
+        add(image(pageId, hl.image, cx, cy, circleSize, circleSize, Math.round(circleSize / 2)));
+      } else {
+        /* soft ring + solid accent disc, WaveX icon treatment */
+        add(circle(pageId, cx - 8, cy - 8, circleSize + 16, i % 2 === 0 ? "#E6F7FC" : "#EDF1F3"));
+        add(circle(pageId, cx, cy, circleSize, i % 2 === 0 ? A : "#6C757B"));
+        add(icon(pageId, hl.icon, cx + Math.round(circleSize / 2) - 20, cy + Math.round(circleSize / 2) - 20, 40, "#FFFFFF"));
       }
-      add(text(pageId, hl.title, g.xOf(i), cy + circleSize + 18, g.cardW, { size: M.h3, weight: 700, color: INK, align: "center" }));
-      if (hl.body)
-        add(text(pageId, hl.body.slice(0, 120), g.xOf(i), cy + circleSize + 18 + M.h3 + 12, g.cardW, { size: M.small, color: MUTED, align: "center" }));
+      add(text(pageId, hl.title, g.xOf(i), cy + circleSize + 22, g.cardW, { size: M.h3, weight: 700, color: INK, align: "center" }));
+      add(
+        text(pageId, (hl.body ?? LOREM_SHORT).slice(0, 130), g.xOf(i), cy + circleSize + 22 + M.h3 + 12, g.cardW, {
+          size: M.small, color: MUTED, align: "center", height: bodyH,
+        })
+      );
     });
     y += h;
   }
 
   /* ========================================================= 4. EXPERTISE */
-  const expertiseItems = (hasServices ? profile.services.map((s) => s.title) : [])
-    .concat(hasServices ? [] : (profile.ctas ?? []).map((c) => c.label))
-    .filter(Boolean)
-    .slice(0, 5);
+  const expertiseItems = (profile.services ?? []).map((s) => s.title).filter(Boolean).slice(0, 5);
   if (expertiseItems.length) {
-    const barH = device === "mobile" ? 34 : 40;
+    const barW = Math.round(COL * (device === "desktop" ? 0.78 : 1));
+    const barX = PAD + Math.round((COL - barW) / 2);
+    const trackH = 8;
+    const rowH = M.small + 12 + trackH + 26;
     const expSub = profile.description?.slice(0, 200);
-    const headH = measureHead(undefined, T.expertiseTitle, expSub);
-    const h = M.sectionPad * 2 + headH + expertiseItems.length * (barH + 18);
+    const headH = measureHead("Our expertise", T.expertiseTitle, expSub);
+    const h = M.sectionPad * 2 + headH + expertiseItems.length * rowH;
     add(rect(pageId, 0, y, W, h, { fill: LIGHT_2, radius: 0 }));
-    heading(y + M.sectionPad, undefined, T.expertiseTitle, expSub, false);
+    heading(y + M.sectionPad, "Our expertise", T.expertiseTitle, expSub, false);
     const top = y + M.sectionPad + headH;
 
     expertiseItems.forEach((label, i) => {
-      const width = Math.round(COL * (i % 2 === 0 ? 1 : 0.82));
-      add(rect(pageId, PAD, top + i * (barH + 18), width, barH, { fill: i % 2 === 0 ? A : "#6C757B", radius: 3 }));
-      add(text(pageId, label, PAD + 18, top + i * (barH + 18) + Math.round(barH / 2) - 9, width - 36, {
-        size: M.small + 1, weight: 700, color: "#FFFFFF",
-      }));
+      const ry = top + i * rowH;
+      add(text(pageId, label, barX, ry, barW - 70, { size: M.small + 2, weight: 700, color: INK }));
+      add(text(pageId, "00%", barX + barW - 60, ry, 60, { size: M.small + 1, weight: 700, color: MUTED, align: "right" }));
+      const ty = ry + M.small + 12;
+      add(rect(pageId, barX, ty, barW, trackH, { fill: "#DCE1E5", radius: 4 }));
+      add(rect(pageId, barX, ty, barW, trackH, { fill: A, radius: 4 }));
     });
     y += h;
   }
@@ -565,8 +586,9 @@ export function buildWebsitePage(
   /* ============================================================== 5. TEAM */
   if (hasTeam) {
     const g = gridOf(profile.team.length, M.teamCols);
-    const avatar = device === "mobile" ? 76 : 92;
-    const cardH = Math.max(avatar + 40, 190);
+    const avatar = device === "mobile" ? 120 : 140;
+    const bodyH = textHeight(LOREM_SHORT, g.cardW - 44, M.small);
+    const cardH = 34 + avatar + 22 + M.h3 + 10 + M.small + 14 + bodyH + 18 + 26 + 30;
     const rows = Math.ceil(profile.team.length / g.c);
     const headH = measureHead("Our team", T.teamTitle, undefined);
     const h = M.sectionPad * 2 + headH + rows * cardH + (rows - 1) * M.gap;
@@ -577,18 +599,33 @@ export function buildWebsitePage(
     profile.team.forEach((member, i) => {
       const x = g.xOf(i);
       const cy = top + g.rowOf(i) * (cardH + M.gap);
-      add(rect(pageId, x, cy, g.cardW, cardH, { fill: LIGHT_2, radius: 4 }));
-      if (member.photo) add(image(pageId, member.photo, x + 20, cy + 22, avatar, avatar, Math.round(avatar / 2)));
+      add(rect(pageId, x, cy, g.cardW, cardH, { fill: LIGHT_2, radius: 6 }));
+      const ax = x + Math.round((g.cardW - avatar) / 2);
+      const ay = cy + 34;
+      add(circle(pageId, ax - 6, ay - 6, avatar + 12, "#E1E6EA"));
+      if (member.photo) add(image(pageId, member.photo, ax, ay, avatar, avatar, Math.round(avatar / 2)));
       else {
-        add(circle(pageId, x + 20, cy + 22, avatar, "#C9CFD4"));
-        add(icon(pageId, "User", x + 20 + avatar / 2 - 16, cy + 22 + avatar / 2 - 16, 32, "#FFFFFF"));
+        add(circle(pageId, ax, ay, avatar, "#C9CFD4"));
+        add(icon(pageId, "User", ax + avatar / 2 - 22, ay + avatar / 2 - 22, 44, "#FFFFFF"));
       }
-      const tx = x + 20 + avatar + 18;
-      const tw = g.cardW - (20 + avatar + 18) - 20;
-      add(text(pageId, member.name, tx, cy + 26, tw, { size: M.h3, weight: 700, color: A }));
-      if (member.role) add(text(pageId, member.role, tx, cy + 26 + M.h3 + 8, tw, { size: M.small, weight: 600, color: MUTED }));
-      if (member.body)
-        add(text(pageId, member.body.slice(0, 150), tx, cy + 26 + M.h3 + 34, tw, { size: M.small, color: DARK }));
+      let ty = ay + avatar + 22;
+      add(text(pageId, member.name, x + 20, ty, g.cardW - 40, { size: M.h3, weight: 800, color: INK, align: "center" }));
+      ty += M.h3 + 10;
+      add(text(pageId, member.role || LOREM_SHORT.slice(0, 18), x + 20, ty, g.cardW - 40, { size: M.small, weight: 700, color: A, align: "center" }));
+      ty += M.small + 14;
+      add(text(pageId, (member.body ?? LOREM_SHORT).slice(0, 150), x + 22, ty, g.cardW - 44, { size: M.small, color: MUTED, align: "center", height: bodyH }));
+      ty += bodyH + 18;
+      /* social/action icon row */
+      const socials = (profile.socials ?? []).slice(0, 3);
+      const iconNames = socials.length ? socials.map(() => "Link") : ["Mail", "Phone", "Link"];
+      const iw = 26;
+      const startIx = x + Math.round((g.cardW - (iconNames.length * iw + (iconNames.length - 1) * 14)) / 2);
+      iconNames.forEach((n, ii) => {
+        const ic = icon(pageId, n, startIx + ii * (iw + 14), ty, iw, "#8A9299");
+        const s = socials[ii];
+        if (s?.url) ic.action = { id: uid(), type: "open_url", payload: { url: s.url, newTab: true } };
+        add(ic);
+      });
     });
     y += h;
   }
@@ -597,15 +634,17 @@ export function buildWebsitePage(
   if (hasStats) {
     const g = gridOf(profile.stats.length, M.statCols);
     const rows = Math.ceil(profile.stats.length / g.c);
-    const rowH = device === "mobile" ? 110 : 130;
+    const rowH = device === "mobile" ? 132 : 156;
     const h = M.sectionPad + rows * rowH + M.sectionPad;
-    photoBand(y, h, photo(2) || heroImage, "#3A4247", 0.75);
+    photoBand(y, h, photo(2) || heroImage, "#3A4247", 0.78);
     const top = y + M.sectionPad;
     profile.stats.forEach((s, i) => {
       const x = g.xOf(i);
       const cy = top + g.rowOf(i) * rowH;
-      add(text(pageId, s.value, x, cy, g.cardW, { size: device === "mobile" ? 40 : 56, weight: 800, color: ON_DARK, align: "center" }));
-      add(text(pageId, s.label.toUpperCase(), x, cy + (device === "mobile" ? 52 : 70), g.cardW, { size: M.small, weight: 700, color: ON_DARK_MUTED, align: "center" }));
+      const numSize = device === "mobile" ? 46 : 64;
+      add(text(pageId, s.value, x, cy, g.cardW, { size: numSize, weight: 800, color: ON_DARK, align: "center", height: Math.round(numSize * 1.2) }));
+      add(rect(pageId, x + Math.round(g.cardW / 2) - 18, cy + Math.round(numSize * 1.2) + 8, 36, 3, { fill: A, radius: 2 }));
+      add(text(pageId, s.label.toUpperCase(), x, cy + Math.round(numSize * 1.2) + 24, g.cardW, { size: M.small, weight: 700, color: ON_DARK_MUTED, align: "center" }));
     });
     y += h;
   }
@@ -616,29 +655,28 @@ export function buildWebsitePage(
       new Set((profile.portfolio ?? []).map((p) => p.category).filter(Boolean) as string[])
     ).slice(0, 4);
     const headH = measureHead(T.workLabel, T.workTitle, profile.tagline);
-    const filterH = categories.length ? 52 : 0;
+    const filterH = 60;
     const tileCount = device === "mobile" ? 6 : 8;
     const tiles: Array<string | undefined> = galleryImages.length
       ? galleryImages.slice(0, tileCount)
-      : Array.from({ length: device === "mobile" ? 4 : 4 }, () => undefined);
+      : Array.from({ length: 4 }, () => undefined);
     const g = gridOf(tiles.length, M.workCols, W, 0);
-    const tileH = Math.round(g.cardW * 0.82);
+    const tileH = Math.round(g.cardW * 0.86);
     const rows = Math.ceil(tiles.length / g.c);
-    const h = M.sectionPad + headH + filterH + rows * tileH;
+    const h = M.sectionPad + headH + filterH + rows * tileH + M.sectionPad / 2;
     add(rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 }));
-    // heading + filters
     const headTop = y + M.sectionPad;
     heading(headTop, T.workLabel, T.workTitle, profile.tagline, false);
-    if (categories.length) {
-      const chipW = Math.min(120, Math.round(COL / (categories.length + 1)));
-      const startX = PAD + Math.round((COL - (categories.length + 1) * (chipW + 10)) / 2);
-      ["All", ...categories].forEach((c, i) => {
-        add(rect(pageId, startX + i * (chipW + 10), headTop + headH, chipW, 36, { fill: i === 0 ? A : LIGHT_2, radius: 3 }));
-        add(text(pageId, c, startX + i * (chipW + 10), headTop + headH + 10, chipW, {
-          size: M.small, weight: 700, color: i === 0 ? "#FFFFFF" : DARK, align: "center",
-        }));
-      });
-    }
+    /* filter chips — real categories when known, otherwise an "All" chip */
+    const chips = ["All", ...categories];
+    const chipW = Math.min(130, Math.round(COL / Math.max(3, chips.length + 1)));
+    const startX = PAD + Math.round((COL - (chips.length * (chipW + 10) - 10)) / 2);
+    chips.forEach((c, i) => {
+      add(rect(pageId, startX + i * (chipW + 10), headTop + headH, chipW, 38, { fill: i === 0 ? A : LIGHT_2, radius: 3 }));
+      add(text(pageId, c, startX + i * (chipW + 10), headTop + headH + 11, chipW, {
+        size: M.small, weight: 700, color: i === 0 ? "#FFFFFF" : DARK, align: "center",
+      }));
+    });
     const gridTop = headTop + headH + filterH;
     tiles.forEach((src, i) => {
       const x = g.xOf(i);
@@ -648,10 +686,11 @@ export function buildWebsitePage(
       const entry = src
         ? (profile.portfolio ?? []).find((p) => p.image === src) ?? (profile.portfolio ?? [])[i]
         : (profile.portfolio ?? [])[i];
-      if (entry?.title) {
-        add(rect(pageId, x, cy + tileH - 52, g.cardW, 52, { fill: "#101418", radius: 0, opacity: 0.62 }));
-        add(text(pageId, entry.title, x + 14, cy + tileH - 36, g.cardW - 28, { size: M.small + 1, weight: 700, color: ON_DARK }));
-      }
+      const capTitle = entry?.title ?? LOREM_NAME;
+      const capSub = entry?.category ?? LOREM_SHORT.slice(0, 26);
+      add(rect(pageId, x, cy + tileH - 74, g.cardW, 74, { fill: "#101418", radius: 0, opacity: 0.62 }));
+      add(text(pageId, capTitle, x + 16, cy + tileH - 58, g.cardW - 32, { size: M.small + 1, weight: 700, color: ON_DARK }));
+      add(text(pageId, capSub, x + 16, cy + tileH - 34, g.cardW - 32, { size: M.small - 1, color: ON_DARK_MUTED }));
     });
     y += h;
   }
@@ -661,77 +700,109 @@ export function buildWebsitePage(
   {
     const featured = (profile.portfolio ?? [])[0];
     const featSub = featured?.description ?? profile.tagline;
-    const headH = measureHead(undefined, T.featuredTitle, featSub);
-    const showW = Math.round(COL * (device === "mobile" ? 1 : 0.82));
-    const showH = Math.round(showW * 0.52);
-    const frame = 14;
-    const h = M.sectionPad * 2 + headH + showH + frame * 2;
+    const headH = measureHead("Featured", T.featuredTitle, featSub);
+    const showW = Math.round(COL * (device === "mobile" ? 1 : device === "tablet" ? 0.9 : 0.72));
+    const showH = Math.round(showW * 0.56);
+    const frame = 16;
+    const capH = M.h3 + 14 + textHeight(LOREM_SHORT, showW - 40, M.small) + 30;
+    const h = Math.round(M.sectionPad * 2.4) + headH + showH + frame * 2 + capH;
     add(rect(pageId, 0, y, W, h, { fill: LIGHT_2, radius: 0 }));
-    heading(y + M.sectionPad, undefined, T.featuredTitle, featSub, false);
+    heading(y + Math.round(M.sectionPad * 1.2), "Featured", T.featuredTitle, featSub, false);
 
     const fx = PAD + Math.round((COL - showW) / 2);
-    const fy = y + M.sectionPad + headH;
+    const fy = y + Math.round(M.sectionPad * 1.2) + headH;
     add(rect(pageId, fx, fy, showW, showH + frame * 2, { fill: "#2C3235", radius: 8 }));
     if (featuredImage) add(image(pageId, featuredImage, fx + frame, fy + frame, showW - frame * 2, showH, 2));
     else {
       add(rect(pageId, fx + frame, fy + frame, showW - frame * 2, showH, { fill: "#DCE1E5", radius: 2 }));
       add(text(pageId, LOREM_SHORT, fx + frame + 20, fy + frame + Math.round(showH / 2) - 10, showW - frame * 2 - 40, { size: M.small + 1, color: MUTED, align: "center" }));
     }
+    const cy = fy + showH + frame * 2 + 26;
+    add(text(pageId, featured?.title ?? LOREM_NAME, fx, cy, showW, { size: M.h3, weight: 800, color: INK, align: "center" }));
+    add(
+      text(pageId, (featured?.description ?? LOREM_SHORT).slice(0, 180), fx + 20, cy + M.h3 + 14, showW - 40, {
+        size: M.small, color: MUTED, align: "center",
+      })
+    );
     y += h;
   }
 
   /* ====================================================== 9. TESTIMONIALS */
   if (hasTestimonials) {
     const t0 = profile.testimonials[0];
-    const boxW = Math.round(COL * (device === "mobile" ? 1 : 0.78));
-    const quoteH = textHeight(t0.body, boxW - 60, M.body + 1);
-    const boxH = 40 + quoteH + 70;
-    const h = M.sectionPad * 2 + 80 + boxH;
-    photoBand(y, h, photo(3) || heroImage, "#3A4247", 0.72);
+    const boxW = Math.round(COL * (device === "mobile" ? 1 : 0.74));
+    const quoteH = textHeight(t0.body, boxW - 80, M.body + 2);
+    const avatar = 72;
+    const boxH = 46 + 40 + quoteH + 26 + avatar + 46;
+    const h = M.sectionPad * 2 + 96 + boxH;
+    photoBand(y, h, photo(3) || heroImage, "#3A4247", 0.74);
     add(text(pageId, "What people say", PAD, y + M.sectionPad, COL, { size: M.h2, weight: 800, color: ON_DARK, align: "center" }));
+    add(rect(pageId, Math.round(W / 2 - 26), y + M.sectionPad + M.h2 + 18, 52, 3, { fill: A, radius: 2 }));
+
     const bx0 = PAD + Math.round((COL - boxW) / 2);
-    const by0 = y + M.sectionPad + 80;
-    add(rect(pageId, bx0, by0, boxW, boxH, { fill: "#FFFFFF", radius: 4, opacity: 0.08, stroke: "#FFFFFF", strokeWidth: 1 }));
-    add(text(pageId, `“${t0.body}”`, bx0 + 30, by0 + 26, boxW - 60, { size: M.body + 1, color: ON_DARK, align: "center", italic: true, height: quoteH }));
-    if (t0.name)
-      add(text(pageId, t0.name, bx0 + 30, by0 + 26 + quoteH + 16, boxW - 60, { size: M.small + 1, weight: 700, color: A, align: "center" }));
+    const by0 = y + M.sectionPad + 96;
+    add(rect(pageId, bx0, by0, boxW, boxH, { fill: "#FFFFFF", radius: 6, opacity: 0.1, stroke: "#FFFFFF", strokeWidth: 1 }));
+    add(icon(pageId, "Quote", Math.round(W / 2 - 18), by0 + 26, 36, A));
+    add(
+      text(pageId, `“${t0.body}”`, bx0 + 40, by0 + 46 + 34, boxW - 80, {
+        size: M.body + 2, color: ON_DARK, align: "center", italic: true, height: quoteH,
+      })
+    );
+    const ay = by0 + 46 + 34 + quoteH + 22;
+    const ax = Math.round(W / 2 - avatar / 2);
+    if (t0.photo) add(image(pageId, t0.photo, ax, ay, avatar, avatar, Math.round(avatar / 2)));
+    else {
+      add(circle(pageId, ax, ay, avatar, "#C9CFD4"));
+      add(icon(pageId, "User", ax + avatar / 2 - 16, ay + avatar / 2 - 16, 32, "#FFFFFF"));
+    }
+    add(text(pageId, t0.name || LOREM_NAME, PAD, ay + avatar + 12, COL, { size: M.small + 2, weight: 800, color: A, align: "center" }));
     y += h;
   }
 
   /* =============================================== 10. PRICING / PACKAGES */
   if (hasPackages) {
-    const plans = hasPricing
-      ? profile.pricing.map((p) => ({ name: p.name, price: p.price, features: p.features }))
-      : profile.services.slice(0, 3).map((s) => ({ name: s.title, price: "", features: s.body ? [s.body] : [] }));
+    const plans = profile.pricing.map((p) => ({ name: p.name, price: p.price, features: p.features }));
     const g = gridOf(plans.length, Math.min(3, M.cols));
     const maxFeatures = Math.max(0, ...plans.map((p) => p.features.length));
-    const cardH = 90 + (hasPricing ? 70 : 0) + maxFeatures * 34 + M.btnH + 60;
+    const cardH = 34 + M.h3 + 18 + 56 + 22 + maxFeatures * 36 + 20 + M.btnH + 34;
     const rows = Math.ceil(plans.length / g.c);
-    const priceEyebrow = hasPricing ? "Pricing" : "Packages";
-    const priceTitle = hasPricing ? T.pricingTitle : T.packagesTitle;
-    const headH = measureHead(priceEyebrow, priceTitle, undefined);
-    const h = M.sectionPad * 2 + headH + rows * (cardH + 24) + (rows - 1) * M.gap;
+    const headH = measureHead("Pricing", T.pricingTitle, undefined);
+    const h = M.sectionPad * 2 + headH + rows * (cardH + 28) + (rows - 1) * M.gap;
     add(rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 }));
-    heading(y + M.sectionPad, priceEyebrow, priceTitle, undefined, false);
+    heading(y + M.sectionPad, "Pricing", T.pricingTitle, undefined, false);
     const top = y + M.sectionPad + headH;
 
     plans.forEach((plan, i) => {
       const featured = plans.length === 3 && i === 1;
       const x = g.xOf(i);
-      const cy = top + g.rowOf(i) * (cardH + 24 + M.gap) + (featured ? 0 : 24);
-      const ch = featured ? cardH + 24 : cardH;
-      const innerW = g.cardW - 40;
-      add(rect(pageId, x, cy, g.cardW, ch, { fill: featured ? A : "#5B6469", radius: 3 }));
-      add(text(pageId, plan.name, x + 20, cy + 24, innerW, { size: M.h3 + 2, weight: 700, color: "#FFFFFF", align: "center" }));
-      if (plan.price)
-        add(text(pageId, plan.price, x + 20, cy + 24 + M.h3 + 22, innerW, { size: device === "mobile" ? 30 : 38, weight: 800, color: "#FFFFFF", align: "center" }));
-      const featTop = cy + 24 + M.h3 + 22 + (plan.price ? 60 : 14);
+      const cy = top + g.rowOf(i) * (cardH + 28 + M.gap) + (featured ? 0 : 28);
+      const ch = featured ? cardH + 28 : cardH;
+      const innerW = g.cardW - 44;
+      add(
+        rect(pageId, x, cy, g.cardW, ch, {
+          fill: featured ? A : "#FFFFFF",
+          radius: 6,
+          stroke: featured ? A : "#DCE1E5",
+          strokeWidth: 1,
+        })
+      );
+      const onDark = featured;
+      let py = cy + 34;
+      add(text(pageId, plan.name, x + 22, py, innerW, { size: M.h3 + 1, weight: 800, color: onDark ? "#FFFFFF" : INK, align: "center" }));
+      py += M.h3 + 18;
+      add(
+        text(pageId, plan.price, x + 22, py, innerW, {
+          size: device === "mobile" ? 34 : 42, weight: 800, color: onDark ? "#FFFFFF" : A, align: "center", height: 56,
+        })
+      );
+      py += 56 + 22;
       plan.features.forEach((f, fi) => {
-        add(text(pageId, f, x + 20, featTop + fi * 34, innerW, { size: M.small, color: "#EDF1F3", align: "center" }));
+        add(rect(pageId, x + 22, py + fi * 36 - 8, innerW, 1, { fill: onDark ? "#FFFFFF" : "#E4E8EB", opacity: onDark ? 0.25 : 1 }));
+        add(text(pageId, f.slice(0, 70), x + 22, py + fi * 36, innerW, { size: M.small, color: onDark ? "#EDF1F3" : MUTED, align: "center" }));
       });
       const cta = primaryCta;
       add(
-        button(pageId, cta?.label ?? T.primaryCta, x + 20, cy + ch - 24 - M.btnH, innerW, M.btnH, {
+        button(pageId, cta?.label ?? T.primaryCta, x + 22, cy + ch - 34 - M.btnH, innerW, M.btnH, {
           fill: featured ? "#FFFFFF" : A,
           color: featured ? INK : "#FFFFFF",
           size: M.small + 1,
@@ -744,16 +815,24 @@ export function buildWebsitePage(
 
   /* ============================================= 11. CLIENTS / PARTNERS */
   {
-    const h = M.sectionPad * 2 + 150;
-    photoBand(y, h, photo(4) || heroImage, "#3A4247", 0.74);
-    add(text(pageId, profile.socials.length ? "Connect with us" : "Our clients", PAD, y + M.sectionPad, COL, { size: M.h2 - 4, weight: 800, color: ON_DARK, align: "center" }));
     const items = profile.socials.length
-      ? profile.socials.slice(0, 5)
-      : placeholderClients(device === "mobile" ? 3 : 5).map((label) => ({ label, url: "" }));
-    const iw = Math.min(150, Math.round(COL / items.length));
-    const startX = PAD + Math.round((COL - items.length * iw) / 2);
+      ? profile.socials.slice(0, 5).map((s) => ({ label: s.label, url: s.url }))
+      : placeholderClients(device === "mobile" ? 2 : device === "tablet" ? 3 : 5).map((label) => ({ label, url: "" }));
+    const boxH = device === "mobile" ? 82 : 96;
+    const cols = Math.min(items.length, device === "mobile" ? 2 : device === "tablet" ? 3 : 5);
+    const cardW = Math.round((COL - M.gap * (cols - 1)) / cols);
+    const rows = Math.ceil(items.length / cols);
+    const h = M.sectionPad * 2 + 96 + rows * boxH + (rows - 1) * M.gap;
+    photoBand(y, h, photo(4) || heroImage, "#3A4247", 0.76);
+    add(text(pageId, profile.socials.length ? "Connect with us" : "Our clients", PAD, y + M.sectionPad, COL, { size: M.h2 - 2, weight: 800, color: ON_DARK, align: "center" }));
+    add(rect(pageId, Math.round(W / 2 - 26), y + M.sectionPad + M.h2 + 14, 52, 3, { fill: A, radius: 2 }));
+
+    const top = y + M.sectionPad + 96;
     items.forEach((s, i) => {
-      const l = text(pageId, s.label, startX + i * iw, y + M.sectionPad + 74, iw, {
+      const x = PAD + (i % cols) * (cardW + M.gap);
+      const cy = top + Math.floor(i / cols) * (boxH + M.gap);
+      add(rect(pageId, x, cy, cardW, boxH, { fill: "#FFFFFF", radius: 4, opacity: 0.1, stroke: "#FFFFFF", strokeWidth: 1 }));
+      const l = text(pageId, s.label, x + 10, cy + Math.round(boxH / 2) - 10, cardW - 20, {
         size: M.small + 1, weight: 700, color: ON_DARK, align: "center",
       });
       if (s.url) l.action = { id: uid(), type: "open_url", payload: { url: s.url, newTab: true } };
@@ -765,23 +844,36 @@ export function buildWebsitePage(
   /* ======================================================= 12. NEWS/EVENTS */
   if (hasNews) {
     const g = gridOf(profile.news.length, M.newsCols);
-    const entryImgH = Math.round(g.cardW * 0.52);
-    const entryH = entryImgH + 130;
+    const entryImgH = Math.round(g.cardW * 0.58);
+    const excerptH = textHeight(LOREM_LONG, g.cardW - 44, M.small);
+    const entryH = entryImgH + 22 + M.small + 12 + M.h3 + 12 + excerptH + 18 + M.small + 26;
     const rows = Math.ceil(profile.news.length / g.c);
-    const headH = measureHead(undefined, T.newsTitle, undefined);
+    const headH = measureHead("Latest", T.newsTitle, undefined);
     const h = M.sectionPad * 2 + headH + rows * entryH + (rows - 1) * M.gap;
     add(rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 }));
-    heading(y + M.sectionPad, undefined, T.newsTitle, undefined, false);
+    heading(y + M.sectionPad, "Latest", T.newsTitle, undefined, false);
     const top = y + M.sectionPad + headH;
 
     profile.news.forEach((n, i) => {
       const x = g.xOf(i);
       const cy = top + g.rowOf(i) * (entryH + M.gap);
-      if (n.image) add(image(pageId, n.image, x, cy, g.cardW, entryImgH, 2));
-      else add(rect(pageId, x, cy, g.cardW, entryImgH, { fill: LIGHT_2, radius: 2 }));
-      add(text(pageId, n.title, x, cy + entryImgH + 18, g.cardW, { size: M.h3, weight: 700, color: A }));
-      if (n.body)
-        add(text(pageId, n.body.slice(0, 160), x, cy + entryImgH + 18 + M.h3 + 12, g.cardW, { size: M.small, color: MUTED }));
+      add(rect(pageId, x, cy, g.cardW, entryH, { fill: "#FFFFFF", radius: 6, stroke: "#E4E8EB", strokeWidth: 1 }));
+      if (n.image) add(image(pageId, n.image, x, cy, g.cardW, entryImgH, 6));
+      else {
+        add(rect(pageId, x, cy, g.cardW, entryImgH, { fill: LIGHT_2, radius: 6 }));
+        add(icon(pageId, "Image", x + Math.round(g.cardW / 2) - 18, cy + Math.round(entryImgH / 2) - 18, 36, "#C3CACF"));
+      }
+      let ny = cy + entryImgH + 22;
+      /* category / date line — editable placeholder when unknown */
+      add(text(pageId, LOREM_NAME.toUpperCase(), x + 22, ny, g.cardW - 44, { size: M.small - 1, weight: 700, color: A }));
+      ny += M.small + 12;
+      add(text(pageId, n.title, x + 22, ny, g.cardW - 44, { size: M.h3, weight: 800, color: INK }));
+      ny += M.h3 + 12;
+      add(text(pageId, (n.body ?? LOREM_LONG).slice(0, 180), x + 22, ny, g.cardW - 44, { size: M.small, color: MUTED, height: excerptH }));
+      ny += excerptH + 18;
+      const more = text(pageId, "Read more", x + 22, ny, g.cardW - 44, { size: M.small, weight: 700, color: A });
+      more.action = anchor("contact");
+      add(more);
     });
     y += h;
   }
@@ -794,26 +886,29 @@ export function buildWebsitePage(
     if (profile.address) infoLines.push(["MapPin", profile.address]);
     (profile.hours ?? []).slice(0, 2).forEach((line) => infoLines.push(["Clock", line]));
 
-    const formW = Math.round(COL * (device === "mobile" ? 1 : device === "tablet" ? 0.85 : 0.56));
-    const formPad = device === "mobile" ? 20 : 30;
+    const formW = Math.round(COL * (device === "mobile" ? 1 : device === "tablet" ? 0.85 : 0.58));
+    const formPad = device === "mobile" ? 22 : 34;
     const fieldGap = 14;
-    const fieldsH = 50 * 2 + 96 + fieldGap * 2;
-    const formH = formPad * 2 + 44 + fieldsH + 16 + M.btnH;
-    const infoH = infoLines.length * 40 + 30;
-    const h = M.sectionPad * 2 + 90 + formH + infoH;
+    const fieldsH = 52 * 2 + 104 + fieldGap * 2;
+    const formH = formPad * 2 + 48 + fieldsH + 20 + M.btnH;
+    const infoRows = M.stackContact ? infoLines.length : 1;
+    const infoH = infoRows * 42 + 40;
+    const socialH = profile.socials.length ? 52 : 0;
+    const h = M.sectionPad * 2 + 104 + formH + infoH + socialH;
 
-    photoBand(y, h, photo(5) || heroImage, "#3A4247", 0.76);
+    photoBand(y, h, photo(5) || heroImage, "#3A4247", 0.78);
     add(text(pageId, T.contactTitle, PAD, y + M.sectionPad, COL, { size: M.h2, weight: 800, color: ON_DARK, align: "center" }));
+    add(rect(pageId, Math.round(W / 2 - 26), y + M.sectionPad + M.h2 + 16, 52, 3, { fill: A, radius: 2 }));
 
     const fx = PAD + Math.round((COL - formW) / 2);
-    const fy0 = y + M.sectionPad + 90;
-    add(rect(pageId, fx, fy0, formW, formH, { fill: "#FFFFFF", radius: 4, opacity: 0.95 }));
-    add(text(pageId, `Message ${name}`, fx + formPad, fy0 + formPad, formW - formPad * 2, { size: M.h3, weight: 700, color: INK, align: "center" }));
-    let fy = fy0 + formPad + 48;
+    const fy0 = y + M.sectionPad + 104;
+    add(rect(pageId, fx, fy0, formW, formH, { fill: "#FFFFFF", radius: 6, opacity: 0.96 }));
+    add(text(pageId, `Message ${name}`, fx + formPad, fy0 + formPad, formW - formPad * 2, { size: M.h3, weight: 800, color: INK, align: "center" }));
+    let fy = fy0 + formPad + 52;
     ["Your name", "Email address", "Message"].forEach((label, i) => {
-      const hh = i === 2 ? 96 : 50;
-      add(rect(pageId, fx + formPad, fy, formW - formPad * 2, hh, { fill: LIGHT_2, radius: 3 }));
-      add(text(pageId, label, fx + formPad + 14, fy + 16, formW - formPad * 2 - 28, { size: M.small + 1, color: MUTED }));
+      const hh = i === 2 ? 104 : 52;
+      add(rect(pageId, fx + formPad, fy, formW - formPad * 2, hh, { fill: LIGHT_2, radius: 3, stroke: "#E4E8EB", strokeWidth: 1 }));
+      add(text(pageId, label, fx + formPad + 16, fy + 17, formW - formPad * 2 - 32, { size: M.small + 1, color: MUTED }));
       fy += hh + fieldGap;
     });
     add(
@@ -833,29 +928,41 @@ export function buildWebsitePage(
     );
 
     // Contact details + quick actions under the form
-    const iy = fy0 + formH + 30;
+    const iy = fy0 + formH + 40;
     const per = Math.round(COL / Math.max(1, infoLines.length));
     infoLines.forEach(([ic, value], i) => {
       const cx = M.stackContact ? PAD : PAD + i * per;
-      const cy = M.stackContact ? iy + i * 40 : iy;
+      const cy = M.stackContact ? iy + i * 42 : iy;
       const w = M.stackContact ? COL : per;
-      add(icon(pageId, ic, cx + (M.stackContact ? 0 : Math.round(w / 2) - 44), cy, 20, A));
-      add(text(pageId, value, cx + (M.stackContact ? 30 : Math.round(w / 2) - 16), cy + 1, M.stackContact ? w - 30 : w - 40, {
+      add(icon(pageId, ic, cx + (M.stackContact ? 0 : Math.round(w / 2) - 46), cy, 22, A));
+      add(text(pageId, value, cx + (M.stackContact ? 32 : Math.round(w / 2) - 18), cy + 2, M.stackContact ? w - 32 : w - 40, {
         size: M.small + 1, color: ON_DARK,
       }));
     });
+
+    if (profile.socials.length) {
+      const sy = iy + infoRows * 42 + 20;
+      const socials = profile.socials.slice(0, 5);
+      const sw = 40;
+      const sx = PAD + Math.round((COL - (socials.length * sw + (socials.length - 1) * 16)) / 2);
+      socials.forEach((s, i) => {
+        const ic = icon(pageId, "Link", sx + i * (sw + 16), sy, 26, ON_DARK);
+        ic.action = { id: uid(), type: "open_url", payload: { url: s.url, newTab: true } };
+        add(ic);
+      });
+    }
     y += h;
   }
 
   /* ============================================================ 14. FOOTER */
-  const footerH = device === "mobile" ? 300 : 260;
+  const footerH = device === "mobile" ? 330 : 300;
   add(rect(pageId, 0, y, W, footerH, { fill: "#2C3235", radius: 0 }));
-  const logoS = device === "mobile" ? 44 : 52;
-  if (profile.logoUrl) add(image(pageId, profile.logoUrl, Math.round(W / 2 - logoS / 2), y + 40, logoS, logoS, 6));
-  else add(icon(pageId, "Sparkles", Math.round(W / 2 - 20), y + 42, 40, A));
-  add(text(pageId, name, PAD, y + 40 + logoS + 14, COL, { size: M.h3 + 2, weight: 800, color: ON_DARK, align: "center" }));
+  const logoS = device === "mobile" ? 46 : 56;
+  if (profile.logoUrl) add(image(pageId, profile.logoUrl, Math.round(W / 2 - logoS / 2), y + 48, logoS, logoS, 6));
+  else add(icon(pageId, "Sparkles", Math.round(W / 2 - 22), y + 50, 44, A));
+  add(text(pageId, name, PAD, y + 48 + logoS + 18, COL, { size: M.h3 + 2, weight: 800, color: ON_DARK, align: "center" }));
 
-  const navRowY = y + 40 + logoS + 14 + M.h3 + 30;
+  const navRowY = y + 48 + logoS + 18 + M.h3 + 36;
   const navPer = Math.round(COL / Math.max(1, navItems.length));
   navItems.forEach(([label, hash], i) => {
     const l = text(pageId, label, PAD + i * navPer, navRowY, navPer, { size: M.small, weight: 600, color: ON_DARK_MUTED, align: "center" });
@@ -866,7 +973,7 @@ export function buildWebsitePage(
   if (profile.socials.length) {
     const per = Math.round(COL / profile.socials.length);
     profile.socials.slice(0, 6).forEach((s, i) => {
-      const l = text(pageId, s.label, PAD + i * per, navRowY + 32, per, { size: M.small, weight: 600, color: A, align: "center" });
+      const l = text(pageId, s.label, PAD + i * per, navRowY + 34, per, { size: M.small, weight: 600, color: A, align: "center" });
       l.action = { id: uid(), type: "open_url", payload: { url: s.url, newTab: true } };
       add(l);
     });
@@ -874,15 +981,16 @@ export function buildWebsitePage(
 
   const contactLine = [profile.phone, profile.email, profile.address].filter(Boolean).join("  ·  ");
   if (contactLine) {
-    add(text(pageId, contactLine, PAD, navRowY + (profile.socials.length ? 68 : 36), COL, { size: M.small, color: ON_DARK_MUTED, align: "center" }));
+    add(text(pageId, contactLine, PAD, navRowY + (profile.socials.length ? 72 : 40), COL, { size: M.small, color: ON_DARK_MUTED, align: "center" }));
   }
-  add(rect(pageId, PAD, y + footerH - 50, COL, 1, { fill: "#454C51", radius: 0 }));
+  add(rect(pageId, PAD, y + footerH - 54, COL, 1, { fill: "#454C51", radius: 0 }));
   add(
-    text(pageId, `© ${new Date().getFullYear()} ${name}. All rights reserved.`, PAD, y + footerH - 34, COL, {
+    text(pageId, `© ${new Date().getFullYear()} ${name}. All rights reserved.`, PAD, y + footerH - 36, COL, {
       size: 12, color: ON_DARK_MUTED, align: "center",
     })
   );
   y += footerH;
+
 
   return {
     id: pageId,
