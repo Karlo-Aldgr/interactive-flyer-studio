@@ -564,11 +564,12 @@ export function buildWebsitePage(
     const avatar = device === "mobile" ? 76 : 92;
     const cardH = Math.max(avatar + 40, 190);
     const rows = Math.ceil(profile.team.length / g.c);
-    const headH = heading(y + M.sectionPad, "Our team", T.teamTitle, undefined, false);
+    const headH = measureHead("Our team", T.teamTitle, undefined);
     const h = M.sectionPad * 2 + headH + rows * cardH + (rows - 1) * M.gap;
-    const band = rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 });
-    L.splice(L.findIndex((l) => l.position.y >= y + M.sectionPad), 0, band);
+    add(rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 }));
+    heading(y + M.sectionPad, "Our team", T.teamTitle, undefined, false);
     const top = y + M.sectionPad + headH;
+
     profile.team.forEach((member, i) => {
       const x = g.xOf(i);
       const cy = top + g.rowOf(i) * (cardH + M.gap);
