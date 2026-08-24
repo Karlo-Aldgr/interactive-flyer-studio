@@ -331,7 +331,7 @@ export function PagesPanel() {
             size="sm"
             variant="secondary"
             className="h-8 w-full text-xs"
-            onClick={() => window.open(`/website-preview/${flyer?.id ?? currentFlyer?.id ?? ""}`, "_blank", "noopener")}
+            onClick={() => window.open(`/website-preview/${flyer?.id ?? ""}`, "_blank", "noopener")}
           >
             <Globe className="mr-1 h-3.5 w-3.5" /> Preview website
           </Button>
