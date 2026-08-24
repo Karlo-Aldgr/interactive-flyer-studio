@@ -44,7 +44,7 @@ async function getKey(): Promise<CryptoKey> {
   if (!raw) throw new EncryptionNotConfigured();
   const bytes = decodeBase64(raw);
   if (bytes.length !== 32) throw new EncryptionNotConfigured();
-  cachedKey = await crypto.subtle.importKey("raw", bytes, { name: "AES-GCM" }, false, [
+  cachedKey = await crypto.subtle.importKey("raw", bytes as unknown as BufferSource, { name: "AES-GCM" }, false, [
     "encrypt",
     "decrypt",
   ]);
@@ -55,7 +55,11 @@ export async function encryptSecret(plain: string): Promise<string> {
   const key = await getKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const cipher = new Uint8Array(
-    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plain)),
+    await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv as unknown as BufferSource },
+      key,
+      new TextEncoder().encode(plain) as unknown as BufferSource,
+    ),
   );
   return `v1.${encodeBase64(iv)}.${encodeBase64(cipher)}`;
 }
@@ -67,9 +71,9 @@ export async function decryptSecret(payload: string | null | undefined): Promise
   const key = await getKey();
   try {
     const plain = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: decodeBase64(parts[1]) },
+      { name: "AES-GCM", iv: decodeBase64(parts[1]) as unknown as BufferSource },
       key,
-      decodeBase64(parts[2]),
+      decodeBase64(parts[2]) as unknown as BufferSource,
     );
     return new TextDecoder().decode(plain);
   } catch {
