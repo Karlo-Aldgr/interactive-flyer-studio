@@ -2030,6 +2030,7 @@ export type Database = {
       }
       onboarding_submissions: {
         Row: {
+          ai_description: string | null
           ai_details: string | null
           business_address: string | null
           business_description: string | null
@@ -2067,6 +2068,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          ai_description?: string | null
           ai_details?: string | null
           business_address?: string | null
           business_description?: string | null
@@ -2104,6 +2106,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          ai_description?: string | null
           ai_details?: string | null
           business_address?: string | null
           business_description?: string | null
