@@ -151,9 +151,30 @@ export function useFlyerData(flyerId: string | undefined) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pages, flyer, dirty]);
 
-  async function save(f: Flyer, currentPages: FlyerPage[]) {
+  /**
+   * Saves are serialized. Two overlapping runs used to race (one deleting layers
+   * while the other inserted their actions), which surfaced as
+   * `new row violates row-level security policy for table "actions"`.
+   * Every queued run also re-reads the LIVE editor state, so it never writes a
+   * stale snapshot.
+   */
+  const savePromise = useRef<Promise<void> | null>(null);
+  function save(_f?: Flyer, _pages?: FlyerPage[]) {
+    const next = (savePromise.current ?? Promise.resolve())
+      .catch(() => {})
+      .then(() => {
+        const st = useEditorStore.getState();
+        if (!st.flyer) return;
+        return runSave(st.flyer, st.pages);
+      });
+    savePromise.current = next;
+    return next;
+  }
+
+  async function runSave(f: Flyer, currentPages: FlyerPage[]) {
     setSaving(true);
     try {
+
       const { pages: normalizedPages, changed } = normalizePageIds(currentPages);
       if (changed) {
         useEditorStore.setState((s) => {
@@ -170,15 +191,19 @@ export function useFlyerData(flyerId: string | undefined) {
       const pagesToSave = changed ? normalizedPages : currentPages;
 
       // 1. Update flyer meta
-      await supabase
-        .from("flyers")
-        .update({
-          title: f.title,
-          status: f.status,
-          public_slug: f.public_slug,
-          settings: f.settings as any,
-        })
-        .eq("id", f.id);
+      {
+        const { error } = await supabase
+          .from("flyers")
+          .update({
+            title: f.title,
+            status: f.status,
+            public_slug: f.public_slug,
+            settings: f.settings as any,
+          })
+          .eq("id", f.id);
+        if (error) throw error;
+      }
+
 
       // 2. Fetch current DB state to diff
       const { data: dbPages } = await supabase
@@ -215,7 +240,8 @@ export function useFlyerData(flyerId: string | undefined) {
         intro: (p.intro ?? null) as any,
       }));
       if (pageRows.length) {
-        await supabase.from("pages").upsert(pageRows);
+        const { error } = await supabase.from("pages").upsert(pageRows);
+        if (error) throw error;
       }
 
       // 6. Upsert layers
@@ -233,29 +259,53 @@ export function useFlyerData(flyerId: string | undefined) {
           content: l.content as any,
           intro: (l.intro ?? null) as any,
         }));
-        await supabase.from("layers").upsert(layerRows);
+        // Website pages can carry a lot of layers — chunk to keep payloads small.
+        for (let i = 0; i < layerRows.length; i += 200) {
+          const { error } = await supabase.from("layers").upsert(layerRows.slice(i, i + 200));
+          if (error) throw error;
+        }
       }
 
-      // 7. Upsert / delete actions
-      const layersWithAction = allLayers.filter((l) => l.action);
-      const layersWithoutAction = allLayers.filter((l) => !l.action).map((l) => l.id);
+      // 7. Upsert / delete actions.
+      // Only touch actions for layers that really exist in the DB right now —
+      // inserting an action for a layer that was removed is rejected by RLS.
+      const { data: liveLayers } = await supabase
+        .from("layers")
+        .select("id")
+        .in("id", allLayers.map((l) => l.id).slice(0, 1000));
+      const liveLayerIds = new Set((liveLayers ?? []).map((l: any) => l.id));
+
+      const layersWithAction = allLayers.filter((l) => l.action && liveLayerIds.has(l.id));
+      const layersWithoutAction = allLayers
+        .filter((l) => !l.action && liveLayerIds.has(l.id))
+        .map((l) => l.id);
       if (layersWithoutAction.length) {
-        const { error } = await supabase.from("actions").delete().in("layer_id", layersWithoutAction);
-        if (error) throw error;
+        for (let i = 0; i < layersWithoutAction.length; i += 200) {
+          const { error } = await supabase
+            .from("actions")
+            .delete()
+            .in("layer_id", layersWithoutAction.slice(i, i + 200));
+          if (error) throw error;
+        }
       }
-      for (const l of layersWithAction) {
-        if (!l.action) continue;
-        // Upsert by layer_id (delete then insert is simpler given no unique constraint)
-        const { error: deleteError } = await supabase.from("actions").delete().eq("layer_id", l.id);
-        if (deleteError) throw deleteError;
-        const { error: insertError } = await supabase.from("actions").insert([{
+      if (layersWithAction.length) {
+        const ids = layersWithAction.map((l) => l.id);
+        for (let i = 0; i < ids.length; i += 200) {
+          const { error } = await supabase.from("actions").delete().in("layer_id", ids.slice(i, i + 200));
+          if (error) throw error;
+        }
+        const actionRows = layersWithAction.map((l) => ({
           layer_id: l.id,
-          type: l.action.type as any,
-          payload: l.action.payload as any,
-          highlight: (l.action.highlight ?? null) as any,
-        }]);
-        if (insertError) throw insertError;
+          type: l.action!.type as any,
+          payload: l.action!.payload as any,
+          highlight: (l.action!.highlight ?? null) as any,
+        }));
+        for (let i = 0; i < actionRows.length; i += 200) {
+          const { error } = await supabase.from("actions").insert(actionRows.slice(i, i + 200));
+          if (error) throw error;
+        }
       }
+
 
       // 8. Keep the public digital business card in sync with its editor page
       const bizadPage = pagesToSave.find((p) => p.background?.bizadPage);
@@ -274,9 +324,9 @@ export function useFlyerData(flyerId: string | undefined) {
   }
 
   async function saveNow() {
-    const st = useEditorStore.getState();
-    if (!st.flyer) return;
-    await save(st.flyer, st.pages);
+    if (!useEditorStore.getState().flyer) return;
+    await save();
+
     markSaved();
     toast.success("All changes saved");
   }
