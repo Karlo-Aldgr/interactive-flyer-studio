@@ -68,7 +68,7 @@ export function PagesPanel() {
     const currentFlyer = state.flyer;
     if (!currentFlyer) return;
     if (state.pages.some((p) => p.background?.websitePage)) {
-      addWebsitePage({ images: [], services: [], pricing: [], portfolio: [], socials: [], ctas: [] });
+      addWebsitePage({ images: [], services: [], pricing: [], portfolio: [], socials: [], ctas: [], team: [], stats: [], testimonials: [], news: [] });
       return;
     }
     setCreatingWebsite(true);
