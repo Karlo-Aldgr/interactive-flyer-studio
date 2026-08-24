@@ -171,7 +171,12 @@ export function buildWebsiteProfile(args: {
     portfolio: [],
     socials: [],
     ctas: [],
+    team: [],
+    stats: [],
+    testimonials: [],
+    news: [],
   };
+
 
   /* ---- identity / contact -------------------------------------------------
      Priority: project onboarding → project business card → client dashboard
