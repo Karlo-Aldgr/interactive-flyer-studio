@@ -955,7 +955,7 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         .eq("flyer_id", f.id)
         .order("index", { ascending: true });
 
-      const mapped: FlyerPage[] = (pgs ?? []).filter((p: any) => !p.background?.bizadPage).map((p: any) => ({
+      const mapped: FlyerPage[] = (pgs ?? []).filter((p: any) => !p.background?.bizadPage && !p.background?.websitePage).map((p: any) => ({
         id: p.id,
         flyer_id: p.flyer_id,
         index: p.index,
