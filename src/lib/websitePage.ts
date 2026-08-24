@@ -347,38 +347,62 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
 
   /* ---------------- Contact ---------------- */
   if (hasContact) {
-    const h = 560;
+    const rows: Array<[string, string]> = [];
+    if (profile.phone) rows.push(["Phone", profile.phone]);
+    if (profile.whatsapp) rows.push(["MessageCircle", "WhatsApp"]);
+    if (profile.email) rows.push(["Mail", profile.email]);
+    if (profile.address) rows.push(["MapPin", profile.address]);
+    (profile.hours ?? []).forEach((line) => rows.push(["Clock", line]));
+
+    const h = Math.max(560, 300 + rows.length * 52 + 160);
     add(rect(pageId, 0, y, W, h, { fill: PBG, radius: 0 }));
     add(eyebrow(pageId, T.contactLabel, PAD, y + 80, 520));
     add(text(pageId, `Get in touch with ${name}`, PAD, y + 112, 560, { size: 40, weight: 800, height: 120 }));
 
-    const rows: Array<[string, string]> = [];
-    if (profile.phone) rows.push(["Phone", profile.phone]);
-    if (profile.email) rows.push(["Mail", profile.email]);
-    if (profile.address) rows.push(["MapPin", profile.address]);
     rows.forEach(([ic, value], i) => {
-      const cy = y + 250 + i * 60;
-      add(icon(pageId, ic, PAD, cy, 26, A));
+      const cy = y + 240 + i * 52;
+      add(icon(pageId, ic, PAD, cy, 24, A));
       add(text(pageId, value, PAD + 44, cy + 2, 520, { size: 16 }));
     });
 
+    const ctaY = y + 260 + rows.length * 52;
     let cx = PAD;
     if (profile.phone) {
       add(
-        button(pageId, "Call us", cx, y + 450, 160, 52, {
+        button(pageId, "Call us", cx, ctaY, 160, 52, {
           action: { id: uid(), type: "call", payload: { phone: profile.phone } },
         })
       );
       cx += 180;
     }
+    if (profile.whatsapp) {
+      add(
+        button(pageId, "WhatsApp", cx, ctaY, 170, 52, {
+          fill: "#25D366",
+          color: "#08240F",
+          action: { id: uid(), type: "open_url", payload: { url: profile.whatsapp, newTab: true } },
+        })
+      );
+      cx += 190;
+    }
+    if (profile.email) {
+      add(
+        button(pageId, "Email us", cx, ctaY, 170, 52, {
+          fill: S2,
+          action: { id: uid(), type: "open_url", payload: { url: `mailto:${profile.email}`, newTab: false } },
+        })
+      );
+      cx += 190;
+    }
     if (profile.address) {
       add(
-        button(pageId, "Get directions", cx, y + 450, 200, 52, {
+        button(pageId, "Get directions", cx, ctaY, 200, 52, {
           fill: ACCENT_2,
           action: { id: uid(), type: "map", payload: { mapAddress: profile.address, mapProvider: "auto" } },
         })
       );
     }
+
 
     // Message form — collects leads into the existing form submissions flow
     add(rect(pageId, 760, y + 90, 560, 380, { fill: S1, radius: 26 }));
