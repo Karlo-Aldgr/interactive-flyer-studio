@@ -188,6 +188,11 @@ export function PagesPanel() {
                 Add story page (1080×1920)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => addWebsitePage()}>
+                <Globe className="mr-2 h-3.5 w-3.5" /> Add website page
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem disabled={scanning} onClick={() => fileRef.current?.click()}>
                 <Camera className="mr-2 h-3.5 w-3.5" /> {scanning ? "Scanning…" : "Scan menu photo"}
               </DropdownMenuItem>
