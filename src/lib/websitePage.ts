@@ -693,11 +693,14 @@ export function buildWebsitePage(
     const maxFeatures = Math.max(0, ...plans.map((p) => p.features.length));
     const cardH = 90 + (hasPricing ? 70 : 0) + maxFeatures * 34 + M.btnH + 60;
     const rows = Math.ceil(plans.length / g.c);
-    const headH = heading(y + M.sectionPad, hasPricing ? "Pricing" : "Packages", hasPricing ? T.pricingTitle : T.packagesTitle, undefined, false);
+    const priceEyebrow = hasPricing ? "Pricing" : "Packages";
+    const priceTitle = hasPricing ? T.pricingTitle : T.packagesTitle;
+    const headH = measureHead(priceEyebrow, priceTitle, undefined);
     const h = M.sectionPad * 2 + headH + rows * (cardH + 24) + (rows - 1) * M.gap;
-    const band = rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 });
-    L.splice(L.findIndex((l) => l.position.y >= y + M.sectionPad), 0, band);
+    add(rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 }));
+    heading(y + M.sectionPad, priceEyebrow, priceTitle, undefined, false);
     const top = y + M.sectionPad + headH;
+
     plans.forEach((plan, i) => {
       const featured = plans.length === 3 && i === 1;
       const x = g.xOf(i);
