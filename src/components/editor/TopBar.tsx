@@ -334,6 +334,37 @@ export function TopBar({ saving, onSave }: Props) {
     void ensureThumbnail(true);
   }
 
+  const isWebsitePage = !!activePage?.background?.websitePage;
+  const websitePublished = (flyer as any)?.website_status === "published";
+  const [publishingWebsite, setPublishingWebsite] = useState(false);
+
+  /** Publishes/unpublishes THIS project's Website page (independent of the flyer). */
+  async function toggleWebsitePublish() {
+    if (!flyer) return;
+    setPublishingWebsite(true);
+    try {
+      const next = websitePublished ? "draft" : "published";
+      let slug = (flyer as any).website_slug as string | null;
+      if (next === "published" && !slug) {
+        const base = isRealFlyerTitle(flyer.title) ? flyer.title : "website";
+        slug = slugFromFlyerTitle(base, null);
+      }
+      const { error } = await supabase
+        .from("flyers")
+        .update({ website_status: next, website_slug: slug } as any)
+        .eq("id", flyer.id);
+      if (error) { toast.error(error.message); return; }
+      setFlyer({ website_status: next, website_slug: slug } as any);
+      if (next === "published" && slug) {
+        toast.success(`Website published at ${window.location.origin}/site/${slug}`);
+      } else {
+        toast.success("Website unpublished");
+      }
+    } finally {
+      setPublishingWebsite(false);
+    }
+  }
+
   async function togglePublish() {
     if (!flyer) return;
     const newStatus = flyer.status === "published" ? "draft" : "published";
@@ -619,10 +650,10 @@ export function TopBar({ saving, onSave }: Props) {
 
       {/* Primary actions — always visible */}
       <div className="lg:hidden">
-        <TopBarPreviewButton flyerId={flyer.id} compact />
+        <TopBarPreviewButton flyerId={flyer.id} compact hasWebsite={hasWebsitePage} />
       </div>
       <div className="hidden lg:block">
-        <TopBarPreviewButton flyerId={flyer.id} />
+        <TopBarPreviewButton flyerId={flyer.id} hasWebsite={hasWebsitePage} />
       </div>
 
       {flyer.status === "published" && (
@@ -638,11 +669,20 @@ export function TopBar({ saving, onSave }: Props) {
 
       <Button
         size="sm"
-        onClick={togglePublish}
-        className={cn("h-8 shrink-0 px-3", flyer.status === "published" ? "" : "shadow-glow")}
+        disabled={publishingWebsite}
+        onClick={isWebsitePage ? toggleWebsitePublish : togglePublish}
+        className={cn(
+          "h-8 shrink-0 px-3",
+          (isWebsitePage ? websitePublished : flyer.status === "published") ? "" : "shadow-glow"
+        )}
+        title={isWebsitePage ? "Publish this project's Website" : "Publish this flyer"}
       >
         <Globe className="mr-1 h-4 w-4 hidden sm:inline" />
-        <span className="hidden sm:inline">{flyer.status === "published" ? "Unpublish" : "Publish"}</span>
+        <span className="hidden sm:inline">
+          {isWebsitePage
+            ? websitePublished ? "Unpublish website" : "Publish website"
+            : flyer.status === "published" ? "Unpublish" : "Publish"}
+        </span>
         <Globe className="h-4 w-4 sm:hidden" />
       </Button>
 
