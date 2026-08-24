@@ -171,6 +171,15 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   const add = (...l: Layer[]) => L.push(...l);
   let y = 0;
 
+  /* Brand colours from the client's project (business card) fall back to template. */
+  const A = profile.brandColors?.accent || ACCENT;
+  const PBG = profile.brandColors?.background || BG;
+  const S1 = profile.brandColors?.background ? shade(PBG, 0.12) : SURFACE;
+  const S2 = profile.brandColors?.background ? shade(PBG, 0.2) : SURFACE_2;
+
+  /* Section wording driven by the client's business theme/category. */
+  const T = themeCopy(profile.theme);
+
   const name = profile.businessName?.trim() || "Your business";
   const images = profile.images ?? [];
   const heroImage = profile.heroImage || images[0];
@@ -190,11 +199,11 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   if (hasPricing) navItems.push(["Pricing", "pricing"]);
   if (hasContact) navItems.push(["Contact", "contact"]);
 
-  add(rect(pageId, 0, 0, W, 92, { fill: SURFACE, radius: 0, opacity: 0.95 }));
+  add(rect(pageId, 0, 0, W, 92, { fill: S1, radius: 0, opacity: 0.95 }));
   if (profile.logoUrl) {
     add(image(pageId, profile.logoUrl, PAD, 22, 48, 48, 12));
   } else {
-    add(icon(pageId, "Sparkles", PAD, 26, 40, ACCENT));
+    add(icon(pageId, "Sparkles", PAD, 26, 40, A));
   }
   add(text(pageId, name, PAD + 60, 34, 320, { size: 22, weight: 800 }));
   const navStart = W - PAD - 150 - 24 - navItems.length * 96;
@@ -210,7 +219,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   /* ---------------- Hero ---------------- */
   y = 92;
   const heroH = 700;
-  add(rect(pageId, 0, y, W, heroH, { fill: BG, radius: 0 }));
+  add(rect(pageId, 0, y, W, heroH, { fill: PBG, radius: 0 }));
   if (heroImage) {
     add(image(pageId, heroImage, 0, y, W, heroH, 0));
     add(rect(pageId, 0, y, W, heroH, { fill: "#050912", radius: 0, opacity: 0.7 }));
@@ -242,7 +251,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   /* ---------------- About ---------------- */
   if (hasAbout) {
     const aboutImg = images[1] || images[0];
-    add(rect(pageId, 0, y, W, 560, { fill: BG, radius: 0 }));
+    add(rect(pageId, 0, y, W, 560, { fill: PBG, radius: 0 }));
     if (aboutImg) add(image(pageId, aboutImg, PAD, y + 80, 540, 400, 28));
     const tx = aboutImg ? 720 : PAD;
     const tw = aboutImg ? 600 : COL;
@@ -256,7 +265,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   if (hasServices) {
     const rows = Math.ceil(profile.services.length / 3);
     const h = 200 + rows * 220;
-    add(rect(pageId, 0, y, W, h, { fill: SURFACE, radius: 0 }));
+    add(rect(pageId, 0, y, W, h, { fill: S1, radius: 0 }));
     add(eyebrow(pageId, "Services", PAD, y + 80, COL, "center"));
     add(text(pageId, "What we offer", PAD, y + 112, COL, { size: 42, weight: 800, align: "center", height: 70 }));
     profile.services.forEach((s, i) => {
@@ -264,7 +273,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
       const row = Math.floor(i / 3);
       const x = PAD + col * 400;
       const cy = y + 200 + row * 220;
-      add(rect(pageId, x, cy, 370, 190, { fill: SURFACE_2, radius: 22 }));
+      add(rect(pageId, x, cy, 370, 190, { fill: S2, radius: 22 }));
       if (s.image) add(image(pageId, s.image, x + 32, cy + 26, 56, 56, 14));
       else add(icon(pageId, "Sparkles", x + 32, cy + 26, 40));
       add(text(pageId, s.title, x + 32, cy + 96, 300, { size: 20, weight: 700 }));
@@ -277,7 +286,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   if (hasPortfolio) {
     const rows = Math.ceil(profile.portfolio.length / 2);
     const h = 200 + rows * 330;
-    add(rect(pageId, 0, y, W, h, { fill: BG, radius: 0 }));
+    add(rect(pageId, 0, y, W, h, { fill: PBG, radius: 0 }));
     add(eyebrow(pageId, "Our work", PAD, y + 70, COL, "center"));
     add(text(pageId, "Gallery", PAD, y + 102, COL, { size: 42, weight: 800, align: "center", height: 70 }));
     profile.portfolio.forEach((p, i) => {
@@ -286,8 +295,8 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
       const x = PAD + col * 620;
       const cy = y + 190 + row * 330;
       if (p.image) add(image(pageId, p.image, x, cy, 580, 220, 22));
-      else add(rect(pageId, x, cy, 580, 220, { fill: SURFACE_2, radius: 22 }));
-      if (p.category) add(text(pageId, p.category.toUpperCase(), x, cy + 236, 300, { size: 12, weight: 700, color: ACCENT }));
+      else add(rect(pageId, x, cy, 580, 220, { fill: S2, radius: 22 }));
+      if (p.category) add(text(pageId, p.category.toUpperCase(), x, cy + 236, 300, { size: 12, weight: 700, color: A }));
       add(text(pageId, p.title, x, cy + 256, 480, { size: 22, weight: 700 }));
       if (p.description) add(text(pageId, p.description.slice(0, 160), x, cy + 288, 560, { size: 14, color: MUTED }));
     });
@@ -297,15 +306,15 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   /* ---------------- Pricing (from project products) ---------------- */
   if (hasPricing) {
     const h = 640;
-    add(rect(pageId, 0, y, W, h, { fill: SURFACE, radius: 0 }));
+    add(rect(pageId, 0, y, W, h, { fill: S1, radius: 0 }));
     add(eyebrow(pageId, "Pricing", PAD, y + 70, COL, "center"));
     add(text(pageId, "Our prices", PAD, y + 102, COL, { size: 42, weight: 800, align: "center", height: 70 }));
     profile.pricing.forEach((plan, i) => {
       const x = PAD + i * 400;
       const cy = y + 200;
-      add(rect(pageId, x, cy, 370, 340, { fill: SURFACE_2, radius: 24 }));
+      add(rect(pageId, x, cy, 370, 340, { fill: S2, radius: 24 }));
       add(text(pageId, plan.name, x + 32, cy + 32, 300, { size: 20, weight: 700, color: "#FFFFFF" }));
-      add(text(pageId, plan.price, x + 32, cy + 66, 300, { size: 36, weight: 800, color: ACCENT }));
+      add(text(pageId, plan.price, x + 32, cy + 66, 300, { size: 36, weight: 800, color: A }));
       plan.features.forEach((f, fi) => {
         add(text(pageId, `•  ${f}`, x + 32, cy + 140 + fi * 34, 300, { size: 15, color: MUTED }));
       });
@@ -323,7 +332,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   /* ---------------- Contact ---------------- */
   if (hasContact) {
     const h = 560;
-    add(rect(pageId, 0, y, W, h, { fill: BG, radius: 0 }));
+    add(rect(pageId, 0, y, W, h, { fill: PBG, radius: 0 }));
     add(eyebrow(pageId, "Contact", PAD, y + 80, 520));
     add(text(pageId, `Get in touch with ${name}`, PAD, y + 112, 560, { size: 40, weight: 800, height: 120 }));
 
@@ -333,7 +342,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
     if (profile.address) rows.push(["MapPin", profile.address]);
     rows.forEach(([ic, value], i) => {
       const cy = y + 250 + i * 60;
-      add(icon(pageId, ic, PAD, cy, 26, ACCENT));
+      add(icon(pageId, ic, PAD, cy, 26, A));
       add(text(pageId, value, PAD + 44, cy + 2, 520, { size: 16 }));
     });
 
@@ -356,12 +365,12 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
     }
 
     // Message form — collects leads into the existing form submissions flow
-    add(rect(pageId, 760, y + 90, 560, 380, { fill: SURFACE, radius: 26 }));
+    add(rect(pageId, 760, y + 90, 560, 380, { fill: S1, radius: 26 }));
     add(text(pageId, "Send us a message", 800, y + 126, 480, { size: 22, weight: 700 }));
     ["Your name", "Email address", "Message"].forEach((label, i) => {
       const fy = y + 180 + i * 74;
       const hh = i === 2 ? 96 : 52;
-      add(rect(pageId, 800, fy, 480, hh, { fill: SURFACE_2, radius: 12 }));
+      add(rect(pageId, 800, fy, 480, hh, { fill: S2, radius: 12 }));
       add(text(pageId, label, 818, fy + 17, 440, { size: 15, color: MUTED }));
     });
     add(
@@ -383,9 +392,9 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
 
   /* ---------------- Footer ---------------- */
   const footerH = 300;
-  add(rect(pageId, 0, y, W, footerH, { fill: SURFACE, radius: 0 }));
+  add(rect(pageId, 0, y, W, footerH, { fill: S1, radius: 0 }));
   if (profile.logoUrl) add(image(pageId, profile.logoUrl, PAD, y + 50, 44, 44, 10));
-  else add(icon(pageId, "Sparkles", PAD, y + 54, 36, ACCENT));
+  else add(icon(pageId, "Sparkles", PAD, y + 54, 36, A));
   add(text(pageId, name, PAD + 56, y + 60, 300, { size: 20, weight: 800 }));
   if (profile.description) {
     add(text(pageId, profile.description.slice(0, 140), PAD, y + 116, 380, { size: 14, color: MUTED }));
@@ -427,7 +436,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
     index,
     name: "Website",
     background: {
-      color: BG,
+      color: PBG,
       size: { width: W, height: y },
       websitePage: true,
       websiteDevice: "desktop",
