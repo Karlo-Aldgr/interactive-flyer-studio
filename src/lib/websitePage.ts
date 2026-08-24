@@ -511,15 +511,13 @@ export function buildWebsitePage(
     const circleSize = device === "mobile" ? 92 : device === "tablet" ? 120 : 150;
     const rows = Math.ceil(highlights.length / g.c);
     const introSub = profile.tagline && profile.tagline !== headlineText ? profile.tagline : profile.description?.slice(0, 180);
-    const headH = heading(y + M.sectionPad, `We are ${name}`, T.introTitle, introSub, false);
+    const headH = measureHead(`We are ${name}`, T.introTitle, introSub);
     const itemH = circleSize + 24 + M.h3 + 60;
     const h = M.sectionPad * 2 + headH + rows * itemH + (rows - 1) * M.gap;
-    L.splice(L.length, 0); // keep order: band first
     add(rect(pageId, 0, y, W, h, { fill: LIGHT, radius: 0 }));
-    // re-emit heading above the band (band added after) — move band to back
-    const bandLayer = L.pop()!;
-    L.splice(L.findIndex((l) => l.z_index >= 0 && l.position.y >= y), 0, bandLayer);
+    heading(y + M.sectionPad, `We are ${name}`, T.introTitle, introSub, false);
     const top = y + M.sectionPad + headH;
+
     highlights.forEach((hl, i) => {
       const cx = g.xOf(i) + Math.round((g.cardW - circleSize) / 2);
       const cy = top + g.rowOf(i) * (itemH + M.gap);
