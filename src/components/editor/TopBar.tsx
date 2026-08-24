@@ -501,7 +501,7 @@ export function TopBar({ saving, onSave }: Props) {
     onOpenPayLink: () => setPayOpen(true),
     onOpenShare: openShare,
     onOpenMarketing: () => setAutomationOpen(true),
-    onOpenResize: () => setResizeOpen(true),
+    onOpenResize: () => { if (!activePage?.background?.websitePage) setResizeOpen(true); },
   };
 
   return (
