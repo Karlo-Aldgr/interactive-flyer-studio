@@ -13,7 +13,7 @@ function json(body: unknown, status = 200) {
   });
 }
 
-async function canManageDraft(supabase: ReturnType<typeof createClient>, userId: string, ownerId: string) {
+async function canManageDraft(supabase: any, userId: string, ownerId: string) {
   if (userId === ownerId) return true;
   const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
   const { data: isEditor } = await supabase.rpc("has_role", { _user_id: userId, _role: "editor" });
