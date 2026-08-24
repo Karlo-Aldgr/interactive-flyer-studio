@@ -31,6 +31,14 @@ export type ConnectedSocial = {
   account_name: string | null;
 };
 
+/** Approved testimonial/review left on this project. */
+export type ProjectTestimonial = {
+  name: string | null;
+  body: string | null;
+  rating: number | null;
+  photo_url: string | null;
+};
+
 export type WebsiteSources = {
   clientProfile: ClientProfile | null;
   /** Onboarding tied to THIS project. */
@@ -40,7 +48,9 @@ export type WebsiteSources = {
   bizad: BizadRecord | null;
   job: ProjectJob | null;
   socialAccounts: ConnectedSocial[];
+  testimonials: ProjectTestimonial[];
 };
+
 
 const safe = async <T>(p: PromiseLike<T>, fallback: T): Promise<T> => {
   try {
