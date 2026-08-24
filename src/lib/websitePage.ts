@@ -330,6 +330,17 @@ export function buildWebsitePage(
   const primaryCta = profile.ctas?.[0];
   const secondaryCta = profile.ctas?.[1];
 
+  /** Height a centered section heading will consume (no layers emitted). */
+  const measureHead = (eyebrowText: string | undefined, title: string, sub: string | undefined) => {
+    let h = eyebrowText ? M.eyebrow * 2 : 0;
+    h += textHeight(title, COL, M.h2) + 14;
+    if (sub) {
+      const subW = Math.min(COL, device === "desktop" ? 720 : COL);
+      h += textHeight(sub, subW, M.body);
+    }
+    return h + 34;
+  };
+
   /** Centered WaveX-style section heading; returns the height it consumed. */
   const heading = (
     yy: number,
@@ -355,6 +366,7 @@ export function buildWebsitePage(
     }
     return h + 34;
   };
+
 
   /** Full-bleed photographic band with dark overlay (WaveX signature). */
   const photoBand = (yy: number, h: number, src?: string, fallback = "#2F363B", opacity = 0.72) => {
