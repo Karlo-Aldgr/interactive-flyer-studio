@@ -1,7 +1,7 @@
 import { FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import { uid } from "@/lib/konvaHelpers";
 import type { WebsiteProfile } from "@/lib/websiteProfile";
-import { withWavexPlaceholders, placeholderClients, LOREM_NAME, LOREM_SHORT } from "@/lib/websitePlaceholders";
+import { withWavexPlaceholders, placeholderClients, LOREM_SHORT } from "@/lib/websitePlaceholders";
 
 /**
  * Website page = one long, vertically scrolling page inside the EXISTING editor.
