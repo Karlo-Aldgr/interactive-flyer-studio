@@ -234,7 +234,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
     add(button(pageId, primaryCta.label, bx, y + 540, 230, 58, { action: cloneAction(primaryCta.action) }));
     bx += 250;
   } else if (hasContact) {
-    add(button(pageId, "Get in touch", bx, y + 540, 210, 58, { action: anchor("contact") }));
+    add(button(pageId, T.primaryCta, bx, y + 540, 230, 58, { action: anchor("contact") }));
     bx += 230;
   }
   if (secondaryCta) {
@@ -255,7 +255,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
     if (aboutImg) add(image(pageId, aboutImg, PAD, y + 80, 540, 400, 28));
     const tx = aboutImg ? 720 : PAD;
     const tw = aboutImg ? 600 : COL;
-    add(eyebrow(pageId, "About", tx, y + 100, tw));
+    add(eyebrow(pageId, T.aboutLabel, tx, y + 100, tw));
     add(text(pageId, `About ${name}`, tx, y + 132, tw, { size: 42, weight: 800, height: 120 }));
     add(text(pageId, profile.description!, tx, y + 270, tw - 20, { size: 17, color: MUTED }));
     y += 560;
@@ -266,8 +266,8 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
     const rows = Math.ceil(profile.services.length / 3);
     const h = 200 + rows * 220;
     add(rect(pageId, 0, y, W, h, { fill: S1, radius: 0 }));
-    add(eyebrow(pageId, "Services", PAD, y + 80, COL, "center"));
-    add(text(pageId, "What we offer", PAD, y + 112, COL, { size: 42, weight: 800, align: "center", height: 70 }));
+    add(eyebrow(pageId, T.servicesLabel, PAD, y + 80, COL, "center"));
+    add(text(pageId, T.servicesTitle, PAD, y + 112, COL, { size: 42, weight: 800, align: "center", height: 70 }));
     profile.services.forEach((s, i) => {
       const col = i % 3;
       const row = Math.floor(i / 3);
@@ -287,8 +287,8 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
     const rows = Math.ceil(profile.portfolio.length / 2);
     const h = 200 + rows * 330;
     add(rect(pageId, 0, y, W, h, { fill: PBG, radius: 0 }));
-    add(eyebrow(pageId, "Our work", PAD, y + 70, COL, "center"));
-    add(text(pageId, "Gallery", PAD, y + 102, COL, { size: 42, weight: 800, align: "center", height: 70 }));
+    add(eyebrow(pageId, T.workLabel, PAD, y + 70, COL, "center"));
+    add(text(pageId, T.workTitle, PAD, y + 102, COL, { size: 42, weight: 800, align: "center", height: 70 }));
     profile.portfolio.forEach((p, i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
@@ -308,7 +308,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
     const h = 640;
     add(rect(pageId, 0, y, W, h, { fill: S1, radius: 0 }));
     add(eyebrow(pageId, "Pricing", PAD, y + 70, COL, "center"));
-    add(text(pageId, "Our prices", PAD, y + 102, COL, { size: 42, weight: 800, align: "center", height: 70 }));
+    add(text(pageId, T.pricingTitle, PAD, y + 102, COL, { size: 42, weight: 800, align: "center", height: 70 }));
     profile.pricing.forEach((plan, i) => {
       const x = PAD + i * 400;
       const cy = y + 200;
@@ -333,7 +333,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   if (hasContact) {
     const h = 560;
     add(rect(pageId, 0, y, W, h, { fill: PBG, radius: 0 }));
-    add(eyebrow(pageId, "Contact", PAD, y + 80, 520));
+    add(eyebrow(pageId, T.contactLabel, PAD, y + 80, 520));
     add(text(pageId, `Get in touch with ${name}`, PAD, y + 112, 560, { size: 40, weight: 800, height: 120 }));
 
     const rows: Array<[string, string]> = [];
