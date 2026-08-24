@@ -395,6 +395,8 @@ export interface LayerStyle {
   opacity?: number;
   cornerRadius?: number;
   shadow?: boolean;
+  /** image fit: "cover" crops to fill the box (no stretching). */
+  fit?: "cover" | "fill";
   // text
   fontFamily?: string;
   fontSize?: number;
