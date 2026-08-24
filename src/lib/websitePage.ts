@@ -160,8 +160,67 @@ function eyebrow(pageId: string, label: string, x: number, y: number, width: num
 
 const cloneAction = (a: LayerAction): LayerAction => ({ ...a, id: uid(), payload: { ...a.payload } });
 
+/** Tints a hex colour so brand backgrounds get consistent surface shades. */
+function shade(hex: string, amount: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const dark = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000 < 128;
+  const parts = rgb.map((c) => {
+    const v = dark ? c + (255 - c) * amount : c * (1 - amount);
+    return Math.max(0, Math.min(255, Math.round(v)));
+  });
+  return `#${parts.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+type ThemeCopy = {
+  aboutLabel: string;
+  servicesLabel: string;
+  servicesTitle: string;
+  workLabel: string;
+  workTitle: string;
+  pricingTitle: string;
+  contactLabel: string;
+  primaryCta: string;
+};
+
+/** Section wording per business theme/category from the client's dashboard. */
+function themeCopy(theme?: string): ThemeCopy {
+  const baseCopy: ThemeCopy = {
+    aboutLabel: "About",
+    servicesLabel: "Services",
+    servicesTitle: "What we offer",
+    workLabel: "Our work",
+    workTitle: "Gallery",
+    pricingTitle: "Our prices",
+    contactLabel: "Contact",
+    primaryCta: "Get in touch",
+  };
+  switch (theme) {
+    case "restaurant":
+      return { ...baseCopy, servicesLabel: "Menu", servicesTitle: "On the menu", workLabel: "Gallery", workTitle: "From our kitchen", pricingTitle: "Menu prices", primaryCta: "View menu" };
+    case "realtor":
+      return { ...baseCopy, servicesTitle: "How we help you move", workLabel: "Listings", workTitle: "Featured properties", pricingTitle: "Listing prices", primaryCta: "Book a viewing" };
+    case "beauty":
+      return { ...baseCopy, servicesLabel: "Treatments", servicesTitle: "Our treatments", workTitle: "Recent looks", pricingTitle: "Price list", primaryCta: "Book now" };
+    case "construction":
+      return { ...baseCopy, servicesTitle: "What we build", workLabel: "Projects", workTitle: "Completed projects", pricingTitle: "Estimates", primaryCta: "Request a quote" };
+    case "event":
+      return { ...baseCopy, servicesLabel: "Packages", servicesTitle: "Event packages", workLabel: "Events", workTitle: "Past events", pricingTitle: "Packages", primaryCta: "Reserve your spot" };
+    case "fitness":
+      return { ...baseCopy, servicesLabel: "Programs", servicesTitle: "Training programs", workLabel: "Results", workTitle: "In the gym", pricingTitle: "Memberships", primaryCta: "Start training" };
+    case "retail":
+      return { ...baseCopy, servicesLabel: "Products", servicesTitle: "Shop our products", workLabel: "Lookbook", workTitle: "Featured items", pricingTitle: "Prices", primaryCta: "Shop now" };
+    case "personal":
+      return { ...baseCopy, servicesTitle: "What I do", workLabel: "Portfolio", workTitle: "Selected work", pricingTitle: "Packages", primaryCta: "Work with me" };
+    default:
+      return baseCopy;
+  }
+}
+
 /**
- * Builds the Website page for the CURRENT project.
+ * Builds the Website page for the CURRENT client and project.
  * Only sections backed by real project data are generated.
  */
 export function buildWebsitePage(flyerId: string, index: number, profile: WebsiteProfile): FlyerPage {
