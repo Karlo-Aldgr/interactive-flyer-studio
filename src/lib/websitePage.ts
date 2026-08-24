@@ -650,13 +650,15 @@ export function buildWebsitePage(
   const featuredImage = galleryImages[1] || galleryImages[0] || heroImage;
   if (featuredImage) {
     const featured = (profile.portfolio ?? [])[0];
-    const headH = heading(y + M.sectionPad, undefined, T.featuredTitle, featured?.description ?? profile.tagline, false);
+    const featSub = featured?.description ?? profile.tagline;
+    const headH = measureHead(undefined, T.featuredTitle, featSub);
     const showW = Math.round(COL * (device === "mobile" ? 1 : 0.82));
     const showH = Math.round(showW * 0.52);
     const frame = 14;
     const h = M.sectionPad * 2 + headH + showH + frame * 2;
-    const band = rect(pageId, 0, y, W, h, { fill: LIGHT_2, radius: 0 });
-    L.splice(L.findIndex((l) => l.position.y >= y + M.sectionPad), 0, band);
+    add(rect(pageId, 0, y, W, h, { fill: LIGHT_2, radius: 0 }));
+    heading(y + M.sectionPad, undefined, T.featuredTitle, featSub, false);
+
     const fx = PAD + Math.round((COL - showW) / 2);
     const fy = y + M.sectionPad + headH;
     add(rect(pageId, fx, fy, showW, showH + frame * 2, { fill: "#2C3235", radius: 8 }));
