@@ -79,6 +79,8 @@ export function TopBar({ saving, onSave }: Props) {
 
   const activePage = pagesForLinks.find((p) => p.id === selectedPageId) ?? pagesForLinks[0];
   const activePageHasOwnSize = !!activePage?.background?.size;
+  const hasWebsitePage = pagesForLinks.some((p) => p.background?.websitePage);
+
   const activeWidth = activePage?.background?.size?.width ?? flyer?.settings.width ?? 1080;
   const activeHeight = activePage?.background?.size?.height ?? flyer?.settings.height ?? 1920;
 
