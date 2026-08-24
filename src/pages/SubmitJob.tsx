@@ -22,6 +22,7 @@ export default function SubmitJob() {
   const [brief, setBrief] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [adminChoose, setAdminChoose] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { setType(initialType); }, [initialType]);
@@ -34,7 +35,7 @@ export default function SubmitJob() {
     if (!title.trim()) { toast.error("Please add a title for your job."); return; }
     if (type === "upload" && !file) { toast.error("Please upload your flyer file."); return; }
     if (type === "design" && !brief.trim()) { toast.error("Please share a short brief."); return; }
-    if (selected.length === 0) { toast.error("Pick at least one interaction."); return; }
+    if (!adminChoose && selected.length === 0) { toast.error("Pick at least one interaction, or tap Admin choose."); return; }
 
     setSubmitting(true);
     try {
@@ -53,7 +54,9 @@ export default function SubmitJob() {
         customer_email: user.email ?? null,
         type,
         title: title.trim(),
-        brief: brief.trim() || null,
+        brief: [brief.trim(), adminChoose ? "[Customer asked our team to choose the interactions]" : ""]
+          .filter(Boolean)
+          .join("\n\n") || null,
         upload_url: uploadUrl,
         selected_actions: selected,
         status: "new",
@@ -108,8 +111,27 @@ export default function SubmitJob() {
         </div>
 
         <div>
-          <Label>Pick your interactions ({selected.length} selected)</Label>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Label>Pick your interactions ({selected.length} selected)</Label>
+            <Button
+              type="button"
+              variant={adminChoose ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setAdminChoose((v) => !v);
+                if (!adminChoose) setSelected([]);
+              }}
+            >
+              {adminChoose ? "Admin will choose ✓" : "Admin choose"}
+            </Button>
+          </div>
+          {adminChoose && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Our team will pick the best interactions for your flyer.
+            </p>
+          )}
+          <div className={`mt-3 grid gap-2 sm:grid-cols-2 ${adminChoose ? "pointer-events-none opacity-50" : ""}`}>
+
             {INTERACTIONS.map((it) => {
               const on = selected.includes(it.id);
               return (
