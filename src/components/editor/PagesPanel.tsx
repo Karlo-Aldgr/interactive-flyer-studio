@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed, IdCard } from "lucide-react";
+import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed, IdCard, Globe, Monitor, Tablet, Smartphone } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,9 @@ export function PagesPanel() {
   const addPage = useEditorStore((s) => s.addPage);
   const addLandingPage = useEditorStore((s) => s.addLandingPage);
   const addScannedMenuPage = useEditorStore((s) => s.addScannedMenuPage);
+  const addWebsitePage = useEditorStore((s) => s.addWebsitePage);
+  const setWebsiteDevice = useEditorStore((s) => s.setWebsiteDevice);
+
   const setPageSize = useEditorStore((s) => s.setPageSize);
   const deletePage = useEditorStore((s) => s.deletePage);
   const duplicatePage = useEditorStore((s) => s.duplicatePage);
