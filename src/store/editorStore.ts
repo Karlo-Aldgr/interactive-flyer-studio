@@ -5,7 +5,7 @@ import { ensureUuid } from "@/lib/safeBrowser";
 import type { SubjectDetection, NormalizedPoint } from "@/lib/subjectDetect";
 import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant } from "@/lib/editorToolPresets";
 import { buildBizadPage } from "@/lib/bizadPage";
-import { buildWebsitePage, WEBSITE_DEVICES, type WebsiteDevice } from "@/lib/websitePage";
+import { buildWebsitePage, type WebsiteDevice } from "@/lib/websitePage";
 import type { WebsiteProfile } from "@/lib/websiteProfile";
 
 import type { BizadRecord } from "@/lib/bizad";

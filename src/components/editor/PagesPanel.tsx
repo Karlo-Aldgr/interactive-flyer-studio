@@ -322,7 +322,8 @@ export function PagesPanel() {
             })}
           </div>
           <p className="text-[10px] text-muted-foreground">
-            One long scrolling page. Switching width scales the whole layout.
+            One long scrolling page. Switching a width re-renders the responsive layout for that
+            viewport (columns, typography and stacking) — nothing is scaled. Height follows content.
           </p>
         </div>
       )}
@@ -392,7 +393,7 @@ export function PagesPanel() {
         </div>
       )}
 
-      {activePage && flyer && (
+      {activePage && flyer && !activePage.background?.websitePage && (
         <PageSizeSection
           pageId={activePage.id}
           currentW={activePage.background?.size?.width ?? flyer.settings.width}
