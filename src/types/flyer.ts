@@ -501,7 +501,12 @@ export interface FlyerPage {
     bizadPage?: boolean;
     /** Digital business card page is toggled off — kept in the editor but not published. */
     bizadHidden?: boolean;
+    /** Marks this page as the single long-scrolling Website page (editor-only for now). */
+    websitePage?: boolean;
+    /** Which responsive width the Website page is currently being edited at. */
+    websiteDevice?: "desktop" | "tablet" | "mobile";
   };
+
 
   layers: Layer[];
   intro?: PageIntro | null;

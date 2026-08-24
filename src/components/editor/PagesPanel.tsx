@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed, IdCard } from "lucide-react";
+import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed, IdCard, Globe, Monitor, Tablet, Smartphone } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,9 @@ export function PagesPanel() {
   const addPage = useEditorStore((s) => s.addPage);
   const addLandingPage = useEditorStore((s) => s.addLandingPage);
   const addScannedMenuPage = useEditorStore((s) => s.addScannedMenuPage);
+  const addWebsitePage = useEditorStore((s) => s.addWebsitePage);
+  const setWebsiteDevice = useEditorStore((s) => s.setWebsiteDevice);
+
   const setPageSize = useEditorStore((s) => s.setPageSize);
   const deletePage = useEditorStore((s) => s.deletePage);
   const duplicatePage = useEditorStore((s) => s.duplicatePage);
@@ -185,6 +188,11 @@ export function PagesPanel() {
                 Add story page (1080×1920)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => addWebsitePage()}>
+                <Globe className="mr-2 h-3.5 w-3.5" /> Add website page
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem disabled={scanning} onClick={() => fileRef.current?.click()}>
                 <Camera className="mr-2 h-3.5 w-3.5" /> {scanning ? "Scanning…" : "Scan menu photo"}
               </DropdownMenuItem>
@@ -195,9 +203,10 @@ export function PagesPanel() {
       <div className="max-h-64 overflow-y-auto">
         {(() => { let flyerCount = 0; return pages.map((p, i) => {
           const isBizad = !!p.background?.bizadPage;
-          const isLanding = !isBizad && !!p.background?.linkPageId;
-          if (!isLanding && !isBizad) flyerCount += 1;
-          const label = isBizad ? "B" : isLanding ? "L" : String(flyerCount);
+          const isWebsite = !!p.background?.websitePage;
+          const isLanding = !isBizad && !isWebsite && !!p.background?.linkPageId;
+          if (!isLanding && !isBizad && !isWebsite) flyerCount += 1;
+          const label = isBizad ? "B" : isWebsite ? "W" : isLanding ? "L" : String(flyerCount);
           const active = p.id === selectedPageId;
           const editing = editingId === p.id;
           return (
@@ -208,10 +217,11 @@ export function PagesPanel() {
             >
               <span
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold"
-                title={isBizad ? "Digital business card page (editor only)" : isLanding ? "Landing page (not counted)" : `Page ${flyerCount}`}
+                title={isBizad ? "Digital business card page (editor only)" : isWebsite ? "Website page (long scrolling)" : isLanding ? "Landing page (not counted)" : `Page ${flyerCount}`}
               >
-                {isBizad ? <IdCard className="h-3.5 w-3.5" /> : label}
+                {isBizad ? <IdCard className="h-3.5 w-3.5" /> : isWebsite ? <Globe className="h-3.5 w-3.5" /> : label}
               </span>
+
               {editing ? (
                 <Input
                   autoFocus
@@ -259,6 +269,38 @@ export function PagesPanel() {
           );
         }); })()}
       </div>
+
+      {activePage?.background?.websitePage && (
+        <div className="space-y-2 border-t border-border bg-muted/20 p-3">
+          <div className="text-xs font-semibold uppercase text-muted-foreground">Website width</div>
+          <div className="grid grid-cols-3 gap-1">
+            {([
+              ["desktop", Monitor, "1440"],
+              ["tablet", Tablet, "834"],
+              ["mobile", Smartphone, "430"],
+            ] as const).map(([device, Icon, w]) => {
+              const on = (activePage.background?.websiteDevice ?? "desktop") === device;
+              return (
+                <Button
+                  key={device}
+                  size="sm"
+                  variant={on ? "default" : "outline"}
+                  className="h-8 flex-col gap-0 px-1 text-[10px] capitalize"
+                  onClick={() => setWebsiteDevice(device)}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {w}
+                </Button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            One long scrolling page. Switching width scales the whole layout.
+          </p>
+        </div>
+      )}
+
+
 
       {activePage && (
         <div className="space-y-3 border-t border-border bg-muted/20 p-3">
