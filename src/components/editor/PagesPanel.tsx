@@ -270,6 +270,38 @@ export function PagesPanel() {
         }); })()}
       </div>
 
+      {activePage?.background?.websitePage && (
+        <div className="space-y-2 border-t border-border bg-muted/20 p-3">
+          <div className="text-xs font-semibold uppercase text-muted-foreground">Website width</div>
+          <div className="grid grid-cols-3 gap-1">
+            {([
+              ["desktop", Monitor, "1440"],
+              ["tablet", Tablet, "834"],
+              ["mobile", Smartphone, "430"],
+            ] as const).map(([device, Icon, w]) => {
+              const on = (activePage.background?.websiteDevice ?? "desktop") === device;
+              return (
+                <Button
+                  key={device}
+                  size="sm"
+                  variant={on ? "default" : "outline"}
+                  className="h-8 flex-col gap-0 px-1 text-[10px] capitalize"
+                  onClick={() => setWebsiteDevice(device)}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {w}
+                </Button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            One long scrolling page. Switching width scales the whole layout.
+          </p>
+        </div>
+      )}
+
+
+
       {activePage && (
         <div className="space-y-3 border-t border-border bg-muted/20 p-3">
           <div className="text-xs font-semibold uppercase text-muted-foreground">Page background</div>
