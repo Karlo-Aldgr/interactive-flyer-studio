@@ -191,15 +191,19 @@ export function useFlyerData(flyerId: string | undefined) {
       const pagesToSave = changed ? normalizedPages : currentPages;
 
       // 1. Update flyer meta
-      await supabase
-        .from("flyers")
-        .update({
-          title: f.title,
-          status: f.status,
-          public_slug: f.public_slug,
-          settings: f.settings as any,
-        })
-        .eq("id", f.id);
+      {
+        const { error } = await supabase
+          .from("flyers")
+          .update({
+            title: f.title,
+            status: f.status,
+            public_slug: f.public_slug,
+            settings: f.settings as any,
+          })
+          .eq("id", f.id);
+        if (error) throw error;
+      }
+
 
       // 2. Fetch current DB state to diff
       const { data: dbPages } = await supabase
