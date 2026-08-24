@@ -68,7 +68,7 @@ export type OnboardingKnowledgeSource = Pick<
   | "instagram_url"
   | "tiktok_url"
   | "other_social_url"
->;
+> & { ai_description?: string | null };
 
 /** Text block fed to Ask AI from onboarding fields. */
 export function buildChatbotKnowledgeFromOnboarding(source: OnboardingKnowledgeSource): string {
@@ -77,6 +77,9 @@ export function buildChatbotKnowledgeFromOnboarding(source: OnboardingKnowledgeS
   if (source.business_slogan?.trim()) lines.push(`Slogan: ${source.business_slogan.trim()}`);
   if (source.business_description?.trim()) {
     lines.push(`About the business:\n${source.business_description.trim()}`);
+  }
+  if (source.ai_description?.trim()) {
+    lines.push(`Extra details for AI:\n${source.ai_description.trim()}`);
   }
   if (source.business_address?.trim()) lines.push(`Address: ${source.business_address.trim()}`);
   if (source.phone?.trim()) lines.push(`Phone: ${source.phone.trim()}`);
@@ -301,7 +304,7 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
           await supabase
             .from("onboarding_submissions" as any)
             .update({ hotspot_suggestions: data })
-            .eq("user_id", userId);
+            .eq("flyer_job_id", jobId);
         }
       } catch (err) {
         console.warn("smart-detect background run failed", err);
