@@ -12,6 +12,7 @@ export interface OnboardingSubmission {
   business_address: string | null;
   business_slogan: string | null;
   business_description: string | null;
+  ai_details: string | null;
   website_url: string | null;
   website_help: OnboardingHelp;
   facebook_url: string | null;
@@ -61,6 +62,7 @@ export type OnboardingKnowledgeSource = Pick<
   | "business_slogan"
   | "business_address"
   | "business_description"
+  | "ai_details"
   | "website_url"
   | "facebook_url"
   | "instagram_url"
@@ -75,6 +77,9 @@ export function buildChatbotKnowledgeFromOnboarding(source: OnboardingKnowledgeS
   if (source.business_slogan?.trim()) lines.push(`Slogan: ${source.business_slogan.trim()}`);
   if (source.business_description?.trim()) {
     lines.push(`About the business:\n${source.business_description.trim()}`);
+  }
+  if (source.ai_details?.trim()) {
+    lines.push(`Detailed business info:\n${source.ai_details.trim()}`);
   }
   if (source.business_address?.trim()) lines.push(`Address: ${source.business_address.trim()}`);
   if (source.phone?.trim()) lines.push(`Phone: ${source.phone.trim()}`);
@@ -243,6 +248,7 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     business_address: input.business_address,
     business_slogan: input.business_slogan,
     business_description: input.business_description,
+    ai_details: input.ai_details ?? null,
     website_url: input.website_url,
     website_help: input.website_help,
     facebook_url: input.facebook_url,
