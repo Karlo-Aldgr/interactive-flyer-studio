@@ -188,10 +188,12 @@ function image(pageId: string, src: string, x: number, y: number, width: number,
     ...base(pageId, "image"),
     position: { x, y },
     size: { width, height },
-    style: { cornerRadius: radius },
+    /* cover = crop to the box, never stretch the client's photo */
+    style: { cornerRadius: radius, fit: "cover" },
     content: { src },
   };
 }
+
 
 function icon(pageId: string, name: string, x: number, y: number, size = 44, color = ACCENT): Layer {
   return {
