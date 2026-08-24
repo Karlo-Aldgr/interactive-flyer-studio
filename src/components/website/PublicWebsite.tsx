@@ -244,19 +244,21 @@ function AbsLayer({
   s,
   doc,
   openForm,
+  fullBleed = false,
 }: {
   layer: Layer;
   band: Band;
   s: number;
   doc: WebsiteDocument;
   openForm: (r: WebsiteFormRequest) => void;
+  fullBleed?: boolean;
 }) {
   const clickable = !!layer.action;
   const box: React.CSSProperties = {
     position: "absolute",
-    left: layer.position.x * s,
+    left: fullBleed ? 0 : layer.position.x * s,
     top: (layer.position.y - band.top) * s,
-    width: layer.size.width * s,
+    width: fullBleed ? "100%" : layer.size.width * s,
     height: layer.size.height * s,
     opacity: layer.style.opacity ?? 1,
     transform: layer.rotation ? `rotate(${layer.rotation}deg)` : undefined,
@@ -264,6 +266,7 @@ function AbsLayer({
     cursor: clickable ? "pointer" : undefined,
   };
   const onClick = clickable ? () => runAction(layer.action, openForm, layer.id) : undefined;
+
 
   switch (layer.type) {
     case "text": {
