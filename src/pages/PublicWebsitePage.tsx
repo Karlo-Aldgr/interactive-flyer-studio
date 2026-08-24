@@ -90,7 +90,7 @@ export default function PublicWebsitePage({ previewMode = false }: { previewMode
           Draft preview — not public yet
         </div>
       )}
-      <PublicWebsite doc={site.doc} flyerId={site.flyerId} canSubmitForms={site.status === "published"} />
+      <PublicWebsite doc={site.doc} page={site.page} flyerId={site.flyerId} canSubmitForms={site.status === "published"} />
     </>
   );
 }
