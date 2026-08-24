@@ -1,26 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as LucideIcons from "lucide-react";
 import { Menu, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { LayerAction } from "@/types/flyer";
-import type { WebsiteBlock, WebsiteCard, WebsiteDocument, WebsiteSection } from "@/lib/websiteDocument";
+import type { FlyerPage, Layer, LayerAction } from "@/types/flyer";
+import type { WebsiteDocument } from "@/lib/websiteDocument";
 
 /**
  * Public Website renderer.
  *
- * Renders a SAVED website document as a normal, vertically scrolling, fully
- * responsive webpage. It contains zero editor UI and loads no editor state —
- * only the saved page/layers/actions passed in as a parsed document.
+ * Renders the SAVED website page (pages → layers → actions) exactly as it was
+ * composed in the editor. Nothing is regenerated: every band, layer, style and
+ * action comes straight from the saved data.
+ *
+ * Wide viewports render the saved composition proportionally (true 1:1 match
+ * with the editor). Narrow viewports reflow the same saved layers into a
+ * stacked, readable layout — never a squeezed desktop composition.
  */
 
-/* --------------------------------------------------------------- helpers */
+const REFLOW_BELOW = 900;
 
-function fluid(size: number, designWidth: number, minRatio = 0.66) {
-  const min = Math.max(11, Math.round(size * minRatio));
-  const vw = ((size / designWidth) * 100).toFixed(3);
-  return `clamp(${min}px, ${vw}vw, ${size}px)`;
-}
+/* -------------------------------------------------------------- utilities */
 
 function Icon({ name, color, size }: { name?: string; color?: string; size: number }) {
   const Cmp = (LucideIcons as any)[name || "Star"] || LucideIcons.Star;
@@ -31,8 +31,6 @@ function scrollToAnchor(anchor: string) {
   const el = document.getElementById(anchor);
   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-
-/* ---------------------------------------------------------------- actions */
 
 export type WebsiteFormRequest = { action: LayerAction; layerId: string } | null;
 
@@ -59,12 +57,12 @@ function runAction(action: LayerAction | null | undefined, openForm: (r: Website
       return;
     case "map": {
       const { mapAddress, mapLat, mapLng } = p;
-      const hasCoords = mapLat != null && mapLng != null;
-      const url = hasCoords
-        ? `https://www.google.com/maps/search/?api=1&query=${mapLat},${mapLng}`
-        : mapAddress
-          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapAddress)}`
-          : "";
+      const url =
+        mapLat != null && mapLng != null
+          ? `https://www.google.com/maps/search/?api=1&query=${mapLat},${mapLng}`
+          : mapAddress
+            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapAddress)}`
+            : "";
       if (url) window.open(url, "_blank", "noopener,noreferrer");
       return;
     }
@@ -80,237 +78,632 @@ function runAction(action: LayerAction | null | undefined, openForm: (r: Website
   }
 }
 
-/* ----------------------------------------------------------------- blocks */
+/* ------------------------------------------------------------ band model */
 
-function BlockView({
-  block,
-  doc,
-  openForm,
-  fullWidth,
-}: {
-  block: WebsiteBlock;
-  doc: WebsiteDocument;
-  openForm: (r: WebsiteFormRequest) => void;
-  fullWidth?: boolean;
-}) {
-  const clickable = !!block.action;
-  const onClick = clickable ? () => runAction(block.action, openForm, block.id) : undefined;
+interface FormField {
+  key: string;
+  label: string;
+  multiline: boolean;
+  boxId: string;
+  labelId: string;
+}
 
-  const common: React.CSSProperties = {
-    cursor: clickable ? "pointer" : undefined,
-    opacity: block.opacity ?? 1,
+interface FormModel {
+  fields: FormField[];
+  buttonId: string;
+  action: LayerAction | null;
+  consumed: Set<string>;
+}
+
+interface Band {
+  id: string;
+  anchor: string;
+  top: number;
+  height: number;
+  bg?: string;
+  bgLayerId: string;
+  layers: Layer[];
+  form: FormModel | null;
+}
+
+const isFullWidth = (l: Layer, W: number) => l.position.x <= 4 && l.size.width >= W - 8;
+const centerY = (l: Layer) => l.position.y + l.size.height / 2;
+const anchorOf = (a?: LayerAction | null) => {
+  const url = a?.type === "open_url" ? (a.payload as any)?.url ?? "" : "";
+  return typeof url === "string" && url.startsWith("#") ? url.slice(1) : null;
+};
+
+function fieldKey(label: string) {
+  const t = label.toLowerCase();
+  if (t.includes("name")) return "name";
+  if (t.includes("email") || t.includes("@")) return "email";
+  if (t.includes("phone") || t.includes("number")) return "phone";
+  if (t.includes("message") || t.includes("tell us")) return "message";
+  return t.replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "field";
+}
+
+/** Detects an in-canvas contact form: input rectangles + placeholder text + a form button. */
+function detectForm(layers: Layer[], W: number): FormModel | null {
+  const button = layers.find(
+    (l) => l.type === "button" && ["form", "rsvp", "subscribe"].includes(String(l.action?.type))
+  );
+  if (!button) return null;
+
+  const boxes = layers.filter(
+    (l) =>
+      l.type === "shape" &&
+      !isFullWidth(l, W) &&
+      l.size.height >= 36 &&
+      l.size.height <= 200 &&
+      l.size.width >= 160 &&
+      l.content.shape !== "line"
+  );
+
+  const consumed = new Set<string>();
+  const fields: FormField[] = [];
+  for (const box of boxes) {
+    const inner = layers.find(
+      (l) =>
+        l.type === "text" &&
+        !consumed.has(l.id) &&
+        l.position.x >= box.position.x - 4 &&
+        l.position.y >= box.position.y - 4 &&
+        l.position.x + l.size.width <= box.position.x + box.size.width + 8 &&
+        l.position.y + l.size.height <= box.position.y + box.size.height + 8
+    );
+    if (!inner) continue;
+    const label = (inner.content.text ?? "").trim();
+    if (!label || label.length > 40) continue;
+    consumed.add(box.id);
+    consumed.add(inner.id);
+    fields.push({
+      key: fieldKey(label),
+      label,
+      multiline: box.size.height > 70,
+      boxId: box.id,
+      labelId: inner.id,
+    });
+  }
+  if (!fields.length) return null;
+  consumed.add(button.id);
+  return { fields, buttonId: button.id, action: button.action ?? null, consumed };
+}
+
+function buildBands(page: FlyerPage, doc: WebsiteDocument): { W: number; nav: Band | null; bands: Band[] } {
+  const W = page.background?.size?.width || doc.designWidth || 1440;
+  const layers = [...(page.layers ?? [])].sort((a, b) => a.z_index - b.z_index);
+
+  const candidates = layers
+    .filter((l) => l.type === "shape" && isFullWidth(l, W) && l.size.height > 60)
+    .sort((a, b) => a.position.y - b.position.y || b.size.height - a.size.height);
+
+  // A full-width shape that sits INSIDE an already accepted band is an overlay /
+  // tint, not a new section — otherwise the section would be duplicated and the
+  // page would grow a large empty gap.
+  const ranges: { shape: Layer; top: number; bottom: number }[] = [];
+  for (const s of candidates) {
+    const top = s.position.y;
+    const bottom = top + s.size.height;
+    const inside = ranges.some((r) => top >= r.top - 2 && bottom <= r.bottom + 2);
+    if (inside) continue;
+    ranges.push({ shape: s, top, bottom });
+  }
+
+  const used = new Set(ranges.map((r) => r.shape.id));
+
+  const anchorQueue = doc.nav.map((n) => n.anchor);
+
+  const make = (r: (typeof ranges)[number], anchor: string): Band => {
+    const own = layers.filter((l) => !used.has(l.id) && centerY(l) >= r.top - 2 && centerY(l) < r.bottom + 2);
+    own.forEach((l) => used.add(l.id));
+    return {
+      id: r.shape.id,
+      anchor,
+      top: r.top,
+      height: r.bottom - r.top,
+      bg: r.shape.style.fill,
+      bgLayerId: r.shape.id,
+      layers: own,
+      form: detectForm(own, W),
+    };
   };
 
-  if (block.kind === "divider") {
-    return <hr style={{ width: "100%", border: 0, height: 1, background: block.fill || "rgba(255,255,255,0.14)" }} />;
+  const navBand = ranges.length ? make(ranges[0], "site-nav") : null;
+  const rest = ranges.slice(1);
+  const bands = rest.map((r, i) => {
+    const anchorFromLayers = null;
+    return make(r, anchorFromLayers || anchorQueue[i] || (i === rest.length - 1 ? "footer" : `section-${i + 1}`));
+  });
+
+  // Any layer that fell outside every band still has to render — append it in
+  // a synthetic band so nothing saved is silently dropped.
+  const orphans = layers.filter((l) => !used.has(l.id));
+  if (orphans.length) {
+    const top = Math.min(...orphans.map((l) => l.position.y));
+    const bottom = Math.max(...orphans.map((l) => l.position.y + l.size.height));
+    bands.push({
+      id: "orphans",
+      anchor: "more",
+      top,
+      height: bottom - top,
+      bg: undefined,
+      bgLayerId: "",
+      layers: orphans,
+      form: detectForm(orphans, W),
+    });
   }
 
-  if (block.kind === "image" && block.src) {
+  return { W, nav: navBand, bands };
+}
+
+/* ------------------------------------------------------- absolute rendering */
+
+function AbsLayer({
+  layer,
+  band,
+  s,
+  doc,
+  openForm,
+}: {
+  layer: Layer;
+  band: Band;
+  s: number;
+  doc: WebsiteDocument;
+  openForm: (r: WebsiteFormRequest) => void;
+}) {
+  const clickable = !!layer.action;
+  const box: React.CSSProperties = {
+    position: "absolute",
+    left: layer.position.x * s,
+    top: (layer.position.y - band.top) * s,
+    width: layer.size.width * s,
+    height: layer.size.height * s,
+    opacity: layer.style.opacity ?? 1,
+    transform: layer.rotation ? `rotate(${layer.rotation}deg)` : undefined,
+    transformOrigin: "top left",
+    cursor: clickable ? "pointer" : undefined,
+  };
+  const onClick = clickable ? () => runAction(layer.action, openForm, layer.id) : undefined;
+
+  switch (layer.type) {
+    case "text": {
+      const size = (layer.style.fontSize ?? 16) * s;
+      return (
+        <div
+          onClick={onClick}
+          style={{
+            ...box,
+            height: undefined,
+            minHeight: layer.size.height * s,
+            color: layer.style.color || "#F8FAFC",
+            fontSize: size,
+            fontWeight: (layer.style.fontWeight as any) ?? 400,
+            fontStyle: layer.style.fontStyle,
+            fontFamily: layer.style.fontFamily || doc.fontFamily,
+            textAlign: layer.style.align ?? "left",
+            lineHeight: 1.32,
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+          }}
+        >
+          {layer.content.text}
+        </div>
+      );
+    }
+    case "image":
+      return layer.content.src ? (
+        <img
+          src={layer.content.src}
+          alt=""
+          loading="lazy"
+          onClick={onClick}
+          style={{ ...box, objectFit: "cover", borderRadius: (layer.style.cornerRadius ?? 0) * s, display: "block" }}
+        />
+      ) : null;
+    case "video":
+      return (
+        <video
+          src={layer.content.videoUrl || layer.content.src}
+          poster={layer.content.posterUrl}
+          autoPlay={layer.content.videoAutoplay !== false}
+          loop={layer.content.videoLoop !== false}
+          muted={layer.content.videoMuted !== false}
+          playsInline
+          controls={layer.content.videoAutoplay === false}
+          style={{ ...box, objectFit: "cover", borderRadius: (layer.style.cornerRadius ?? 0) * s }}
+        />
+      );
+    case "icon":
+      return (
+        <span onClick={onClick} style={{ ...box, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <Icon
+            name={layer.content.iconName || (layer.style as any).iconName}
+            color={layer.style.color || doc.accent}
+            size={Math.min(layer.size.width, layer.size.height) * s}
+          />
+        </span>
+      );
+    case "button":
+      return (
+        <button
+          type="button"
+          onClick={onClick}
+          style={{
+            ...box,
+            background: layer.style.fill || doc.accent,
+            color: layer.style.color || "#fff",
+            border: layer.style.stroke ? `${(layer.style.strokeWidth ?? 1) * s}px solid ${layer.style.stroke}` : "none",
+            borderRadius: (layer.style.cornerRadius ?? 999) * s,
+            fontSize: (layer.style.fontSize ?? 16) * s,
+            fontWeight: (layer.style.fontWeight as any) ?? 700,
+            fontFamily: layer.style.fontFamily || doc.fontFamily,
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          {layer.content.label || layer.content.text}
+        </button>
+      );
+    case "shape": {
+      if (layer.content.shape === "line") {
+        return (
+          <div
+            style={{
+              ...box,
+              height: Math.max(1, (layer.style.strokeWidth ?? layer.size.height) * s),
+              background: layer.style.fill || layer.style.stroke || "rgba(255,255,255,0.14)",
+            }}
+          />
+        );
+      }
+      return (
+        <div
+          onClick={onClick}
+          style={{
+            ...box,
+            background: layer.style.fill,
+            border: layer.style.stroke ? `${(layer.style.strokeWidth ?? 1) * s}px solid ${layer.style.stroke}` : undefined,
+            borderRadius:
+              layer.content.shape === "circle" ? "50%" : (layer.style.cornerRadius ?? 0) * s,
+          }}
+        />
+      );
+    }
+    default:
+      return null;
+  }
+}
+
+/* ---------------------------------------------------------------- the form */
+
+function useFormState(fields: FormField[]) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const set = (k: string, v: string) => setValues((prev) => ({ ...prev, [k]: v }));
+  const reset = () => setValues({});
+  return { values, set, reset, fields };
+}
+
+function useFormSubmit(flyerId: string, canSubmit: boolean) {
+  const [busy, setBusy] = useState(false);
+  const submit = async (fields: FormField[], values: Record<string, string>, action: LayerAction | null, onDone: () => void) => {
+    for (const f of fields) {
+      if (!values[f.key]?.trim()) return toast.error(`Please enter your ${f.label.toLowerCase()}`);
+    }
+    if (!canSubmit) {
+      toast.info("This is a preview — messages are only saved on the published website.");
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase
+      .from("form_submissions")
+      .insert([{ flyer_id: flyerId, layer_id: null, data: { ...values, _preset: "website" } as any }]);
+    setBusy(false);
+    if (error) return toast.error("Could not send your message");
+    toast.success(((action?.payload as any)?.successMessage as string) || "Thanks — we'll be in touch.");
+    onDone();
+  };
+  return { busy, submit };
+}
+
+function inputStyle(box: Layer, s: number, band: Band, absolute: boolean): React.CSSProperties {
+  return absolute
+    ? {
+        position: "absolute",
+        left: box.position.x * s,
+        top: (box.position.y - band.top) * s,
+        width: box.size.width * s,
+        height: box.size.height * s,
+        borderRadius: (box.style.cornerRadius ?? 10) * s,
+        background: box.style.fill || "#161F32",
+        border: box.style.stroke ? `1px solid ${box.style.stroke}` : "1px solid rgba(255,255,255,0.08)",
+      }
+    : {
+        width: "100%",
+        minHeight: box.size.height > 70 ? 110 : 50,
+        borderRadius: 12,
+        background: box.style.fill || "#161F32",
+        border: box.style.stroke ? `1px solid ${box.style.stroke}` : "1px solid rgba(255,255,255,0.08)",
+      };
+}
+
+/* --------------------------------------------------------------- band view */
+
+function BandView({
+  band,
+  W,
+  width,
+  doc,
+  flyerId,
+  canSubmitForms,
+  openForm,
+}: {
+  band: Band;
+  W: number;
+  width: number;
+  doc: WebsiteDocument;
+  flyerId: string;
+  canSubmitForms: boolean;
+  openForm: (r: WebsiteFormRequest) => void;
+}) {
+  const scaled = width >= REFLOW_BELOW;
+  const s = Math.min(1, width / W);
+  const form = band.form;
+  const { values, set, reset } = useFormState(form?.fields ?? []);
+  const { busy, submit } = useFormSubmit(flyerId, canSubmitForms);
+
+  const byId = useMemo(() => new Map(band.layers.map((l) => [l.id, l])), [band.layers]);
+  const ordered = useMemo(() => [...band.layers].sort((a, b) => a.z_index - b.z_index), [band.layers]);
+  const formButton = form ? byId.get(form.buttonId) : undefined;
+
+  const doSubmit = () => form && submit(form.fields, values, form.action, reset);
+
+  /* ------------------------------------------------ scaled (desktop) mode */
+  if (scaled) {
     return (
-      <img
-        src={block.src}
-        alt=""
-        loading="lazy"
-        onClick={onClick}
+      <section
+        id={band.anchor}
         style={{
-          ...common,
+          position: "relative",
           width: "100%",
-          aspectRatio: `${Math.max(1, block.w)} / ${Math.max(1, block.h)}`,
-          objectFit: "cover",
-          borderRadius: block.radius ?? 16,
-          display: "block",
-        }}
-      />
-    );
-  }
-
-  if (block.kind === "video" && block.src) {
-    return (
-      <video
-        src={block.src}
-        poster={block.posterUrl}
-        controls
-        playsInline
-        style={{ ...common, width: "100%", borderRadius: block.radius ?? 16, display: "block" }}
-      />
-    );
-  }
-
-  if (block.kind === "icon") {
-    return (
-      <span onClick={onClick} style={{ ...common, display: "inline-flex" }}>
-        <Icon name={block.iconName} color={block.color || doc.accent} size={Math.min(48, Math.max(18, block.h))} />
-      </span>
-    );
-  }
-
-  if (block.kind === "button") {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        style={{
-          ...common,
-          background: block.fill || doc.accent,
-          color: block.color || "#fff",
-          borderRadius: block.radius ?? 999,
-          border: "none",
-          padding: "0 22px",
-          minHeight: Math.max(44, Math.min(block.h, 64)),
-          width: fullWidth ? "100%" : undefined,
-          fontWeight: 700,
-          fontSize: fluid(block.fontSize ?? 16, doc.designWidth, 0.85),
-          fontFamily: block.fontFamily || doc.fontFamily,
-          cursor: "pointer",
+          height: band.height * s,
+          background: band.bg,
+          overflow: "hidden",
+          scrollMarginTop: 80,
         }}
       >
-        {block.text}
-      </button>
+        {ordered.map((l) => {
+          if (form?.consumed.has(l.id)) return null;
+          return <AbsLayer key={l.id} layer={l} band={band} s={s} doc={doc} openForm={openForm} />;
+        })}
+
+        {form?.fields.map((f) => {
+          const box = byId.get(f.boxId);
+          const label = byId.get(f.labelId);
+          if (!box) return null;
+          const common = {
+            placeholder: f.label,
+            value: values[f.key] ?? "",
+            onChange: (e: any) => set(f.key, e.target.value),
+            style: {
+              ...inputStyle(box, s, band, true),
+              color: label?.style.color || "#E2E8F0",
+              fontSize: (label?.style.fontSize ?? 15) * s,
+              fontFamily: doc.fontFamily,
+              padding: `${10 * s}px ${16 * s}px`,
+              outline: "none",
+              resize: "none" as const,
+            },
+          };
+          return f.multiline ? <textarea key={f.key} {...common} /> : <input key={f.key} {...common} />;
+        })}
+
+        {form && formButton && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={doSubmit}
+            style={{
+              position: "absolute",
+              left: formButton.position.x * s,
+              top: (formButton.position.y - band.top) * s,
+              width: formButton.size.width * s,
+              height: formButton.size.height * s,
+              background: formButton.style.fill || doc.accent,
+              color: formButton.style.color || "#fff",
+              border: "none",
+              borderRadius: (formButton.style.cornerRadius ?? 999) * s,
+              fontSize: (formButton.style.fontSize ?? 16) * s,
+              fontWeight: 700,
+              fontFamily: doc.fontFamily,
+              cursor: "pointer",
+            }}
+          >
+            {busy ? "Sending…" : formButton.content.label || "Send"}
+          </button>
+        )}
+      </section>
     );
   }
 
-  if (block.kind === "shape") {
-    return (
-      <div
-        onClick={onClick}
-        style={{
-          ...common,
-          background: block.fill,
-          borderRadius: block.radius ?? 12,
-          minHeight: Math.min(block.h, 120),
-          width: "100%",
-        }}
-      />
-    );
-  }
-
-  const size = block.fontSize ?? 16;
-  const Tag: any = size >= 34 ? "h2" : size >= 22 ? "h3" : "p";
-  return (
-    <Tag
-      onClick={onClick}
-      style={{
-        ...common,
-        margin: 0,
-        color: block.color || "#F8FAFC",
-        fontSize: fluid(size, doc.designWidth, size > 30 ? 0.5 : 0.86),
-        fontWeight: block.fontWeight ?? 400,
-        fontStyle: block.fontStyle,
-        fontFamily: block.fontFamily || doc.fontFamily,
-        textAlign: block.align ?? "left",
-        lineHeight: size > 30 ? 1.12 : 1.5,
-        whiteSpace: "pre-wrap",
-        overflowWrap: "anywhere",
-      }}
-    >
-      {block.text}
-    </Tag>
+  /* ---------------------------------------------------- reflow (narrow) mode */
+  const bgImage = band.layers.find(
+    (l) => l.type === "image" && isFullWidth(l, W) && l.size.height >= band.height - 12
   );
-}
-
-function CardView({ card, doc, openForm }: { card: WebsiteCard; doc: WebsiteDocument; openForm: (r: WebsiteFormRequest) => void }) {
-  return (
-    <div
-      style={{
-        background: card.fill,
-        opacity: card.opacity ?? 1,
-        borderRadius: card.radius ?? 18,
-        border: card.stroke ? `1px solid ${card.stroke}` : undefined,
-        padding: card.blocks.length ? "clamp(16px, 3vw, 28px)" : 0,
-        minHeight: card.blocks.length ? undefined : Math.min(card.h, 220),
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        overflow: "hidden",
-      }}
-    >
-      {card.blocks.map((b) => (
-        <BlockView key={b.id} block={b} doc={doc} openForm={openForm} fullWidth />
-      ))}
-    </div>
+  const overlay = band.layers.find(
+    (l) => l.type === "shape" && isFullWidth(l, W) && l.size.height >= band.height - 12
   );
-}
+  const flowLayers = ordered.filter(
+    (l) => l.id !== bgImage?.id && l.id !== overlay?.id && !form?.consumed.has(l.id) && l.type !== "hotspot"
+  );
+  const scaleText = Math.min(1, Math.max(0.52, width / W + 0.18));
 
-function SectionView({ section, doc, openForm }: { section: WebsiteSection; doc: WebsiteDocument; openForm: (r: WebsiteFormRequest) => void }) {
   return (
     <section
-      id={section.anchor}
+      id={band.anchor}
       style={{
         position: "relative",
-        background: section.bgColor || doc.bgColor,
-        scrollMarginTop: 84,
+        background: band.bg,
         overflow: "hidden",
+        scrollMarginTop: 72,
       }}
     >
-      {section.bgImage && (
+      {bgImage?.content.src && (
         <img
-          src={section.bgImage}
+          src={bgImage.content.src}
           alt=""
           loading="lazy"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
       )}
-      {section.overlayColor && (
-        <div
-          style={{ position: "absolute", inset: 0, background: section.overlayColor, opacity: section.overlayOpacity ?? 0.6 }}
-        />
+      {overlay && (
+        <div style={{ position: "absolute", inset: 0, background: overlay.style.fill, opacity: overlay.style.opacity ?? 0.6 }} />
       )}
       <div
         style={{
           position: "relative",
-          maxWidth: doc.contentWidth,
-          margin: "0 auto",
-          padding: "clamp(40px, 7vw, 88px) clamp(18px, 5vw, 40px)",
           display: "flex",
           flexDirection: "column",
-          gap: "clamp(16px, 2.6vw, 28px)",
+          gap: 14,
+          padding: "40px 20px",
+          maxWidth: 640,
+          margin: "0 auto",
         }}
       >
-        {section.rows.map((row) =>
-          row.kind === "grid" ? (
-            <div
-              key={row.id}
+        {flowLayers.map((l) => {
+          const clickable = !!l.action;
+          const onClick = clickable ? () => runAction(l.action, openForm, l.id) : undefined;
+          switch (l.type) {
+            case "text":
+              return (
+                <div
+                  key={l.id}
+                  onClick={onClick}
+                  style={{
+                    color: l.style.color || "#F8FAFC",
+                    fontSize: Math.max(13, (l.style.fontSize ?? 16) * scaleText),
+                    fontWeight: (l.style.fontWeight as any) ?? 400,
+                    fontStyle: l.style.fontStyle,
+                    fontFamily: l.style.fontFamily || doc.fontFamily,
+                    textAlign: l.style.align ?? "left",
+                    lineHeight: (l.style.fontSize ?? 16) > 30 ? 1.15 : 1.5,
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    cursor: clickable ? "pointer" : undefined,
+                  }}
+                >
+                  {l.content.text}
+                </div>
+              );
+            case "image":
+              return l.content.src ? (
+                <img
+                  key={l.id}
+                  src={l.content.src}
+                  alt=""
+                  loading="lazy"
+                  onClick={onClick}
+                  style={{
+                    width: "100%",
+                    aspectRatio: `${Math.max(1, l.size.width)} / ${Math.max(1, l.size.height)}`,
+                    objectFit: "cover",
+                    borderRadius: l.style.cornerRadius ?? 14,
+                    display: "block",
+                  }}
+                />
+              ) : null;
+            case "video":
+              return (
+                <video
+                  key={l.id}
+                  src={l.content.videoUrl || l.content.src}
+                  poster={l.content.posterUrl}
+                  controls
+                  playsInline
+                  style={{ width: "100%", borderRadius: l.style.cornerRadius ?? 14 }}
+                />
+              );
+            case "icon":
+              return (
+                <span key={l.id} onClick={onClick} style={{ display: "inline-flex" }}>
+                  <Icon
+                    name={l.content.iconName || (l.style as any).iconName}
+                    color={l.style.color || doc.accent}
+                    size={Math.min(40, Math.max(18, l.size.height))}
+                  />
+                </span>
+              );
+            case "button":
+              return (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={onClick}
+                  style={{
+                    background: l.style.fill || doc.accent,
+                    color: l.style.color || "#fff",
+                    border: "none",
+                    borderRadius: l.style.cornerRadius ?? 999,
+                    minHeight: 50,
+                    width: "100%",
+                    fontWeight: 700,
+                    fontSize: 16,
+                    fontFamily: doc.fontFamily,
+                    cursor: "pointer",
+                  }}
+                >
+                  {l.content.label || l.content.text}
+                </button>
+              );
+            case "shape":
+              if (l.content.shape === "line" || l.size.height <= 3) {
+                return <hr key={l.id} style={{ width: "100%", border: 0, height: 1, background: l.style.fill || "rgba(255,255,255,0.14)" }} />;
+              }
+              return null;
+            default:
+              return null;
+          }
+        })}
+
+        {form && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+            {form.fields.map((f) => {
+              const box = byId.get(f.boxId)!;
+              const label = byId.get(f.labelId);
+              const common = {
+                placeholder: f.label,
+                value: values[f.key] ?? "",
+                onChange: (e: any) => set(f.key, e.target.value),
+                style: {
+                  ...inputStyle(box, s, band, false),
+                  color: label?.style.color || "#E2E8F0",
+                  fontSize: 15,
+                  fontFamily: doc.fontFamily,
+                  padding: "12px 14px",
+                  outline: "none",
+                  resize: "none" as const,
+                },
+              };
+              return f.multiline ? <textarea key={f.key} rows={4} {...common} /> : <input key={f.key} {...common} />;
+            })}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={doSubmit}
               style={{
-                display: "grid",
-                gap: "clamp(14px, 2vw, 24px)",
-                gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${Math.max(
-                  240,
-                  Math.min(360, Math.round(row.cards[0]?.w ?? 320))
-                )}px), 1fr))`,
+                background: formButton?.style.fill || doc.accent,
+                color: formButton?.style.color || "#fff",
+                border: "none",
+                borderRadius: 999,
+                minHeight: 52,
+                fontWeight: 700,
+                fontSize: 16,
+                fontFamily: doc.fontFamily,
+                cursor: "pointer",
               }}
             >
-              {row.cards.map((c) => (
-                <CardView key={c.id} card={c} doc={doc} openForm={openForm} />
-              ))}
-            </div>
-          ) : (
-            <div
-              key={row.id}
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: "clamp(10px, 1.6vw, 18px)",
-              }}
-            >
-              {row.blocks.map((b) => {
-                const ratio = Math.min(1, b.w / doc.contentWidth);
-                const basis = ratio > 0.75 ? "100%" : `${Math.max(18, ratio * 100)}%`;
-                return (
-                  <div
-                    key={b.id}
-                    style={{
-                      flex: `1 1 ${basis}`,
-                      minWidth: b.kind === "text" && b.w > doc.contentWidth * 0.5 ? "100%" : "min(100%, 180px)",
-                      maxWidth: "100%",
-                    }}
-                  >
-                    <BlockView block={b} doc={doc} openForm={openForm} />
-                  </div>
-                );
-              })}
-            </div>
-          )
+              {busy ? "Sending…" : formButton?.content.label || "Send message"}
+            </button>
+          </div>
         )}
       </div>
     </section>
@@ -327,14 +720,14 @@ function SiteNav({ doc, openForm }: { doc: WebsiteDocument; openForm: (r: Websit
         position: "sticky",
         top: 0,
         zIndex: 40,
-        background: doc.sections[0]?.bgColor ? "rgba(0,0,0,0.72)" : "rgba(7,11,22,0.86)",
+        background: "rgba(7,11,22,0.86)",
         backdropFilter: "blur(10px)",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
     >
       <div
         style={{
-          maxWidth: doc.contentWidth,
+          maxWidth: 1320,
           margin: "0 auto",
           padding: "10px clamp(18px, 5vw, 40px)",
           display: "flex",
@@ -389,10 +782,7 @@ function SiteNav({ doc, openForm }: { doc: WebsiteDocument; openForm: (r: Websit
         </button>
       </div>
       {open && (
-        <nav
-          className="md:hidden"
-          style={{ display: "flex", flexDirection: "column", padding: "6px 20px 16px", gap: 4 }}
-        >
+        <nav className="md:hidden" style={{ display: "flex", flexDirection: "column", padding: "6px 20px 16px", gap: 4 }}>
           {doc.nav.map((n) => (
             <button
               key={n.anchor}
@@ -442,7 +832,7 @@ function SiteNav({ doc, openForm }: { doc: WebsiteDocument; openForm: (r: Websit
   );
 }
 
-/* ------------------------------------------------------------- contact form */
+/* ------------------------------------------------------------- form dialog */
 
 function ContactFormDialog({
   request,
@@ -548,14 +938,28 @@ function ContactFormDialog({
 
 export function PublicWebsite({
   doc,
+  page,
   flyerId,
   canSubmitForms = true,
 }: {
   doc: WebsiteDocument;
+  page: FlyerPage;
   flyerId: string;
   canSubmitForms?: boolean;
 }) {
   const [formRequest, setFormRequest] = useState<WebsiteFormRequest>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(() => (typeof window === "undefined" ? 1440 : window.innerWidth));
+
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const update = () => setWidth(el.clientWidth || window.innerWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!doc.fontFamily) return;
@@ -568,13 +972,25 @@ export function PublicWebsite({
     document.head.appendChild(link);
   }, [doc.fontFamily]);
 
-  const sections = useMemo(() => (doc.footer ? [...doc.sections, doc.footer] : doc.sections), [doc]);
+  const { W, bands } = useMemo(() => buildBands(page, doc), [page, doc]);
 
   return (
-    <div style={{ background: doc.bgColor, minHeight: "100vh", width: "100%", overflowX: "hidden", fontFamily: doc.fontFamily }}>
+    <div
+      ref={rootRef}
+      style={{ background: doc.bgColor, minHeight: "100vh", width: "100%", overflowX: "hidden", fontFamily: doc.fontFamily }}
+    >
       <SiteNav doc={doc} openForm={setFormRequest} />
-      {sections.map((s) => (
-        <SectionView key={s.id} section={s} doc={doc} openForm={setFormRequest} />
+      {bands.map((b) => (
+        <BandView
+          key={b.id}
+          band={b}
+          W={W}
+          width={width}
+          doc={doc}
+          flyerId={flyerId}
+          canSubmitForms={canSubmitForms}
+          openForm={setFormRequest}
+        />
       ))}
       <ContactFormDialog
         request={formRequest}
