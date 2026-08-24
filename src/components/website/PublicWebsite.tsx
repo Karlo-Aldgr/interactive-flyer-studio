@@ -173,17 +173,24 @@ function buildBands(page: FlyerPage, doc: WebsiteDocument): { W: number; nav: Ba
   const W = page.background?.size?.width || doc.designWidth || 1440;
   const layers = [...(page.layers ?? [])].sort((a, b) => a.z_index - b.z_index);
 
-  const bandShapes = layers
+  const candidates = layers
     .filter((l) => l.type === "shape" && isFullWidth(l, W) && l.size.height > 60)
-    .sort((a, b) => a.position.y - b.position.y);
+    .sort((a, b) => a.position.y - b.position.y || b.size.height - a.size.height);
 
-  const ranges = bandShapes.map((s) => ({
-    shape: s,
-    top: s.position.y,
-    bottom: s.position.y + s.size.height,
-  }));
+  // A full-width shape that sits INSIDE an already accepted band is an overlay /
+  // tint, not a new section — otherwise the section would be duplicated and the
+  // page would grow a large empty gap.
+  const ranges: { shape: Layer; top: number; bottom: number }[] = [];
+  for (const s of candidates) {
+    const top = s.position.y;
+    const bottom = top + s.size.height;
+    const inside = ranges.some((r) => top >= r.top - 2 && bottom <= r.bottom + 2);
+    if (inside) continue;
+    ranges.push({ shape: s, top, bottom });
+  }
 
-  const used = new Set(bandShapes.map((s) => s.id));
+  const used = new Set(ranges.map((r) => r.shape.id));
+
   const anchorQueue = doc.nav.map((n) => n.anchor);
 
   const make = (r: (typeof ranges)[number], anchor: string): Band => {
