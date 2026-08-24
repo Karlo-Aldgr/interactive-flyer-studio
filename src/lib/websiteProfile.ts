@@ -267,6 +267,19 @@ export function buildWebsiteProfile(args: {
     if (sub) profile.tagline = sub.value;
   }
 
+  /* ---- offer / business hours found in the flyer text ---- */
+  const offerText = texts.find((t) => t.value.length <= 90 && OFFER_RE.test(t.value));
+  if (offerText) profile.offer = offerText.value;
+  const hourLines = texts.filter((t) => t.value.length <= 80 && HOURS_RE.test(t.value)).map((t) => t.value);
+  if (hourLines.length) profile.hours = Array.from(new Set(hourLines)).slice(0, 7);
+
+  /* ---- theme refinement using real project content ---- */
+  if (!profile.theme) {
+    profile.theme = detectTheme(texts.map((t) => t.value).join(" "));
+  }
+
+
+
   /* ---- images from the existing flyer pages ---- */
   layers.forEach((l) => {
     if (l.type === "image") pushUnique(profile.images, l.content?.src);
