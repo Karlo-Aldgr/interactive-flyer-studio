@@ -4,6 +4,7 @@
 // credentials. The legacy Facebook-Page based Meta integration is untouched.
 import {
   adapterError,
+  type AdapterError,
   type AdapterAccount,
   type AdapterResult,
   type AuthStartInput,

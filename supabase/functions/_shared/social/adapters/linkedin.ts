@@ -1,5 +1,6 @@
 import {
   adapterError,
+  type AdapterError,
   type AdapterAccount,
   type AdapterResult,
   type AuthStartInput,
