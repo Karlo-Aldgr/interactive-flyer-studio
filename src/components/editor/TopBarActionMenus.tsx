@@ -47,6 +47,23 @@ function ActiveDot({ active, className }: { active?: boolean; className?: string
   return <span className={cn("inline-block h-1.5 w-1.5 rounded-full bg-primary", className)} />;
 }
 
+/** Onboarding is per project — link to this flyer's own onboarding. */
+function useOnboardingHref(flyerId: string) {
+  const [href, setHref] = useState("/onboarding");
+  useEffect(() => {
+    let alive = true;
+    getJobIdForFlyer(flyerId)
+      .then((jobId) => {
+        if (alive && jobId) setHref(`/onboarding?job=${jobId}`);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [flyerId]);
+  return href;
+}
+
 const MENU_CONTENT_CLASS = "z-[200] w-52";
 
 const MenuTrigger = forwardRef<
@@ -130,6 +147,7 @@ export function TopBarPortalMenu({
   onOpenPortalLink,
   onOpenBizad,
 }: Pick<TopBarMenuActions, "flyerId" | "onOpenSubscribers" | "onOpenPortalLink" | "onOpenBizad">) {
+  const onboardingHref = useOnboardingHref(flyerId);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -270,6 +288,7 @@ export function TopBarFlyerMenu({
 
 export function TopBarMobileMenu(actions: TopBarMenuActions) {
   const { flyer, flyerId } = actions;
+  const onboardingHref = useOnboardingHref(flyerId);
   const highlightsOn = flyer.settings.highlightsEnabled ?? true;
 
   return (
