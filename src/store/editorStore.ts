@@ -5,6 +5,8 @@ import { ensureUuid } from "@/lib/safeBrowser";
 import type { SubjectDetection, NormalizedPoint } from "@/lib/subjectDetect";
 import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant } from "@/lib/editorToolPresets";
 import { buildBizadPage } from "@/lib/bizadPage";
+import { buildWebsitePage, WEBSITE_DEVICES, type WebsiteDevice } from "@/lib/websitePage";
+
 import type { BizadRecord } from "@/lib/bizad";
 
 
@@ -79,7 +81,10 @@ interface EditorState {
   addScannedMenuPage: (args: { imageUrl: string; imgWidth: number; imgHeight: number; items: Array<{ id?: string; name: string; price?: number; description?: string; category?: string; color?: string; bbox: { x: number; y: number; w: number; h: number } }>; }) => string;
   addBizadPage: (bizad: BizadRecord) => string;
   setBizadPageHidden: (hidden: boolean) => void;
+  addWebsitePage: () => string;
+  setWebsiteDevice: (device: WebsiteDevice) => void;
   setPageSize: (id: string, w: number, h: number, mode: ResizeMode) => void;
+
 
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
