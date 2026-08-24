@@ -5,7 +5,7 @@ import { ensureUuid } from "@/lib/safeBrowser";
 import type { SubjectDetection, NormalizedPoint } from "@/lib/subjectDetect";
 import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant } from "@/lib/editorToolPresets";
 import { buildBizadPage } from "@/lib/bizadPage";
-import { buildWebsitePage, WEBSITE_DEVICES, type WebsiteDevice } from "@/lib/websitePage";
+import { buildWebsitePage, type WebsiteDevice } from "@/lib/websitePage";
 import type { WebsiteProfile } from "@/lib/websiteProfile";
 
 import type { BizadRecord } from "@/lib/bizad";
@@ -752,39 +752,35 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return page.id;
   },
 
-  /** Switches the Website page between responsive widths, scaling its layout to fit. */
+  /**
+   * Switches the Website page between responsive viewport presets.
+   * The page is REBUILT with that viewport's responsive layout rules
+   * (columns, typography, stacking, container padding) — never scaled.
+   */
   setWebsiteDevice: (device) => {
     const s = get();
     const page = s.pages.find((p) => p.background?.websitePage);
     if (!page || !s.flyer) return;
     const current = page.background?.websiteDevice ?? "desktop";
     if (current === device) return;
-    const oldW = page.background?.size?.width ?? WEBSITE_DEVICES.desktop;
-    const oldH = page.background?.size?.height ?? s.flyer.settings.height;
-    const newW = WEBSITE_DEVICES[device];
-    const k = newW / oldW;
+    const profile = page.background?.websiteProfile as WebsiteProfile | undefined;
+    if (!profile) return;
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const rebuilt = buildWebsitePage(s.flyer.id, page.index, profile, device);
     set({
       pages: s.pages.map((p) =>
         p.id === page.id
           ? {
-              ...p,
-              layers: p.layers.map((l) => ({
-                ...l,
-                position: { x: l.position.x * k, y: l.position.y * k },
-                size: { width: l.size.width * k, height: l.size.height * k },
-                style: l.style.fontSize
-                  ? { ...l.style, fontSize: Math.max(8, Math.round(l.style.fontSize * k)) }
-                  : l.style,
-              })),
-              background: {
-                ...p.background,
-                size: { width: newW, height: Math.round(oldH * k) },
-                websiteDevice: device,
-              },
+              ...rebuilt,
+              id: page.id,
+              index: page.index,
+              name: page.name,
+              layers: rebuilt.layers.map((l) => ({ ...l, page_id: page.id })),
             }
           : p
       ),
+      selectedLayerId: null,
+      selectedLayerIds: [],
       past,
       future: [],
       dirty: true,

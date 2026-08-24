@@ -501,7 +501,7 @@ export function TopBar({ saving, onSave }: Props) {
     onOpenPayLink: () => setPayOpen(true),
     onOpenShare: openShare,
     onOpenMarketing: () => setAutomationOpen(true),
-    onOpenResize: () => setResizeOpen(true),
+    onOpenResize: () => { if (!activePage?.background?.websitePage) setResizeOpen(true); },
   };
 
   return (
@@ -561,7 +561,8 @@ export function TopBar({ saving, onSave }: Props) {
         </Button>
       </div>
 
-      {/* Canvas size */}
+      {/* Canvas size — hidden for Website pages (they use the responsive viewport presets) */}
+      {!activePage?.background?.websitePage && (
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -576,6 +577,7 @@ export function TopBar({ saving, onSave }: Props) {
         </TooltipTrigger>
         <TooltipContent>Change canvas size or crop</TooltipContent>
       </Tooltip>
+      )}
 
       {/* View menu — desktop/tablet */}
       <div className="hidden md:block">

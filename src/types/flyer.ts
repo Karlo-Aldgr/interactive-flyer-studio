@@ -505,6 +505,8 @@ export interface FlyerPage {
     websitePage?: boolean;
     /** Which responsive width the Website page is currently being edited at. */
     websiteDevice?: "desktop" | "tablet" | "mobile";
+    /** Snapshot of the client/project profile the Website was generated from (used to rebuild per viewport). */
+    websiteProfile?: unknown;
   };
 
 

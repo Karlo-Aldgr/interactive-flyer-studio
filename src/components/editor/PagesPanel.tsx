@@ -313,7 +313,13 @@ export function PagesPanel() {
                   size="sm"
                   variant={on ? "default" : "outline"}
                   className="h-8 flex-col gap-0 px-1 text-[10px] capitalize"
-                  onClick={() => setWebsiteDevice(device)}
+                  onClick={() => {
+                    if (!activePage.background?.websiteProfile) {
+                      toast.info("Re-create the website page to enable responsive viewport previews");
+                      return;
+                    }
+                    setWebsiteDevice(device);
+                  }}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {w}
@@ -322,7 +328,8 @@ export function PagesPanel() {
             })}
           </div>
           <p className="text-[10px] text-muted-foreground">
-            One long scrolling page. Switching width scales the whole layout.
+            One long scrolling page. Switching a width re-renders the responsive layout for that
+            viewport (columns, typography and stacking) — nothing is scaled. Height follows content.
           </p>
         </div>
       )}
@@ -392,7 +399,7 @@ export function PagesPanel() {
         </div>
       )}
 
-      {activePage && flyer && (
+      {activePage && flyer && !activePage.background?.websitePage && (
         <PageSizeSection
           pageId={activePage.id}
           currentW={activePage.background?.size?.width ?? flyer.settings.width}
