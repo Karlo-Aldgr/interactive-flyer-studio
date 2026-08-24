@@ -22,6 +22,7 @@ export default function SubmitJob() {
   const [brief, setBrief] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [adminChoose, setAdminChoose] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { setType(initialType); }, [initialType]);
