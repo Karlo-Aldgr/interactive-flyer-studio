@@ -151,9 +151,30 @@ export function useFlyerData(flyerId: string | undefined) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pages, flyer, dirty]);
 
-  async function save(f: Flyer, currentPages: FlyerPage[]) {
+  /**
+   * Saves are serialized. Two overlapping runs used to race (one deleting layers
+   * while the other inserted their actions), which surfaced as
+   * `new row violates row-level security policy for table "actions"`.
+   * Every queued run also re-reads the LIVE editor state, so it never writes a
+   * stale snapshot.
+   */
+  const savePromise = useRef<Promise<void> | null>(null);
+  function save(_f?: Flyer, _pages?: FlyerPage[]) {
+    const next = (savePromise.current ?? Promise.resolve())
+      .catch(() => {})
+      .then(() => {
+        const st = useEditorStore.getState();
+        if (!st.flyer) return;
+        return runSave(st.flyer, st.pages);
+      });
+    savePromise.current = next;
+    return next;
+  }
+
+  async function runSave(f: Flyer, currentPages: FlyerPage[]) {
     setSaving(true);
     try {
+
       const { pages: normalizedPages, changed } = normalizePageIds(currentPages);
       if (changed) {
         useEditorStore.setState((s) => {
