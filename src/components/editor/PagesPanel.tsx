@@ -13,6 +13,9 @@ import type { IntroPreset, PageIntro } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getOnboardingForFlyer } from "@/lib/onboarding";
+import { getBizadForFlyer } from "@/lib/bizad";
+import { buildWebsiteProfile } from "@/lib/websiteProfile";
 
 const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
   { value: "none", label: "None" },
@@ -58,6 +61,37 @@ export function PagesPanel() {
   const [scanning, setScanning] = useState(false);
   const bgFileRef = useRef<HTMLInputElement>(null);
   const [uploadingBg, setUploadingBg] = useState(false);
+  const [creatingWebsite, setCreatingWebsite] = useState(false);
+
+  /** Creates the Website page from the CURRENTLY OPEN project's own data. */
+  const handleAddWebsitePage = async () => {
+    const state = useEditorStore.getState();
+    const currentFlyer = state.flyer;
+    if (!currentFlyer) return;
+    if (state.pages.some((p) => p.background?.websitePage)) {
+      addWebsitePage({ images: [], services: [], pricing: [], portfolio: [], socials: [], ctas: [] });
+      return;
+    }
+    setCreatingWebsite(true);
+    try {
+      const [onboarding, bizad] = await Promise.all([
+        getOnboardingForFlyer(currentFlyer.id).catch(() => null),
+        getBizadForFlyer(currentFlyer.id).catch(() => null),
+      ]);
+      const profile = buildWebsiteProfile({
+        flyer: currentFlyer,
+        pages: state.pages,
+        onboarding,
+        bizad,
+      });
+      addWebsitePage(profile);
+      toast.success("Website page created from this project's content");
+    } catch (e) {
+      toast.error("Could not build the website page");
+    } finally {
+      setCreatingWebsite(false);
+    }
+  };
 
   async function uploadBackground(file: File) {
     const pageId = selectedPageId;
@@ -188,8 +222,8 @@ export function PagesPanel() {
                 Add story page (1080×1920)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => addWebsitePage()}>
-                <Globe className="mr-2 h-3.5 w-3.5" /> Add website page
+              <DropdownMenuItem disabled={creatingWebsite} onClick={() => { void handleAddWebsitePage(); }}>
+                <Globe className="mr-2 h-3.5 w-3.5" /> {creatingWebsite ? "Building website…" : "Add website page"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
 
