@@ -766,17 +766,48 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const profile = page.background?.websiteProfile as WebsiteProfile | undefined;
     if (!profile) return;
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+
+    // Manual edits must survive a viewport switch. Compare the CURRENT layers with a
+    // freshly generated layout for the CURRENT device: anything that differs is a user
+    // edit, which we re-apply to the rebuilt layout by (type, ordinal) key.
+    const keyOf = (counts: Record<string, number>, type: string) => {
+      counts[type] = (counts[type] ?? 0) + 1;
+      return `${type}#${counts[type]}`;
+    };
+    const baseline = buildWebsitePage(s.flyer.id, page.index, profile, current);
+    const baseCounts: Record<string, number> = {};
+    const baseMap = new Map(baseline.layers.map((l) => [keyOf(baseCounts, l.type), l]));
+    const curCounts: Record<string, number> = {};
+    const overrides = new Map<string, { content?: any; action?: any; style?: any }>();
+    for (const l of page.layers) {
+      const key = keyOf(curCounts, l.type);
+      const b = baseMap.get(key);
+      if (!b) continue;
+      const o: { content?: any; action?: any; style?: any } = {};
+      if (JSON.stringify(b.content ?? {}) !== JSON.stringify(l.content ?? {})) o.content = l.content;
+      if (JSON.stringify(b.action ?? null) !== JSON.stringify(l.action ?? null)) o.action = l.action;
+      if (JSON.stringify(b.style ?? {}) !== JSON.stringify(l.style ?? {})) o.style = l.style;
+      if (Object.keys(o).length) overrides.set(key, o);
+    }
+
     const rebuilt = buildWebsitePage(s.flyer.id, page.index, profile, device);
+    const newCounts: Record<string, number> = {};
+    const layers = rebuilt.layers.map((l) => {
+      const key = keyOf(newCounts, l.type);
+      const o = overrides.get(key);
+      return {
+        ...l,
+        page_id: page.id,
+        ...(o?.content ? { content: { ...l.content, ...o.content } } : {}),
+        ...(o?.style ? { style: { ...l.style, ...o.style } } : {}),
+        ...(o && "action" in o ? { action: o.action } : {}),
+      };
+    });
+
     set({
       pages: s.pages.map((p) =>
         p.id === page.id
-          ? {
-              ...rebuilt,
-              id: page.id,
-              index: page.index,
-              name: page.name,
-              layers: rebuilt.layers.map((l) => ({ ...l, page_id: page.id })),
-            }
+          ? { ...rebuilt, id: page.id, index: page.index, name: page.name, layers }
           : p
       ),
       selectedLayerId: null,
@@ -786,6 +817,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       dirty: true,
     });
   },
+
 
 
 
