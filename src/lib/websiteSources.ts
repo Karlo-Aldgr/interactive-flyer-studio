@@ -31,6 +31,14 @@ export type ConnectedSocial = {
   account_name: string | null;
 };
 
+/** Approved testimonial/review left on this project. */
+export type ProjectTestimonial = {
+  name: string | null;
+  body: string | null;
+  rating: number | null;
+  photo_url: string | null;
+};
+
 export type WebsiteSources = {
   clientProfile: ClientProfile | null;
   /** Onboarding tied to THIS project. */
@@ -40,7 +48,9 @@ export type WebsiteSources = {
   bizad: BizadRecord | null;
   job: ProjectJob | null;
   socialAccounts: ConnectedSocial[];
+  testimonials: ProjectTestimonial[];
 };
+
 
 const safe = async <T>(p: PromiseLike<T>, fallback: T): Promise<T> => {
   try {
@@ -66,7 +76,7 @@ export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> 
 
   const clientId = ownerId ?? projectOnboarding?.user_id ?? null;
 
-  const [clientProfile, dashboardOnboarding, job, socialAccounts] = await Promise.all([
+  const [clientProfile, dashboardOnboarding, job, socialAccounts, testimonials] = await Promise.all([
     clientId
       ? safe(
           supabase
@@ -101,7 +111,19 @@ export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> 
           [] as ConnectedSocial[]
         )
       : Promise.resolve([] as ConnectedSocial[]),
+    safe(
+      supabase
+        .from("testimonials")
+        .select("name, body, rating, photo_url")
+        .eq("flyer_id", flyer.id)
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(6)
+        .then((r) => ((r.data as ProjectTestimonial[] | null) ?? [])),
+      [] as ProjectTestimonial[]
+    ),
   ]);
 
-  return { clientProfile, projectOnboarding, dashboardOnboarding, bizad, job, socialAccounts };
+  return { clientProfile, projectOnboarding, dashboardOnboarding, bizad, job, socialAccounts, testimonials };
+
 }
