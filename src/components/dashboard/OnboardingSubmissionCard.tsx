@@ -62,6 +62,7 @@ export function OnboardingSubmissionCard({ jobId }: Props) {
           <Row label="Slogan" value={sub.business_slogan} />
           <Row label="Address" value={sub.business_address} />
           <Row label="Description" value={sub.business_description && <span className="whitespace-pre-wrap">{sub.business_description}</span>} />
+          <Row label="AI description" value={sub.ai_description && <span className="whitespace-pre-wrap">{sub.ai_description}</span>} />
         </div>
 
         <div>

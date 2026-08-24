@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { Loader2, Upload, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
-import { getMyOnboarding, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
+import { getOnboardingForJob, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 
@@ -27,6 +27,7 @@ const schema = z.object({
   business_address: z.string().trim().max(300).optional().or(z.literal("")),
   business_slogan: z.string().trim().max(200).optional().or(z.literal("")),
   business_description: z.string().trim().max(2000).optional().or(z.literal("")),
+  ai_description: z.string().trim().max(4000).optional().or(z.literal("")),
   website_url: z.string().trim().max(300).optional().or(z.literal("")),
   facebook_url: z.string().trim().max(300).optional().or(z.literal("")),
   instagram_url: z.string().trim().max(300).optional().or(z.literal("")),
@@ -49,6 +50,7 @@ const emptyForm: FormState = {
   business_address: "",
   business_slogan: "",
   business_description: "",
+  ai_description: "",
   website_url: "",
   facebook_url: "",
   instagram_url: "",
@@ -64,6 +66,8 @@ const emptyForm: FormState = {
 export default function Onboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const jobId = searchParams.get("job");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -84,7 +88,7 @@ export default function Onboarding() {
     if (!user) return;
     (async () => {
       try {
-        const existing = await getMyOnboarding(user.id);
+        const existing = jobId ? await getOnboardingForJob(jobId) : null;
         if (existing) {
           setForm({
             full_name: existing.full_name ?? "",
@@ -94,6 +98,7 @@ export default function Onboarding() {
             business_address: existing.business_address ?? "",
             business_slogan: existing.business_slogan ?? "",
             business_description: existing.business_description ?? "",
+            ai_description: existing.ai_description ?? "",
             website_url: existing.website_url ?? "",
             facebook_url: existing.facebook_url ?? "",
             instagram_url: existing.instagram_url ?? "",
@@ -120,7 +125,7 @@ export default function Onboarding() {
         setLoading(false);
       }
     })();
-  }, [user]);
+  }, [user, jobId]);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -128,17 +133,31 @@ export default function Onboarding() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase
-        .from("flyers")
-        .select("id, title, thumbnail_url")
-        .eq("owner_id", user.id)
-        .not("thumbnail_url", "is", null)
-        .order("updated_at", { ascending: false })
-        .limit(1);
-      const row = data?.[0];
+      let row: { title: string | null; thumbnail_url: string | null } | undefined;
+      if (jobId) {
+        // Only this project's flyer — onboarding never crosses projects.
+        const { data: job } = await supabase.from("jobs").select("flyer_id").eq("id", jobId).maybeSingle();
+        if (job?.flyer_id) {
+          const { data } = await supabase
+            .from("flyers")
+            .select("title, thumbnail_url")
+            .eq("id", job.flyer_id)
+            .maybeSingle();
+          row = data ?? undefined;
+        }
+      } else {
+        const { data } = await supabase
+          .from("flyers")
+          .select("title, thumbnail_url")
+          .eq("owner_id", user.id)
+          .not("thumbnail_url", "is", null)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        row = data?.[0];
+      }
       if (row?.thumbnail_url) setExistingFlyer({ title: row.title ?? "Your flyer", url: row.thumbnail_url });
     })();
-  }, [user]);
+  }, [user, jobId]);
 
   const readAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -200,7 +219,7 @@ export default function Onboarding() {
     }
     setSaving(true);
     try {
-      const { jobId } = await submitOnboarding({
+      const { jobId: savedJobId } = await submitOnboarding({
         userId: user.id,
         userEmail: user.email,
         input: {
@@ -211,6 +230,7 @@ export default function Onboarding() {
           business_address: parsed.data.business_address || null,
           business_slogan: parsed.data.business_slogan || null,
           business_description: parsed.data.business_description || null,
+          ai_description: parsed.data.ai_description || null,
           website_url: parsed.data.website_url || null,
           website_help: websiteBlank ? websiteHelp : null,
           facebook_url: parsed.data.facebook_url || null,
@@ -232,13 +252,14 @@ export default function Onboarding() {
         },
         logoFile,
         flyerFile,
+        jobId,
       });
       toast.success(
         flyerFile
           ? "Thanks! Your flyer is in the queue — we'll get to work."
           : "Your project has been created. You can upload a flyer any time.",
       );
-      navigate(jobId ? `/my-jobs/${jobId}` : "/dashboard?view=customer");
+      navigate(savedJobId ? `/my-jobs/${savedJobId}` : "/dashboard?view=customer");
     } catch (err: any) {
       toast.error(err.message || "Could not submit");
     } finally {
@@ -344,6 +365,21 @@ export default function Onboarding() {
                 onChange={(e) => set("business_description", e.target.value)}
                 placeholder="What do you do? Who's your customer? Anything special?"
                 className="mt-1"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="ai_description">Describe your business to AI</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Extra details just for the AI — services, prices, hours, specials, tone of voice,
+                anything it should know when writing your posts and answering customers.
+              </p>
+              <Textarea
+                id="ai_description"
+                rows={5}
+                value={form.ai_description}
+                onChange={(e) => set("ai_description", e.target.value)}
+                placeholder="Tell the AI everything it should know about your business."
+                className="mt-2"
               />
             </div>
           </div>

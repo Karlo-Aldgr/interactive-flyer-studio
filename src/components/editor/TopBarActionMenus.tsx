@@ -16,6 +16,7 @@ import type { Flyer } from "@/types/flyer";
 import { hasAnySocial } from "@/components/viewer/SocialSlideout";
 import { cn } from "@/lib/utils";
 import { getBizadForFlyer } from "@/lib/bizad";
+import { getJobIdForFlyer } from "@/lib/onboarding";
 import { format } from "date-fns";
 
 export interface TopBarMenuActions {
@@ -44,6 +45,23 @@ export interface TopBarMenuActions {
 function ActiveDot({ active, className }: { active?: boolean; className?: string }) {
   if (!active) return null;
   return <span className={cn("inline-block h-1.5 w-1.5 rounded-full bg-primary", className)} />;
+}
+
+/** Onboarding is per project — link to this flyer's own onboarding. */
+function useOnboardingHref(flyerId: string) {
+  const [href, setHref] = useState("/onboarding");
+  useEffect(() => {
+    let alive = true;
+    getJobIdForFlyer(flyerId)
+      .then((jobId) => {
+        if (alive && jobId) setHref(`/onboarding?job=${jobId}`);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [flyerId]);
+  return href;
 }
 
 const MENU_CONTENT_CLASS = "z-[200] w-52";
@@ -129,6 +147,7 @@ export function TopBarPortalMenu({
   onOpenPortalLink,
   onOpenBizad,
 }: Pick<TopBarMenuActions, "flyerId" | "onOpenSubscribers" | "onOpenPortalLink" | "onOpenBizad">) {
+  const onboardingHref = useOnboardingHref(flyerId);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -156,7 +175,7 @@ export function TopBarPortalMenu({
           <Users className="mr-2 h-4 w-4" /> Subscribers
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/onboarding" className="flex cursor-pointer items-center">
+          <Link to={onboardingHref} className="flex cursor-pointer items-center">
             <ClipboardList className="mr-2 h-4 w-4" /> Onboarding
           </Link>
         </DropdownMenuItem>
@@ -269,6 +288,7 @@ export function TopBarFlyerMenu({
 
 export function TopBarMobileMenu(actions: TopBarMenuActions) {
   const { flyer, flyerId } = actions;
+  const onboardingHref = useOnboardingHref(flyerId);
   const highlightsOn = flyer.settings.highlightsEnabled ?? true;
 
   return (
@@ -335,7 +355,7 @@ export function TopBarMobileMenu(actions: TopBarMenuActions) {
           <Users className="mr-2 h-4 w-4" /> Subscribers
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/onboarding" className="flex cursor-pointer items-center">
+          <Link to={onboardingHref} className="flex cursor-pointer items-center">
             <ClipboardList className="mr-2 h-4 w-4" /> Onboarding
           </Link>
         </DropdownMenuItem>
