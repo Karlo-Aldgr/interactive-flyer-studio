@@ -163,7 +163,7 @@ function image(pageId: string, src: string, x: number, y: number, width: number,
     ...base(pageId, "image"),
     position: { x, y },
     size: { width, height },
-    style: { cornerRadius: radius, objectFit: "cover" },
+    style: { cornerRadius: radius },
     content: { src },
   };
 }
