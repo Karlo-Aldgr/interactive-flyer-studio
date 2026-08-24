@@ -320,9 +320,9 @@ export function useFlyerData(flyerId: string | undefined) {
   }
 
   async function saveNow() {
-    const st = useEditorStore.getState();
-    if (!st.flyer) return;
-    await save(st.flyer, st.pages);
+    if (!useEditorStore.getState().flyer) return;
+    await save();
+
     markSaved();
     toast.success("All changes saved");
   }
