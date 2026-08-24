@@ -1,1 +1,0 @@
-ALTER TABLE public.onboarding_submissions ADD COLUMN IF NOT EXISTS ai_details TEXT;

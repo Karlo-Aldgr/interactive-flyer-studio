@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Loader2, Upload, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -14,14 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
-import {
-  getOnboardingForJob,
-  getMyOnboarding,
-  getJobIdForFlyer,
-  submitOnboarding,
-  extractSpreadsheetId,
-  type OnboardingHelp,
-} from "@/lib/onboarding";
+import { getMyOnboarding, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 
@@ -34,7 +27,6 @@ const schema = z.object({
   business_address: z.string().trim().max(300).optional().or(z.literal("")),
   business_slogan: z.string().trim().max(200).optional().or(z.literal("")),
   business_description: z.string().trim().max(2000).optional().or(z.literal("")),
-  ai_details: z.string().trim().max(5000).optional().or(z.literal("")),
   website_url: z.string().trim().max(300).optional().or(z.literal("")),
   facebook_url: z.string().trim().max(300).optional().or(z.literal("")),
   instagram_url: z.string().trim().max(300).optional().or(z.literal("")),
@@ -57,7 +49,6 @@ const emptyForm: FormState = {
   business_address: "",
   business_slogan: "",
   business_description: "",
-  ai_details: "",
   website_url: "",
   facebook_url: "",
   instagram_url: "",
@@ -87,24 +78,13 @@ export default function Onboarding() {
   const [postingPermission, setPostingPermission] = useState(false);
   const [existingFlyer, setExistingFlyer] = useState<{ title: string; url: string } | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [searchParams] = useSearchParams();
-  const jobParam = searchParams.get("job");
-  const flyerParam = searchParams.get("flyer");
-  const [projectJobId, setProjectJobId] = useState<string | null>(jobParam);
+
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       try {
-        // Onboarding is per project. Only fall back to the account-level record
-        // when this page is opened without a project in the URL.
-        let scopedJobId = jobParam;
-        if (!scopedJobId && flyerParam) scopedJobId = await getJobIdForFlyer(flyerParam);
-        setProjectJobId(scopedJobId);
-
-        const existing = scopedJobId
-          ? await getOnboardingForJob(scopedJobId)
-          : await getMyOnboarding(user.id);
+        const existing = await getMyOnboarding(user.id);
         if (existing) {
           setForm({
             full_name: existing.full_name ?? "",
@@ -114,7 +94,6 @@ export default function Onboarding() {
             business_address: existing.business_address ?? "",
             business_slogan: existing.business_slogan ?? "",
             business_description: existing.business_description ?? "",
-            ai_details: (existing as any).ai_details ?? "",
             website_url: existing.website_url ?? "",
             facebook_url: existing.facebook_url ?? "",
             instagram_url: existing.instagram_url ?? "",
@@ -141,7 +120,7 @@ export default function Onboarding() {
         setLoading(false);
       }
     })();
-  }, [user, jobParam, flyerParam]);
+  }, [user]);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -224,7 +203,6 @@ export default function Onboarding() {
       const { jobId } = await submitOnboarding({
         userId: user.id,
         userEmail: user.email,
-        jobId: projectJobId,
         input: {
           full_name: parsed.data.full_name,
           phone: parsed.data.phone,
@@ -233,7 +211,6 @@ export default function Onboarding() {
           business_address: parsed.data.business_address || null,
           business_slogan: parsed.data.business_slogan || null,
           business_description: parsed.data.business_description || null,
-          ai_details: parsed.data.ai_details || null,
           website_url: parsed.data.website_url || null,
           website_help: websiteBlank ? websiteHelp : null,
           facebook_url: parsed.data.facebook_url || null,
@@ -367,22 +344,6 @@ export default function Onboarding() {
                 onChange={(e) => set("business_description", e.target.value)}
                 placeholder="What do you do? Who's your customer? Anything special?"
                 className="mt-1"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="ai_details">Describe your business for AI assistance (give details)</Label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                The more detail you give, the better our AI writes your posts, captions, scripts and chatbot answers.
-                Include services and prices, hours, location/service area, your ideal customer, what makes you different,
-                current promotions, tone of voice, and anything AI should never say.
-              </p>
-              <Textarea
-                id="ai_details"
-                rows={7}
-                value={form.ai_details}
-                onChange={(e) => set("ai_details", e.target.value)}
-                placeholder="Services & prices, hours, service area, ideal customer, what makes you different, current specials, preferred tone, things to avoid..."
-                className="mt-2"
               />
             </div>
           </div>

@@ -1,2 +1,0 @@
-DROP INDEX IF EXISTS public.onboarding_submissions_flyer_job_id_key;
-ALTER TABLE public.onboarding_submissions ADD CONSTRAINT onboarding_submissions_flyer_job_id_key UNIQUE (flyer_job_id);

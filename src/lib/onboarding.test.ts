@@ -7,7 +7,6 @@ describe("buildChatbotKnowledgeFromOnboarding", () => {
       business_name: "Express Tshirts & Graphics",
       business_slogan: "Print it right",
       business_description: "Custom shirts and signs in Columbus, MS.",
-    ai_details: null,
       business_address: "513 13th Ave S, Columbus, MS",
       phone: "662-549-1457",
       email: "hello@example.com",

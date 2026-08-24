@@ -1257,15 +1257,7 @@ export type Database = {
           upload_url?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "jobs_flyer_id_fkey"
-            columns: ["flyer_id"]
-            isOneToOne: false
-            referencedRelation: "flyers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       layers: {
         Row: {
@@ -2030,7 +2022,6 @@ export type Database = {
       }
       onboarding_submissions: {
         Row: {
-          ai_details: string | null
           business_address: string | null
           business_description: string | null
           business_name: string | null
@@ -2067,7 +2058,6 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
-          ai_details?: string | null
           business_address?: string | null
           business_description?: string | null
           business_name?: string | null
@@ -2104,7 +2094,6 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
-          ai_details?: string | null
           business_address?: string | null
           business_description?: string | null
           business_name?: string | null
@@ -2144,7 +2133,7 @@ export type Database = {
           {
             foreignKeyName: "onboarding_submissions_flyer_job_id_fkey"
             columns: ["flyer_job_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },

@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 export type UserJobFlyer = {
   public_slug: string | null;
   status: string | null;
-  thumbnail_url?: string | null;
 };
 
 export type UserJob = {
@@ -51,7 +50,7 @@ async function attachFlyers(rows: Record<string, unknown>[]): Promise<UserJob[]>
 
   const { data: flyers } = await supabase
     .from("flyers")
-    .select("id, public_slug, status, thumbnail_url")
+    .select("id, public_slug, status")
     .in("id", flyerIds);
 
   const flyerById = new Map((flyers ?? []).map((f) => [f.id, f]));
@@ -62,7 +61,7 @@ async function attachFlyers(rows: Record<string, unknown>[]): Promise<UserJob[]>
   });
 }
 
-function normalizeJob(row: Record<string, unknown>, flyer: { public_slug: string | null; status: string | null; thumbnail_url?: string | null } | null): UserJob {
+function normalizeJob(row: Record<string, unknown>, flyer: { public_slug: string | null; status: string | null } | null): UserJob {
   return {
     id: row.id as string,
     user_id: row.user_id as string,
@@ -81,7 +80,7 @@ function normalizeJob(row: Record<string, unknown>, flyer: { public_slug: string
     admin_notes: (row.admin_notes as string | null) ?? null,
     flyer_id: (row.flyer_id as string | null) ?? null,
     flyer: flyer
-      ? { public_slug: flyer.public_slug, status: flyer.status, thumbnail_url: flyer.thumbnail_url ?? null }
+      ? { public_slug: flyer.public_slug, status: flyer.status }
       : null,
     deleted_at: (row.deleted_at as string | null) ?? null,
     customer_deletion_reason: (row.customer_deletion_reason as string | null) ?? null,
