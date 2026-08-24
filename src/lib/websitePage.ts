@@ -224,29 +224,45 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
     add(image(pageId, heroImage, 0, y, W, heroH, 0));
     add(rect(pageId, 0, y, W, heroH, { fill: "#050912", radius: 0, opacity: 0.7 }));
   }
-  if (profile.tagline) add(eyebrow(pageId, profile.tagline.slice(0, 60), PAD, y + 150, 620));
-  add(text(pageId, profile.headline || name, PAD, y + 190, 820, { size: 68, weight: 800, height: 220 }));
-  if (profile.description) {
-    add(text(pageId, profile.description.slice(0, 220), PAD, y + 430, 660, { size: 19, color: MUTED }));
+  // Business name from the client's dashboard/profile sits above the flyer headline.
+  add(eyebrow(pageId, name, PAD, y + 140, 640));
+  const heroHeadline = profile.headline && profile.headline !== name ? profile.headline : profile.tagline || name;
+  add(text(pageId, heroHeadline, PAD, y + 178, 820, { size: 68, weight: 800, height: 220 }));
+  const heroSupport = profile.description || (heroHeadline !== profile.tagline ? profile.tagline : undefined);
+  if (heroSupport) {
+    add(text(pageId, heroSupport.slice(0, 220), PAD, y + 420, 660, { size: 19, color: MUTED }));
+  }
+  if (profile.offer) {
+    add(rect(pageId, PAD, y + 500, Math.min(640, profile.offer.length * 12 + 60), 44, { fill: A, radius: 999 }));
+    add(text(pageId, profile.offer, PAD + 24, y + 512, 600, { size: 16, weight: 700, color: "#FFFFFF" }));
   }
   let bx = PAD;
   if (primaryCta) {
-    add(button(pageId, primaryCta.label, bx, y + 540, 230, 58, { action: cloneAction(primaryCta.action) }));
+    add(button(pageId, primaryCta.label, bx, y + 570, 230, 58, { action: cloneAction(primaryCta.action) }));
     bx += 250;
   } else if (hasContact) {
-    add(button(pageId, T.primaryCta, bx, y + 540, 230, 58, { action: anchor("contact") }));
-    bx += 230;
+    add(button(pageId, T.primaryCta, bx, y + 570, 230, 58, { action: anchor("contact") }));
+    bx += 250;
   }
   if (secondaryCta) {
     add(
-      button(pageId, secondaryCta.label, bx, y + 540, 220, 58, {
+      button(pageId, secondaryCta.label, bx, y + 570, 220, 58, {
         fill: "#FFFFFF",
         color: "#0B1220",
         action: cloneAction(secondaryCta.action),
       })
     );
+  } else if (profile.whatsapp) {
+    add(
+      button(pageId, "WhatsApp us", bx, y + 570, 210, 58, {
+        fill: "#25D366",
+        color: "#08240F",
+        action: { id: uid(), type: "open_url", payload: { url: profile.whatsapp, newTab: true } },
+      })
+    );
   }
   y += heroH;
+
 
   /* ---------------- About ---------------- */
   if (hasAbout) {
