@@ -13,8 +13,7 @@ import type { IntroPreset, PageIntro } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { getOnboardingForFlyer } from "@/lib/onboarding";
-import { getBizadForFlyer } from "@/lib/bizad";
+import { loadWebsiteSources } from "@/lib/websiteSources";
 import { buildWebsiteProfile } from "@/lib/websiteProfile";
 
 const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
@@ -74,24 +73,18 @@ export function PagesPanel() {
     }
     setCreatingWebsite(true);
     try {
-      const [onboarding, bizad] = await Promise.all([
-        getOnboardingForFlyer(currentFlyer.id).catch(() => null),
-        getBizadForFlyer(currentFlyer.id).catch(() => null),
-      ]);
-      const profile = buildWebsiteProfile({
-        flyer: currentFlyer,
-        pages: state.pages,
-        onboarding,
-        bizad,
-      });
+      // Combine the client's dashboard/profile info with this project's own data.
+      const sources = await loadWebsiteSources(currentFlyer);
+      const profile = buildWebsiteProfile({ flyer: currentFlyer, pages: state.pages, sources });
       addWebsitePage(profile);
-      toast.success("Website page created from this project's content");
-    } catch (e) {
+      toast.success("Website page created from this client's profile and project");
+    } catch {
       toast.error("Could not build the website page");
     } finally {
       setCreatingWebsite(false);
     }
   };
+
 
   async function uploadBackground(file: File) {
     const pageId = selectedPageId;
