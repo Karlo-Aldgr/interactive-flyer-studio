@@ -187,7 +187,7 @@ export function buildWebsitePage(flyerId: string, index: number, profile: Websit
   const hasServices = (profile.services?.length ?? 0) > 0;
   const hasPortfolio = (profile.portfolio?.length ?? 0) > 0;
   const hasPricing = (profile.pricing?.length ?? 0) > 0;
-  const hasContact = !!(profile.phone || profile.email || profile.address);
+  const hasContact = !!(profile.phone || profile.email || profile.address || profile.whatsapp || profile.hours?.length);
   const primaryCta = profile.ctas?.[0];
   const secondaryCta = profile.ctas?.[1];
 
