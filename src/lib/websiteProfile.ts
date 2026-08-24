@@ -1,21 +1,27 @@
 import type { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import type { OnboardingSubmission } from "@/lib/onboarding";
 import type { BizadRecord } from "@/lib/bizad";
+import type { WebsiteSources } from "@/lib/websiteSources";
 
 /**
- * Project-specific content used to initialise a Website page.
+ * Content used to initialise a Website page for the CURRENT client AND the
+ * CURRENT project.
  *
- * Everything here is derived from the CURRENT project only:
- *  - the flyer record (title)
- *  - the flyer's existing pages/layers (text, images, actions)
- *  - the project's onboarding submission (business info)
- *  - the project's digital business card record
+ * Sources, in priority order:
+ *  1. Project-specific information (this project's onboarding, business card, job)
+ *  2. The client's Dashboard/Profile information (profiles row, latest onboarding,
+ *     connected social accounts)
+ *  3. The existing flyer pages (text, images, actions)
+ *  4. Template defaults (only where nothing real exists)
  *
  * Nothing is invented. Missing values stay undefined so the website builder can
  * hide the matching section instead of writing fake business content.
  */
 export interface WebsiteProfile {
   businessName?: string;
+  ownerName?: string;
+  /** Business theme/category, e.g. "restaurant", "realtor", "event". */
+  theme?: string;
   headline?: string;
   tagline?: string;
   description?: string;
@@ -25,10 +31,15 @@ export interface WebsiteProfile {
   services: { title: string; body?: string; image?: string }[];
   pricing: { name: string; price: string; features: string[] }[];
   portfolio: { title: string; category?: string; description?: string; image?: string }[];
+  /** Special offer / promotion found in the project content. */
+  offer?: string;
   phone?: string;
+  whatsapp?: string;
   email?: string;
   address?: string;
+  hours?: string[];
   website?: string;
+  brandColors?: { accent?: string; background?: string };
   socials: { label: string; url: string }[];
   ctas: { label: string; action: LayerAction }[];
 }
@@ -39,6 +50,16 @@ const clean = (v?: string | null) => {
 };
 
 const isHttp = (v?: string | null) => !!v && /^(https?:)?\/\//i.test(v.trim());
+
+const first = (...vals: Array<string | null | undefined>) => {
+  for (const v of vals) {
+    const c = clean(v);
+    if (c) return c;
+  }
+  return undefined;
+};
+
+const isColor = (v?: string | null) => !!v && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim());
 
 function pushUnique(list: string[], v?: string | null) {
   const s = clean(v);
@@ -52,9 +73,57 @@ function socialLabel(url: string): string {
   if (u.includes("tiktok")) return "TikTok";
   if (u.includes("linkedin")) return "LinkedIn";
   if (u.includes("youtube")) return "YouTube";
+  if (u.includes("wa.me") || u.includes("whatsapp")) return "WhatsApp";
   if (u.includes("x.com") || u.includes("twitter")) return "X";
   return "Website";
 }
+
+/** Builds a profile URL for a CONNECTED social account (never invented). */
+function connectedSocialUrl(platform: string, username?: string | null): string | undefined {
+  const u = clean(username)?.replace(/^@/, "");
+  if (!u || /\s/.test(u)) return undefined;
+  switch (platform) {
+    case "facebook":
+      return `https://facebook.com/${u}`;
+    case "instagram":
+      return `https://instagram.com/${u}`;
+    case "tiktok":
+      return `https://tiktok.com/@${u}`;
+    case "linkedin":
+      return `https://linkedin.com/in/${u}`;
+    case "x":
+      return `https://x.com/${u}`;
+    case "youtube":
+      return `https://youtube.com/@${u}`;
+    default:
+      return undefined;
+  }
+}
+
+const THEME_KEYWORDS: Array<[string, RegExp]> = [
+  ["restaurant", /restaurant|food|kitchen|cuisine|menu|caf[eé]|catering|grill|bakery|pizza|dining/i],
+  ["realtor", /real ?estate|realtor|property|properties|listing|brokerage|homes for sale/i],
+  ["beauty", /salon|spa|beauty|hair|nails|barber|lash|makeup|skincare|massage/i],
+  ["construction", /construction|contractor|builder|renovation|roofing|plumbing|electrical|remodel|landscap/i],
+  ["event", /event|party|wedding|dj\b|concert|festival|gala|birthday/i],
+  ["fitness", /gym|fitness|trainer|yoga|pilates|workout/i],
+  ["retail", /shop|store|boutique|retail|clothing|fashion|merch/i],
+  ["personal", /portfolio|personal brand|author|artist|musician|photographer|consultant|speaker/i],
+];
+
+function detectTheme(text: string, flyerCategory?: string | null): string | undefined {
+  for (const [theme, re] of THEME_KEYWORDS) {
+    if (re.test(text)) return theme;
+  }
+  const cat = clean(flyerCategory);
+  if (cat === "realtor") return "realtor";
+  if (cat === "event") return "event";
+  if (cat === "business") return "business";
+  return undefined;
+}
+
+const OFFER_RE = /(\d{1,3}\s?%\s?off|free\s+\w+|buy\s+\w+\s+get|special|promo(tion)?|discount|deal\b|\bsale\b)/i;
+const HOURS_RE = /(mon|tue|wed|thu|fri|sat|sun)[a-z]*\s*[-–—:]|open\s+(daily|mon|\d)|\d{1,2}\s?(am|pm)\s?[-–—]\s?\d{1,2}\s?(am|pm)/i;
 
 /** Orders layers the way a reader would see them: page order, then top-to-bottom. */
 function orderedLayers(pages: FlyerPage[]): Layer[] {
@@ -71,10 +140,19 @@ function orderedLayers(pages: FlyerPage[]): Layer[] {
 export function buildWebsiteProfile(args: {
   flyer: Flyer | null;
   pages: FlyerPage[];
+  /** Client dashboard/profile + project records (see loadWebsiteSources). */
+  sources?: Partial<WebsiteSources> | null;
+  /** Deprecated single-source args, still supported. */
   onboarding?: OnboardingSubmission | null;
   bizad?: BizadRecord | null;
 }): WebsiteProfile {
-  const { flyer, pages, onboarding, bizad } = args;
+  const { flyer, pages } = args;
+  const src = args.sources ?? {};
+  const onboarding = args.onboarding ?? src.projectOnboarding ?? null;
+  const bizad = args.bizad ?? src.bizad ?? null;
+  const dash = src.dashboardOnboarding ?? null;
+  const client = src.clientProfile ?? null;
+  const job = src.job ?? null;
   const layers = orderedLayers(pages);
 
   const profile: WebsiteProfile = {
@@ -86,17 +164,46 @@ export function buildWebsiteProfile(args: {
     ctas: [],
   };
 
-  /* ---- identity / contact from onboarding + business card (most reliable) ---- */
-  profile.businessName =
-    clean(onboarding?.business_name) || clean(bizad?.business_name) || clean(flyer?.title);
-  profile.tagline = clean(onboarding?.business_slogan);
-  profile.description = clean(onboarding?.business_description) || clean(bizad?.about_text);
-  profile.logoUrl = clean(onboarding?.logo_url) || clean(bizad?.logo_url);
-  profile.phone = clean(onboarding?.phone) || clean(bizad?.phone);
-  profile.email = clean(onboarding?.email) || clean(bizad?.email);
-  profile.address = clean(onboarding?.business_address) || clean(bizad?.address);
-  profile.website = clean(onboarding?.website_url) || clean(bizad?.social_links?.website);
+  /* ---- identity / contact -------------------------------------------------
+     Priority: project onboarding → project business card → client dashboard
+     onboarding → client profile record → job/flyer title.                    */
+  profile.businessName = first(
+    onboarding?.business_name,
+    bizad?.business_name,
+    dash?.business_name,
+    job?.title,
+    flyer?.title
+  );
+  profile.ownerName = first(onboarding?.full_name, bizad?.owner_name, dash?.full_name, client?.full_name);
+  profile.tagline = first(onboarding?.business_slogan, dash?.business_slogan, client?.headline);
+  profile.description = first(
+    onboarding?.business_description,
+    bizad?.about_text,
+    onboarding?.ai_description,
+    dash?.business_description,
+    dash?.ai_description,
+    job?.brief
+  );
+  profile.logoUrl = first(onboarding?.logo_url, bizad?.logo_url, dash?.logo_url, client?.photo_url);
+  profile.phone = first(onboarding?.phone, bizad?.phone, dash?.phone, client?.phone);
+  profile.email = first(onboarding?.email, bizad?.email, dash?.email, client?.email);
+  profile.address = first(onboarding?.business_address, bizad?.address, dash?.business_address);
+  profile.website = first(onboarding?.website_url, bizad?.social_links?.website, dash?.website_url);
 
+  /* ---- brand colours from the project's digital business card ---- */
+  const accent = isColor(bizad?.button_color) ? clean(bizad?.button_color) : undefined;
+  const background = isColor(bizad?.background_color) ? clean(bizad?.background_color) : undefined;
+  if (accent || background) profile.brandColors = { accent, background };
+
+  /* ---- business theme / category ---- */
+  profile.theme = detectTheme(
+    [profile.businessName, profile.tagline, profile.description, job?.title, job?.brief]
+      .filter(Boolean)
+      .join(" "),
+    (flyer as unknown as { category?: string })?.category
+  );
+
+  /* ---- social links: project → dashboard → connected accounts ---- */
   const socialCandidates: Array<string | null | undefined> = [
     onboarding?.facebook_url,
     onboarding?.instagram_url,
@@ -106,13 +213,30 @@ export function buildWebsiteProfile(args: {
     bizad?.social_links?.instagram,
     bizad?.social_links?.tiktok,
     bizad?.social_links?.other,
+    dash?.facebook_url,
+    dash?.instagram_url,
+    dash?.tiktok_url,
+    dash?.other_social_url,
+    flyer?.settings?.social?.facebook,
+    flyer?.settings?.social?.instagram,
+    flyer?.settings?.social?.tiktok,
+    flyer?.settings?.social?.youtube,
+    flyer?.settings?.social?.linkedin,
+    flyer?.settings?.social?.twitter,
+    flyer?.settings?.social?.threads,
+    flyer?.settings?.social?.snapchat,
+    ...(src.socialAccounts ?? []).map((a) => connectedSocialUrl(a.platform, a.username ?? a.account_name)),
   ];
-  socialCandidates.forEach((raw) => {
+  const addSocial = (raw?: string | null) => {
     const url = clean(raw);
     if (!url || !isHttp(url)) return;
-    if (profile.socials.some((s) => s.url === url)) return;
-    profile.socials.push({ label: socialLabel(url), url });
-  });
+    const label = socialLabel(url);
+    if (label === "WhatsApp" && !profile.whatsapp) profile.whatsapp = url;
+    if (label === "Website") return;
+    if (profile.socials.some((s) => s.url === url || s.label === label)) return;
+    profile.socials.push({ label, url });
+  };
+  socialCandidates.forEach(addSocial);
 
   pushUnique(profile.images, bizad?.flyer_image_url);
   pushUnique(profile.images, onboarding?.flyer_upload_url);
@@ -142,6 +266,19 @@ export function buildWebsiteProfile(args: {
     );
     if (sub) profile.tagline = sub.value;
   }
+
+  /* ---- offer / business hours found in the flyer text ---- */
+  const offerText = texts.find((t) => t.value.length <= 90 && OFFER_RE.test(t.value));
+  if (offerText) profile.offer = offerText.value;
+  const hourLines = texts.filter((t) => t.value.length <= 80 && HOURS_RE.test(t.value)).map((t) => t.value);
+  if (hourLines.length) profile.hours = Array.from(new Set(hourLines)).slice(0, 7);
+
+  /* ---- theme refinement using real project content ---- */
+  if (!profile.theme) {
+    profile.theme = detectTheme(texts.map((t) => t.value).join(" "));
+  }
+
+
 
   /* ---- images from the existing flyer pages ---- */
   layers.forEach((l) => {
