@@ -31,7 +31,7 @@ export function LayersPanel() {
         {layers.length === 0 && <div className="p-4 text-xs text-muted-foreground">No layers yet.</div>}
         {layers.map((l) => {
           const isCutout = !!l.content.extractedFrom;
-          const Icon = isCutout ? Scissors : ICON[l.type];
+          const Icon = isCutout ? Scissors : (ICON[l.type] ?? Square);
           const label = isCutout
             ? (l.content.label || l.content.subjectLabel || "Cutout")
             : (l.content.text || l.content.label || l.content.iconName || l.type);

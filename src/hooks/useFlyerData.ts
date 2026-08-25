@@ -41,6 +41,7 @@ function normalizePageIds(pages: FlyerPage[]): { pages: FlyerPage[]; changed: bo
 
 export function useFlyerData(flyerId: string | undefined) {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const hydrate = useEditorStore((s) => s.hydrate);
   const flyer = useEditorStore((s) => s.flyer);
   const pages = useEditorStore((s) => s.pages);
@@ -53,11 +54,23 @@ export function useFlyerData(flyerId: string | undefined) {
   useEffect(() => {
     if (!flyerId) return;
     let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    useEditorStore.setState({
+      flyer: null,
+      pages: [],
+      selectedPageId: null,
+      selectedLayerId: null,
+      selectedLayerIds: [],
+      dirty: false,
+    });
     (async () => {
-      setLoading(true);
       const { data: f, error } = await supabase.from("flyers").select("*").eq("id", flyerId).single();
+      if (cancelled) return;
       if (error || !f) {
-        toast.error("Could not load flyer");
+        const message = error?.message || "Could not load flyer";
+        setLoadError(message);
+        toast.error(message);
         setLoading(false);
         return;
       }
@@ -330,6 +343,6 @@ export function useFlyerData(flyerId: string | undefined) {
     toast.success("All changes saved");
   }
 
-  return { loading, saving, saveNow };
+  return { loading, loadError, saving, saveNow, flyer };
 
 }
