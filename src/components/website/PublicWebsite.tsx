@@ -661,6 +661,7 @@ function BandView({
                     objectFit: "cover",
                     borderRadius: l.style.cornerRadius ?? 14,
                     display: "block",
+                    ...ring,
                   }}
                 />
               ) : null;
@@ -702,6 +703,7 @@ function BandView({
                     fontSize: 16,
                     fontFamily: doc.fontFamily,
                     cursor: "pointer",
+                    ...ring,
                   }}
                 >
                   {l.content.label || l.content.text}
