@@ -733,11 +733,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!s.flyer) return "";
     const existing = s.pages.find((p) => p.background?.bizadPage);
     if (existing) {
+      if (bizad.enabled) {
+        return get().replaceBizadPage(bizad);
+      }
       const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
       set({
         pages: s.pages.map((p) =>
           p.id === existing.id
-            ? { ...p, background: { ...p.background, bizadHidden: !bizad.enabled } }
+            ? { ...p, background: { ...p.background, bizadHidden: true } }
             : p
         ),
         selectedPageId: existing.id,

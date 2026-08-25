@@ -243,6 +243,8 @@ function LayerView({
 /** CSS equivalent of the flyer viewer's tappable-hotspot highlight rings. */
 function TapHighlight({ layer }: { layer: Layer }) {
   const hl = layer.action?.highlight ?? {};
+  // Standard bizad buttons should not show purple pulse rings unless explicitly enabled.
+  if (layer.type === "button" && hl.enabled !== true) return null;
   const style = hl.style ?? "pulse";
   if (hl.enabled === false || style === "none") return null;
   const color = hl.color ?? "#7c3aed";
