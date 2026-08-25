@@ -56,6 +56,7 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const DataDeletion = lazy(() => import("./pages/DataDeletion"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
+const ClientPortal = lazy(() => import("./pages/ClientPortal"));
 const Affiliate = lazy(() => import("./pages/Affiliate"));
 const AffiliateApply = lazy(() => import("./pages/AffiliateApply"));
 const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
@@ -123,6 +124,7 @@ const App = () => (
               <Route path="/data-deletion" element={<DataDeletion />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+              <Route path="/client-portal" element={<ProtectedRoute><ClientPortal /></ProtectedRoute>} />
               <Route path="/editor/:flyerId" element={<ProtectedRoute><EditorErrorBoundary><Editor /></EditorErrorBoundary></ProtectedRoute>} />
               <Route path="/analytics/:flyerId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/preview/:flyerId" element={<ProtectedRoute><PublicViewer previewMode /></ProtectedRoute>} />
