@@ -468,6 +468,8 @@ export default function Landing() {
         </div>
       </section>
 
+      <NewsletterSignup />
+
       <section id="start" className="overflow-hidden">
         <div className="grid md:grid-cols-[1.1fr_1fr]">
           <div className="bg-[#0a1f44] px-6 py-12 text-white md:px-12 md:py-16">
