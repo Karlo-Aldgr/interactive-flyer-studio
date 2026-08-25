@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEditorStore } from "@/store/editorStore";
 import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import { toast } from "sonner";
-import { updateBizadLayout } from "@/lib/bizad";
-import { layoutFromPage } from "@/lib/bizadPage";
+import { syncBizadRecordFromEditorPage } from "@/lib/bizad";
 import { generateAndUploadThumbnail } from "@/lib/thumbnail";
 import { ensureUuid, isUuid } from "@/lib/safeBrowser";
 
@@ -311,7 +310,7 @@ export function useFlyerData(flyerId: string | undefined) {
       const bizadPage = pagesToSave.find((p) => p.background?.bizadPage);
       if (bizadPage) {
         try {
-          await updateBizadLayout(f.id, bizadPage.background?.bizadHidden ? null : layoutFromPage(bizadPage, f.settings));
+          await syncBizadRecordFromEditorPage(f.id, pagesToSave, f.settings ?? null);
         } catch {
           /* card sync is best-effort */
         }

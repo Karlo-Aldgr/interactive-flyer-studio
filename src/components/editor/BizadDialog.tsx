@@ -6,13 +6,13 @@ import { getOnboardingForFlyer, type OnboardingSubmission } from "@/lib/onboardi
 import {
   buildBizadPayloadFromOnboarding,
   getBizadForFlyer,
-  syncBizadLayoutFromEditor,
+  rebuildAndSaveBizadLayout,
   upsertBizad,
   updateBizadLayout,
   type BizadRecord,
 } from "@/lib/bizad";
 import { BIZAD_DEFAULT_BACKGROUND_COLOR, BIZAD_DEFAULT_BUTTON_COLOR } from "@/lib/bizadDefaults";
-import { shouldOfferBizadLayoutReset, shouldRebuildBizadLayoutOnSave } from "@/lib/bizadLayoutUtils";
+import { shouldOfferBizadLayoutReset } from "@/lib/bizadLayoutUtils";
 import { buildBizadPage, layoutFromPage } from "@/lib/bizadPage";
 import { buildBizadSocialShareUrl, buildPublicBizadUrl } from "@/lib/utils";
 import { uploadBizadShareImage } from "@/lib/thumbnail";
@@ -166,9 +166,10 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
     const hasPage = useEditorStore.getState().pages.some((p) => p.background?.bizadPage);
     if (!hasPage) {
       addBizadPage(saved);
+    } else {
+      replaceBizadPage(saved);
     }
-    const storePages = useEditorStore.getState().pages;
-    await syncBizadLayoutFromEditor(flyer.id, storePages, flyer.settings);
+    await rebuildAndSaveBizadLayout(saved, flyer.settings);
   }
 
   async function save(nextEnabled = enabled) {
@@ -194,18 +195,12 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       setBizad(saved);
       setEnabled(saved.enabled);
 
-      const hasPage = pages.some((p) => p.background?.bizadPage);
+      const hadPage = pages.some((p) => p.background?.bizadPage);
       if (saved.enabled) {
-        const needsFreshLayout = !hasPage || shouldRebuildBizadLayoutOnSave(bizad?.layout);
-        if (needsFreshLayout) {
-          replaceBizadPage(saved);
-          if (!hasPage) {
-            toast.success("Digital business card page added to your flyer pages");
-          }
-        } else {
-          addBizadPage(saved);
-        }
         await persistLayout(saved);
+        if (!hadPage) {
+          toast.success("Digital business card page added to your flyer pages");
+        }
       } else {
         setBizadPageHidden(true);
         await updateBizadLayout(flyer.id, null);
@@ -246,8 +241,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       });
       setBizad(saved);
       replaceBizadPage(saved);
-      const storePages = useEditorStore.getState().pages;
-      await syncBizadLayoutFromEditor(flyer.id, storePages, flyer.settings);
+      await rebuildAndSaveBizadLayout(saved, flyer.settings);
       toast.success("Standard layout applied");
     } catch (e: any) {
       toast.error(e?.message || "Could not reset layout");
