@@ -12,7 +12,7 @@ import {
   type BizadRecord,
 } from "@/lib/bizad";
 import { BIZAD_DEFAULT_BACKGROUND_COLOR, BIZAD_DEFAULT_BUTTON_COLOR } from "@/lib/bizadDefaults";
-import { shouldOfferBizadLayoutReset } from "@/lib/bizadLayoutUtils";
+import { shouldOfferBizadLayoutReset, shouldRebuildBizadLayoutOnSave } from "@/lib/bizadLayoutUtils";
 import { buildBizadPage, layoutFromPage } from "@/lib/bizadPage";
 import { buildBizadSocialShareUrl, buildPublicBizadUrl } from "@/lib/utils";
 import { uploadBizadShareImage } from "@/lib/thumbnail";
@@ -48,6 +48,9 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   const [enabled, setEnabled] = useState(false);
   const [buttonColor, setButtonColor] = useState(BIZAD_DEFAULT_BUTTON_COLOR);
   const [backgroundColor, setBackgroundColor] = useState(BIZAD_DEFAULT_BACKGROUND_COLOR);
+  const [ownerName, setOwnerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [copyrightText, setCopyrightText] = useState("");
   const [shareImageUrl, setShareImageUrl] = useState("");
@@ -75,6 +78,9 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           setEnabled(existing.enabled);
           setButtonColor(existing.button_color);
           setBackgroundColor(existing.background_color);
+          setOwnerName(existing.owner_name ?? "");
+          setPhone(existing.phone ?? "");
+          setEmail(existing.email ?? "");
           setVideoUrl(existing.video_url ?? "");
           setCopyrightText(existing.copyright_text ?? "");
           setShareImageUrl(existing.share_image_url ?? "");
@@ -83,9 +89,15 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           setEnabled(false);
           setButtonColor(BIZAD_DEFAULT_BUTTON_COLOR);
           setBackgroundColor(BIZAD_DEFAULT_BACKGROUND_COLOR);
+          setOwnerName("");
+          setPhone("");
+          setEmail("");
           setVideoUrl("");
           setShareImageUrl(flyer.thumbnail_url ?? "");
           const draft = buildBizadPayloadFromOnboarding(onboardingRow, flyerContext, null);
+          setOwnerName(draft.owner_name ?? "");
+          setPhone(draft.phone ?? "");
+          setEmail(draft.email ?? "");
           setCopyrightText(draft.copyright_text ?? "");
         }
       } catch (e: any) {
@@ -107,6 +119,9 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       enabled,
       button_color: buttonColor,
       background_color: backgroundColor,
+      owner_name: ownerName.trim() || base.owner_name,
+      phone: phone.trim() || base.phone,
+      email: email.trim() || base.email,
       video_url: videoUrl.trim() || null,
       copyright_text: copyrightText.trim() || base.copyright_text,
       share_image_url: shareImageUrl.trim() || base.share_image_url,
@@ -119,6 +134,9 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
     enabled,
     buttonColor,
     backgroundColor,
+    ownerName,
+    phone,
+    email,
     videoUrl,
     copyrightText,
     shareImageUrl,
@@ -132,7 +150,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
 
   const publicUrl = previewBizad?.slug ? buildPublicBizadUrl(previewBizad.slug) : null;
   const socialShareUrl = previewBizad?.slug ? buildBizadSocialShareUrl(previewBizad.slug) : null;
-  const showLayoutReset = bizad ? shouldOfferBizadLayoutReset(bizad.layout) : false;
+  const showLayoutReset = bizad ? shouldOfferBizadLayoutReset(bizad.layout) : true;
 
   async function persistLayout(saved: BizadRecord) {
     if (!saved.enabled) {
@@ -159,6 +177,9 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
         enabled: nextEnabled,
         button_color: buttonColor,
         background_color: backgroundColor,
+        owner_name: ownerName.trim() || base.owner_name,
+        phone: phone.trim() || base.phone,
+        email: email.trim() || base.email,
         video_url: videoUrl.trim() || null,
         copyright_text: copyrightText.trim() || base.copyright_text,
         share_image_url: shareImageUrl.trim() || base.share_image_url,
@@ -168,7 +189,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
 
       const hasPage = pages.some((p) => p.background?.bizadPage);
       if (saved.enabled) {
-        const needsFreshLayout = !hasPage || shouldOfferBizadLayoutReset(bizad?.layout);
+        const needsFreshLayout = !hasPage || shouldRebuildBizadLayoutOnSave(bizad?.layout);
         if (needsFreshLayout) {
           replaceBizadPage(saved);
           if (!hasPage) {
@@ -199,10 +220,24 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   }
 
   async function handleResetLayout() {
-    if (!previewBizad) return;
+    if (!previewBizad || !user) return;
     setResetting(true);
     try {
-      replaceBizadPage(previewBizad);
+      const base = buildBizadPayloadFromOnboarding(onboarding, flyerContext, bizad);
+      const saved = await upsertBizad({
+        ...base,
+        enabled,
+        button_color: buttonColor,
+        background_color: backgroundColor,
+        owner_name: ownerName.trim() || base.owner_name,
+        phone: phone.trim() || base.phone,
+        email: email.trim() || base.email,
+        video_url: videoUrl.trim() || null,
+        copyright_text: copyrightText.trim() || base.copyright_text,
+        share_image_url: shareImageUrl.trim() || base.share_image_url,
+      });
+      setBizad(saved);
+      replaceBizadPage(saved);
       const storePages = useEditorStore.getState().pages;
       await syncBizadLayoutFromEditor(flyer.id, storePages, flyer.settings);
       toast.success("Standard layout applied");
@@ -224,6 +259,9 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           enabled,
           button_color: buttonColor,
           background_color: backgroundColor,
+          owner_name: ownerName.trim() || bizad.owner_name,
+          phone: phone.trim() || bizad.phone,
+          email: email.trim() || bizad.email,
           video_url: videoUrl.trim() || null,
           copyright_text: copyrightText.trim() || bizad.copyright_text,
           share_image_url: url,
@@ -296,6 +334,45 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
                   Reset to standard layout
                 </Button>
               )}
+
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <p className="text-xs font-medium">Contact info</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Phone and email power the CALL, TEXT, and EMAIL buttons on your live card.
+                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="bizad-owner" className="text-xs">Owner / contact name</Label>
+                  <Input
+                    id="bizad-owner"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    placeholder="Jane Smith"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="bizad-phone" className="text-xs">Phone</Label>
+                  <Input
+                    id="bizad-phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(555) 123-4567"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="bizad-email" className="text-xs">Email</Label>
+                  <Input
+                    id="bizad-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="hello@business.com"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
