@@ -253,16 +253,26 @@ Deno.serve(async (req) => {
 
     const flyerContext = buildFlyerContext(Array.isArray(pages) ? pages : []);
     let ownerNotes = String(flyer.chatbot_knowledge || "").trim().slice(0, CHATBOT_KNOWLEDGE_MAX);
-    if (!ownerNotes && flyer.owner_id) {
-      const { data: onboarding } = await supabase
-        .from("onboarding_submissions")
-        .select(
-          "business_name, business_slogan, business_address, business_description, website_url, facebook_url, instagram_url, tiktok_url, other_social_url, phone, email",
-        )
-        .eq("user_id", flyer.owner_id)
+    if (!ownerNotes) {
+      // PER-PROJECT RULE: only this flyer's own project onboarding may be used.
+      const { data: chatJob } = await supabase
+        .from("jobs")
+        .select("id")
+        .eq("flyer_id", flyerId)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
-      if (onboarding) {
-        ownerNotes = buildOnboardingKnowledge(onboarding as Record<string, unknown>);
+      if (chatJob?.id) {
+        const { data: onboarding } = await supabase
+          .from("onboarding_submissions")
+          .select(
+            "business_name, business_slogan, business_address, business_description, website_url, facebook_url, instagram_url, tiktok_url, other_social_url, phone, email",
+          )
+          .eq("flyer_job_id", chatJob.id)
+          .maybeSingle();
+        if (onboarding) {
+          ownerNotes = buildOnboardingKnowledge(onboarding as Record<string, unknown>);
+        }
       }
     }
 

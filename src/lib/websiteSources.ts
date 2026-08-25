@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { getMyOnboarding, getOnboardingForFlyer } from "@/lib/onboarding";
+import { getOnboardingForFlyer } from "@/lib/onboarding";
 import { getBizadForFlyer } from "@/lib/bizad";
 import type { OnboardingSubmission } from "@/lib/onboarding";
 import type { BizadRecord } from "@/lib/bizad";
@@ -43,7 +43,10 @@ export type WebsiteSources = {
   clientProfile: ClientProfile | null;
   /** Onboarding tied to THIS project. */
   projectOnboarding: OnboardingSubmission | null;
-  /** Client's latest onboarding (dashboard-level business profile). */
+  /**
+   * @deprecated Always null. Account-wide onboarding is never used — a project
+   * must never show another project's business information.
+   */
   dashboardOnboarding: OnboardingSubmission | null;
   bizad: BizadRecord | null;
   job: ProjectJob | null;
@@ -61,22 +64,46 @@ const safe = async <T>(p: PromiseLike<T>, fallback: T): Promise<T> => {
 };
 
 /**
- * Loads every existing source of information about the CURRENT client and the
- * CURRENT project. Nothing new is stored — this only reads records TapThatFlyer
- * already keeps (profiles, onboarding submissions, digital business card, job,
- * connected social accounts).
+ * Drops any row that does not belong to the given project. Cross-project and
+ * cross-account data must never reach a website, even on the same login.
+ */
+function assertProject<T extends Record<string, unknown>>(
+  row: T | null,
+  field: keyof T & string,
+  expected: string | null,
+): T | null {
+  if (!row) return null;
+  const value = row[field];
+  if (!expected || typeof value !== "string" || value !== expected) {
+    if (value !== undefined && value !== expected) return null;
+  }
+  return row;
+}
+
+/**
+ * Loads information about the CURRENT project only. Business identity always
+ * comes from this project's own onboarding / business card / job — never from
+ * another project and never from another account. The account profile row is
+ * used only for the owner's personal contact details.
  */
 export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> {
   const ownerId = (flyer as unknown as { owner_id?: string }).owner_id ?? null;
 
-  const [projectOnboarding, bizad] = await Promise.all([
+  const [projectOnboardingRaw, bizadRaw] = await Promise.all([
     safe(getOnboardingForFlyer(flyer.id), null),
     safe(getBizadForFlyer(flyer.id), null),
   ]);
 
-  const clientId = ownerId ?? projectOnboarding?.user_id ?? null;
+  const bizad = assertProject(bizadRaw as unknown as Record<string, unknown> | null, "flyer_id", flyer.id) as
+    | BizadRecord
+    | null;
 
-  const [clientProfile, dashboardOnboarding, job, socialAccounts, testimonials] = await Promise.all([
+  const clientId = ownerId ?? projectOnboardingRaw?.user_id ?? null;
+  // Onboarding written by a different account never applies to this project.
+  const projectOnboarding =
+    projectOnboardingRaw && clientId && projectOnboardingRaw.user_id !== clientId ? null : projectOnboardingRaw;
+
+  const [clientProfile, job, testimonials] = await Promise.all([
     clientId
       ? safe(
           supabase
@@ -88,7 +115,6 @@ export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> 
           null
         )
       : Promise.resolve(null),
-    clientId ? safe(getMyOnboarding(clientId), null) : Promise.resolve(null),
     safe(
       supabase
         .from("jobs")
@@ -101,16 +127,6 @@ export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> 
         .then((r) => (r.data as ProjectJob | null) ?? null),
       null
     ),
-    clientId
-      ? safe(
-          supabase
-            .from("social_accounts")
-            .select("platform, username, account_name")
-            .eq("user_id", clientId)
-            .then((r) => ((r.data as ConnectedSocial[] | null) ?? [])),
-          [] as ConnectedSocial[]
-        )
-      : Promise.resolve([] as ConnectedSocial[]),
     safe(
       supabase
         .from("testimonials")
@@ -124,6 +140,15 @@ export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> 
     ),
   ]);
 
-  return { clientProfile, projectOnboarding, dashboardOnboarding, bizad, job, socialAccounts, testimonials };
+  return {
+    clientProfile,
+    projectOnboarding,
+    // Account-wide sources are intentionally never used (per-project rule).
+    dashboardOnboarding: null,
+    bizad,
+    job,
+    socialAccounts: [] as ConnectedSocial[],
+    testimonials,
+  };
 
 }

@@ -266,13 +266,23 @@ Deno.serve(async (request) => {
       .eq("id", scriptRequest.flyer_id)
       .maybeSingle();
 
-    const { data: onboarding } = await admin
-      .from("onboarding_submissions")
-      .select("business_name, business_slogan, business_description, business_address, website_url, facebook_url, instagram_url, tiktok_url, phone, email")
-      .eq("user_id", scriptRequest.owner_id)
-      .order("updated_at", { ascending: false })
+    // PER-PROJECT RULE: only this project's own onboarding may be used.
+    // Never fall back to another project or another account's business info.
+    const { data: scriptJob } = await admin
+      .from("jobs")
+      .select("id")
+      .eq("flyer_id", scriptRequest.flyer_id)
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    const { data: onboarding } = scriptJob?.id
+      ? await admin
+          .from("onboarding_submissions")
+          .select("business_name, business_slogan, business_description, business_address, website_url, facebook_url, instagram_url, tiktok_url, phone, email")
+          .eq("flyer_job_id", scriptJob.id)
+          .maybeSingle()
+      : { data: null };
 
     let updated = scriptRequest;
 
