@@ -34,49 +34,37 @@ function scrollToAnchor(anchor: string) {
 
 export type WebsiteFormRequest = { action: LayerAction; layerId: string } | null;
 
-function runAction(action: LayerAction | null | undefined, openForm: (r: WebsiteFormRequest) => void, layerId: string) {
+/** Dispatcher for every action type the flyer supports (provided by the root). */
+export const RuntimeCtx = createContext<((a: LayerAction | null | undefined) => void) | null>(null);
+
+function runAction(
+  action: LayerAction | null | undefined,
+  openForm: (r: WebsiteFormRequest) => void,
+  layerId: string,
+  run?: ((a: LayerAction | null | undefined) => void) | null,
+) {
   if (!action) return;
   const p: any = action.payload ?? {};
   switch (action.type) {
     case "open_url": {
       const url = String(p.url ?? "");
-      if (!url) return;
       if (url.startsWith("#")) return scrollToAnchor(url.slice(1));
-      if (p.newTab === false || url.startsWith("mailto:") || url.startsWith("tel:") || url.startsWith("sms:")) {
-        window.location.href = url;
-      } else {
-        window.open(url, "_blank", "noopener,noreferrer");
-      }
-      return;
-    }
-    case "call":
-      if (p.phone) window.location.href = `tel:${p.phone}`;
-      return;
-    case "sms":
-      if (p.phone) window.location.href = `sms:${p.phone}${p.smsBody ? `?&body=${encodeURIComponent(p.smsBody)}` : ""}`;
-      return;
-    case "map": {
-      const { mapAddress, mapLat, mapLng } = p;
-      const url =
-        mapLat != null && mapLng != null
-          ? `https://www.google.com/maps/search/?api=1&query=${mapLat},${mapLng}`
-          : mapAddress
-            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapAddress)}`
-            : "";
-      if (url) window.open(url, "_blank", "noopener,noreferrer");
-      return;
+      break;
     }
     case "form":
     case "rsvp":
     case "subscribe":
       openForm({ action, layerId });
       return;
-    default: {
-      const url = p.url || p.link;
-      if (url) window.open(String(url), "_blank", "noopener,noreferrer");
-    }
   }
+  // Everything else uses the shared flyer action runtime so popups, galleries,
+  // carousels, coupons, bookings, polls, menus, novels, etc. behave exactly as
+  // they do on a flyer.
+  if (run) return run(action);
+  const url = p.url || p.link;
+  if (url) window.open(String(url), "_blank", "noopener,noreferrer");
 }
+
 
 /* ------------------------------------------------------------ band model */
 
