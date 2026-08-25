@@ -10,8 +10,16 @@ import { loadPublishedWebsite, loadWebsiteByFlyerId, type LoadedWebsite } from "
  *
  * Renders nothing from the editor: no toolbar, no pages panel, no inspector.
  */
-export default function PublicWebsitePage({ previewMode = false }: { previewMode?: boolean }) {
-  const { slug, flyerId } = useParams();
+export default function PublicWebsitePage({
+  previewMode = false,
+  hostSlug,
+}: {
+  previewMode?: boolean;
+  hostSlug?: string;
+}) {
+  const params = useParams();
+  const slug = hostSlug ?? params.slug;
+  const flyerId = params.flyerId;
   const [site, setSite] = useState<LoadedWebsite | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +42,7 @@ export default function PublicWebsitePage({ previewMode = false }: { previewMode
       cancelled = true;
     };
   }, [previewMode, slug, flyerId]);
+
 
   useEffect(() => {
     if (site?.doc?.brandName) document.title = site.doc.brandName;
