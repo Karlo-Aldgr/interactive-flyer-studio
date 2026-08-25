@@ -16,8 +16,8 @@ export async function loadCustomerPortalJobs(userId: string): Promise<UserJob[]>
 }
 
 export async function fetchCustomerPortalUrl(flyerId: string): Promise<string | null> {
-  const { data, error } = await supabase.functions.invoke("customer-portal-link", {
-    body: { flyer_id: flyerId },
+  const { data, error } = await supabase.functions.invoke("portal-access", {
+    body: { action: "customer_link", flyer_id: flyerId },
   });
   if (error) throw new Error(error.message);
   const res = data as { error?: string; portal_token?: string; portal_access_code?: string } | null;
