@@ -11,7 +11,13 @@ export const BIZAD_PAGE_HEIGHT = 1920;
 export const isBizadPage = (p: FlyerPage) => !!p.background?.bizadPage;
 
 function act(type: LayerAction["type"], payload: LayerAction["payload"]): LayerAction {
-  return { id: uid(), type, payload };
+  return {
+    id: uid(),
+    type,
+    payload,
+    // Bizad buttons are obviously tappable — skip flyer-style pulse rings on the live card.
+    highlight: { enabled: false, style: "none" },
+  };
 }
 
 function text(
