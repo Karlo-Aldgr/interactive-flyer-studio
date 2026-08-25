@@ -706,7 +706,7 @@ export function Canvas() {
                 const effectiveAction = previewAction && previewAction.layerId === l.id ? previewAction.action : l.action;
                 const h = effectiveAction?.highlight;
                 const showHighlight =
-                  (flyer.settings.highlightsEnabled ?? true) &&
+                  (flyer.settings?.highlightsEnabled ?? true) &&
                   !!effectiveAction &&
                   h?.enabled !== false &&
                   (h?.style ?? "pulse") !== "none";
@@ -1042,7 +1042,7 @@ export function Canvas() {
             )}
           </Stage>
 
-          <SocialSlideout settings={flyer.settings.social} />
+          <SocialSlideout settings={flyer.settings?.social} />
         </div>
       </div>
     </div>

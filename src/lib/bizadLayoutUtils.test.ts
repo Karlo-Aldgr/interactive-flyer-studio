@@ -16,8 +16,10 @@ describe("isHandEditedBizadLayout", () => {
     expect(isHandEditedBizadLayout({ layers })).toBe(true);
   });
 
-  it("is false for standard vontastic layouts", () => {
-    expect(isHandEditedBizadLayout({ source: BIZAD_LAYOUT_SOURCE, layers: [{ id: "1" }] })).toBe(false);
+  it("never treats vontastic_v1 as hand-edited even with many layers", () => {
+    const layers = Array.from({ length: 12 }, (_, i) => ({ id: String(i) }));
+    expect(isHandEditedBizadLayout({ source: BIZAD_LAYOUT_SOURCE, layers })).toBe(false);
+    expect(shouldRebuildBizadLayoutOnSave({ source: BIZAD_LAYOUT_SOURCE, layers })).toBe(true);
   });
 });
 

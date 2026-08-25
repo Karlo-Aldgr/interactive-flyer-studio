@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Flyer, FlyerPage, Layer, LayerAction, LayerContent, LayerStyle, PageIntro } from "@/types/flyer";
+import { Flyer, FlyerPage, FlyerSettings, Layer, LayerAction, LayerContent, LayerStyle, PageIntro } from "@/types/flyer";
 import { defaultLayer, emptyPage, uid } from "@/lib/konvaHelpers";
 import { ensureUuid } from "@/lib/safeBrowser";
 import type { SubjectDetection, NormalizedPoint } from "@/lib/subjectDetect";
@@ -10,6 +10,18 @@ import type { WebsiteProfile } from "@/lib/websiteProfile";
 
 import type { BizadRecord } from "@/lib/bizad";
 
+const DEFAULT_FLYER_SETTINGS: FlyerSettings = {
+  width: 1080,
+  height: 1920,
+  background: "#ffffff",
+};
+
+function normalizeFlyer(flyer: Flyer): Flyer {
+  return {
+    ...flyer,
+    settings: { ...DEFAULT_FLYER_SETTINGS, ...(flyer.settings ?? {}) },
+  };
+}
 
 export type DrawMode = null | "hotspot" | "hotspot-ellipse" | "crop" | "extract-rect" | "extract-auto";
 
@@ -171,7 +183,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   hydrate: (flyer, pages) =>
     set({
-      flyer,
+      flyer: normalizeFlyer(flyer),
       pages,
       selectedPageId: pages[0]?.id ?? null,
       selectedLayerId: null,

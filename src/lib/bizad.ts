@@ -2,9 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { buildPublicFlyerUrl, slugBaseFromTitle } from "@/lib/utils";
 import type { OnboardingSubmission } from "@/lib/onboarding";
 import { BIZAD_DEFAULT_BACKGROUND_COLOR, BIZAD_DEFAULT_BUTTON_COLOR } from "@/lib/bizadDefaults";
-import { layoutFromPage } from "@/lib/bizadPage";
+import { buildBizadPage, layoutFromPage } from "@/lib/bizadPage";
 import type { FlyerPage, FlyerSettings } from "@/types/flyer";
-import { layoutFromPage } from "@/lib/bizadPage";
 
 export type BizadSocialLinks = {
   website?: string | null;
@@ -132,6 +131,41 @@ export async function syncBizadLayoutFromEditor(
     flyerId,
     bizadPage.background?.bizadHidden ? null : layoutFromPage(bizadPage, settings),
   );
+}
+
+/** Rebuild the public card layout from bizad record fields (colors, contact, copy). */
+export async function rebuildAndSaveBizadLayout(
+  bizad: Pick<BizadRecord, "flyer_id" | "enabled"> & Partial<BizadRecord>,
+  settings?: FlyerSettings | null,
+): Promise<void> {
+  if (!bizad.enabled) {
+    await updateBizadLayout(bizad.flyer_id, null);
+    return;
+  }
+  const page = buildBizadPage(bizad.flyer_id, 0, bizad as BizadRecord);
+  await updateBizadLayout(bizad.flyer_id, layoutFromPage(page, settings));
+}
+
+/** After canvas edits, keep bizads row colors aligned with the editor page. */
+export async function syncBizadRecordFromEditorPage(
+  flyerId: string,
+  pages: FlyerPage[],
+  settings?: FlyerSettings | null,
+): Promise<void> {
+  const bizadPage = pages.find((p) => p.background?.bizadPage);
+  if (!bizadPage) return;
+
+  const buttonLayer = bizadPage.layers.find((l) => l.type === "button");
+  const patch: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (bizadPage.background?.color) patch.background_color = bizadPage.background.color;
+  if (buttonLayer?.style?.fill) patch.button_color = buttonLayer.style.fill;
+
+  const { error: metaError } = await supabase.from("bizads" as any).update(patch).eq("flyer_id", flyerId);
+  if (metaError) throw metaError;
+
+  await syncBizadLayoutFromEditor(flyerId, pages, settings);
 }
 
 export async function getBizadForFlyer(flyerId: string): Promise<BizadRecord | null> {

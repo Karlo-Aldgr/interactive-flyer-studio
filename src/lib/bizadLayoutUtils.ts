@@ -14,7 +14,9 @@ export function buildBizadQrImageUrl(slug: string, size = 400): string {
 /** Hand-customized cards (e.g. Vontastic) — never auto-rebuild or offer reset. */
 export function isHandEditedBizadLayout(layout: unknown): boolean {
   if (!layout) return false;
-  const l = layout as BizadLayout;
+  const l = layout as BizadLayout & { source?: string };
+  // Auto-generated standard cards always rebuild on save, even with 10+ layers.
+  if (l.source === BIZAD_LAYOUT_SOURCE) return false;
   return Array.isArray(l.layers) && l.layers.length >= HAND_EDITED_LAYER_THRESHOLD;
 }
 
