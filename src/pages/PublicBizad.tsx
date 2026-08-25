@@ -7,6 +7,17 @@ import { loadPublicBizad, DEMO_BIZAD, type BizadRecord } from "@/lib/bizad";
 import { BizadLayoutView, isBizadLayout } from "@/components/viewer/BizadLayoutView";
 import { BizadAudio } from "@/components/viewer/BizadAudio";
 import type { BizadAudioSettings } from "@/lib/bizadPage";
+import { buildPublicBizadUrl } from "@/lib/utils";
+
+function setPageMeta(selector: string, attr: string, name: string, content: string) {
+  let tag = document.head.querySelector<HTMLMetaElement>(selector);
+  if (!tag) {
+    tag = document.createElement("meta");
+    tag.setAttribute(attr, name);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute("content", content);
+}
 
 export default function PublicBizad() {
   const { slug } = useParams<{ slug: string }>();
@@ -29,9 +40,37 @@ export default function PublicBizad() {
   }, [slug]);
 
   useEffect(() => {
-    if (bizad?.business_name) {
-      document.title = `${bizad.business_name} — Digital Card`;
-    }
+    if (!bizad) return;
+    const title = bizad.business_name
+      ? `${bizad.business_name} — Digital Card`
+      : "Digital Business Card";
+    const description =
+      bizad.about_text?.trim() ||
+      `${bizad.business_name || "Business"} — digital business card on TapThatFlyer.`;
+    const image =
+      bizad.share_image_url ||
+      bizad.flyer_image_url ||
+      bizad.logo_url ||
+      `${window.location.origin}/og.png`;
+    const canonical = buildPublicBizadUrl(bizad.slug);
+
+    const prevTitle = document.title;
+    document.title = title;
+
+    setPageMeta(`meta[property="og:title"]`, "property", "og:title", title);
+    setPageMeta(`meta[property="og:description"]`, "property", "og:description", description);
+    setPageMeta(`meta[property="og:image"]`, "property", "og:image", image);
+    setPageMeta(`meta[property="og:url"]`, "property", "og:url", canonical);
+    setPageMeta(`meta[property="og:type"]`, "property", "og:type", "website");
+    setPageMeta(`meta[name="description"]`, "name", "description", description);
+    setPageMeta(`meta[name="twitter:card"]`, "name", "twitter:card", "summary_large_image");
+    setPageMeta(`meta[name="twitter:title"]`, "name", "twitter:title", title);
+    setPageMeta(`meta[name="twitter:description"]`, "name", "twitter:description", description);
+    setPageMeta(`meta[name="twitter:image"]`, "name", "twitter:image", image);
+
+    return () => {
+      document.title = prevTitle;
+    };
   }, [bizad]);
 
   if (loading) {

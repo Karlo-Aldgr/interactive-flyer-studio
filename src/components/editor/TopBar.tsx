@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { buildPublicBizadUrl, buildPublicFlyerUrl, buildPublicWebsiteUrl, buildSocialLandingShareUrl, buildSocialShareUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
+import { buildBizadSocialShareUrl, buildPublicFlyerUrl, buildPublicWebsiteUrl, buildSocialLandingShareUrl, buildSocialShareUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
 import { ensureUniqueWebsiteSlug } from "@/lib/websiteSlug";
 
 import { getBizadForFlyer } from "@/lib/bizad";
@@ -138,7 +138,7 @@ export function TopBar({ saving, onSave }: Props) {
       try {
         const bizad = await getBizadForFlyer(flyer.id);
         if (!cancelled) {
-          setBizadShareUrl(bizad?.slug && bizad.enabled ? buildPublicBizadUrl(bizad.slug) : null);
+          setBizadShareUrl(bizad?.slug && bizad.enabled ? buildBizadSocialShareUrl(bizad.slug) : null);
         }
       } catch {
         if (!cancelled) setBizadShareUrl(null);

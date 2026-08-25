@@ -848,6 +848,7 @@ export type Database = {
           owner_name: string | null
           owner_photo_url: string | null
           phone: string | null
+          share_image_url: string | null
           slug: string
           social_links: Json
           updated_at: string
@@ -872,6 +873,7 @@ export type Database = {
           owner_name?: string | null
           owner_photo_url?: string | null
           phone?: string | null
+          share_image_url?: string | null
           slug: string
           social_links?: Json
           updated_at?: string
@@ -896,6 +898,7 @@ export type Database = {
           owner_name?: string | null
           owner_photo_url?: string | null
           phone?: string | null
+          share_image_url?: string | null
           slug?: string
           social_links?: Json
           updated_at?: string

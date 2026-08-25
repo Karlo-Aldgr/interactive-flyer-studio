@@ -81,6 +81,7 @@ interface EditorState {
   addLandingPage: (width?: number, height?: number) => void;
   addScannedMenuPage: (args: { imageUrl: string; imgWidth: number; imgHeight: number; items: Array<{ id?: string; name: string; price?: number; description?: string; category?: string; color?: string; bbox: { x: number; y: number; w: number; h: number } }>; }) => string;
   addBizadPage: (bizad: BizadRecord) => string;
+  replaceBizadPage: (bizad: BizadRecord) => string;
   setBizadPageHidden: (hidden: boolean) => void;
   addWebsitePage: (profile: WebsiteProfile) => string;
   setWebsiteDevice: (device: WebsiteDevice) => void;
@@ -713,6 +714,40 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       dirty: true,
     });
     return page.id;
+  },
+
+  replaceBizadPage: (bizad) => {
+    const s = get();
+    if (!s.flyer) return "";
+    const existing = s.pages.find((p) => p.background?.bizadPage);
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const fresh = buildBizadPage(s.flyer.id, existing?.index ?? s.pages.length, bizad);
+    if (existing) {
+      set({
+        pages: s.pages.map((p) =>
+          p.id === existing.id
+            ? { ...fresh, id: existing.id, index: existing.index, flyer_id: existing.flyer_id }
+            : p,
+        ),
+        selectedPageId: existing.id,
+        selectedLayerId: null,
+        selectedLayerIds: [],
+        past,
+        future: [],
+        dirty: true,
+      });
+      return existing.id;
+    }
+    set({
+      pages: [...s.pages, fresh],
+      selectedPageId: fresh.id,
+      selectedLayerId: null,
+      selectedLayerIds: [],
+      past,
+      future: [],
+      dirty: true,
+    });
+    return fresh.id;
   },
 
   setBizadPageHidden: (hidden) => {

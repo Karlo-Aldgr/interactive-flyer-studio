@@ -23,6 +23,7 @@ export type ActionType =
   | "poll"
   | "subscribe"
   | "book_appointment"
+  | "download_vcard"
   | "gallery"
   | "survey"
   | "testimonial"
@@ -503,6 +504,8 @@ export interface FlyerPage {
     bizadPage?: boolean;
     /** Digital business card page is toggled off — kept in the editor but not published. */
     bizadHidden?: boolean;
+    /** Auto-generated bizad layout version marker (e.g. vontastic_v1). */
+    bizadLayoutSource?: string;
     /** Marks this page as the single long-scrolling Website page (editor-only for now). */
     websitePage?: boolean;
     /** Which responsive width the Website page is currently being edited at. */

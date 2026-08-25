@@ -164,6 +164,11 @@ export function buildSocialShareUrl(slug: string): string {
   return `${getShareOrigin().replace(/\/$/, "")}/f/${slug}`;
 }
 
+/** Social share link for digital business cards (crawler-friendly OG HTML). */
+export function buildBizadSocialShareUrl(slug: string): string {
+  return `${getShareOrigin().replace(/\/$/, "")}/bizads/${slug}`;
+}
+
 /** Landing share link: crawlers see landing art; humans open the flyer via ?open=. */
 export function buildSocialLandingShareUrl(
   slug: string,

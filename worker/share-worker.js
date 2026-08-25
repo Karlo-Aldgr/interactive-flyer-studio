@@ -5,8 +5,9 @@
  * LinkedInBot, Slackbot, Discordbot, TelegramBot, etc.
  *
  * Routes:
- *   GET /f/:slug   -> Crawler: OG HTML. Human: 302 to live viewer.
- *   GET /         -> 302 to app homepage.
+ *   GET /f/:slug       -> Crawler: OG HTML. Human: 302 to live viewer.
+ *   GET /bizads/:slug  -> Crawler: OG HTML for digital business cards.
+ *   GET /             -> 302 to app homepage.
  *
  * Required env vars:
  *   SUPABASE_URL, SUPABASE_ANON_KEY, APP_ORIGIN
@@ -61,6 +62,52 @@ async function fetchFlyer(env, slug) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Fetch enabled bizad row for social previews. */
+async function fetchBizad(env, slug) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    console.log("[share-worker] missing SUPABASE_URL or SUPABASE_ANON_KEY");
+    return null;
+  }
+  const url = `${env.SUPABASE_URL}/rest/v1/bizads?slug=eq.${encodeURIComponent(
+    slug,
+  )}&enabled=eq.true&select=business_name,about_text,share_image_url,flyer_image_url,logo_url,updated_at&limit=1`;
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 3000);
+  try {
+    const res = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+        Accept: "application/json",
+      },
+      signal: ctrl.signal,
+      cf: { cacheTtl: 60, cacheEverything: true },
+    });
+    if (!res.ok) {
+      console.log(`[share-worker] supabase bizad ${res.status} for slug=${slug}`);
+      return null;
+    }
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length ? rows[0] : null;
+  } catch (e) {
+    console.log(`[share-worker] fetchBizad error for slug=${slug}: ${e?.message || e}`);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function pickBizadImage(bizad) {
+  const image =
+    bizad?.share_image_url ||
+    bizad?.flyer_image_url ||
+    bizad?.logo_url ||
+    FALLBACK_IMAGE;
+  const stamp = encodeURIComponent(String(bizad?.updated_at || Date.now()));
+  return `${image}${String(image).includes("?") ? "&" : "?"}v=${stamp}&variant=bizad`;
 }
 
 /** Append a stable cache-buster so Facebook re-fetches regenerated storage images. */
@@ -173,42 +220,67 @@ export default {
     }
 
     // /f/:slug
-    const match = url.pathname.match(/^\/f\/([A-Za-z0-9_-]+)\/?$/);
-    if (!match) {
-      return new Response("Not found", { status: 404 });
+    const flyerMatch = url.pathname.match(/^\/f\/([A-Za-z0-9_-]+)\/?$/);
+    if (flyerMatch) {
+      const slug = flyerMatch[1];
+      const qs = url.search || "";
+      const pageId = url.searchParams.get("page");
+      const isLanding = !!pageId;
+      const viewerUrl = `${appOrigin}/f/${slug}${qs}`;
+      const shareUrl = `${url.origin}/f/${slug}${qs}`;
+
+      if (!isCrawler) {
+        return Response.redirect(viewerUrl, 302);
+      }
+
+      const flyer = await fetchFlyer(env, slug);
+      const { url: image, source: imageSource } = await pickImage(flyer, env, pageId);
+      const title = flyer?.title || "Flyer";
+      const description = isLanding ? `View "${title}" — interactive flyer.` : `Open "${title}" — tap to interact.`;
+
+      return new Response(ogHtml({ title, description, image, canonical: shareUrl }), {
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "public, max-age=60",
+          "x-share-worker": "v7",
+          "x-flyer-found": flyer ? "true" : "false",
+          "x-image-source": imageSource,
+          "x-link-kind": isLanding ? "landing" : "flyer",
+        },
+      });
     }
-    const slug = match[1];
-    // Preserve incoming query string so ?page=<id> survives the redirect /
-    // OG fetch round-trip.
-    const qs = url.search || "";
-    const pageId = url.searchParams.get("page");
-    const isLanding = !!pageId;
-    const viewerUrl = `${appOrigin}/f/${slug}${qs}`;
-    // Canonical MUST include the query string, otherwise Facebook re-scrapes
-    // the bare slug and overrides our per-page image.
-    const shareUrl = `${url.origin}/f/${slug}${qs}`;
 
-    // Humans → straight to the interactive viewer (with original query).
-    if (!isCrawler) {
-      return Response.redirect(viewerUrl, 302);
+    // /bizads/:slug
+    const bizadMatch = url.pathname.match(/^\/bizads\/([A-Za-z0-9_-]+)\/?$/);
+    if (bizadMatch) {
+      const slug = bizadMatch[1];
+      const viewerUrl = `${appOrigin}/bizads/${slug}`;
+      const shareUrl = `${url.origin}/bizads/${slug}`;
+
+      if (!isCrawler) {
+        return Response.redirect(viewerUrl, 302);
+      }
+
+      const bizad = await fetchBizad(env, slug);
+      const image = pickBizadImage(bizad);
+      const title = bizad?.business_name ? `${bizad.business_name} — Digital Card` : "Digital Business Card";
+      const description =
+        bizad?.about_text?.trim() ||
+        `${bizad?.business_name || "Business"} — digital business card on TapThatFlyer.`;
+
+      return new Response(ogHtml({ title, description, image, canonical: shareUrl }), {
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "public, max-age=60",
+          "x-share-worker": "v7",
+          "x-bizad-found": bizad ? "true" : "false",
+          "x-link-kind": "bizad",
+        },
+      });
     }
 
-    // Crawlers → always serve OG HTML, even if Supabase is down.
-    const flyer = await fetchFlyer(env, slug);
-    const { url: image, source: imageSource } = await pickImage(flyer, env, pageId);
-    const title = flyer?.title || "Flyer";
-    const description = isLanding ? `View "${title}" — interactive flyer.` : `Open "${title}" — tap to interact.`;
-
-    return new Response(ogHtml({ title, description, image, canonical: shareUrl }), {
-      status: 200,
-      headers: {
-        "content-type": "text/html; charset=utf-8",
-        "cache-control": "public, max-age=60",
-        "x-share-worker": "v6",
-        "x-flyer-found": flyer ? "true" : "false",
-        "x-image-source": imageSource,
-        "x-link-kind": isLanding ? "landing" : "flyer",
-      },
-    });
+    return new Response("Not found", { status: 404 });
   },
 };

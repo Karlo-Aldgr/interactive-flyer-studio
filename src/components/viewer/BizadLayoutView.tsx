@@ -488,6 +488,9 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
           }
           setAppointmentAction(a);
           break;
+        case "download_vcard":
+          downloadVCard(bizad);
+          break;
         case "realtor_gallery":
           setRealtorGallery(a);
           break;
