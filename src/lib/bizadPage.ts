@@ -84,15 +84,27 @@ export function buildBizadPage(flyerId: string, index: number, bizad: BizadRecor
   }
 
   if (bizad.flyer_image_url) {
+    const heroW = Math.round(innerW * 0.86);
+    const heroH = Math.round(heroW * 1.28);
+    const heroX = side + (innerW - heroW) / 2;
+    const pad = 12;
+    layers.push({
+      ...defaultLayer("shape", pageId, z++),
+      position: { x: heroX - pad, y: y - pad },
+      size: { width: heroW + pad * 2, height: heroH + pad * 2 },
+      style: { fill: "#ffffff", cornerRadius: 20 },
+      content: {},
+      action: null,
+    });
     layers.push({
       ...defaultLayer("image", pageId, z++),
-      position: { x: side, y },
-      size: { width: innerW, height: 520 },
+      position: { x: heroX, y },
+      size: { width: heroW, height: heroH },
       content: { src: bizad.flyer_image_url },
-      style: { cornerRadius: 20 },
+      style: { cornerRadius: 16, objectFit: "cover" },
       action: bizad.gallery_url ? act("open_url", { url: bizad.gallery_url, newTab: true }) : null,
     });
-    y += 548;
+    y += heroH + pad + 24;
   }
 
   if (bizad.owner_name) {

@@ -58,42 +58,7 @@ function SocialButton({ href, label, children, color }: { href: string; label: s
   );
 }
 
-function toEmbedVideoUrl(url: string): string | null {
-  const raw = url.trim();
-  if (!raw) return null;
-  if (raw.includes("youtube.com/watch")) {
-    const id = new URL(raw).searchParams.get("v");
-    return id ? `https://www.youtube.com/embed/${id}` : raw;
-  }
-  if (raw.includes("youtu.be/")) {
-    const id = raw.split("youtu.be/")[1]?.split(/[?#]/)[0];
-    return id ? `https://www.youtube.com/embed/${id}` : raw;
-  }
-  return raw;
-}
-
-function BizadVideo({ url }: { url: string }) {
-  const embed = toEmbedVideoUrl(url);
-  if (!embed) return null;
-
-  const isDirect = /\.(mp4|webm|mov)(\?|$)/i.test(embed) || embed.startsWith("blob:");
-
-  return (
-    <section className="mt-6 w-full overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-black/5">
-      {isDirect ? (
-        <video src={embed} controls playsInline className="aspect-video w-full bg-black" />
-      ) : (
-        <iframe
-          src={embed}
-          title="Business video"
-          className="aspect-video w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      )}
-    </section>
-  );
-}
+import { BizadVideoEmbed } from "@/components/bizad/BizadVideoEmbed";
 
 function shouldShowOwnerPhoto(bizad: BizadRecord): boolean {
   if (!bizad.owner_photo_url?.trim()) return false;
@@ -220,7 +185,7 @@ export function BizadPageContent({
           </div>
         )}
 
-        {bizad.video_url && <BizadVideo url={bizad.video_url} />}
+        {bizad.video_url && <BizadVideoEmbed url={bizad.video_url} className="mt-6" />}
 
         {bizad.about_text && (
           <section className="mt-8 w-full rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-black/5">
