@@ -248,7 +248,7 @@ export function buildWebsiteProfile(args: {
     (flyer as unknown as { category?: string })?.category
   );
 
-  /* ---- social links: project → dashboard → connected accounts ---- */
+  /* ---- social links: THIS project only (onboarding → card → flyer) ---- */
   const socialCandidates: Array<string | null | undefined> = [
     onboarding?.facebook_url,
     onboarding?.instagram_url,
