@@ -610,6 +610,12 @@ export function PagesPanel() {
           </Dialog>
         </div>
       )}
+      <WebsiteSectionsDialog
+        open={sectionsOpen}
+        onOpenChange={setSectionsOpen}
+        loading={creatingWebsite}
+        onConfirm={(sections) => { void createWebsiteWithSections(sections); }}
+      />
     </div>
   );
 }
