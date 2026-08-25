@@ -21,7 +21,7 @@ import type { Flyer } from "@/types/flyer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { BizadLayoutView } from "@/components/viewer/BizadLayoutView";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -51,6 +51,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   const [ownerName, setOwnerName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [aboutText, setAboutText] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [copyrightText, setCopyrightText] = useState("");
   const [shareImageUrl, setShareImageUrl] = useState("");
@@ -81,6 +82,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           setOwnerName(existing.owner_name ?? "");
           setPhone(existing.phone ?? "");
           setEmail(existing.email ?? "");
+          setAboutText(existing.about_text ?? "");
           setVideoUrl(existing.video_url ?? "");
           setCopyrightText(existing.copyright_text ?? "");
           setShareImageUrl(existing.share_image_url ?? "");
@@ -92,12 +94,14 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           setOwnerName("");
           setPhone("");
           setEmail("");
+          setAboutText("");
           setVideoUrl("");
           setShareImageUrl(flyer.thumbnail_url ?? "");
           const draft = buildBizadPayloadFromOnboarding(onboardingRow, flyerContext, null);
           setOwnerName(draft.owner_name ?? "");
           setPhone(draft.phone ?? "");
           setEmail(draft.email ?? "");
+          setAboutText(draft.about_text ?? "");
           setCopyrightText(draft.copyright_text ?? "");
         }
       } catch (e: any) {
@@ -122,6 +126,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       owner_name: ownerName.trim() || base.owner_name,
       phone: phone.trim() || base.phone,
       email: email.trim() || base.email,
+      about_text: aboutText.trim() || base.about_text,
       video_url: videoUrl.trim() || null,
       copyright_text: copyrightText.trim() || base.copyright_text,
       share_image_url: shareImageUrl.trim() || base.share_image_url,
@@ -137,6 +142,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
     ownerName,
     phone,
     email,
+    aboutText,
     videoUrl,
     copyrightText,
     shareImageUrl,
@@ -180,6 +186,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
         owner_name: ownerName.trim() || base.owner_name,
         phone: phone.trim() || base.phone,
         email: email.trim() || base.email,
+        about_text: aboutText.trim() || base.about_text,
         video_url: videoUrl.trim() || null,
         copyright_text: copyrightText.trim() || base.copyright_text,
         share_image_url: shareImageUrl.trim() || base.share_image_url,
@@ -232,6 +239,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
         owner_name: ownerName.trim() || base.owner_name,
         phone: phone.trim() || base.phone,
         email: email.trim() || base.email,
+        about_text: aboutText.trim() || base.about_text,
         video_url: videoUrl.trim() || null,
         copyright_text: copyrightText.trim() || base.copyright_text,
         share_image_url: shareImageUrl.trim() || base.share_image_url,
@@ -262,6 +270,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           owner_name: ownerName.trim() || bizad.owner_name,
           phone: phone.trim() || bizad.phone,
           email: email.trim() || bizad.email,
+          about_text: aboutText.trim() || bizad.about_text,
           video_url: videoUrl.trim() || null,
           copyright_text: copyrightText.trim() || bizad.copyright_text,
           share_image_url: url,
@@ -306,8 +315,8 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
             <Loader2 className="h-4 w-4 animate-spin" /> Loading…
           </div>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_1fr]">
-            <div className="space-y-5">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_1fr] lg:items-start">
+            <div className="min-w-0 space-y-5">
               <div className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div>
                   <Label htmlFor="bizad-enabled" className="text-sm font-medium">Add bizad to this flyer</Label>
@@ -374,6 +383,17 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <Label htmlFor="bizad-about" className="text-xs">Business description</Label>
+                <Textarea
+                  id="bizad-about"
+                  value={aboutText}
+                  onChange={(e) => setAboutText(e.target.value)}
+                  placeholder="Short description shown on your card"
+                  className="min-h-[72px] resize-y text-xs"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="bizad-btn-color" className="text-xs">Button color</Label>
@@ -403,7 +423,11 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
                   Shown when you share your card link on Facebook, WhatsApp, and iMessage.
                 </p>
                 {shareImageUrl ? (
-                  <img src={shareImageUrl} alt="Share preview" className="h-24 w-full rounded-md border object-cover" />
+                  <img
+                    src={shareImageUrl}
+                    alt="Share preview"
+                    className="h-28 w-full rounded-md border bg-muted object-contain p-1"
+                  />
                 ) : null}
                 <input
                   ref={shareFileRef}
@@ -454,8 +478,13 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
               {publicUrl && enabled && (
                 <div className="space-y-2 rounded-lg bg-muted/40 p-3">
                   <Label className="text-xs">Public link</Label>
-                  <div className="flex gap-2">
-                    <Input readOnly value={publicUrl} className="h-8 text-xs" />
+                  <div className="flex min-w-0 gap-2">
+                    <Input
+                      readOnly
+                      value={publicUrl}
+                      title={publicUrl}
+                      className="h-8 min-w-0 flex-1 text-[11px] font-mono"
+                    />
                     <Button type="button" size="icon" variant="outline" className="h-8 w-8 shrink-0" onClick={copyLink}>
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
@@ -480,12 +509,12 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2 lg:sticky lg:top-0">
               <Label className="text-xs">Page preview</Label>
-              <div className="overflow-hidden rounded-xl border border-border bg-muted/30">
+              <div className="isolate overflow-hidden rounded-xl border border-border bg-muted/30">
                 {previewBizad && previewLayout ? (
-                  <div className="max-h-[min(70vh,720px)] overflow-y-auto">
-                    <BizadLayoutView layout={previewLayout} bizad={previewBizad} />
+                  <div className="max-h-[min(70vh,720px)] overflow-y-auto overscroll-contain">
+                    <BizadLayoutView layout={previewLayout} bizad={previewBizad} embedded />
                   </div>
                 ) : null}
               </div>

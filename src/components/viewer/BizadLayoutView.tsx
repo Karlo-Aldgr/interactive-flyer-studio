@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import type { IntroPreset, Layer, LayerAction, PageIntro } from "@/types/flyer";
 import type { BizadAudioSettings } from "@/lib/bizadPage";
 import type { BizadRecord } from "@/lib/bizad";
 import { downloadVCard } from "@/lib/bizad";
+import { BizadVideoEmbed } from "@/components/bizad/BizadVideoEmbed";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import CarouselDialog from "@/components/viewer/CarouselDialog";
 import AppointmentBookingDialog from "@/components/viewer/AppointmentBookingDialog";
@@ -167,7 +168,7 @@ function LayerView({
         alt={(layer.content as any).alt || ""}
         loading="lazy"
         onClick={onClick}
-        style={{ ...base, objectFit: "contain", objectPosition: "center", borderRadius: s.cornerRadius ?? 0 }}
+        style={{ ...base, objectFit: (s.objectFit as CSSProperties["objectFit"]) || "contain", objectPosition: "center", borderRadius: s.cornerRadius ?? 0 }}
       />
     );
   }
@@ -363,7 +364,16 @@ function Overlay({ onClose, children }: { onClose: () => void; children: React.R
   );
 }
 
-export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad: BizadRecord }) {
+export function BizadLayoutView({
+  layout,
+  bizad,
+  embedded = false,
+}: {
+  layout: BizadLayout;
+  bizad: BizadRecord;
+  /** When true, used inside editor dialog — no full-screen bleed. */
+  embedded?: boolean;
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [popup, setPopup] = useState<LayerAction | null>(null);
@@ -556,13 +566,13 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
 
   return (
     <div
-      className="min-h-screen w-full"
+      className={embedded ? "w-full" : "min-h-screen w-full"}
       style={{
         backgroundColor: layout.background || "#ffffff",
         backgroundImage: layout.backgroundImage ? `url(${layout.backgroundImage})` : undefined,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundAttachment: "fixed",
+        backgroundAttachment: embedded ? undefined : "fixed",
       }}
     >
       <div ref={wrapRef} className="mx-auto w-full max-w-[430px] px-2">
@@ -592,6 +602,12 @@ export function BizadLayoutView({ layout, bizad }: { layout: BizadLayout; bizad:
           </div>
 
         </div>
+
+        {!embedded && bizad.video_url ? (
+          <div className="px-2 pb-6">
+            <BizadVideoEmbed url={bizad.video_url} className="mt-4" />
+          </div>
+        ) : null}
       </div>
 
       {video && (
