@@ -322,18 +322,26 @@ export function buildWebsitePage(
   const heroImage = profile.heroImage || images[0];
   const photo = (i: number) => images[i % Math.max(1, images.length)];
 
-  const hasServices = true;
+  /* Only the sections the client picked are built (header, hero and footer always render). */
+  const picked = rawProfile.sections ?? DEFAULT_WEBSITE_SECTIONS;
+  const on = (k: WebsiteSectionKey) => picked.includes(k);
+
+  const hasServices = on("intro");
   const galleryImages = Array.from(
     new Set([...(profile.portfolio ?? []).map((p) => p.image).filter(Boolean) as string[], ...images])
   );
-  const hasWork = true;
-  const hasTeam = true;
-  const hasStats = true;
-  const hasTestimonials = true;
-  const hasPricing = true;
-  const hasPackages = true;
-  const hasNews = true;
-  const hasContact = true;
+  const hasIntro = on("intro");
+  const hasExpertise = on("expertise");
+  const hasFeatured = on("featured");
+  const hasClients = on("clients");
+  const hasWork = on("work");
+  const hasTeam = on("team");
+  const hasStats = on("stats");
+  const hasTestimonials = on("testimonials");
+  const hasPricing = on("pricing");
+  const hasPackages = on("pricing");
+  const hasNews = on("news");
+  const hasContact = on("contact");
   const primaryCta = profile.ctas?.[0];
   const secondaryCta = profile.ctas?.[1];
 
