@@ -13,6 +13,7 @@ import { isPasswordRecoveryUrl, passwordRecoveryRedirectPath } from "@/lib/authU
 import { websiteSlugFromHostname } from "@/lib/utils";
 
 import { EditorErrorBoundary } from "@/components/EditorErrorBoundary";
+import Landing from "./pages/Landing";
 import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 
 // Lazy-loaded routes — keeps Konva/Recharts/etc out of the initial bundle
