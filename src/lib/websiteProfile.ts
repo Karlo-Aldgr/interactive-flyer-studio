@@ -211,30 +211,29 @@ export function buildWebsiteProfile(args: {
 
 
   /* ---- identity / contact -------------------------------------------------
-     Priority: project onboarding → project business card → client dashboard
-     onboarding → client profile record → job/flyer title.                    */
+     STRICT PER-PROJECT RULE: business identity may only come from THIS
+     project's onboarding, THIS project's business card, or THIS project's
+     job/flyer. Never from another project and never from another account.
+     The account profile row may only supply personal contact details.        */
   profile.businessName = first(
     onboarding?.business_name,
     bizad?.business_name,
-    dash?.business_name,
     job?.title,
     flyer?.title
   );
-  profile.ownerName = first(onboarding?.full_name, bizad?.owner_name, dash?.full_name, client?.full_name);
-  profile.tagline = first(onboarding?.business_slogan, dash?.business_slogan, client?.headline);
+  profile.ownerName = first(onboarding?.full_name, bizad?.owner_name, client?.full_name);
+  profile.tagline = first(onboarding?.business_slogan, client?.headline);
   profile.description = first(
     onboarding?.business_description,
     bizad?.about_text,
     onboarding?.ai_description,
-    dash?.business_description,
-    dash?.ai_description,
     job?.brief
   );
-  profile.logoUrl = first(onboarding?.logo_url, bizad?.logo_url, dash?.logo_url, client?.photo_url);
-  profile.phone = first(onboarding?.phone, bizad?.phone, dash?.phone, client?.phone);
-  profile.email = first(onboarding?.email, bizad?.email, dash?.email, client?.email);
-  profile.address = first(onboarding?.business_address, bizad?.address, dash?.business_address);
-  profile.website = first(onboarding?.website_url, bizad?.social_links?.website, dash?.website_url);
+  profile.logoUrl = first(onboarding?.logo_url, bizad?.logo_url);
+  profile.phone = first(onboarding?.phone, bizad?.phone, client?.phone);
+  profile.email = first(onboarding?.email, bizad?.email, client?.email);
+  profile.address = first(onboarding?.business_address, bizad?.address);
+  profile.website = first(onboarding?.website_url, bizad?.social_links?.website);
 
   /* ---- brand colours from the project's digital business card ---- */
   const accent = isColor(bizad?.button_color) ? clean(bizad?.button_color) : undefined;
