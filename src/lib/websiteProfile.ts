@@ -191,7 +191,7 @@ export function buildWebsiteProfile(args: {
   const src = args.sources ?? {};
   const onboarding = args.onboarding ?? src.projectOnboarding ?? null;
   const bizad = args.bizad ?? src.bizad ?? null;
-  const dash = src.dashboardOnboarding ?? null;
+  
   const client = src.clientProfile ?? null;
   const job = src.job ?? null;
   const layers = orderedLayers(pages);
