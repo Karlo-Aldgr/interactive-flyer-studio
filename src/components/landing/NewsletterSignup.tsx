@@ -57,20 +57,20 @@ export function NewsletterSignup() {
   }
 
   return (
-    <section id="newsletter" className="bg-[#0a1f44] py-16 md:py-20">
+    <section id="newsletter" className="bg-[#0a1f44] py-20 md:py-28">
       <div className="container">
-        <div className="mx-auto max-w-2xl text-center text-white">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#ff8a00]/15 text-[#ff8a00]">
+        <div className="mx-auto max-w-3xl text-center text-white">
+          <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#ff8a00]/15 text-[#ff8a00]">
             <Mail className="h-6 w-6" />
           </div>
-          <h2 className="font-display text-3xl font-extrabold md:text-4xl">Stay in the loop</h2>
-          <p className="mt-3 text-white/80">
+          <h2 className="font-display text-4xl font-extrabold md:text-5xl">Stay in the loop</h2>
+          <p className="mt-4 text-lg text-white/80 md:text-xl">
             Get the latest TapThatFlyer updates, marketing tips, and new features delivered straight to your inbox.
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-8" noValidate>
+          <form onSubmit={handleSubmit} className="mt-10" noValidate>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-center">
-              <div className="w-full sm:max-w-sm">
+              <div className="w-full sm:max-w-md">
                 <Input
                   type="email"
                   name="email"
@@ -94,7 +94,7 @@ export function NewsletterSignup() {
               <Button
                 type="submit"
                 disabled={status === "loading"}
-                className="h-12 w-full rounded-lg bg-[#ff8a00] px-8 font-bold text-white hover:bg-[#e67a00] disabled:opacity-70 sm:w-auto"
+                className="h-12 w-full rounded-lg bg-[#ff8a00] px-10 font-bold text-white hover:bg-[#e67a00] disabled:opacity-70 sm:w-auto"
               >
                 {status === "loading" ? (
                   <>
@@ -115,7 +115,7 @@ export function NewsletterSignup() {
               ) : status === "error" ? (
                 <span className="text-red-400">Something went wrong. Please try again.</span>
               ) : (
-                <span className="text-white/60">No spam. Just useful updates from TapThatFlyer.</span>
+                <span className="text-white/60" />
               )}
             </div>
           </form>
