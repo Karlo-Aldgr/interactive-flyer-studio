@@ -50,7 +50,39 @@ export interface WebsiteProfile {
   testimonials: { name?: string; body: string; rating?: number; photo?: string }[];
   /** Announcements / updates taken from the project's own pages. */
   news: { title: string; body?: string; image?: string }[];
+  /** Which optional sections the client chose to include (header/hero/footer always render). */
+  sections?: WebsiteSectionKey[];
 }
+
+/** Optional website sections the client can pick when the Website page is created. */
+export type WebsiteSectionKey =
+  | "intro"
+  | "expertise"
+  | "team"
+  | "stats"
+  | "work"
+  | "featured"
+  | "testimonials"
+  | "pricing"
+  | "clients"
+  | "news"
+  | "contact";
+
+export const WEBSITE_SECTION_OPTIONS: { key: WebsiteSectionKey; label: string; description: string }[] = [
+  { key: "intro", label: "About us / Highlights", description: "Intro circles with what you do" },
+  { key: "expertise", label: "Expertise", description: "Skill bars for your services" },
+  { key: "team", label: "Team", description: "People cards with photos" },
+  { key: "stats", label: "Statistics", description: "Numbers band over a photo" },
+  { key: "work", label: "Gallery / Work", description: "Portfolio grid with filters" },
+  { key: "featured", label: "Featured project", description: "One large showcase item" },
+  { key: "testimonials", label: "Testimonials", description: "What people say" },
+  { key: "pricing", label: "Pricing / Packages", description: "Plan cards with CTAs" },
+  { key: "clients", label: "Clients / Socials", description: "Logo or social strip" },
+  { key: "news", label: "News & updates", description: "Article cards" },
+  { key: "contact", label: "Contact", description: "Contact form and details" },
+];
+
+export const DEFAULT_WEBSITE_SECTIONS: WebsiteSectionKey[] = WEBSITE_SECTION_OPTIONS.map((o) => o.key);
 
 
 const clean = (v?: string | null) => {

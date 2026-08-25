@@ -1,6 +1,6 @@
 import { FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import { uid } from "@/lib/konvaHelpers";
-import type { WebsiteProfile } from "@/lib/websiteProfile";
+import { DEFAULT_WEBSITE_SECTIONS, type WebsiteProfile, type WebsiteSectionKey } from "@/lib/websiteProfile";
 import websitePlaceholderImg from "@/assets/website-placeholder.jpg";
 import { withWavexPlaceholders, placeholderClients, LOREM_SHORT, LOREM_NAME, LOREM_LONG } from "@/lib/websitePlaceholders";
 
@@ -305,7 +305,7 @@ export function buildWebsitePage(
 ): FlyerPage {
   /* WaveX structure is fixed: missing data becomes an editable Lorem Ipsum
      placeholder layer, never a removed section. */
-  const profile = withWavexPlaceholders(rawProfile);
+  const profile = { ...withWavexPlaceholders(rawProfile), sections: rawProfile.sections ?? DEFAULT_WEBSITE_SECTIONS };
   Z = 0;
   const pageId = uid();
   const M = metricsFor(device);
@@ -322,18 +322,26 @@ export function buildWebsitePage(
   const heroImage = profile.heroImage || images[0];
   const photo = (i: number) => images[i % Math.max(1, images.length)];
 
-  const hasServices = true;
+  /* Only the sections the client picked are built (header, hero and footer always render). */
+  const picked = rawProfile.sections ?? DEFAULT_WEBSITE_SECTIONS;
+  const on = (k: WebsiteSectionKey) => picked.includes(k);
+
+  const hasServices = on("intro");
   const galleryImages = Array.from(
     new Set([...(profile.portfolio ?? []).map((p) => p.image).filter(Boolean) as string[], ...images])
   );
-  const hasWork = true;
-  const hasTeam = true;
-  const hasStats = true;
-  const hasTestimonials = true;
-  const hasPricing = true;
-  const hasPackages = true;
-  const hasNews = true;
-  const hasContact = true;
+  const hasIntro = on("intro");
+  const hasExpertise = on("expertise");
+  const hasFeatured = on("featured");
+  const hasClients = on("clients");
+  const hasWork = on("work");
+  const hasTeam = on("team");
+  const hasStats = on("stats");
+  const hasTestimonials = on("testimonials");
+  const hasPricing = on("pricing");
+  const hasPackages = on("pricing");
+  const hasNews = on("news");
+  const hasContact = on("contact");
   const primaryCta = profile.ctas?.[0];
   const secondaryCta = profile.ctas?.[1];
 
@@ -392,12 +400,12 @@ export function buildWebsitePage(
 
   /* ============================================================ 1. HEADER */
   const navItems: Array<[string, string]> = [["Home", "hero"]];
-  navItems.push([T.expertiseLabel.split(" ").pop() || "Expertise", "expertise"]);
-  navItems.push(["Team", "team"]);
-  navItems.push(["Work", "work"]);
-  navItems.push(["Pricing", "pricing"]);
-  navItems.push(["News", "news"]);
-  navItems.push(["Contact", "contact"]);
+  if (hasExpertise) navItems.push([T.expertiseLabel.split(" ").pop() || "Expertise", "expertise"]);
+  if (hasTeam) navItems.push(["Team", "team"]);
+  if (hasWork) navItems.push(["Work", "work"]);
+  if (hasPricing) navItems.push(["Pricing", "pricing"]);
+  if (hasNews) navItems.push(["News", "news"]);
+  if (hasContact) navItems.push(["Contact", "contact"]);
 
   const logoSize = device === "mobile" ? 34 : 40;
   let navH = M.navH;
@@ -524,7 +532,7 @@ export function buildWebsitePage(
     });
   }
 
-  if (highlights.length) {
+  if (hasIntro && highlights.length) {
     const g = gridOf(highlights.length, Math.min(4, device === "mobile" ? 2 : 4));
     const circleSize = device === "mobile" ? 96 : device === "tablet" ? 124 : 148;
     const rows = Math.ceil(highlights.length / g.c);
@@ -561,7 +569,7 @@ export function buildWebsitePage(
 
   /* ========================================================= 4. EXPERTISE */
   const expertiseItems = (profile.services ?? []).map((s) => s.title).filter(Boolean).slice(0, 5);
-  if (expertiseItems.length) {
+  if (hasExpertise && expertiseItems.length) {
     const barW = Math.round(COL * (device === "desktop" ? 0.78 : 1));
     const barX = PAD + Math.round((COL - barW) / 2);
     const trackH = 8;
@@ -698,7 +706,7 @@ export function buildWebsitePage(
 
   /* ====================================================== 8. FEATURED WORK */
   const featuredImage = galleryImages[1] || galleryImages[0] || heroImage;
-  {
+  if (hasFeatured) {
     const featured = (profile.portfolio ?? [])[0];
     const featSub = featured?.description ?? profile.tagline;
     const headH = measureHead("Featured", T.featuredTitle, featSub);
@@ -815,7 +823,7 @@ export function buildWebsitePage(
   }
 
   /* ============================================= 11. CLIENTS / PARTNERS */
-  {
+  if (hasClients) {
     const items = profile.socials.length
       ? profile.socials.slice(0, 5).map((s) => ({ label: s.label, url: s.url }))
       : placeholderClients(device === "mobile" ? 2 : device === "tablet" ? 3 : 5).map((label) => ({ label, url: "" }));
