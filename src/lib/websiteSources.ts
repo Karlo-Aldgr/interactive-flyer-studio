@@ -127,16 +127,6 @@ export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> 
         .then((r) => (r.data as ProjectJob | null) ?? null),
       null
     ),
-    clientId
-      ? safe(
-          supabase
-            .from("social_accounts")
-            .select("platform, username, account_name")
-            .eq("user_id", clientId)
-            .then((r) => ((r.data as ConnectedSocial[] | null) ?? [])),
-          [] as ConnectedSocial[]
-        )
-      : Promise.resolve([] as ConnectedSocial[]),
     safe(
       supabase
         .from("testimonials")
