@@ -77,7 +77,9 @@ export function buildBizadPayloadFromOnboarding(
     flyer_id: flyer.id,
     enabled: existing?.enabled ?? false,
     slug,
-    business_name: onboarding?.business_name ?? existing?.business_name ?? null,
+    // PER-PROJECT RULE: identity may only come from THIS project's onboarding,
+    // THIS project's existing card, or THIS flyer. Never another project.
+    business_name: onboarding?.business_name ?? existing?.business_name ?? flyer.title ?? null,
     owner_name: onboarding?.full_name ?? existing?.owner_name ?? null,
     phone: onboarding?.phone ?? existing?.phone ?? null,
     email: onboarding?.email ?? existing?.email ?? null,
