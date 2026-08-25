@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { displayFirstName } from "@/lib/displayName";
 import { Sparkles } from "lucide-react";
 import { OnboardingSubmissionCard } from "@/components/dashboard/OnboardingSubmissionCard";
+import { WebsiteStatusCard } from "@/components/dashboard/WebsiteStatusCard";
+
 
 const labelFor = (id: string) => INTERACTIONS.find((i) => i.id === id)?.label ?? id;
 
