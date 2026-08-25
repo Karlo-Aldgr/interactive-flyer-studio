@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { getMyOnboarding, getOnboardingForFlyer } from "@/lib/onboarding";
+import { getOnboardingForFlyer } from "@/lib/onboarding";
 import { getBizadForFlyer } from "@/lib/bizad";
 import type { OnboardingSubmission } from "@/lib/onboarding";
 import type { BizadRecord } from "@/lib/bizad";
