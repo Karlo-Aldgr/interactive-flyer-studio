@@ -220,7 +220,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }),
 
   setFlyer: (patch) =>
-    set((s) => ({ flyer: s.flyer ? { ...s.flyer, ...patch } : s.flyer, dirty: true })),
+    set((s) => {
+      if (!s.flyer) return s;
+      const next = { ...s.flyer, ...patch };
+      if ("settings" in patch) {
+        next.settings = parseFlyerSettings(patch.settings ?? s.flyer.settings);
+      }
+      return { flyer: next, dirty: true };
+    }),
 
   setZoom: (z) => set({ zoom: Math.max(0.1, Math.min(2, z)) }),
 

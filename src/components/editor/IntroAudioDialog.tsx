@@ -26,13 +26,14 @@ export function IntroAudioDialog({ open, onOpenChange }: Props) {
   const [busy, setBusy] = useState(false);
 
   if (!flyer) return null;
-  const url = flyer.settings.introAudioUrl || "";
-  const loop = !!flyer.settings.introAudioLoop;
-  const volume = flyer.settings.introAudioVolume ?? 1;
-  const showControl = flyer.settings.introAudioShowControl ?? true;
+  const settings = flyer.settings ?? {};
+  const url = settings.introAudioUrl || "";
+  const loop = !!settings.introAudioLoop;
+  const volume = settings.introAudioVolume ?? 1;
+  const showControl = settings.introAudioShowControl ?? true;
 
-  function patch(p: Partial<typeof flyer.settings>) {
-    setFlyer({ settings: { ...flyer.settings, ...p } });
+  function patch(p: Partial<typeof settings>) {
+    setFlyer({ settings: { ...settings, ...p } });
   }
 
   async function handleFile(file: File) {

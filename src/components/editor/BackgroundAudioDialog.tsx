@@ -33,14 +33,15 @@ export function BackgroundAudioDialog({ open, onOpenChange }: Props) {
   }, [flyer?.settings.bgAudioVolume, flyer?.settings.bgAudioUrl]);
 
   if (!flyer) return null;
-  const url = flyer.settings.bgAudioUrl || "";
-  const loop = flyer.settings.bgAudioLoop ?? true;
-  const volume = flyer.settings.bgAudioVolume ?? 0.5;
-  const autoplay = flyer.settings.bgAudioAutoplay ?? true;
-  const showControl = flyer.settings.bgAudioShowControl ?? true;
+  const settings = flyer.settings ?? {};
+  const url = settings.bgAudioUrl || "";
+  const loop = settings.bgAudioLoop ?? true;
+  const volume = settings.bgAudioVolume ?? 0.5;
+  const autoplay = settings.bgAudioAutoplay ?? true;
+  const showControl = settings.bgAudioShowControl ?? true;
 
-  function patch(p: Partial<typeof flyer.settings>) {
-    setFlyer({ settings: { ...flyer.settings, ...p } });
+  function patch(p: Partial<typeof settings>) {
+    setFlyer({ settings: { ...settings, ...p } });
   }
 
   async function handleFile(file: File) {

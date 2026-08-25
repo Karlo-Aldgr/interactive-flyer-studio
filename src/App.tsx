@@ -12,7 +12,7 @@ import { AffiliateTracker } from "@/components/AffiliateTracker";
 import { isPasswordRecoveryUrl, passwordRecoveryRedirectPath } from "@/lib/authUtils";
 import { websiteSlugFromHostname } from "@/lib/utils";
 
-import Landing from "./pages/Landing";
+import { EditorErrorBoundary } from "@/components/EditorErrorBoundary";
 import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 
 // Lazy-loaded routes — keeps Konva/Recharts/etc out of the initial bundle
@@ -122,7 +122,7 @@ const App = () => (
               <Route path="/data-deletion" element={<DataDeletion />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-              <Route path="/editor/:flyerId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
+              <Route path="/editor/:flyerId" element={<ProtectedRoute><EditorErrorBoundary><Editor /></EditorErrorBoundary></ProtectedRoute>} />
               <Route path="/analytics/:flyerId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/preview/:flyerId" element={<ProtectedRoute><PublicViewer previewMode /></ProtectedRoute>} />
               <Route path="/f/:slug" element={<PublicViewer />} />

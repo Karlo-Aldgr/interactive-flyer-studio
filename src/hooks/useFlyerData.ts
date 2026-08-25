@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEditorStore } from "@/store/editorStore";
 import { Flyer, FlyerPage, Layer, LayerAction } from "@/types/flyer";
@@ -50,10 +50,14 @@ export function useFlyerData(flyerId: string | undefined) {
   const lastSnapshot = useRef<string>("");
   const [saving, setSaving] = useState(false);
 
-  // Load
-  useEffect(() => {
-    if (!flyerId) return;
-    let cancelled = false;
+  // Reset editor state synchronously when the route flyer id changes so we never
+  // paint the shell with a previous flyer's store snapshot.
+  useLayoutEffect(() => {
+    if (!flyerId) {
+      setLoading(false);
+      setLoadError("Missing flyer id");
+      return;
+    }
     setLoading(true);
     setLoadError(null);
     useEditorStore.setState({
@@ -64,14 +68,20 @@ export function useFlyerData(flyerId: string | undefined) {
       selectedLayerIds: [],
       dirty: false,
     });
+  }, [flyerId]);
+
+  // Load
+  useEffect(() => {
+    if (!flyerId) return;
+    let cancelled = false;
     (async () => {
+      try {
       const { data: f, error } = await supabase.from("flyers").select("*").eq("id", flyerId).single();
       if (cancelled) return;
       if (error || !f) {
         const message = error?.message || "Could not load flyer";
         setLoadError(message);
         toast.error(message);
-        setLoading(false);
         return;
       }
       const { data: pgs } = await supabase
@@ -123,7 +133,14 @@ export function useFlyerData(flyerId: string | undefined) {
       if (cancelled) return;
       hydrate(f as unknown as Flyer, mapped);
       lastSnapshot.current = JSON.stringify({ flyer: f, pages: mapped });
-      setLoading(false);
+      } catch (e: any) {
+        if (cancelled) return;
+        const message = e?.message || "Could not load flyer";
+        setLoadError(message);
+        toast.error(message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, [flyerId, hydrate]);
