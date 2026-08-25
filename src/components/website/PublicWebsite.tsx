@@ -1030,32 +1030,66 @@ export function PublicWebsite({
 
   const { W, bands } = useMemo(() => buildBands(page, doc), [page, doc]);
 
+  // Full flyer action runtime — popups, galleries, carousels, coupons,
+  // bookings, polls, menus, novels, product grids, air messages, reveal…
+  const { runAction: run, revealed, dialogs } = useActionRuntime({ flyerId });
+
+  const hiddenIds = useMemo(() => computeHiddenIds(page.layers ?? [], revealed), [page.layers, revealed]);
+
+  // Auto-trigger actions marked "run on page load".
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current) return;
+    autoRan.current = true;
+    const timers = (page.layers ?? [])
+      .filter((l) => l.action?.payload?.autoTrigger)
+      .map((l, i) => window.setTimeout(() => run(l.action), 400 + i * 250));
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, [page.layers, run]);
+
+  const bg = page.background ?? ({} as any);
+
   return (
-    <div
-      ref={rootRef}
-      style={{ background: doc.bgColor, minHeight: "100vh", width: "100%", overflowX: "hidden", fontFamily: doc.fontFamily }}
-    >
-      <SiteNav doc={doc} openForm={setFormRequest} />
-      {bands.map((b) => (
-        <BandView
-          key={b.id}
-          band={b}
-          W={W}
-          width={width}
-          doc={doc}
+    <RuntimeCtx.Provider value={run}>
+      <div
+        ref={rootRef}
+        style={{
+          background: bg.color || doc.bgColor,
+          backgroundImage: bg.image ? `url(${bg.image})` : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          minHeight: "100vh",
+          width: "100%",
+          overflowX: "hidden",
+          fontFamily: doc.fontFamily,
+        }}
+      >
+        <style>{HIGHLIGHT_KEYFRAMES}</style>
+        <SiteNav doc={doc} openForm={setFormRequest} />
+        {bands.map((b) => (
+          <BandView
+            key={b.id}
+            band={b}
+            W={W}
+            width={width}
+            doc={doc}
+            flyerId={flyerId}
+            canSubmitForms={canSubmitForms}
+            openForm={setFormRequest}
+            hiddenIds={hiddenIds}
+            pageIntro={page.intro}
+          />
+        ))}
+        <ContactFormDialog
+          request={formRequest}
           flyerId={flyerId}
-          canSubmitForms={canSubmitForms}
-          openForm={setFormRequest}
+          canSubmit={canSubmitForms}
+          accent={doc.accent}
+          onClose={() => setFormRequest(null)}
         />
-      ))}
-      <ContactFormDialog
-        request={formRequest}
-        flyerId={flyerId}
-        canSubmit={canSubmitForms}
-        accent={doc.accent}
-        onClose={() => setFormRequest(null)}
-      />
-    </div>
+        {dialogs}
+      </div>
+    </RuntimeCtx.Provider>
   );
 }
 
