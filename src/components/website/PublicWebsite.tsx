@@ -1,10 +1,12 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as LucideIcons from "lucide-react";
 import { Menu, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import type { WebsiteDocument } from "@/lib/websiteDocument";
+import { useActionRuntime } from "@/components/viewer/useActionRuntime";
+import { HIGHLIGHT_KEYFRAMES, IntroWrap, TapHighlight, computeHiddenIds } from "@/components/viewer/layerEffects";
 
 /**
  * Public Website renderer.
@@ -34,49 +36,37 @@ function scrollToAnchor(anchor: string) {
 
 export type WebsiteFormRequest = { action: LayerAction; layerId: string } | null;
 
-function runAction(action: LayerAction | null | undefined, openForm: (r: WebsiteFormRequest) => void, layerId: string) {
+/** Dispatcher for every action type the flyer supports (provided by the root). */
+export const RuntimeCtx = createContext<((a: LayerAction | null | undefined) => void) | null>(null);
+
+function runAction(
+  action: LayerAction | null | undefined,
+  openForm: (r: WebsiteFormRequest) => void,
+  layerId: string,
+  run?: ((a: LayerAction | null | undefined) => void) | null,
+) {
   if (!action) return;
   const p: any = action.payload ?? {};
   switch (action.type) {
     case "open_url": {
       const url = String(p.url ?? "");
-      if (!url) return;
       if (url.startsWith("#")) return scrollToAnchor(url.slice(1));
-      if (p.newTab === false || url.startsWith("mailto:") || url.startsWith("tel:") || url.startsWith("sms:")) {
-        window.location.href = url;
-      } else {
-        window.open(url, "_blank", "noopener,noreferrer");
-      }
-      return;
-    }
-    case "call":
-      if (p.phone) window.location.href = `tel:${p.phone}`;
-      return;
-    case "sms":
-      if (p.phone) window.location.href = `sms:${p.phone}${p.smsBody ? `?&body=${encodeURIComponent(p.smsBody)}` : ""}`;
-      return;
-    case "map": {
-      const { mapAddress, mapLat, mapLng } = p;
-      const url =
-        mapLat != null && mapLng != null
-          ? `https://www.google.com/maps/search/?api=1&query=${mapLat},${mapLng}`
-          : mapAddress
-            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapAddress)}`
-            : "";
-      if (url) window.open(url, "_blank", "noopener,noreferrer");
-      return;
+      break;
     }
     case "form":
     case "rsvp":
     case "subscribe":
       openForm({ action, layerId });
       return;
-    default: {
-      const url = p.url || p.link;
-      if (url) window.open(String(url), "_blank", "noopener,noreferrer");
-    }
   }
+  // Everything else uses the shared flyer action runtime so popups, galleries,
+  // carousels, coupons, bookings, polls, menus, novels, etc. behave exactly as
+  // they do on a flyer.
+  if (run) return run(action);
+  const url = p.url || p.link;
+  if (url) window.open(String(url), "_blank", "noopener,noreferrer");
 }
+
 
 /* ------------------------------------------------------------ band model */
 
@@ -253,6 +243,7 @@ function AbsLayer({
   openForm: (r: WebsiteFormRequest) => void;
   fullBleed?: boolean;
 }) {
+  const run = useContext(RuntimeCtx);
   const clickable = !!layer.action;
   const box: React.CSSProperties = {
     position: "absolute",
@@ -265,7 +256,8 @@ function AbsLayer({
     transformOrigin: "top left",
     cursor: clickable ? "pointer" : undefined,
   };
-  const onClick = clickable ? () => runAction(layer.action, openForm, layer.id) : undefined;
+  const onClick = clickable ? () => runAction(layer.action, openForm, layer.id, run) : undefined;
+
 
 
   switch (layer.type) {
@@ -372,6 +364,9 @@ function AbsLayer({
         />
       );
     }
+    case "hotspot":
+      // Invisible tap target — exactly like the flyer viewer.
+      return <div onClick={onClick} style={{ ...box, background: "transparent" }} />;
     default:
       return null;
   }
@@ -439,6 +434,8 @@ function BandView({
   flyerId,
   canSubmitForms,
   openForm,
+  hiddenIds,
+  pageIntro,
 }: {
   band: Band;
   W: number;
@@ -447,7 +444,10 @@ function BandView({
   flyerId: string;
   canSubmitForms: boolean;
   openForm: (r: WebsiteFormRequest) => void;
+  hiddenIds: Set<string>;
+  pageIntro?: FlyerPage["intro"] | null;
 }) {
+  const run = useContext(RuntimeCtx);
   const scaled = width >= REFLOW_BELOW;
   const s = Math.min(1, width / W);
   const form = band.form;
@@ -455,7 +455,10 @@ function BandView({
   const { busy, submit } = useFormSubmit(flyerId, canSubmitForms);
 
   const byId = useMemo(() => new Map(band.layers.map((l) => [l.id, l])), [band.layers]);
-  const ordered = useMemo(() => [...band.layers].sort((a, b) => a.z_index - b.z_index), [band.layers]);
+  const ordered = useMemo(
+    () => [...band.layers].filter((l) => !hiddenIds.has(l.id)).sort((a, b) => a.z_index - b.z_index),
+    [band.layers, hiddenIds],
+  );
   const formButton = form ? byId.get(form.buttonId) : undefined;
 
   const doSubmit = () => form && submit(form.fields, values, form.action, reset);
@@ -469,6 +472,7 @@ function BandView({
       (l.type === "image" || l.type === "shape") && isFullWidth(l, W) && l.size.height >= band.height - 12;
     const bleed = ordered.filter(isBleed);
     const content = ordered.filter((l) => !isBleed(l));
+    const tappable = content.filter((l) => (!!l.action || l.type === "hotspot") && !form?.consumed.has(l.id));
 
     return (
       <section
@@ -497,10 +501,22 @@ function BandView({
             height: "100%",
           }}
         >
-          {content.map((l) => {
+          {content.map((l, i) => {
             if (form?.consumed.has(l.id)) return null;
-            return <AbsLayer key={l.id} layer={l} band={band} s={s} doc={doc} openForm={openForm} />;
+            return (
+              <IntroWrap key={l.id} intro={l.intro} index={i} pageIntro={pageIntro}>
+                <AbsLayer layer={l} band={band} s={s} doc={doc} openForm={openForm} />
+              </IntroWrap>
+            );
           })}
+
+          {/* Tap highlights — same visual cues as the flyer */}
+          <div data-bizad-highlights style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+            {tappable.map((l) => (
+              <TapHighlight key={"hl-" + l.id} layer={l} scale={s} offsetY={band.top} />
+            ))}
+          </div>
+
 
           {form?.fields.map((f) => {
             const box = byId.get(f.boxId);
@@ -599,7 +615,16 @@ function BandView({
       >
         {flowLayers.map((l) => {
           const clickable = !!l.action;
-          const onClick = clickable ? () => runAction(l.action, openForm, l.id) : undefined;
+          const onClick = clickable ? () => runAction(l.action, openForm, l.id, run) : undefined;
+          const hl = l.action?.highlight;
+          const ring: React.CSSProperties =
+            clickable && hl?.enabled !== false && (hl?.style ?? "pulse") !== "none"
+              ? {
+                  boxShadow: `0 0 0 ${hl?.thickness ?? 3}px ${hl?.color ?? "#7c3aed"}`,
+                  animation: "bizadTapPulse 1.6s ease-in-out infinite",
+                }
+              : {};
+
           switch (l.type) {
             case "text":
               return (
@@ -636,6 +661,7 @@ function BandView({
                     objectFit: "cover",
                     borderRadius: l.style.cornerRadius ?? 14,
                     display: "block",
+                    ...ring,
                   }}
                 />
               ) : null;
@@ -677,6 +703,7 @@ function BandView({
                     fontSize: 16,
                     fontFamily: doc.fontFamily,
                     cursor: "pointer",
+                    ...ring,
                   }}
                 >
                   {l.content.label || l.content.text}
@@ -741,6 +768,7 @@ function BandView({
 /* -------------------------------------------------------------------- nav */
 
 function SiteNav({ doc, openForm }: { doc: WebsiteDocument; openForm: (r: WebsiteFormRequest) => void }) {
+  const run = useContext(RuntimeCtx);
   const [open, setOpen] = useState(false);
   return (
     <header
@@ -784,7 +812,7 @@ function SiteNav({ doc, openForm }: { doc: WebsiteDocument; openForm: (r: Websit
           {doc.navCta && (
             <button
               type="button"
-              onClick={() => runAction(doc.navCta!.action, openForm, "nav-cta")}
+              onClick={() => runAction(doc.navCta!.action, openForm, "nav-cta", run)}
               style={{
                 background: doc.accent,
                 color: "#fff",
@@ -838,7 +866,7 @@ function SiteNav({ doc, openForm }: { doc: WebsiteDocument; openForm: (r: Websit
               type="button"
               onClick={() => {
                 setOpen(false);
-                runAction(doc.navCta!.action, openForm, "nav-cta");
+                runAction(doc.navCta!.action, openForm, "nav-cta", run);
               }}
               style={{
                 background: doc.accent,
@@ -1002,32 +1030,66 @@ export function PublicWebsite({
 
   const { W, bands } = useMemo(() => buildBands(page, doc), [page, doc]);
 
+  // Full flyer action runtime — popups, galleries, carousels, coupons,
+  // bookings, polls, menus, novels, product grids, air messages, reveal…
+  const { runAction: run, revealed, dialogs } = useActionRuntime({ flyerId });
+
+  const hiddenIds = useMemo(() => computeHiddenIds(page.layers ?? [], revealed), [page.layers, revealed]);
+
+  // Auto-trigger actions marked "run on page load".
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current) return;
+    autoRan.current = true;
+    const timers = (page.layers ?? [])
+      .filter((l) => l.action?.payload?.autoTrigger)
+      .map((l, i) => window.setTimeout(() => run(l.action), 400 + i * 250));
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, [page.layers, run]);
+
+  const bg = page.background ?? ({} as any);
+
   return (
-    <div
-      ref={rootRef}
-      style={{ background: doc.bgColor, minHeight: "100vh", width: "100%", overflowX: "hidden", fontFamily: doc.fontFamily }}
-    >
-      <SiteNav doc={doc} openForm={setFormRequest} />
-      {bands.map((b) => (
-        <BandView
-          key={b.id}
-          band={b}
-          W={W}
-          width={width}
-          doc={doc}
+    <RuntimeCtx.Provider value={run}>
+      <div
+        ref={rootRef}
+        style={{
+          background: bg.color || doc.bgColor,
+          backgroundImage: bg.image ? `url(${bg.image})` : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          minHeight: "100vh",
+          width: "100%",
+          overflowX: "hidden",
+          fontFamily: doc.fontFamily,
+        }}
+      >
+        <style>{HIGHLIGHT_KEYFRAMES}</style>
+        <SiteNav doc={doc} openForm={setFormRequest} />
+        {bands.map((b) => (
+          <BandView
+            key={b.id}
+            band={b}
+            W={W}
+            width={width}
+            doc={doc}
+            flyerId={flyerId}
+            canSubmitForms={canSubmitForms}
+            openForm={setFormRequest}
+            hiddenIds={hiddenIds}
+            pageIntro={page.intro}
+          />
+        ))}
+        <ContactFormDialog
+          request={formRequest}
           flyerId={flyerId}
-          canSubmitForms={canSubmitForms}
-          openForm={setFormRequest}
+          canSubmit={canSubmitForms}
+          accent={doc.accent}
+          onClose={() => setFormRequest(null)}
         />
-      ))}
-      <ContactFormDialog
-        request={formRequest}
-        flyerId={flyerId}
-        canSubmit={canSubmitForms}
-        accent={doc.accent}
-        onClose={() => setFormRequest(null)}
-      />
-    </div>
+        {dialogs}
+      </div>
+    </RuntimeCtx.Provider>
   );
 }
 
