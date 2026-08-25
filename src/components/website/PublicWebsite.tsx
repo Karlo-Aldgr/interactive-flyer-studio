@@ -252,6 +252,9 @@ function SafeImg({ src, style, onClick, eager }: { src?: string; style: React.CS
  * the real artwork sitting on top, cover-cropped and undistorted.
  */
 function BleedVisual({ src, height, eager }: { src?: string; height?: number | string; eager?: boolean }) {
+  /* Auto-generated flyer thumbnails are letterboxed (gray bars baked into the
+     file), so they get cropped harder to land inside the real artwork. */
+  const letterboxed = /flyer-thumbnail/i.test(src ?? "");
   const wrap: React.CSSProperties = {
     position: "absolute",
     inset: 0,
@@ -270,7 +273,7 @@ function BleedVisual({ src, height, eager }: { src?: string; height?: number | s
           width: "100%",
           height: "100%",
           objectFit: "cover",
-          transform: "scale(2.6)",
+          transform: letterboxed ? "scale(3.4)" : "scale(1.4)",
           filter: "blur(42px) saturate(1.25) brightness(0.9)",
           display: "block",
         }}
@@ -286,7 +289,7 @@ function BleedVisual({ src, height, eager }: { src?: string; height?: number | s
           objectFit: "cover",
           /* Zoom into the artwork so letterboxed sources (flyer thumbnails with
              baked-in side bars) crop to real content instead of flat gray. */
-          transform: "scale(1.75)",
+          transform: letterboxed ? "scale(2.45)" : "scale(1.04)",
           display: "block",
         }}
       />
