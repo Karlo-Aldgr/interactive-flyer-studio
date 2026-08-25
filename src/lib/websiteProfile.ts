@@ -254,7 +254,9 @@ export function buildWebsiteProfile(args: {
 
   pushUnique(profile.images, bizad?.flyer_image_url);
   pushUnique(profile.images, onboarding?.flyer_upload_url);
-  pushUnique(profile.images, flyer?.thumbnail_url as unknown as string);
+  /* The auto-generated flyer thumbnail is letterboxed, so it is only used as a
+     last resort (added after the real flyer artwork below). */
+  const thumbnailUrl = flyer?.thumbnail_url as unknown as string | undefined;
 
   /* ---- text mined from the existing flyer pages ---- */
   const texts: { value: string; size: number }[] = [];
@@ -298,6 +300,7 @@ export function buildWebsiteProfile(args: {
   layers.forEach((l) => {
     if (l.type === "image") pushUnique(profile.images, l.content?.src);
   });
+  pushUnique(profile.images, thumbnailUrl);
 
   /* ---- actions: contact details, CTAs, services, pricing, portfolio ---- */
   const seenCta = new Set<string>();

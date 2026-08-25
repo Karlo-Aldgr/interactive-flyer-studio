@@ -1,6 +1,7 @@
 import { FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import { uid } from "@/lib/konvaHelpers";
 import type { WebsiteProfile } from "@/lib/websiteProfile";
+import websitePlaceholderImg from "@/assets/website-placeholder.jpg";
 import { withWavexPlaceholders, placeholderClients, LOREM_SHORT, LOREM_NAME, LOREM_LONG } from "@/lib/websitePlaceholders";
 
 /**
@@ -731,24 +732,24 @@ export function buildWebsitePage(
   if (hasTestimonials) {
     const t0 = profile.testimonials[0];
     const boxW = Math.round(COL * (device === "mobile" ? 1 : 0.74));
-    const quoteH = textHeight(t0.body, boxW - 80, M.body + 2);
+    const quoteH = textHeight(t0.body, boxW - 92, M.body + 2);
     const avatar = 72;
-    const boxH = 46 + 40 + quoteH + 26 + avatar + 46;
-    const h = M.sectionPad * 2 + 96 + boxH;
+    const boxH = 56 + 44 + quoteH + 30 + avatar + 56;
+    const h = M.sectionPad * 2 + 118 + boxH;
     photoBand(y, h, photo(3) || heroImage, "#3A4247", 0.74);
     add(text(pageId, "What people say", PAD, y + M.sectionPad, COL, { size: M.h2, weight: 800, color: ON_DARK, align: "center" }));
     add(rect(pageId, Math.round(W / 2 - 26), y + M.sectionPad + M.h2 + 18, 52, 3, { fill: A, radius: 2 }));
 
     const bx0 = PAD + Math.round((COL - boxW) / 2);
-    const by0 = y + M.sectionPad + 96;
+    const by0 = y + M.sectionPad + 118;
     add(rect(pageId, bx0, by0, boxW, boxH, { fill: "#FFFFFF", radius: 6, opacity: 0.1, stroke: "#FFFFFF", strokeWidth: 1 }));
-    add(icon(pageId, "Quote", Math.round(W / 2 - 18), by0 + 26, 36, A));
+    add(icon(pageId, "Quote", Math.round(W / 2 - 18), by0 + 32, 36, A));
     add(
-      text(pageId, `“${t0.body}”`, bx0 + 40, by0 + 46 + 34, boxW - 80, {
+      text(pageId, `“${t0.body}”`, bx0 + 46, by0 + 56 + 38, boxW - 92, {
         size: M.body + 2, color: ON_DARK, align: "center", italic: true, height: quoteH,
       })
     );
-    const ay = by0 + 46 + 34 + quoteH + 22;
+    const ay = by0 + 56 + 38 + quoteH + 26;
     const ax = Math.round(W / 2 - avatar / 2);
     if (t0.photo) add(image(pageId, t0.photo, ax, ay, avatar, avatar, Math.round(avatar / 2)));
     else {
@@ -822,12 +823,12 @@ export function buildWebsitePage(
     const cols = Math.min(items.length, device === "mobile" ? 2 : device === "tablet" ? 3 : 5);
     const cardW = Math.round((COL - M.gap * (cols - 1)) / cols);
     const rows = Math.ceil(items.length / cols);
-    const h = M.sectionPad * 2 + 96 + rows * boxH + (rows - 1) * M.gap;
+    const h = M.sectionPad * 2 + 118 + rows * boxH + (rows - 1) * M.gap;
     photoBand(y, h, photo(4) || heroImage, "#3A4247", 0.76);
     add(text(pageId, profile.socials.length ? "Connect with us" : "Our clients", PAD, y + M.sectionPad, COL, { size: M.h2 - 2, weight: 800, color: ON_DARK, align: "center" }));
     add(rect(pageId, Math.round(W / 2 - 26), y + M.sectionPad + M.h2 + 14, 52, 3, { fill: A, radius: 2 }));
 
-    const top = y + M.sectionPad + 96;
+    const top = y + M.sectionPad + 118;
     items.forEach((s, i) => {
       const x = PAD + (i % cols) * (cardW + M.gap);
       const cy = top + Math.floor(i / cols) * (boxH + M.gap);
@@ -858,11 +859,9 @@ export function buildWebsitePage(
       const x = g.xOf(i);
       const cy = top + g.rowOf(i) * (entryH + M.gap);
       add(rect(pageId, x, cy, g.cardW, entryH, { fill: "#FFFFFF", radius: 6, stroke: "#E4E8EB", strokeWidth: 1 }));
-      if (n.image) add(image(pageId, n.image, x, cy, g.cardW, entryImgH, 6));
-      else {
-        add(rect(pageId, x, cy, g.cardW, entryImgH, { fill: LIGHT_2, radius: 6 }));
-        add(icon(pageId, "Image", x + Math.round(g.cardW / 2) - 18, cy + Math.round(entryImgH / 2) - 18, 36, "#C3CACF"));
-      }
+      /* Never a broken/empty image state — unknown news art uses a neutral,
+         editable placeholder photo. */
+      add(image(pageId, n.image || websitePlaceholderImg, x, cy, g.cardW, entryImgH, 6));
       let ny = cy + entryImgH + 22;
       /* category / date line — editable placeholder when unknown */
       add(text(pageId, LOREM_NAME.toUpperCase(), x + 22, ny, g.cardW - 44, { size: M.small - 1, weight: 700, color: A }));
@@ -955,14 +954,14 @@ export function buildWebsitePage(
   }
 
   /* ============================================================ 14. FOOTER */
-  const footerH = device === "mobile" ? 330 : 300;
+  const footerH = device === "mobile" ? 372 : 344;
   add(rect(pageId, 0, y, W, footerH, { fill: "#2C3235", radius: 0 }));
   const logoS = device === "mobile" ? 46 : 56;
-  if (profile.logoUrl) add(image(pageId, profile.logoUrl, Math.round(W / 2 - logoS / 2), y + 48, logoS, logoS, 6));
-  else add(icon(pageId, "Sparkles", Math.round(W / 2 - 22), y + 50, 44, A));
-  add(text(pageId, name, PAD, y + 48 + logoS + 18, COL, { size: M.h3 + 2, weight: 800, color: ON_DARK, align: "center" }));
+  if (profile.logoUrl) add(image(pageId, profile.logoUrl, Math.round(W / 2 - logoS / 2), y + 60, logoS, logoS, 6));
+  else add(icon(pageId, "Sparkles", Math.round(W / 2 - 22), y + 62, 44, A));
+  add(text(pageId, name, PAD, y + 60 + logoS + 22, COL, { size: M.h3 + 2, weight: 800, color: ON_DARK, align: "center" }));
 
-  const navRowY = y + 48 + logoS + 18 + M.h3 + 36;
+  const navRowY = y + 60 + logoS + 22 + M.h3 + 42;
   const navPer = Math.round(COL / Math.max(1, navItems.length));
   navItems.forEach(([label, hash], i) => {
     const l = text(pageId, label, PAD + i * navPer, navRowY, navPer, { size: M.small, weight: 600, color: ON_DARK_MUTED, align: "center" });
@@ -983,9 +982,9 @@ export function buildWebsitePage(
   if (contactLine) {
     add(text(pageId, contactLine, PAD, navRowY + (profile.socials.length ? 72 : 40), COL, { size: M.small, color: ON_DARK_MUTED, align: "center" }));
   }
-  add(rect(pageId, PAD, y + footerH - 54, COL, 1, { fill: "#454C51", radius: 0 }));
+  add(rect(pageId, PAD, y + footerH - 58, COL, 1, { fill: "#454C51", radius: 0 }));
   add(
-    text(pageId, `© ${new Date().getFullYear()} ${name}. All rights reserved.`, PAD, y + footerH - 36, COL, {
+    text(pageId, `© ${new Date().getFullYear()} ${name}. All rights reserved.`, PAD, y + footerH - 38, COL, {
       size: 12, color: ON_DARK_MUTED, align: "center",
     })
   );

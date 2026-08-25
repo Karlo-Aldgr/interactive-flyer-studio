@@ -7,6 +7,7 @@ import type { FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import type { WebsiteDocument } from "@/lib/websiteDocument";
 import { useActionRuntime } from "@/components/viewer/useActionRuntime";
 import { HIGHLIGHT_KEYFRAMES, IntroWrap, TapHighlight, computeHiddenIds } from "@/components/viewer/layerEffects";
+import websitePlaceholderImg from "@/assets/website-placeholder.jpg";
 
 /**
  * Public Website renderer.
@@ -226,6 +227,76 @@ function buildBands(page: FlyerPage, doc: WebsiteDocument): { W: number; nav: Ba
   return { W, nav: navBand, bands };
 }
 
+/* --------------------------------------------------------------- images */
+
+/** <img> that never shows a broken state — falls back to a neutral placeholder. */
+function SafeImg({ src, style, onClick, eager }: { src?: string; style: React.CSSProperties; onClick?: () => void; eager?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const resolved = !src || failed ? websitePlaceholderImg : src;
+  return (
+    <img
+      src={resolved}
+      alt=""
+      loading={eager ? "eager" : "lazy"}
+      onError={() => setFailed(true)}
+      onClick={onClick}
+      style={style}
+    />
+  );
+}
+
+/**
+ * Full-width section visual (WaveX hero / band treatment). A blurred, zoomed
+ * copy of the same artwork fills the whole viewport width so letterboxed
+ * sources (flyer thumbnails with side bars) never read as gray columns, with
+ * the real artwork sitting on top, cover-cropped and undistorted.
+ */
+function BleedVisual({ src, height, eager }: { src?: string; height?: number | string; eager?: boolean }) {
+  /* Auto-generated flyer thumbnails are letterboxed (gray bars baked into the
+     file), so they get cropped harder to land inside the real artwork. */
+  const letterboxed = /flyer-thumbnail/i.test(src ?? "");
+  const wrap: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: height ?? "100%",
+    overflow: "hidden",
+  };
+  return (
+    <div style={wrap} aria-hidden>
+      <SafeImg
+        src={src}
+        eager={eager}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          transform: letterboxed ? "scale(3.4)" : "scale(1.4)",
+          filter: "blur(42px) saturate(1.25) brightness(0.9)",
+          display: "block",
+        }}
+      />
+      <SafeImg
+        src={src}
+        eager={eager}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          /* Zoom into the artwork so letterboxed sources (flyer thumbnails with
+             baked-in side bars) crop to real content instead of flat gray. */
+          transform: letterboxed ? "scale(2.45)" : "scale(1.04)",
+          display: "block",
+        }}
+      />
+    </div>
+  );
+}
+
 /* ------------------------------------------------------- absolute rendering */
 
 function AbsLayer({
@@ -286,15 +357,20 @@ function AbsLayer({
       );
     }
     case "image":
-      return layer.content.src ? (
-        <img
+      if (fullBleed) {
+        return (
+          <div style={{ ...box, cursor: undefined }} onClick={onClick}>
+            <BleedVisual src={layer.content.src} />
+          </div>
+        );
+      }
+      return (
+        <SafeImg
           src={layer.content.src}
-          alt=""
-          loading="lazy"
           onClick={onClick}
           style={{ ...box, objectFit: "cover", borderRadius: (layer.style.cornerRadius ?? 0) * s, display: "block" }}
         />
-      ) : null;
+      );
     case "video":
       return (
         <video
@@ -472,7 +548,11 @@ function BandView({
       (l.type === "image" || l.type === "shape") && isFullWidth(l, W) && l.size.height >= band.height - 12;
     const bleed = ordered.filter(isBleed);
     const content = ordered.filter((l) => !isBleed(l));
-    const tappable = content.filter((l) => (!!l.action || l.type === "hotspot") && !form?.consumed.has(l.id));
+    /* Website surface stays clean like the reference: tap rings only show when
+       the layer explicitly opts in (flyers keep their default rings). */
+    const tappable = content.filter(
+      (l) => (!!l.action || l.type === "hotspot") && l.action?.highlight?.enabled === true && !form?.consumed.has(l.id),
+    );
 
     return (
       <section
@@ -591,14 +671,7 @@ function BandView({
         scrollMarginTop: 72,
       }}
     >
-      {bgImage?.content.src && (
-        <img
-          src={bgImage.content.src}
-          alt=""
-          loading="lazy"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-        />
-      )}
+      {bgImage?.content.src && <BleedVisual src={bgImage.content.src} />}
       {overlay && (
         <div style={{ position: "absolute", inset: 0, background: overlay.style.fill, opacity: overlay.style.opacity ?? 0.6 }} />
       )}
@@ -618,7 +691,7 @@ function BandView({
           const onClick = clickable ? () => runAction(l.action, openForm, l.id, run) : undefined;
           const hl = l.action?.highlight;
           const ring: React.CSSProperties =
-            clickable && hl?.enabled !== false && (hl?.style ?? "pulse") !== "none"
+            clickable && hl?.enabled === true && (hl?.style ?? "pulse") !== "none"
               ? {
                   boxShadow: `0 0 0 ${hl?.thickness ?? 3}px ${hl?.color ?? "#7c3aed"}`,
                   animation: "bizadTapPulse 1.6s ease-in-out infinite",
@@ -648,12 +721,10 @@ function BandView({
                 </div>
               );
             case "image":
-              return l.content.src ? (
-                <img
+              return (
+                <SafeImg
                   key={l.id}
                   src={l.content.src}
-                  alt=""
-                  loading="lazy"
                   onClick={onClick}
                   style={{
                     width: "100%",
@@ -664,7 +735,7 @@ function BandView({
                     ...ring,
                   }}
                 />
-              ) : null;
+              );
             case "video":
               return (
                 <video
