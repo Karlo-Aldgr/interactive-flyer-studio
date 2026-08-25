@@ -284,6 +284,9 @@ function BleedVisual({ src, height, eager }: { src?: string; height?: number | s
           width: "100%",
           height: "100%",
           objectFit: "cover",
+          /* Zoom into the artwork so letterboxed sources (flyer thumbnails with
+             baked-in side bars) crop to real content instead of flat gray. */
+          transform: "scale(1.75)",
           display: "block",
         }}
       />
