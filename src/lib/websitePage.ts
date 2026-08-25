@@ -732,7 +732,7 @@ export function buildWebsitePage(
   if (hasTestimonials) {
     const t0 = profile.testimonials[0];
     const boxW = Math.round(COL * (device === "mobile" ? 1 : 0.74));
-    const quoteH = textHeight(t0.body, boxW - 80, M.body + 2);
+    const quoteH = textHeight(t0.body, boxW - 92, M.body + 2);
     const avatar = 72;
     const boxH = 56 + 44 + quoteH + 30 + avatar + 56;
     const h = M.sectionPad * 2 + 118 + boxH;
@@ -743,13 +743,13 @@ export function buildWebsitePage(
     const bx0 = PAD + Math.round((COL - boxW) / 2);
     const by0 = y + M.sectionPad + 118;
     add(rect(pageId, bx0, by0, boxW, boxH, { fill: "#FFFFFF", radius: 6, opacity: 0.1, stroke: "#FFFFFF", strokeWidth: 1 }));
-    add(icon(pageId, "Quote", Math.round(W / 2 - 18), by0 + 26, 36, A));
+    add(icon(pageId, "Quote", Math.round(W / 2 - 18), by0 + 32, 36, A));
     add(
-      text(pageId, `“${t0.body}”`, bx0 + 40, by0 + 46 + 34, boxW - 80, {
+      text(pageId, `“${t0.body}”`, bx0 + 46, by0 + 56 + 38, boxW - 92, {
         size: M.body + 2, color: ON_DARK, align: "center", italic: true, height: quoteH,
       })
     );
-    const ay = by0 + 46 + 34 + quoteH + 22;
+    const ay = by0 + 56 + 38 + quoteH + 26;
     const ax = Math.round(W / 2 - avatar / 2);
     if (t0.photo) add(image(pageId, t0.photo, ax, ay, avatar, avatar, Math.round(avatar / 2)));
     else {
