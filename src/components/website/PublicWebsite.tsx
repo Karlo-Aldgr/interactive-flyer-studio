@@ -243,6 +243,7 @@ function AbsLayer({
   openForm: (r: WebsiteFormRequest) => void;
   fullBleed?: boolean;
 }) {
+  const run = useContext(RuntimeCtx);
   const clickable = !!layer.action;
   const box: React.CSSProperties = {
     position: "absolute",
@@ -255,7 +256,8 @@ function AbsLayer({
     transformOrigin: "top left",
     cursor: clickable ? "pointer" : undefined,
   };
-  const onClick = clickable ? () => runAction(layer.action, openForm, layer.id) : undefined;
+  const onClick = clickable ? () => runAction(layer.action, openForm, layer.id, run) : undefined;
+
 
 
   switch (layer.type) {
