@@ -112,6 +112,7 @@ export function TopBar({ saving, onSave }: Props) {
   const [bizadOpen, setBizadOpen] = useState(false);
   const [bizadShareUrl, setBizadShareUrl] = useState<string | null>(null);
 
+  const [publishingWebsite, setPublishingWebsite] = useState(false);
   const [socialOpen, setSocialOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [autoAdvanceOpen, setAutoAdvanceOpen] = useState(false);
@@ -340,8 +341,6 @@ export function TopBar({ saving, onSave }: Props) {
 
   const isWebsitePage = !!activePage?.background?.websitePage;
   const websitePublished = (flyer as any)?.website_status === "published";
-  const [publishingWebsite, setPublishingWebsite] = useState(false);
-
   /** Publishes/unpublishes THIS project's Website page (independent of the flyer). */
   async function toggleWebsitePublish() {
     if (!flyer) return;
