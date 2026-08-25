@@ -4,6 +4,7 @@ import type { OnboardingSubmission } from "@/lib/onboarding";
 import { BIZAD_DEFAULT_BACKGROUND_COLOR, BIZAD_DEFAULT_BUTTON_COLOR } from "@/lib/bizadDefaults";
 import { layoutFromPage } from "@/lib/bizadPage";
 import type { FlyerPage, FlyerSettings } from "@/types/flyer";
+import { layoutFromPage } from "@/lib/bizadPage";
 
 export type BizadSocialLinks = {
   website?: string | null;
@@ -111,9 +112,6 @@ export function buildBizadPayloadFromOnboarding(
       null,
   };
 }
-
-import type { FlyerPage, FlyerSettings } from "@/types/flyer";
-import { layoutFromPage } from "@/lib/bizadPage";
 
 export async function updateBizadLayout(flyerId: string, layout: unknown): Promise<void> {
   const { error } = await supabase

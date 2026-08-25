@@ -11,10 +11,19 @@ export function buildBizadQrImageUrl(slug: string, size = 400): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(target)}`;
 }
 
+/** Hand-customized cards (e.g. Vontastic) — never auto-rebuild or offer reset. */
+export function isHandEditedBizadLayout(layout: unknown): boolean {
+  if (!layout) return false;
+  const l = layout as BizadLayout;
+  return Array.isArray(l.layers) && l.layers.length >= HAND_EDITED_LAYER_THRESHOLD;
+}
+
+/** Show "Reset to standard layout" unless the card was heavily customized in the editor. */
 export function shouldOfferBizadLayoutReset(layout: unknown): boolean {
-  if (!layout) return true;
-  const l = layout as BizadLayout & { source?: string };
-  if (l.source === BIZAD_LAYOUT_SOURCE) return false;
-  if (Array.isArray(l.layers) && l.layers.length >= HAND_EDITED_LAYER_THRESHOLD) return false;
-  return true;
+  return !isHandEditedBizadLayout(layout);
+}
+
+/** Rebuild saved layout from dialog settings on each save (colors, contact, copy, etc.). */
+export function shouldRebuildBizadLayoutOnSave(layout: unknown): boolean {
+  return !isHandEditedBizadLayout(layout);
 }

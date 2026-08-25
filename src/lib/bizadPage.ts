@@ -171,8 +171,8 @@ export function buildBizadPage(flyerId: string, index: number, bizad: BizadRecor
     y += 196;
   }
 
-  const galleryImage = bizad.owner_photo_url || bizad.flyer_image_url;
-  if (galleryImage) {
+  const galleryImage = bizad.owner_photo_url?.trim() || null;
+  if (galleryImage && galleryImage !== bizad.flyer_image_url) {
     layers.push({
       ...defaultLayer("image", pageId, z++),
       position: { x: side, y },
