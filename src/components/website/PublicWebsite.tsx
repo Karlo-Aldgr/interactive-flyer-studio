@@ -364,6 +364,9 @@ function AbsLayer({
         />
       );
     }
+    case "hotspot":
+      // Invisible tap target — exactly like the flyer viewer.
+      return <div onClick={onClick} style={{ ...box, background: "transparent" }} />;
     default:
       return null;
   }
