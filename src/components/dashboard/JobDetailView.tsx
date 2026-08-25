@@ -138,7 +138,10 @@ export function JobDetailView({ job }: JobDetailViewProps) {
         </Card>
       )}
 
+      <WebsiteStatusCard flyerId={job.flyer_id} />
+
       <OnboardingSubmissionCard jobId={job.id} />
+
     </div>
   );
 }
