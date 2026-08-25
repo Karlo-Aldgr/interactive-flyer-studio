@@ -217,7 +217,6 @@ export function useActionRuntime({ flyerId, fallbackUrl, onBeforeAction, onUnhan
         case "reserve_table":
         case "schedule_consultation":
         case "show_menu":
-        case "menu_add_item":
         case "join_challenge":
         case "business_rating":
         case "novel":
