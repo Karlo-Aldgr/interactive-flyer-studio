@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "deploy:subject-detect": "npx supabase functions deploy subject-detect --project-ref iwmykqilqywbzxpcgaop",
-    "deploy:subject-segment": "npx supabase functions deploy subject-segment --project-ref iwmykqilqywbzxpcgaop"
+    "deploy:subject-segment": "npx supabase functions deploy subject-segment --project-ref iwmykqilqywbzxpcgaop",
+    "deploy:customer-portal-link": "npx supabase functions deploy customer-portal-link --project-ref iwmykqilqywbzxpcgaop"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

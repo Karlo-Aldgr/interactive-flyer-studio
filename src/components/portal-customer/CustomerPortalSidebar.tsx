@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, FolderKanban, Plus, Sparkles, Home, ClipboardList } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Plus, Sparkles, Home, ClipboardList, BarChart3 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -54,7 +54,14 @@ export function CustomerPortalSidebar() {
         muted: application?.status === "rejected",
       };
 
-  const items: NavItem[] = [...baseItems, realtorPortalItem];
+  const clientsPortalItem: NavItem = {
+    title: "Clients portal",
+    url: "/client-portal",
+    icon: BarChart3,
+    match: "prefix",
+  };
+
+  const items: NavItem[] = [...baseItems, clientsPortalItem, realtorPortalItem];
 
   return (
     <Sidebar collapsible="icon">
