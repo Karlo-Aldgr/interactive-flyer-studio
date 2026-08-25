@@ -93,8 +93,12 @@ function PasswordRecoveryRedirect() {
   return null;
 }
 
+const websiteHostSlug =
+  typeof window !== "undefined" ? websiteSlugFromHostname(window.location.hostname) : null;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
+
     <TooltipProvider>
       <Toaster />
       <Sonner />
