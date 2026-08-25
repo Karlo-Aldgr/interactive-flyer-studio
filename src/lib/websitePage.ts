@@ -305,7 +305,7 @@ export function buildWebsitePage(
 ): FlyerPage {
   /* WaveX structure is fixed: missing data becomes an editable Lorem Ipsum
      placeholder layer, never a removed section. */
-  const profile = withWavexPlaceholders(rawProfile);
+  const profile = { ...withWavexPlaceholders(rawProfile), sections: rawProfile.sections ?? DEFAULT_WEBSITE_SECTIONS };
   Z = 0;
   const pageId = uid();
   const M = metricsFor(device);
