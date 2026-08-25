@@ -28,6 +28,7 @@ import {
 import logo from "@/assets/logo.png";
 import { INTERACTIONS, InteractionDef } from "@/lib/interactionsCatalog";
 import Reveal from "@/components/landing/Reveal";
+import { NewsletterSignup } from "@/components/landing/NewsletterSignup";
 import { cn } from "@/lib/utils";
 
 const DEMO_VIDEO = "/interaction.mp4";
@@ -466,6 +467,8 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      <NewsletterSignup />
 
       <section id="start" className="overflow-hidden">
         <div className="grid md:grid-cols-[1.1fr_1fr]">
