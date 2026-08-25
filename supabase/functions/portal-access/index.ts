@@ -1,6 +1,5 @@
-// Public edge function — validates portal token + access code and returns
-// the flyer's portal data (analytics, subscribers, appointments, polls, forms).
-// Deployed with verify_jwt = false so anyone with the link + code can access.
+// Public edge function — validates portal token + access code and returns portal data.
+// Also supports action=customer_link (authenticated) for customer portal one-click URLs.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -10,12 +9,88 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function userCanAccessFlyerPortal(
+  admin: ReturnType<typeof createClient>,
+  userId: string,
+  flyerId: string,
+): Promise<boolean> {
+  const { data: flyer } = await admin
+    .from("flyers")
+    .select("owner_id")
+    .eq("id", flyerId)
+    .maybeSingle();
+  if (flyer?.owner_id === userId) return true;
+
+  const { data: job } = await admin
+    .from("jobs")
+    .select("id")
+    .eq("flyer_id", flyerId)
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .or("share_unlocked.eq.true,status.in.(paid,completed,delivered)")
+    .limit(1)
+    .maybeSingle();
+
+  return !!job;
+}
+
+async function handleCustomerLink(req: Request, flyerId: string) {
+  const authHeader = req.headers.get("authorization") || "";
+  const jwt = authHeader.replace(/^Bearer\s+/i, "");
+  if (!jwt) return json({ error: "Authentication required" }, 401);
+
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  const { data: { user }, error: userErr } = await admin.auth.getUser(jwt);
+  if (userErr || !user) return json({ error: "Authentication required" }, 401);
+
+  const allowed = await userCanAccessFlyerPortal(admin, user.id, flyerId);
+  if (!allowed) return json({ error: "Permission denied" }, 403);
+
+  const { error: insertErr } = await admin
+    .from("flyer_portal_credentials")
+    .upsert({ flyer_id: flyerId }, { onConflict: "flyer_id", ignoreDuplicates: true });
+  if (insertErr) return json({ error: insertErr.message }, 500);
+
+  const { data: cred, error: credErr } = await admin
+    .from("flyer_portal_credentials")
+    .select("portal_token, portal_access_code")
+    .eq("flyer_id", flyerId)
+    .maybeSingle();
+
+  if (credErr) return json({ error: credErr.message }, 500);
+  if (!cred?.portal_token || !cred?.portal_access_code) {
+    return json({ error: "Portal link not available" }, 404);
+  }
+
+  return json({
+    portal_token: cred.portal_token,
+    portal_access_code: cred.portal_access_code,
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
   try {
-    const { token, code } = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
+    if (body.action === "customer_link") {
+      if (!body.flyer_id) return json({ error: "Missing flyer_id" }, 400);
+      return handleCustomerLink(req, body.flyer_id);
+    }
+
+    const { token, code } = body;
     if (!token || !code) {
       return json({ error: "Missing token or code" }, 400);
     }
@@ -212,10 +287,3 @@ Deno.serve(async (req) => {
     return json({ error: e?.message || "Server error" }, 500);
   }
 });
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
