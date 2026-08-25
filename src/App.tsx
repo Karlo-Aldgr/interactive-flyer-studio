@@ -105,8 +105,9 @@ const App = () => (
 
           <Suspense fallback={<FullScreenSpinner />}>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={websiteHostSlug ? <PublicWebsitePage hostSlug={websiteHostSlug} /> : <Landing />} />
               <Route path="/auth" element={<Auth />} />
+
               <Route path="/auth/instagram/callback" element={<InstagramCallback />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/reset-password" element={<ResetPassword />} />
