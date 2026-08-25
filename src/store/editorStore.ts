@@ -16,10 +16,36 @@ const DEFAULT_FLYER_SETTINGS: FlyerSettings = {
   background: "#ffffff",
 };
 
+function parseFlyerSettings(raw: unknown): FlyerSettings {
+  let obj: Record<string, unknown> = {};
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        obj = parsed as Record<string, unknown>;
+      }
+    } catch {
+      /* ignore malformed JSON */
+    }
+  } else if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    obj = raw as Record<string, unknown>;
+  }
+  const width = Number(obj.width);
+  const height = Number(obj.height);
+  return {
+    ...DEFAULT_FLYER_SETTINGS,
+    ...(obj as Partial<FlyerSettings>),
+    width: Number.isFinite(width) && width > 0 ? width : DEFAULT_FLYER_SETTINGS.width,
+    height: Number.isFinite(height) && height > 0 ? height : DEFAULT_FLYER_SETTINGS.height,
+    background:
+      typeof obj.background === "string" ? obj.background : DEFAULT_FLYER_SETTINGS.background,
+  };
+}
+
 function normalizeFlyer(flyer: Flyer): Flyer {
   return {
     ...flyer,
-    settings: { ...DEFAULT_FLYER_SETTINGS, ...(flyer.settings ?? {}) },
+    settings: parseFlyerSettings(flyer.settings),
   };
 }
 

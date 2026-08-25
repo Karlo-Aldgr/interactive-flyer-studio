@@ -1,4 +1,4 @@
-import { Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { useFlyerData } from "@/hooks/useFlyerData";
 import { TopBar } from "@/components/editor/TopBar";
 import { Toolbar } from "@/components/editor/Toolbar";
@@ -8,11 +8,12 @@ import { LayersPanel } from "@/components/editor/LayersPanel";
 import { PagesPanel } from "@/components/editor/PagesPanel";
 import { Loader2 } from "lucide-react";
 import { useCanEdit } from "@/hooks/useCanEdit";
+import { Button } from "@/components/ui/button";
 
 export default function Editor() {
   const { flyerId } = useParams();
   const { canEdit, loading: accessLoading } = useCanEdit();
-  const { loading, saving, saveNow } = useFlyerData(flyerId);
+  const { loading, loadError, saving, saveNow, flyer } = useFlyerData(flyerId);
 
   if (accessLoading) {
     return (
@@ -30,6 +31,20 @@ export default function Editor() {
         <div className="font-display text-lg font-semibold text-foreground animate-pulse">
           We Are Loading Your Experience
         </div>
+      </div>
+    );
+  }
+
+  if (loadError || !flyer) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background px-4 text-center">
+        <p className="font-display text-lg font-semibold text-foreground">Could not open this flyer</p>
+        <p className="max-w-md text-sm text-muted-foreground">
+          {loadError || "The editor did not receive flyer data. Try again or return to your dashboard."}
+        </p>
+        <Button asChild variant="outline">
+          <Link to="/dashboard">Back to dashboard</Link>
+        </Button>
       </div>
     );
   }

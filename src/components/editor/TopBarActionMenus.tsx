@@ -93,7 +93,7 @@ export function TopBarViewMenu({
   onSetDeviceFrame,
   onToggleHighlights,
 }: Pick<TopBarMenuActions, "flyer" | "showHitboxes" | "deviceFrame" | "onToggleHitboxes" | "onSetDeviceFrame" | "onToggleHighlights">) {
-  const highlightsOn = flyer.settings.highlightsEnabled ?? true;
+  const highlightsOn = flyer.settings?.highlightsEnabled ?? true;
 
   return (
     <DropdownMenu>
@@ -197,10 +197,10 @@ export function TopBarMediaMenu({
   onOpenSocial,
 }: Pick<TopBarMenuActions, "flyer" | "onOpenIntroAudio" | "onOpenBgAudio" | "onOpenAutoAdvance" | "onOpenSocial">) {
   const active =
-    !!flyer.settings.introAudioUrl ||
-    !!flyer.settings.bgAudioUrl ||
+    !!flyer.settings?.introAudioUrl ||
+    !!flyer.settings?.bgAudioUrl ||
     !!(flyer.settings as any)?.autoAdvanceEnabled ||
-    hasAnySocial(flyer.settings.social);
+    hasAnySocial(flyer.settings?.social);
 
   return (
     <DropdownMenu>
@@ -210,11 +210,11 @@ export function TopBarMediaMenu({
       <DropdownMenuContent align="end" className={MENU_CONTENT_CLASS}>
         <DropdownMenuItem onSelect={onOpenIntroAudio}>
           <Music className="mr-2 h-4 w-4" /> Intro audio
-          {flyer.settings.introAudioUrl && <ActiveDot active className="ml-auto" />}
+          {flyer.settings?.introAudioUrl && <ActiveDot active className="ml-auto" />}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onOpenBgAudio}>
           <Music2 className="mr-2 h-4 w-4" /> Background audio
-          {flyer.settings.bgAudioUrl && <ActiveDot active className="ml-auto" />}
+          {flyer.settings?.bgAudioUrl && <ActiveDot active className="ml-auto" />}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onOpenAutoAdvance}>
           <Timer className="mr-2 h-4 w-4" /> Auto-advance
@@ -222,7 +222,7 @@ export function TopBarMediaMenu({
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onOpenSocial}>
           <Share2 className="mr-2 h-4 w-4" /> Social links
-          {hasAnySocial(flyer.settings.social) && <ActiveDot active className="ml-auto" />}
+          {hasAnySocial(flyer.settings?.social) && <ActiveDot active className="ml-auto" />}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -234,7 +234,7 @@ export function TopBarPaymentsMenu({
   onOpenCheckout,
   onOpenPayLink,
 }: Pick<TopBarMenuActions, "flyer" | "onOpenCheckout" | "onOpenPayLink">) {
-  const active = !!(flyer.settings.payVenmo || flyer.settings.payCashapp || flyer.settings.payApplePayContact);
+  const active = !!(flyer.settings?.payVenmo || flyer.settings?.payCashapp || flyer.settings?.payApplePayContact);
 
   return (
     <DropdownMenu>
@@ -289,7 +289,7 @@ export function TopBarFlyerMenu({
 export function TopBarMobileMenu(actions: TopBarMenuActions) {
   const { flyer, flyerId } = actions;
   const onboardingHref = useOnboardingHref(flyerId);
-  const highlightsOn = flyer.settings.highlightsEnabled ?? true;
+  const highlightsOn = flyer.settings?.highlightsEnabled ?? true;
 
   return (
     <DropdownMenu>

@@ -250,8 +250,8 @@ export function Canvas() {
 
 
   const page = pages.find((p) => p.id === selectedPageId);
-  const W = page?.background?.size?.width ?? flyer?.settings.width ?? 900;
-  const H = page?.background?.size?.height ?? flyer?.settings.height ?? 1200;
+  const W = Number(page?.background?.size?.width ?? flyer?.settings?.width ?? 900) || 900;
+  const H = Number(page?.background?.size?.height ?? flyer?.settings?.height ?? 1200) || 1200;
   const activeSubjectDetections = subjectDetections.filter((d) => !d.extracted && !d.dismissed);
   const extractSourceLayer = page?.layers.find((l) => l.id === extractSourceLayerId);
   const isRectDrawMode = drawMode === "hotspot" || drawMode === "extract-rect";
