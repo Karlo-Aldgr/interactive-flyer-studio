@@ -35,7 +35,9 @@ export default function Editor() {
     );
   }
 
-  if (loadError || !flyer) {
+  const flyerReady = !!flyer && flyer.id === flyerId;
+
+  if (loadError || !flyerReady) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background px-4 text-center">
         <p className="font-display text-lg font-semibold text-foreground">Could not open this flyer</p>

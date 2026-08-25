@@ -113,7 +113,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   }, [open, flyer.id, flyerContext, flyer.thumbnail_url]);
 
   const previewBizad = useMemo((): BizadRecord | null => {
-    if (loading) return null;
+    if (!open || loading) return null;
     const base = buildBizadPayloadFromOnboarding(onboarding, flyerContext, bizad);
     return {
       ...base,
@@ -132,6 +132,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       share_image_url: shareImageUrl.trim() || base.share_image_url,
     };
   }, [
+    open,
     loading,
     onboarding,
     flyerContext,
@@ -149,10 +150,10 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   ]);
 
   const previewLayout = useMemo(() => {
-    if (!previewBizad) return null;
+    if (!open || !previewBizad) return null;
     const page = buildBizadPage(flyer.id, 0, previewBizad);
     return layoutFromPage(page, flyer.settings);
-  }, [previewBizad, flyer.id, flyer.settings]);
+  }, [open, previewBizad, flyer.id, flyer.settings]);
 
   const publicUrl = previewBizad?.slug ? buildPublicBizadUrl(previewBizad.slug) : null;
   const socialShareUrl = previewBizad?.slug ? buildBizadSocialShareUrl(previewBizad.slug) : null;

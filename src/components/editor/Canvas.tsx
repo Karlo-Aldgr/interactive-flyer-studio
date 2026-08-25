@@ -535,8 +535,8 @@ export function Canvas() {
             position: "relative",
             width: W * zoom,
             height: H * zoom,
-            background: page.background.color || "#fff",
-            backgroundImage: page.background.image ? `url(${page.background.image})` : undefined,
+            background: page.background?.color || "#fff",
+            backgroundImage: page.background?.image ? `url(${page.background.image})` : undefined,
             backgroundSize: "cover",
             backgroundPosition: "center",
             cursor: isRectDrawMode || drawMode === "hotspot-ellipse" || drawMode === "extract-auto" ? "crosshair" : "default",
@@ -691,8 +691,8 @@ export function Canvas() {
             }}
           >
             <KLayer>
-              {!page.background.image && (
-                <Rect x={0} y={0} width={W} height={H} fill={page.background.color || "#fff"} listening={false} />
+              {!page.background?.image && (
+                <Rect x={0} y={0} width={W} height={H} fill={page.background?.color || "#fff"} listening={false} />
               )}
               {sortedLayers.map((l, idx) => {
                 const pageCfg = resolveIntro(page.intro);
