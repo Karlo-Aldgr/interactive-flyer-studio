@@ -768,6 +768,7 @@ function BandView({
 /* -------------------------------------------------------------------- nav */
 
 function SiteNav({ doc, openForm }: { doc: WebsiteDocument; openForm: (r: WebsiteFormRequest) => void }) {
+  const run = useContext(RuntimeCtx);
   const [open, setOpen] = useState(false);
   return (
     <header
@@ -811,7 +812,7 @@ function SiteNav({ doc, openForm }: { doc: WebsiteDocument; openForm: (r: Websit
           {doc.navCta && (
             <button
               type="button"
-              onClick={() => runAction(doc.navCta!.action, openForm, "nav-cta")}
+              onClick={() => runAction(doc.navCta!.action, openForm, "nav-cta", run)}
               style={{
                 background: doc.accent,
                 color: "#fff",
@@ -865,7 +866,7 @@ function SiteNav({ doc, openForm }: { doc: WebsiteDocument; openForm: (r: Websit
               type="button"
               onClick={() => {
                 setOpen(false);
-                runAction(doc.navCta!.action, openForm, "nav-cta");
+                runAction(doc.navCta!.action, openForm, "nav-cta", run);
               }}
               style={{
                 background: doc.accent,
