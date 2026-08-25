@@ -615,7 +615,16 @@ function BandView({
       >
         {flowLayers.map((l) => {
           const clickable = !!l.action;
-          const onClick = clickable ? () => runAction(l.action, openForm, l.id) : undefined;
+          const onClick = clickable ? () => runAction(l.action, openForm, l.id, run) : undefined;
+          const hl = l.action?.highlight;
+          const ring: React.CSSProperties =
+            clickable && hl?.enabled !== false && (hl?.style ?? "pulse") !== "none"
+              ? {
+                  boxShadow: `0 0 0 ${hl?.thickness ?? 3}px ${hl?.color ?? "#7c3aed"}`,
+                  animation: "bizadTapPulse 1.6s ease-in-out infinite",
+                }
+              : {};
+
           switch (l.type) {
             case "text":
               return (
