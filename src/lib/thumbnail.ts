@@ -347,3 +347,27 @@ export async function generateAndUploadThumbnail(
 
 }
 
+/** Upload a 1200×630 share preview image for a digital business card. */
+export async function uploadBizadShareImage(file: File, flyerId: string): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Please choose an image file.");
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await loadImage(objectUrl);
+    const blob = await composeSocialCard(objectUrl, img.naturalWidth, img.naturalHeight, "#0f172a");
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !authData.user) throw new Error("Sign in required to upload the share image.");
+    const path = `${authData.user.id}/${flyerId}-bizad-share.jpg`;
+    const { error: uploadErr } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, blob, { contentType: "image/jpeg", upsert: true, cacheControl: "3600" });
+    if (uploadErr) throw new Error("Upload failed: " + uploadErr.message);
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    return data.publicUrl;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+

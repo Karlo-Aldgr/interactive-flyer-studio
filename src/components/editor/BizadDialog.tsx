@@ -1,23 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Copy, Loader2, IdCard } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ExternalLink, Copy, Loader2, IdCard, RotateCcw, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOnboardingForFlyer, type OnboardingSubmission } from "@/lib/onboarding";
 import {
   buildBizadPayloadFromOnboarding,
   getBizadForFlyer,
+  syncBizadLayoutFromEditor,
   upsertBizad,
+  updateBizadLayout,
   type BizadRecord,
 } from "@/lib/bizad";
 import { BIZAD_DEFAULT_BACKGROUND_COLOR, BIZAD_DEFAULT_BUTTON_COLOR } from "@/lib/bizadDefaults";
-import { buildPublicBizadUrl } from "@/lib/utils";
+import { shouldOfferBizadLayoutReset } from "@/lib/bizadLayoutUtils";
+import { buildBizadPage, layoutFromPage } from "@/lib/bizadPage";
+import { buildBizadSocialShareUrl, buildPublicBizadUrl } from "@/lib/utils";
+import { uploadBizadShareImage } from "@/lib/thumbnail";
 import { useEditorStore } from "@/store/editorStore";
 import type { Flyer } from "@/types/flyer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { BizadPageContent } from "@/components/bizad/BizadPageContent";
+import { BizadLayoutView } from "@/components/viewer/BizadLayoutView";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -31,10 +36,13 @@ interface Props {
 export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   const { user } = useAuth();
   const addBizadPage = useEditorStore((s) => s.addBizadPage);
+  const replaceBizadPage = useEditorStore((s) => s.replaceBizadPage);
   const setBizadPageHidden = useEditorStore((s) => s.setBizadPageHidden);
   const pages = useEditorStore((s) => s.pages);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [uploadingShare, setUploadingShare] = useState(false);
   const [bizad, setBizad] = useState<BizadRecord | null>(null);
   const [onboarding, setOnboarding] = useState<OnboardingSubmission | null>(null);
   const [enabled, setEnabled] = useState(false);
@@ -42,6 +50,8 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   const [backgroundColor, setBackgroundColor] = useState(BIZAD_DEFAULT_BACKGROUND_COLOR);
   const [videoUrl, setVideoUrl] = useState("");
   const [copyrightText, setCopyrightText] = useState("");
+  const [shareImageUrl, setShareImageUrl] = useState("");
+  const shareFileRef = useRef<HTMLInputElement>(null);
 
   const flyerContext = useMemo(() => ({
     id: flyer.id,
@@ -67,12 +77,14 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           setBackgroundColor(existing.background_color);
           setVideoUrl(existing.video_url ?? "");
           setCopyrightText(existing.copyright_text ?? "");
+          setShareImageUrl(existing.share_image_url ?? "");
         } else {
           setBizad(null);
           setEnabled(false);
           setButtonColor(BIZAD_DEFAULT_BUTTON_COLOR);
           setBackgroundColor(BIZAD_DEFAULT_BACKGROUND_COLOR);
           setVideoUrl("");
+          setShareImageUrl(flyer.thumbnail_url ?? "");
           const draft = buildBizadPayloadFromOnboarding(onboardingRow, flyerContext, null);
           setCopyrightText(draft.copyright_text ?? "");
         }
@@ -82,7 +94,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
         setLoading(false);
       }
     })();
-  }, [open, flyer.id, flyerContext]);
+  }, [open, flyer.id, flyerContext, flyer.thumbnail_url]);
 
   const previewBizad = useMemo((): BizadRecord | null => {
     if (loading) return null;
@@ -97,6 +109,7 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       background_color: backgroundColor,
       video_url: videoUrl.trim() || null,
       copyright_text: copyrightText.trim() || base.copyright_text,
+      share_image_url: shareImageUrl.trim() || base.share_image_url,
     };
   }, [
     loading,
@@ -108,9 +121,31 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
     backgroundColor,
     videoUrl,
     copyrightText,
+    shareImageUrl,
   ]);
 
-  const publicUrl = bizad?.slug ? buildPublicBizadUrl(bizad.slug) : null;
+  const previewLayout = useMemo(() => {
+    if (!previewBizad) return null;
+    const page = buildBizadPage(flyer.id, 0, previewBizad);
+    return layoutFromPage(page, flyer.settings);
+  }, [previewBizad, flyer.id, flyer.settings]);
+
+  const publicUrl = previewBizad?.slug ? buildPublicBizadUrl(previewBizad.slug) : null;
+  const socialShareUrl = previewBizad?.slug ? buildBizadSocialShareUrl(previewBizad.slug) : null;
+  const showLayoutReset = bizad ? shouldOfferBizadLayoutReset(bizad.layout) : false;
+
+  async function persistLayout(saved: BizadRecord) {
+    if (!saved.enabled) {
+      await updateBizadLayout(flyer.id, null);
+      return;
+    }
+    const hasPage = useEditorStore.getState().pages.some((p) => p.background?.bizadPage);
+    if (!hasPage) {
+      addBizadPage(saved);
+    }
+    const storePages = useEditorStore.getState().pages;
+    await syncBizadLayoutFromEditor(flyer.id, storePages, flyer.settings);
+  }
 
   async function save(nextEnabled = enabled) {
     if (!user) return toast.error("Sign in to enable your digital card");
@@ -126,18 +161,26 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
         background_color: backgroundColor,
         video_url: videoUrl.trim() || null,
         copyright_text: copyrightText.trim() || base.copyright_text,
+        share_image_url: shareImageUrl.trim() || base.share_image_url,
       });
       setBizad(saved);
       setEnabled(saved.enabled);
 
       const hasPage = pages.some((p) => p.background?.bizadPage);
       if (saved.enabled) {
-        addBizadPage(saved);
-        if (!hasPage) {
-          toast.success("Digital business card page added to your flyer pages");
+        const needsFreshLayout = !hasPage || shouldOfferBizadLayoutReset(bizad?.layout);
+        if (needsFreshLayout) {
+          replaceBizadPage(saved);
+          if (!hasPage) {
+            toast.success("Digital business card page added to your flyer pages");
+          }
+        } else {
+          addBizadPage(saved);
         }
+        await persistLayout(saved);
       } else {
         setBizadPageHidden(true);
+        await updateBizadLayout(flyer.id, null);
       }
       toast.success(nextEnabled ? "Digital business card enabled" : "Digital business card saved");
     } catch (e: any) {
@@ -148,14 +191,63 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   }
 
   async function handleToggle(checked: boolean) {
+    if (checked && !shareImageUrl.trim() && !flyer.thumbnail_url) {
+      toast.message("Add a share preview image so your card looks right when shared.");
+    }
     setEnabled(checked);
     await save(checked);
+  }
+
+  async function handleResetLayout() {
+    if (!previewBizad) return;
+    setResetting(true);
+    try {
+      replaceBizadPage(previewBizad);
+      const storePages = useEditorStore.getState().pages;
+      await syncBizadLayoutFromEditor(flyer.id, storePages, flyer.settings);
+      toast.success("Standard layout applied");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not reset layout");
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  async function handleShareImageUpload(file: File) {
+    setUploadingShare(true);
+    try {
+      const url = await uploadBizadShareImage(file, flyer.id);
+      setShareImageUrl(url);
+      if (bizad) {
+        const saved = await upsertBizad({
+          ...buildBizadPayloadFromOnboarding(onboarding, flyerContext, bizad),
+          enabled,
+          button_color: buttonColor,
+          background_color: backgroundColor,
+          video_url: videoUrl.trim() || null,
+          copyright_text: copyrightText.trim() || bizad.copyright_text,
+          share_image_url: url,
+        });
+        setBizad(saved);
+      }
+      toast.success("Share preview image uploaded");
+    } catch (e: any) {
+      toast.error(e?.message || "Upload failed");
+    } finally {
+      setUploadingShare(false);
+    }
   }
 
   async function copyLink() {
     if (!publicUrl) return;
     await navigator.clipboard.writeText(publicUrl);
     toast.success("Link copied");
+  }
+
+  async function copySocialLink() {
+    if (!socialShareUrl) return;
+    await navigator.clipboard.writeText(socialShareUrl);
+    toast.success("Social share link copied");
   }
 
   return (
@@ -166,7 +258,8 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
             <IdCard className="h-4 w-4" /> Digital business card
           </DialogTitle>
           <DialogDescription>
-            Standard layout: logo, flyer, Save Contact, hot buttons, video, About Us, social links, and QR. Orange buttons and light gray background are the default for new cards.
+            Standard Vontastic layout: flyer hero, CALL / TEXT / EMAIL / FLYER buttons, gallery, booking, and QR.
+            Navy background and orange buttons are the default — colors are editable below.
           </DialogDescription>
         </DialogHeader>
 
@@ -190,6 +283,20 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
                 />
               </div>
 
+              {showLayoutReset && enabled && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={resetting || saving}
+                  onClick={() => void handleResetLayout()}
+                >
+                  {resetting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+                  Reset to standard layout
+                </Button>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="bizad-btn-color" className="text-xs">Button color</Label>
@@ -211,6 +318,38 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
                     className="h-10 cursor-pointer p-1"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Share preview image</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Shown when you share your card link on Facebook, WhatsApp, and iMessage.
+                </p>
+                {shareImageUrl ? (
+                  <img src={shareImageUrl} alt="Share preview" className="h-24 w-full rounded-md border object-cover" />
+                ) : null}
+                <input
+                  ref={shareFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleShareImageUpload(file);
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={uploadingShare}
+                  onClick={() => shareFileRef.current?.click()}
+                >
+                  {uploadingShare ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                  Upload share image
+                </Button>
               </div>
 
               <div className="space-y-1.5">
@@ -249,6 +388,11 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
                       </a>
                     </Button>
                   </div>
+                  {socialShareUrl && (
+                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={copySocialLink}>
+                      Copy social share link
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -262,9 +406,9 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
             <div className="space-y-2">
               <Label className="text-xs">Page preview</Label>
               <div className="overflow-hidden rounded-xl border border-border bg-muted/30">
-                {previewBizad ? (
+                {previewBizad && previewLayout ? (
                   <div className="max-h-[min(70vh,720px)] overflow-y-auto">
-                    <BizadPageContent bizad={previewBizad} preview />
+                    <BizadLayoutView layout={previewLayout} bizad={previewBizad} />
                   </div>
                 ) : null}
               </div>

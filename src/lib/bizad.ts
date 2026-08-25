@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { buildPublicFlyerUrl, slugBaseFromTitle } from "@/lib/utils";
 import type { OnboardingSubmission } from "@/lib/onboarding";
 import { BIZAD_DEFAULT_BACKGROUND_COLOR, BIZAD_DEFAULT_BUTTON_COLOR } from "@/lib/bizadDefaults";
+import { layoutFromPage } from "@/lib/bizadPage";
+import type { FlyerPage, FlyerSettings } from "@/types/flyer";
 
 export type BizadSocialLinks = {
   website?: string | null;
@@ -31,6 +33,8 @@ export type BizadRecord = {
   gallery_url: string | null;
   video_url: string | null;
   copyright_text: string | null;
+  /** Image shown when sharing the /bizads link on social apps. */
+  share_image_url: string | null;
   /** Saved editor page layout (elements/size/background) rendered on the public card. */
   layout?: any | null;
   created_at: string;
@@ -100,8 +104,16 @@ export function buildBizadPayloadFromOnboarding(
         : existing?.business_name
           ? `© ${existing.business_name} ${new Date().getFullYear()}`
           : null),
+    share_image_url:
+      existing?.share_image_url ??
+      flyer.thumbnail_url ??
+      existing?.flyer_image_url ??
+      null,
   };
 }
+
+import type { FlyerPage, FlyerSettings } from "@/types/flyer";
+import { layoutFromPage } from "@/lib/bizadPage";
 
 export async function updateBizadLayout(flyerId: string, layout: unknown): Promise<void> {
   const { error } = await supabase
@@ -109,6 +121,19 @@ export async function updateBizadLayout(flyerId: string, layout: unknown): Promi
     .update({ layout: layout as any, updated_at: new Date().toISOString() })
     .eq("flyer_id", flyerId);
   if (error) throw error;
+}
+
+export async function syncBizadLayoutFromEditor(
+  flyerId: string,
+  pages: FlyerPage[],
+  settings?: FlyerSettings | null,
+): Promise<void> {
+  const bizadPage = pages.find((p) => p.background?.bizadPage);
+  if (!bizadPage) return;
+  await updateBizadLayout(
+    flyerId,
+    bizadPage.background?.bizadHidden ? null : layoutFromPage(bizadPage, settings),
+  );
 }
 
 export async function getBizadForFlyer(flyerId: string): Promise<BizadRecord | null> {
@@ -204,6 +229,7 @@ export const DEMO_BIZAD: BizadRecord = {
   gallery_url: "https://tapthatflyer.com",
   video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   copyright_text: "© Biggs Auto Repair",
+  share_image_url: "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=1200&auto=format&fit=crop",
   layout: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
