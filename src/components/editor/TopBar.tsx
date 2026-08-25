@@ -346,11 +346,29 @@ export function TopBar({ saving, onSave }: Props) {
     setPublishingWebsite(true);
     try {
       const next = websitePublished ? "draft" : "published";
-      let slug = (flyer as any).website_slug as string | null;
-      if (next === "published" && !slug) {
-        const base = isRealFlyerTitle(flyer.title) ? flyer.title : "website";
-        slug = slugFromFlyerTitle(base, null);
+
+      if (next === "published") {
+        // Save the latest editor state before it goes public.
+        try {
+          await onSave?.();
+        } catch (e) {
+          console.warn("[website publish] save failed", e);
+        }
+        const hasWebsite = useEditorStore
+          .getState()
+          .pages.some((p) => p.background?.websitePage);
+        if (!hasWebsite) {
+          toast.error("This project has no Website page yet");
+          return;
+        }
       }
+
+      let slug = (flyer as any).website_slug as string | null;
+      if (next === "published") {
+        const base = isRealFlyerTitle(flyer.title) ? flyer.title : "my-site";
+        slug = await ensureUniqueWebsiteSlug(base, flyer.id, slug);
+      }
+
       const { error } = await supabase
         .from("flyers")
         .update({ website_status: next, website_slug: slug } as any)
@@ -358,14 +376,15 @@ export function TopBar({ saving, onSave }: Props) {
       if (error) { toast.error(error.message); return; }
       setFlyer({ website_status: next, website_slug: slug } as any);
       if (next === "published" && slug) {
-        toast.success(`Website published at ${window.location.origin}/site/${slug}`);
+        toast.success(`Website published — ${buildPublicWebsiteUrl(slug)}`);
       } else {
-        toast.success("Website unpublished");
+        toast.success("Website unpublished — your draft is safe");
       }
     } finally {
       setPublishingWebsite(false);
     }
   }
+
 
   async function togglePublish() {
     if (!flyer) return;
