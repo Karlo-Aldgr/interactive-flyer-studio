@@ -14,7 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { loadWebsiteSources } from "@/lib/websiteSources";
-import { buildWebsiteProfile } from "@/lib/websiteProfile";
+import { buildWebsiteProfile, type WebsiteSectionKey } from "@/lib/websiteProfile";
+import { WebsiteSectionsDialog } from "@/components/editor/WebsiteSectionsDialog";
 
 const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
   { value: "none", label: "None" },
@@ -61,23 +62,32 @@ export function PagesPanel() {
   const bgFileRef = useRef<HTMLInputElement>(null);
   const [uploadingBg, setUploadingBg] = useState(false);
   const [creatingWebsite, setCreatingWebsite] = useState(false);
+  const [sectionsOpen, setSectionsOpen] = useState(false);
 
   /** Creates the Website page from the CURRENTLY OPEN project's own data. */
-  const handleAddWebsitePage = async () => {
+  const handleAddWebsitePage = () => {
     const state = useEditorStore.getState();
-    const currentFlyer = state.flyer;
-    if (!currentFlyer) return;
+    if (!state.flyer) return;
     if (state.pages.some((p) => p.background?.websitePage)) {
       addWebsitePage({ images: [], services: [], pricing: [], portfolio: [], socials: [], ctas: [], team: [], stats: [], testimonials: [], news: [] });
       return;
     }
+    setSectionsOpen(true);
+  };
+
+  /** Builds the website with ONLY the sections the client picked. */
+  const createWebsiteWithSections = async (sections: WebsiteSectionKey[]) => {
+    const state = useEditorStore.getState();
+    const currentFlyer = state.flyer;
+    if (!currentFlyer) return;
     setCreatingWebsite(true);
     try {
       // Combine the client's dashboard/profile info with this project's own data.
       const sources = await loadWebsiteSources(currentFlyer);
       const profile = buildWebsiteProfile({ flyer: currentFlyer, pages: state.pages, sources });
-      addWebsitePage(profile);
-      toast.success("Website page created from this client's profile and project");
+      addWebsitePage({ ...profile, sections });
+      setSectionsOpen(false);
+      toast.success("Website page created with your selected sections");
     } catch {
       toast.error("Could not build the website page");
     } finally {
@@ -215,7 +225,7 @@ export function PagesPanel() {
                 Add story page (1080×1920)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled={creatingWebsite} onClick={() => { void handleAddWebsitePage(); }}>
+              <DropdownMenuItem disabled={creatingWebsite} onClick={() => { handleAddWebsitePage(); }}>
                 <Globe className="mr-2 h-3.5 w-3.5" /> {creatingWebsite ? "Building website…" : "Add website page"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
