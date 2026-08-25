@@ -140,6 +140,15 @@ export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> 
     ),
   ]);
 
-  return { clientProfile, projectOnboarding, dashboardOnboarding, bizad, job, socialAccounts, testimonials };
+  return {
+    clientProfile,
+    projectOnboarding,
+    // Account-wide sources are intentionally never used (per-project rule).
+    dashboardOnboarding: null,
+    bizad,
+    job,
+    socialAccounts: [] as ConnectedSocial[],
+    testimonials,
+  };
 
 }
