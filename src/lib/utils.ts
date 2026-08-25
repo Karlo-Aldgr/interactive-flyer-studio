@@ -88,6 +88,35 @@ export function buildPublicBizadUrl(slug: string): string {
   return `${getPublicAppOrigin().replace(/\/$/, "")}/bizads/${slug}`;
 }
 
+/** Root domain that client website subdomains hang off. */
+export const WEBSITE_ROOT_DOMAIN = "tapthatflyer.com";
+
+/** Subdomains that are never a client website. */
+const RESERVED_WEBSITE_HOSTS = new Set(["www", "app", "api", "preview", "share", "admin", "mail"]);
+
+/**
+ * If the current hostname is `<slug>.tapthatflyer.com`, return that slug.
+ * Used to serve one published client website per subdomain from this one app.
+ */
+export function websiteSlugFromHostname(hostname: string): string | null {
+  const host = (hostname || "").toLowerCase().replace(/\.$/, "");
+  if (!host.endsWith(`.${WEBSITE_ROOT_DOMAIN}`)) return null;
+  const sub = host.slice(0, -1 * (WEBSITE_ROOT_DOMAIN.length + 1));
+  if (!sub || sub.includes(".") || RESERVED_WEBSITE_HOSTS.has(sub)) return null;
+  return sub;
+}
+
+/**
+ * Public website URL. Uses real client subdomains once wildcard DNS is live
+ * (`VITE_WEBSITE_SUBDOMAINS=1`), otherwise the path form on the main domain.
+ */
+export function buildPublicWebsiteUrl(slug: string): string {
+  const useSubdomains = String((import.meta as any).env?.VITE_WEBSITE_SUBDOMAINS ?? "") === "1";
+  if (useSubdomains) return `https://${slug}.${WEBSITE_ROOT_DOMAIN}`;
+  return `${getPublicAppOrigin().replace(/\/$/, "")}/site/${slug}`;
+}
+
+
 /**
  * Marketing / social posts must always use the published public origin.
  * Local LAN URLs break Facebook/Instagram link previews because Meta cannot crawl them.

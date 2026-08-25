@@ -10,6 +10,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AffiliateTracker } from "@/components/AffiliateTracker";
 
 import { isPasswordRecoveryUrl, passwordRecoveryRedirectPath } from "@/lib/authUtils";
+import { websiteSlugFromHostname } from "@/lib/utils";
+
 import Landing from "./pages/Landing";
 import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 
@@ -93,8 +95,12 @@ function PasswordRecoveryRedirect() {
   return null;
 }
 
+const websiteHostSlug =
+  typeof window !== "undefined" ? websiteSlugFromHostname(window.location.hostname) : null;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
+
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -105,8 +111,9 @@ const App = () => (
 
           <Suspense fallback={<FullScreenSpinner />}>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={websiteHostSlug ? <PublicWebsitePage hostSlug={websiteHostSlug} /> : <Landing />} />
               <Route path="/auth" element={<Auth />} />
+
               <Route path="/auth/instagram/callback" element={<InstagramCallback />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/reset-password" element={<ResetPassword />} />

@@ -3613,6 +3613,10 @@ export type Database = {
         }
         Returns: Json
       }
+      website_slug_available: {
+        Args: { _flyer_id?: string; _slug: string }
+        Returns: boolean
+      }
     }
     Enums: {
       action_type:

@@ -11,7 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { buildPublicBizadUrl, buildPublicFlyerUrl, buildSocialLandingShareUrl, buildSocialShareUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
+import { buildPublicBizadUrl, buildPublicFlyerUrl, buildPublicWebsiteUrl, buildSocialLandingShareUrl, buildSocialShareUrl, cn, flyerSlugLooksUntitled, isRealFlyerTitle, slugFromFlyerTitle } from "@/lib/utils";
+import { ensureUniqueWebsiteSlug } from "@/lib/websiteSlug";
+
 import { getBizadForFlyer } from "@/lib/bizad";
 import type { FlyerCategory } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
@@ -346,11 +348,29 @@ export function TopBar({ saving, onSave }: Props) {
     setPublishingWebsite(true);
     try {
       const next = websitePublished ? "draft" : "published";
-      let slug = (flyer as any).website_slug as string | null;
-      if (next === "published" && !slug) {
-        const base = isRealFlyerTitle(flyer.title) ? flyer.title : "website";
-        slug = slugFromFlyerTitle(base, null);
+
+      if (next === "published") {
+        // Save the latest editor state before it goes public.
+        try {
+          await onSave?.();
+        } catch (e) {
+          console.warn("[website publish] save failed", e);
+        }
+        const hasWebsite = useEditorStore
+          .getState()
+          .pages.some((p) => p.background?.websitePage);
+        if (!hasWebsite) {
+          toast.error("This project has no Website page yet");
+          return;
+        }
       }
+
+      let slug = (flyer as any).website_slug as string | null;
+      if (next === "published") {
+        const base = isRealFlyerTitle(flyer.title) ? flyer.title : "my-site";
+        slug = await ensureUniqueWebsiteSlug(base, flyer.id, slug);
+      }
+
       const { error } = await supabase
         .from("flyers")
         .update({ website_status: next, website_slug: slug } as any)
@@ -358,14 +378,15 @@ export function TopBar({ saving, onSave }: Props) {
       if (error) { toast.error(error.message); return; }
       setFlyer({ website_status: next, website_slug: slug } as any);
       if (next === "published" && slug) {
-        toast.success(`Website published at ${window.location.origin}/site/${slug}`);
+        toast.success(`Website published — ${buildPublicWebsiteUrl(slug)}`);
       } else {
-        toast.success("Website unpublished");
+        toast.success("Website unpublished — your draft is safe");
       }
     } finally {
       setPublishingWebsite(false);
     }
   }
+
 
   async function togglePublish() {
     if (!flyer) return;
@@ -669,6 +690,32 @@ export function TopBar({ saving, onSave }: Props) {
         </>
       )}
 
+      {isWebsitePage && websitePublished && (flyer as any).website_slug && (
+        <>
+          <Button
+            size="sm"
+            variant="outline"
+            className="hidden h-8 lg:inline-flex"
+            onClick={() =>
+              window.open(buildPublicWebsiteUrl((flyer as any).website_slug), "_blank", "noreferrer")
+            }
+            title="Open the live website"
+          >
+            <Globe className="mr-1 h-4 w-4" /> Website Published
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8"
+            disabled={publishingWebsite}
+            onClick={toggleWebsitePublish}
+          >
+            Unpublish
+          </Button>
+        </>
+      )}
+
+      {!(isWebsitePage && websitePublished) && (
       <Button
         size="sm"
         disabled={publishingWebsite}
@@ -679,14 +726,20 @@ export function TopBar({ saving, onSave }: Props) {
         )}
         title={isWebsitePage ? "Publish this project's Website" : "Publish this flyer"}
       >
-        <Globe className="mr-1 h-4 w-4 hidden sm:inline" />
+        {publishingWebsite ? (
+          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+        ) : (
+          <Globe className="mr-1 h-4 w-4 hidden sm:inline" />
+        )}
         <span className="hidden sm:inline">
           {isWebsitePage
-            ? websitePublished ? "Unpublish website" : "Publish website"
+            ? "Publish Website"
             : flyer.status === "published" ? "Unpublish" : "Publish"}
         </span>
         <Globe className="h-4 w-4 sm:hidden" />
       </Button>
+      )}
+
 
       {/* Grouped menus — large screens */}
       <div className="hidden items-center gap-1 lg:flex">
