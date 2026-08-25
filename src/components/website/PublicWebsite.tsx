@@ -548,7 +548,11 @@ function BandView({
       (l.type === "image" || l.type === "shape") && isFullWidth(l, W) && l.size.height >= band.height - 12;
     const bleed = ordered.filter(isBleed);
     const content = ordered.filter((l) => !isBleed(l));
-    const tappable = content.filter((l) => (!!l.action || l.type === "hotspot") && !form?.consumed.has(l.id));
+    /* Website surface stays clean like the reference: tap rings only show when
+       the layer explicitly opts in (flyers keep their default rings). */
+    const tappable = content.filter(
+      (l) => (!!l.action || l.type === "hotspot") && l.action?.highlight?.enabled === true && !form?.consumed.has(l.id),
+    );
 
     return (
       <section
@@ -687,7 +691,7 @@ function BandView({
           const onClick = clickable ? () => runAction(l.action, openForm, l.id, run) : undefined;
           const hl = l.action?.highlight;
           const ring: React.CSSProperties =
-            clickable && hl?.enabled !== false && (hl?.style ?? "pulse") !== "none"
+            clickable && hl?.enabled === true && (hl?.style ?? "pulse") !== "none"
               ? {
                   boxShadow: `0 0 0 ${hl?.thickness ?? 3}px ${hl?.color ?? "#7c3aed"}`,
                   animation: "bizadTapPulse 1.6s ease-in-out infinite",
