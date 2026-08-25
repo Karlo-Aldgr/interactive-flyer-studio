@@ -434,6 +434,8 @@ function BandView({
   flyerId,
   canSubmitForms,
   openForm,
+  hiddenIds,
+  pageIntro,
 }: {
   band: Band;
   W: number;
@@ -442,7 +444,10 @@ function BandView({
   flyerId: string;
   canSubmitForms: boolean;
   openForm: (r: WebsiteFormRequest) => void;
+  hiddenIds: Set<string>;
+  pageIntro?: FlyerPage["intro"] | null;
 }) {
+  const run = useContext(RuntimeCtx);
   const scaled = width >= REFLOW_BELOW;
   const s = Math.min(1, width / W);
   const form = band.form;
@@ -450,7 +455,10 @@ function BandView({
   const { busy, submit } = useFormSubmit(flyerId, canSubmitForms);
 
   const byId = useMemo(() => new Map(band.layers.map((l) => [l.id, l])), [band.layers]);
-  const ordered = useMemo(() => [...band.layers].sort((a, b) => a.z_index - b.z_index), [band.layers]);
+  const ordered = useMemo(
+    () => [...band.layers].filter((l) => !hiddenIds.has(l.id)).sort((a, b) => a.z_index - b.z_index),
+    [band.layers, hiddenIds],
+  );
   const formButton = form ? byId.get(form.buttonId) : undefined;
 
   const doSubmit = () => form && submit(form.fields, values, form.action, reset);
@@ -464,6 +472,7 @@ function BandView({
       (l.type === "image" || l.type === "shape") && isFullWidth(l, W) && l.size.height >= band.height - 12;
     const bleed = ordered.filter(isBleed);
     const content = ordered.filter((l) => !isBleed(l));
+    const tappable = content.filter((l) => (!!l.action || l.type === "hotspot") && !form?.consumed.has(l.id));
 
     return (
       <section
@@ -492,10 +501,22 @@ function BandView({
             height: "100%",
           }}
         >
-          {content.map((l) => {
+          {content.map((l, i) => {
             if (form?.consumed.has(l.id)) return null;
-            return <AbsLayer key={l.id} layer={l} band={band} s={s} doc={doc} openForm={openForm} />;
+            return (
+              <IntroWrap key={l.id} intro={l.intro} index={i} pageIntro={pageIntro}>
+                <AbsLayer layer={l} band={band} s={s} doc={doc} openForm={openForm} />
+              </IntroWrap>
+            );
           })}
+
+          {/* Tap highlights — same visual cues as the flyer */}
+          <div data-bizad-highlights style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+            {tappable.map((l) => (
+              <TapHighlight key={"hl-" + l.id} layer={l} scale={s} offsetY={band.top} />
+            ))}
+          </div>
+
 
           {form?.fields.map((f) => {
             const box = byId.get(f.boxId);
