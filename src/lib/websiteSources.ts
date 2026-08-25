@@ -115,7 +115,6 @@ export async function loadWebsiteSources(flyer: Flyer): Promise<WebsiteSources> 
           null
         )
       : Promise.resolve(null),
-    clientId ? safe(getMyOnboarding(clientId), null) : Promise.resolve(null),
     safe(
       supabase
         .from("jobs")
