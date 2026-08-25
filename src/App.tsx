@@ -10,6 +10,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AffiliateTracker } from "@/components/AffiliateTracker";
 
 import { isPasswordRecoveryUrl, passwordRecoveryRedirectPath } from "@/lib/authUtils";
+import { websiteSlugFromHostname } from "@/lib/utils";
+
 import Landing from "./pages/Landing";
 import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 
