@@ -690,6 +690,32 @@ export function TopBar({ saving, onSave }: Props) {
         </>
       )}
 
+      {isWebsitePage && websitePublished && (flyer as any).website_slug && (
+        <>
+          <Button
+            size="sm"
+            variant="outline"
+            className="hidden h-8 lg:inline-flex"
+            onClick={() =>
+              window.open(buildPublicWebsiteUrl((flyer as any).website_slug), "_blank", "noreferrer")
+            }
+            title="Open the live website"
+          >
+            <Globe className="mr-1 h-4 w-4" /> Website Published
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8"
+            disabled={publishingWebsite}
+            onClick={toggleWebsitePublish}
+          >
+            Unpublish
+          </Button>
+        </>
+      )}
+
+      {!(isWebsitePage && websitePublished) && (
       <Button
         size="sm"
         disabled={publishingWebsite}
@@ -700,14 +726,20 @@ export function TopBar({ saving, onSave }: Props) {
         )}
         title={isWebsitePage ? "Publish this project's Website" : "Publish this flyer"}
       >
-        <Globe className="mr-1 h-4 w-4 hidden sm:inline" />
+        {publishingWebsite ? (
+          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+        ) : (
+          <Globe className="mr-1 h-4 w-4 hidden sm:inline" />
+        )}
         <span className="hidden sm:inline">
           {isWebsitePage
-            ? websitePublished ? "Unpublish website" : "Publish website"
+            ? "Publish Website"
             : flyer.status === "published" ? "Unpublish" : "Publish"}
         </span>
         <Globe className="h-4 w-4 sm:hidden" />
       </Button>
+      )}
+
 
       {/* Grouped menus — large screens */}
       <div className="hidden items-center gap-1 lg:flex">
