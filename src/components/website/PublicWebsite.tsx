@@ -270,8 +270,8 @@ function BleedVisual({ src, height, eager }: { src?: string; height?: number | s
           width: "100%",
           height: "100%",
           objectFit: "cover",
-          transform: "scale(1.25)",
-          filter: "blur(34px) saturate(1.1)",
+          transform: "scale(2.6)",
+          filter: "blur(42px) saturate(1.25) brightness(0.9)",
           display: "block",
         }}
       />
