@@ -7,6 +7,7 @@ import type { FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import type { WebsiteDocument } from "@/lib/websiteDocument";
 import { useActionRuntime } from "@/components/viewer/useActionRuntime";
 import { HIGHLIGHT_KEYFRAMES, IntroWrap, TapHighlight, computeHiddenIds } from "@/components/viewer/layerEffects";
+import websitePlaceholderImg from "@/assets/website-placeholder.jpg";
 
 /**
  * Public Website renderer.
@@ -226,6 +227,70 @@ function buildBands(page: FlyerPage, doc: WebsiteDocument): { W: number; nav: Ba
   return { W, nav: navBand, bands };
 }
 
+/* --------------------------------------------------------------- images */
+
+/** <img> that never shows a broken state — falls back to a neutral placeholder. */
+function SafeImg({ src, style, onClick, eager }: { src?: string; style: React.CSSProperties; onClick?: () => void; eager?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const resolved = !src || failed ? websitePlaceholderImg : src;
+  return (
+    <img
+      src={resolved}
+      alt=""
+      loading={eager ? "eager" : "lazy"}
+      onError={() => setFailed(true)}
+      onClick={onClick}
+      style={style}
+    />
+  );
+}
+
+/**
+ * Full-width section visual (WaveX hero / band treatment). A blurred, zoomed
+ * copy of the same artwork fills the whole viewport width so letterboxed
+ * sources (flyer thumbnails with side bars) never read as gray columns, with
+ * the real artwork sitting on top, cover-cropped and undistorted.
+ */
+function BleedVisual({ src, height, eager }: { src?: string; height?: number | string; eager?: boolean }) {
+  const wrap: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: height ?? "100%",
+    overflow: "hidden",
+  };
+  return (
+    <div style={wrap} aria-hidden>
+      <SafeImg
+        src={src}
+        eager={eager}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          transform: "scale(1.25)",
+          filter: "blur(34px) saturate(1.1)",
+          display: "block",
+        }}
+      />
+      <SafeImg
+        src={src}
+        eager={eager}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+        }}
+      />
+    </div>
+  );
+}
+
 /* ------------------------------------------------------- absolute rendering */
 
 function AbsLayer({
@@ -286,15 +351,20 @@ function AbsLayer({
       );
     }
     case "image":
-      return layer.content.src ? (
-        <img
+      if (fullBleed) {
+        return (
+          <div style={{ ...box, cursor: undefined }} onClick={onClick}>
+            <BleedVisual src={layer.content.src} />
+          </div>
+        );
+      }
+      return (
+        <SafeImg
           src={layer.content.src}
-          alt=""
-          loading="lazy"
           onClick={onClick}
           style={{ ...box, objectFit: "cover", borderRadius: (layer.style.cornerRadius ?? 0) * s, display: "block" }}
         />
-      ) : null;
+      );
     case "video":
       return (
         <video
@@ -591,14 +661,7 @@ function BandView({
         scrollMarginTop: 72,
       }}
     >
-      {bgImage?.content.src && (
-        <img
-          src={bgImage.content.src}
-          alt=""
-          loading="lazy"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-        />
-      )}
+      {bgImage?.content.src && <BleedVisual src={bgImage.content.src} />}
       {overlay && (
         <div style={{ position: "absolute", inset: 0, background: overlay.style.fill, opacity: overlay.style.opacity ?? 0.6 }} />
       )}
@@ -648,12 +711,10 @@ function BandView({
                 </div>
               );
             case "image":
-              return l.content.src ? (
-                <img
+              return (
+                <SafeImg
                   key={l.id}
                   src={l.content.src}
-                  alt=""
-                  loading="lazy"
                   onClick={onClick}
                   style={{
                     width: "100%",
@@ -664,7 +725,7 @@ function BandView({
                     ...ring,
                   }}
                 />
-              ) : null;
+              );
             case "video":
               return (
                 <video
