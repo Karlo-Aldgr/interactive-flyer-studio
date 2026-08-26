@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, FolderKanban, Plus, Sparkles, Home, ClipboardList, BarChart3 } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Plus, Sparkles, Home, ClipboardList, BarChart3, Mail } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
