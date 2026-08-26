@@ -145,6 +145,9 @@ export interface ActionPayload {
   title?: string;
   body?: string;
   mediaUrl?: string;
+  /** Share popup: link to share (enables native share / copy link controls). */
+  shareUrl?: string;
+  shareTitle?: string;
   buttons?: PopupButton[];
   hotspots?: PopupHotspot[];
   popupBgColor?: string;
@@ -391,6 +394,9 @@ export interface PollOption {
 
 export interface LayerStyle {
   fill?: string;
+  /** Optional linear gradient fill (overrides `fill` when both ends are set). */
+  gradientFrom?: string;
+  gradientTo?: string;
   stroke?: string;
   strokeWidth?: number;
   opacity?: number;

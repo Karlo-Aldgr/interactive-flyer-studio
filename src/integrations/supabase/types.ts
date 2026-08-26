@@ -831,18 +831,27 @@ export type Database = {
       bizads: {
         Row: {
           about_text: string | null
+          accent_color: string | null
           address: string | null
           background_color: string
+          booking_url: string | null
           business_name: string | null
           button_color: string
+          company_name: string | null
           copyright_text: string | null
+          cover_image_url: string | null
           created_at: string
+          custom_link_label: string | null
+          custom_link_url: string | null
           email: string | null
           enabled: boolean
           flyer_id: string
           flyer_image_url: string | null
           gallery_url: string | null
+          gradient_from: string | null
+          gradient_to: string | null
           id: string
+          job_title: string | null
           layout: Json | null
           logo_url: string | null
           owner_name: string | null
@@ -851,23 +860,33 @@ export type Database = {
           share_image_url: string | null
           slug: string
           social_links: Json
+          template_id: string
           updated_at: string
           video_url: string | null
         }
         Insert: {
           about_text?: string | null
+          accent_color?: string | null
           address?: string | null
           background_color?: string
+          booking_url?: string | null
           business_name?: string | null
           button_color?: string
+          company_name?: string | null
           copyright_text?: string | null
+          cover_image_url?: string | null
           created_at?: string
+          custom_link_label?: string | null
+          custom_link_url?: string | null
           email?: string | null
           enabled?: boolean
           flyer_id: string
           flyer_image_url?: string | null
           gallery_url?: string | null
+          gradient_from?: string | null
+          gradient_to?: string | null
           id?: string
+          job_title?: string | null
           layout?: Json | null
           logo_url?: string | null
           owner_name?: string | null
@@ -876,23 +895,33 @@ export type Database = {
           share_image_url?: string | null
           slug: string
           social_links?: Json
+          template_id?: string
           updated_at?: string
           video_url?: string | null
         }
         Update: {
           about_text?: string | null
+          accent_color?: string | null
           address?: string | null
           background_color?: string
+          booking_url?: string | null
           business_name?: string | null
           button_color?: string
+          company_name?: string | null
           copyright_text?: string | null
+          cover_image_url?: string | null
           created_at?: string
+          custom_link_label?: string | null
+          custom_link_url?: string | null
           email?: string | null
           enabled?: boolean
           flyer_id?: string
           flyer_image_url?: string | null
           gallery_url?: string | null
+          gradient_from?: string | null
+          gradient_to?: string | null
           id?: string
+          job_title?: string | null
           layout?: Json | null
           logo_url?: string | null
           owner_name?: string | null
@@ -901,6 +930,7 @@ export type Database = {
           share_image_url?: string | null
           slug?: string
           social_links?: Json
+          template_id?: string
           updated_at?: string
           video_url?: string | null
         }

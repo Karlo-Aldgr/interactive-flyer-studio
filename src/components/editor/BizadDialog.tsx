@@ -14,6 +14,15 @@ import {
 import { BIZAD_DEFAULT_BACKGROUND_COLOR, BIZAD_DEFAULT_BUTTON_COLOR } from "@/lib/bizadDefaults";
 import { shouldOfferBizadLayoutReset } from "@/lib/bizadLayoutUtils";
 import { buildBizadPage, layoutFromPage } from "@/lib/bizadPage";
+import {
+  BIZAD_TEMPLATES,
+  CLEAN_GRID_DEFAULT_ACCENT,
+  GRADIENT_PROFILE_DEFAULT_FROM,
+  GRADIENT_PROFILE_DEFAULT_TO,
+  GRADIENT_PROFILE_TEMPLATE_ID,
+  CLEAN_GRID_TEMPLATE_ID,
+  VONTASTIC_TEMPLATE_ID,
+} from "@/lib/bizadTemplates";
 import { buildBizadSocialShareUrl, buildPublicBizadUrl } from "@/lib/utils";
 import { uploadBizadShareImage } from "@/lib/thumbnail";
 import { useEditorStore } from "@/store/editorStore";
@@ -56,7 +65,24 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
   const [videoUrl, setVideoUrl] = useState("");
   const [copyrightText, setCopyrightText] = useState("");
   const [shareImageUrl, setShareImageUrl] = useState("");
+  const [templateId, setTemplateId] = useState<string>(VONTASTIC_TEMPLATE_ID);
+  const [jobTitle, setJobTitle] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [customLinkLabel, setCustomLinkLabel] = useState("");
+  const [customLinkUrl, setCustomLinkUrl] = useState("");
+  const [bookingUrl, setBookingUrl] = useState("");
+  const [accentColor, setAccentColor] = useState(CLEAN_GRID_DEFAULT_ACCENT);
+  const [gradientFrom, setGradientFrom] = useState(GRADIENT_PROFILE_DEFAULT_FROM);
+  const [gradientTo, setGradientTo] = useState(GRADIENT_PROFILE_DEFAULT_TO);
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [tiktokUrl, setTiktokUrl] = useState("");
   const shareFileRef = useRef<HTMLInputElement>(null);
+  const coverFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const flyerContext = useMemo(() => ({
     id: flyer.id,
@@ -87,6 +113,21 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           setVideoUrl(existing.video_url ?? "");
           setCopyrightText(existing.copyright_text ?? "");
           setShareImageUrl(existing.share_image_url ?? "");
+          setTemplateId(existing.template_id || VONTASTIC_TEMPLATE_ID);
+          setJobTitle(existing.job_title ?? "");
+          setCompanyName(existing.company_name ?? existing.business_name ?? "");
+          setCoverImageUrl(existing.cover_image_url ?? "");
+          setCustomLinkLabel(existing.custom_link_label ?? "");
+          setCustomLinkUrl(existing.custom_link_url ?? "");
+          setBookingUrl(existing.booking_url ?? "");
+          setAccentColor(existing.accent_color || CLEAN_GRID_DEFAULT_ACCENT);
+          setGradientFrom(existing.gradient_from || GRADIENT_PROFILE_DEFAULT_FROM);
+          setGradientTo(existing.gradient_to || GRADIENT_PROFILE_DEFAULT_TO);
+          setWebsiteUrl(existing.social_links?.website ?? "");
+          setFacebookUrl(existing.social_links?.facebook ?? "");
+          setInstagramUrl(existing.social_links?.instagram ?? "");
+          setYoutubeUrl(existing.social_links?.youtube ?? "");
+          setTiktokUrl(existing.social_links?.tiktok ?? "");
         } else {
           setBizad(null);
           setEnabled(false);
@@ -104,6 +145,21 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
           setEmail(draft.email ?? "");
           setAboutText(draft.about_text ?? "");
           setCopyrightText(draft.copyright_text ?? "");
+          setTemplateId(VONTASTIC_TEMPLATE_ID);
+          setJobTitle("");
+          setCompanyName(draft.company_name ?? draft.business_name ?? "");
+          setCoverImageUrl("");
+          setCustomLinkLabel("");
+          setCustomLinkUrl("");
+          setBookingUrl("");
+          setAccentColor(CLEAN_GRID_DEFAULT_ACCENT);
+          setGradientFrom(GRADIENT_PROFILE_DEFAULT_FROM);
+          setGradientTo(GRADIENT_PROFILE_DEFAULT_TO);
+          setWebsiteUrl(draft.social_links?.website ?? "");
+          setFacebookUrl(draft.social_links?.facebook ?? "");
+          setInstagramUrl(draft.social_links?.instagram ?? "");
+          setYoutubeUrl(draft.social_links?.youtube ?? "");
+          setTiktokUrl(draft.social_links?.tiktok ?? "");
         }
       } catch (e: any) {
         toast.error(e?.message || "Could not load bizad settings");
@@ -113,15 +169,10 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
     })();
   }, [open, flyer.id, flyerContext, flyer.thumbnail_url]);
 
-  const previewBizad = useMemo((): BizadRecord | null => {
-    if (!open || loading) return null;
-    const base = buildBizadPayloadFromOnboarding(onboarding, flyerContext, bizad);
-    return {
+  /** Field overrides from the form, applied on top of the onboarding-derived base record. */
+  const overrides = useMemo(
+    () => (base: Omit<BizadRecord, "id" | "created_at" | "updated_at">) => ({
       ...base,
-      id: bizad?.id ?? "preview",
-      created_at: bizad?.created_at ?? new Date().toISOString(),
-      updated_at: bizad?.updated_at ?? new Date().toISOString(),
-      enabled,
       button_color: buttonColor,
       background_color: backgroundColor,
       owner_name: ownerName.trim() || base.owner_name,
@@ -131,24 +182,44 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       video_url: videoUrl.trim() || null,
       copyright_text: copyrightText.trim() || base.copyright_text,
       share_image_url: shareImageUrl.trim() || base.share_image_url,
+      template_id: templateId,
+      job_title: jobTitle.trim() || null,
+      company_name: companyName.trim() || base.company_name,
+      cover_image_url: coverImageUrl.trim() || null,
+      custom_link_label: customLinkLabel.trim() || null,
+      custom_link_url: customLinkUrl.trim() || null,
+      booking_url: bookingUrl.trim() || null,
+      accent_color: accentColor,
+      gradient_from: gradientFrom,
+      gradient_to: gradientTo,
+      social_links: {
+        ...(base.social_links || {}),
+        website: websiteUrl.trim() || null,
+        facebook: facebookUrl.trim() || null,
+        instagram: instagramUrl.trim() || null,
+        youtube: youtubeUrl.trim() || null,
+        tiktok: tiktokUrl.trim() || null,
+      },
+    }),
+    [
+      buttonColor, backgroundColor, ownerName, phone, email, aboutText, videoUrl, copyrightText,
+      shareImageUrl, templateId, jobTitle, companyName, coverImageUrl, customLinkLabel, customLinkUrl,
+      bookingUrl, accentColor, gradientFrom, gradientTo, websiteUrl, facebookUrl, instagramUrl,
+      youtubeUrl, tiktokUrl,
+    ],
+  );
+
+  const previewBizad = useMemo((): BizadRecord | null => {
+    if (!open || loading) return null;
+    const base = buildBizadPayloadFromOnboarding(onboarding, flyerContext, bizad);
+    return {
+      ...overrides(base),
+      id: bizad?.id ?? "preview",
+      created_at: bizad?.created_at ?? new Date().toISOString(),
+      updated_at: bizad?.updated_at ?? new Date().toISOString(),
+      enabled,
     };
-  }, [
-    open,
-    loading,
-    onboarding,
-    flyerContext,
-    bizad,
-    enabled,
-    buttonColor,
-    backgroundColor,
-    ownerName,
-    phone,
-    email,
-    aboutText,
-    videoUrl,
-    copyrightText,
-    shareImageUrl,
-  ]);
+  }, [open, loading, onboarding, flyerContext, bizad, enabled, overrides]);
 
   const previewLayout = useMemo(() => {
     if (!open || !previewBizad) return null;
@@ -182,17 +253,8 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       const base = buildBizadPayloadFromOnboarding(onboardingRow, flyerContext, bizad);
 
       const saved = await upsertBizad({
-        ...base,
+        ...overrides(base),
         enabled: nextEnabled,
-        button_color: buttonColor,
-        background_color: backgroundColor,
-        owner_name: ownerName.trim() || base.owner_name,
-        phone: phone.trim() || base.phone,
-        email: email.trim() || base.email,
-        about_text: aboutText.trim() || base.about_text,
-        video_url: videoUrl.trim() || null,
-        copyright_text: copyrightText.trim() || base.copyright_text,
-        share_image_url: shareImageUrl.trim() || base.share_image_url,
       });
       setBizad(saved);
       setEnabled(saved.enabled);
@@ -228,23 +290,11 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
     setResetting(true);
     try {
       const base = buildBizadPayloadFromOnboarding(onboarding, flyerContext, bizad);
-      const saved = await upsertBizad({
-        ...base,
-        enabled,
-        button_color: buttonColor,
-        background_color: backgroundColor,
-        owner_name: ownerName.trim() || base.owner_name,
-        phone: phone.trim() || base.phone,
-        email: email.trim() || base.email,
-        about_text: aboutText.trim() || base.about_text,
-        video_url: videoUrl.trim() || null,
-        copyright_text: copyrightText.trim() || base.copyright_text,
-        share_image_url: shareImageUrl.trim() || base.share_image_url,
-      });
+      const saved = await upsertBizad({ ...overrides(base), enabled });
       setBizad(saved);
       replaceBizadPage(saved);
       await rebuildAndSaveBizadLayout(saved, flyer.settings);
-      toast.success("Standard layout applied");
+      toast.success("Template layout applied");
     } catch (e: any) {
       toast.error(e?.message || "Could not reset layout");
     } finally {
@@ -258,19 +308,8 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       const url = await uploadBizadShareImage(file, flyer.id);
       setShareImageUrl(url);
       if (bizad) {
-        const saved = await upsertBizad({
-          ...buildBizadPayloadFromOnboarding(onboarding, flyerContext, bizad),
-          enabled,
-          button_color: buttonColor,
-          background_color: backgroundColor,
-          owner_name: ownerName.trim() || bizad.owner_name,
-          phone: phone.trim() || bizad.phone,
-          email: email.trim() || bizad.email,
-          about_text: aboutText.trim() || bizad.about_text,
-          video_url: videoUrl.trim() || null,
-          copyright_text: copyrightText.trim() || bizad.copyright_text,
-          share_image_url: url,
-        });
+        const base = buildBizadPayloadFromOnboarding(onboarding, flyerContext, bizad);
+        const saved = await upsertBizad({ ...overrides(base), enabled, share_image_url: url });
         setBizad(saved);
       }
       toast.success("Share preview image uploaded");
@@ -278,6 +317,19 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
       toast.error(e?.message || "Upload failed");
     } finally {
       setUploadingShare(false);
+    }
+  }
+
+  async function handleCoverUpload(file: File) {
+    setUploadingCover(true);
+    try {
+      const url = await uploadBizadShareImage(file, flyer.id);
+      setCoverImageUrl(url);
+      toast.success("Cover image uploaded — save to apply");
+    } catch (e: any) {
+      toast.error(e?.message || "Upload failed");
+    } finally {
+      setUploadingCover(false);
     }
   }
 
@@ -301,8 +353,8 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
             <IdCard className="h-4 w-4" /> Digital business card
           </DialogTitle>
           <DialogDescription>
-            Standard Vontastic layout: flyer hero, CALL / TEXT / EMAIL / FLYER buttons, gallery, booking, and QR.
-            Navy background and orange buttons are the default — colors are editable below.
+            Pick a card template, then edit your details, colors, images and links. Every button uses your own
+            project data — nothing is shared between projects.
           </DialogDescription>
         </DialogHeader>
 
@@ -326,6 +378,36 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
                 />
               </div>
 
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                <p className="text-xs font-medium">Card template</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {BIZAD_TEMPLATES.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTemplateId(t.id)}
+                      title={t.description}
+                      className={`overflow-hidden rounded-md border text-left transition ${
+                        templateId === t.id ? "border-primary ring-2 ring-primary/40" : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div
+                        className="flex h-16 flex-col items-center justify-center gap-1"
+                        style={{ background: t.preview.background }}
+                      >
+                        <span className="h-3 w-3 rounded-full" style={{ background: t.preview.accent }} />
+                        <span className="h-1.5 w-10 rounded-full" style={{ background: t.preview.accent }} />
+                        <span className="h-1.5 w-8 rounded-full opacity-60" style={{ background: t.preview.text }} />
+                      </div>
+                      <span className="block px-1.5 py-1 text-[10px] font-medium leading-tight">{t.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {BIZAD_TEMPLATES.find((t) => t.id === templateId)?.description}
+                </p>
+              </div>
+
               {showLayoutReset && enabled && (
                 <Button
                   type="button"
@@ -336,8 +418,104 @@ export function BizadDialog({ flyer, open, onOpenChange }: Props) {
                   onClick={() => void handleResetLayout()}
                 >
                   {resetting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
-                  Reset to standard layout
+                  Apply selected template layout
                 </Button>
+              )}
+
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <p className="text-xs font-medium">Identity</p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="bizad-title" className="text-xs">Job title</Label>
+                  <Input id="bizad-title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)}
+                    placeholder="Owner / Realtor" className="h-8 text-xs" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="bizad-company" className="text-xs">Company</Label>
+                  <Input id="bizad-company" value={companyName} onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Business name" className="h-8 text-xs" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Cover / header image</Label>
+                  {coverImageUrl ? (
+                    <img src={coverImageUrl} alt="Cover" className="h-24 w-full rounded-md border bg-muted object-cover" />
+                  ) : null}
+                  <input
+                    ref={coverFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handleCoverUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" className="flex-1" disabled={uploadingCover}
+                      onClick={() => coverFileRef.current?.click()}>
+                      {uploadingCover ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                      Upload cover
+                    </Button>
+                    {coverImageUrl && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setCoverImageUrl("")}>Remove</Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <p className="text-xs font-medium">Links &amp; socials</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Empty social links show a “Setup Required” tile instead of a dead button.
+                </p>
+                {([
+                  ["Website", websiteUrl, setWebsiteUrl, "https://yourbusiness.com"],
+                  ["Facebook", facebookUrl, setFacebookUrl, "https://facebook.com/yourpage"],
+                  ["Instagram", instagramUrl, setInstagramUrl, "https://instagram.com/you"],
+                  ["YouTube", youtubeUrl, setYoutubeUrl, "https://youtube.com/@you"],
+                  ["TikTok", tiktokUrl, setTiktokUrl, "https://tiktok.com/@you"],
+                  ["Booking link", bookingUrl, setBookingUrl, "https://calendly.com/you (optional)"],
+                ] as Array<[string, string, (v: string) => void, string]>).map(([label, value, setter, ph]) => (
+                  <div key={label} className="space-y-1.5">
+                    <Label className="text-xs">{label}</Label>
+                    <Input value={value} onChange={(e) => setter(e.target.value)} placeholder={ph} className="h-8 text-xs" />
+                  </div>
+                ))}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Custom link label</Label>
+                    <Input value={customLinkLabel} onChange={(e) => setCustomLinkLabel(e.target.value)}
+                      placeholder="Our menu" className="h-8 text-xs" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Custom link URL</Label>
+                    <Input value={customLinkUrl} onChange={(e) => setCustomLinkUrl(e.target.value)}
+                      placeholder="https://…" className="h-8 text-xs" />
+                  </div>
+                </div>
+              </div>
+
+              {templateId === GRADIENT_PROFILE_TEMPLATE_ID && (
+                <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Gradient start</Label>
+                    <Input type="color" value={gradientFrom} onChange={(e) => setGradientFrom(e.target.value)}
+                      className="h-10 cursor-pointer p-1" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Gradient end</Label>
+                    <Input type="color" value={gradientTo} onChange={(e) => setGradientTo(e.target.value)}
+                      className="h-10 cursor-pointer p-1" />
+                  </div>
+                </div>
+              )}
+
+              {templateId === CLEAN_GRID_TEMPLATE_ID && (
+                <div className="space-y-1.5 rounded-lg border border-border p-3">
+                  <Label className="text-xs">Accent color</Label>
+                  <Input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)}
+                    className="h-10 cursor-pointer p-1" />
+                </div>
               )}
 
               <div className="space-y-3 rounded-lg border border-border p-3">

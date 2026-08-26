@@ -3,6 +3,7 @@ import { buildPublicFlyerUrl, slugBaseFromTitle } from "@/lib/utils";
 import type { OnboardingSubmission } from "@/lib/onboarding";
 import { BIZAD_DEFAULT_BACKGROUND_COLOR, BIZAD_DEFAULT_BUTTON_COLOR } from "@/lib/bizadDefaults";
 import { buildBizadPage, layoutFromPage } from "@/lib/bizadPage";
+import { VONTASTIC_TEMPLATE_ID } from "@/lib/bizadTemplates/vontastic";
 import type { FlyerPage, FlyerSettings } from "@/types/flyer";
 
 export type BizadSocialLinks = {
@@ -10,6 +11,7 @@ export type BizadSocialLinks = {
   facebook?: string | null;
   instagram?: string | null;
   tiktok?: string | null;
+  youtube?: string | null;
   other?: string | null;
 };
 
@@ -35,6 +37,17 @@ export type BizadRecord = {
   copyright_text: string | null;
   /** Image shown when sharing the /bizads link on social apps. */
   share_image_url: string | null;
+  /** Selected card template id (see src/lib/bizadTemplates). */
+  template_id: string;
+  job_title: string | null;
+  company_name: string | null;
+  cover_image_url: string | null;
+  custom_link_label: string | null;
+  custom_link_url: string | null;
+  booking_url: string | null;
+  accent_color: string | null;
+  gradient_from: string | null;
+  gradient_to: string | null;
   /** Saved editor page layout (elements/size/background) rendered on the public card. */
   layout?: any | null;
   created_at: string;
@@ -109,6 +122,16 @@ export function buildBizadPayloadFromOnboarding(
       flyer.thumbnail_url ??
       existing?.flyer_image_url ??
       null,
+    template_id: existing?.template_id ?? VONTASTIC_TEMPLATE_ID,
+    job_title: existing?.job_title ?? null,
+    company_name: existing?.company_name ?? onboarding?.business_name ?? null,
+    cover_image_url: existing?.cover_image_url ?? null,
+    custom_link_label: existing?.custom_link_label ?? null,
+    custom_link_url: existing?.custom_link_url ?? null,
+    booking_url: existing?.booking_url ?? null,
+    accent_color: existing?.accent_color ?? null,
+    gradient_from: existing?.gradient_from ?? null,
+    gradient_to: existing?.gradient_to ?? null,
   };
 }
 
@@ -261,6 +284,16 @@ export const DEMO_BIZAD: BizadRecord = {
   gallery_url: "https://tapthatflyer.com",
   video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   copyright_text: "© Biggs Auto Repair",
+  template_id: VONTASTIC_TEMPLATE_ID,
+  job_title: "Owner / Master Technician",
+  company_name: "Biggs Auto Repair",
+  cover_image_url: null,
+  custom_link_label: null,
+  custom_link_url: null,
+  booking_url: null,
+  accent_color: null,
+  gradient_from: null,
+  gradient_to: null,
   share_image_url: "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=1200&auto=format&fit=crop",
   layout: null,
   created_at: new Date().toISOString(),
