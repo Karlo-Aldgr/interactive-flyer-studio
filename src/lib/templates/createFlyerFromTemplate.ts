@@ -79,7 +79,7 @@ export async function createFlyerFromTemplate(
 
     const { error: actErr } = await supabase.from("actions").insert([{
       layer_id: hotspot.id,
-      type: spot.action.type,
+      type: spot.action.type as any,
       payload: spot.action.payload as unknown as any,
     }]);
 

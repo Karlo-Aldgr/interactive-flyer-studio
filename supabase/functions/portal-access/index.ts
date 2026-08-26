@@ -17,7 +17,7 @@ function json(body: unknown, status = 200) {
 }
 
 async function userCanAccessFlyerPortal(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   userId: string,
   flyerId: string,
 ): Promise<boolean> {
