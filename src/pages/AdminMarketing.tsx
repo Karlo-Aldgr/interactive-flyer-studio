@@ -26,7 +26,7 @@ export default function AdminMarketing() {
   }, []);
 
   return (
-    <AdminLayout title="Marketing" description="Subscribers, campaigns and audiences across TapThatFlyer.">
+    <AdminLayout active="marketing">
       <Tabs defaultValue={initial} className="space-y-4">
         <TabsList className="flex-wrap">
           <TabsTrigger value="subscribers">Subscribers</TabsTrigger>
