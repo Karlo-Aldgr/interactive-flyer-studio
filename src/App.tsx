@@ -43,6 +43,9 @@ const AdminEditors = lazy(() => import("./pages/AdminEditors"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 const AdminMiniAds = lazy(() => import("./pages/AdminMiniAds"));
 const AdminAutomation = lazy(() => import("./pages/AdminAutomation"));
+const AdminMarketing = lazy(() => import("./pages/AdminMarketing"));
+const ClientMarketing = lazy(() => import("./pages/ClientMarketing"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const RealtorDashboard = lazy(() => import("./pages/RealtorDashboard"));
 const RealtorListing = lazy(() => import("./pages/RealtorListing"));
 const RealtorGalleryIndex = lazy(() => import("./pages/RealtorGalleryIndex"));
@@ -165,6 +168,11 @@ const App = () => (
 
               <Route path="/affiliate/dashboard" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
               <Route path="/admin/affiliates" element={<ProtectedRoute><AdminAffiliates /></ProtectedRoute>} />
+              <Route path="/admin/marketing" element={<ProtectedRoute><AdminMarketing /></ProtectedRoute>} />
+              <Route path="/admin/marketing/:tab" element={<ProtectedRoute><AdminMarketing /></ProtectedRoute>} />
+              <Route path="/marketing" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
+              <Route path="/marketing/:tab" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const NEWSLETTER_WEBHOOK_URL = "https://hook.eu1.make.com/x5ye73x8oopmu5bhxeanttgsypt12ypo";
+import { supabase } from "@/integrations/supabase/client";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -35,21 +34,20 @@ export function NewsletterSignup() {
     setStatus("loading");
 
     try {
-      const response = await fetch(NEWSLETTER_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke("marketing-subscribe", {
+        body: {
+          action: "subscribe",
           email: trimmed,
-          source: "TapThatFlyer Website",
-          subscribed_at: new Date().toISOString(),
-        }),
+          source: "platform_newsletter",
+          signup_location: "TapThatFlyer landing page",
+        },
       });
 
-      if (response.ok) {
+      if (error || (data as { error?: string } | null)?.error) {
+        setStatus("error");
+      } else {
         setStatus("success");
         setEmail("");
-      } else {
-        setStatus("error");
       }
     } catch {
       setStatus("error");
