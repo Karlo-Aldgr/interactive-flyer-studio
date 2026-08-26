@@ -481,7 +481,7 @@ export async function saveCampaign(c: Partial<MarketingCampaign> & { name: strin
     channel: c.channel ?? "email",
     audience_id: c.audience_id ?? null,
     audience_label: c.audience_label ?? null,
-    audience_rules: c.audience_rules ?? EMPTY_RULES,
+    audience_rules: (c.audience_rules ?? EMPTY_RULES) as unknown as Record<string, never>,
     recipient_count: c.recipient_count ?? 0,
     subject: c.subject ?? null,
     body: c.body ?? null,
