@@ -214,12 +214,16 @@ function LayerView({
 
   if (layer.type === "button" || layer.type === "shape") {
     const label = (layer.content as any).label;
+    const gradient =
+      s.gradientFrom && s.gradientTo
+        ? `linear-gradient(160deg, ${s.gradientFrom}, ${s.gradientTo})`
+        : null;
     return (
       <div
         onClick={onClick}
         style={{
           ...base,
-          background: s.fill || "#2563eb",
+          background: gradient || s.fill || "#2563eb",
           color: s.color || "#ffffff",
           borderRadius: s.cornerRadius ?? 12,
           display: "flex",
@@ -229,6 +233,9 @@ function LayerView({
           fontSize: s.fontSize,
           fontWeight: s.fontWeight as any,
           textAlign: "center",
+          whiteSpace: "pre-line",
+          padding: "0 12px",
+          lineHeight: 1.2,
         }}
       >
         {label}
@@ -645,6 +652,28 @@ export function BizadLayoutView({
             {popup.payload.title && <h2 className="mb-1 text-lg font-semibold">{popup.payload.title}</h2>}
             {popup.payload.body && <p className="whitespace-pre-wrap text-sm">{popup.payload.body}</p>}
             <div className="mt-3 flex flex-col gap-2">
+              {popup.payload.shareUrl && (
+                <button
+                  type="button"
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  onClick={async () => {
+                    const url = popup.payload.shareUrl!;
+                    const title = popup.payload.shareTitle || document.title;
+                    try {
+                      if (typeof navigator !== "undefined" && "share" in navigator) {
+                        await (navigator as any).share({ title, url });
+                        return;
+                      }
+                      await (navigator as Navigator).clipboard?.writeText(url);
+                      alert("Link copied");
+                    } catch {
+                      /* user dismissed the share sheet */
+                    }
+                  }}
+                >
+                  {typeof navigator !== "undefined" && "share" in navigator ? "Share…" : "Copy link"}
+                </button>
+              )}
               {(popup.payload.buttons || []).map((b) => (
                 <button
                   key={b.id}
