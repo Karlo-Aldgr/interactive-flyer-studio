@@ -129,7 +129,71 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true });
     }
 
+    /* --------------------------- campaign test email ------------------------ */
+    if (action === "test_campaign") {
+      const to = String(body.to || "").trim().toLowerCase();
+      if (!isEmail(to)) return jsonResponse({ error: "Enter a valid test email address" }, 400);
+
+      const clientId: string | null =
+        body.client_id === null ? null : String(body.client_id || user.id);
+      if (clientId !== null && clientId !== user.id && !isAdmin) {
+        return jsonResponse({ error: "Forbidden" }, 403);
+      }
+      if (clientId === null && !isAdmin) return jsonResponse({ error: "Forbidden" }, 403);
+
+      const subjectRaw = String(body.subject || "").trim();
+      const bodyRaw = String(body.body || "").trim();
+      if (!subjectRaw) return jsonResponse({ error: "Add a subject before testing" }, 400);
+      if (!bodyRaw) return jsonResponse({ error: "Add a message before testing" }, 400);
+
+      const settings = await loadSettings(supabase, clientId);
+      let businessName = settings.business_name;
+      if (!businessName && clientId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", clientId)
+          .maybeSingle();
+        businessName = profile?.full_name ?? null;
+      }
+      businessName = businessName || "TapThatFlyer";
+
+      const ctaText = String(body.cta_text || "").trim();
+      const ctaUrl = String(body.cta_url || "").trim();
+      const vars = {
+        first_name: "John",
+        last_name: "Smith",
+        email: to,
+        business_name: businessName,
+        unsubscribe_link: `${siteUrl}/unsubscribe?token=preview`,
+      };
+      const subject = renderTemplate(subjectRaw, vars);
+      const text = renderTemplate(
+        bodyRaw + (ctaText && ctaUrl ? `\n\n${ctaText}: ${ctaUrl}` : ""),
+        vars,
+      );
+      const result = await sendResendEmail({
+        from: defaultFrom(settings.from_name || businessName),
+        to,
+        subject: `[Test] ${subject}`,
+        text,
+        html: textToHtml(text, vars.unsubscribe_link),
+        replyTo: settings.reply_to,
+      });
+      await logEmail(supabase, {
+        client_id: clientId,
+        recipient_email: to,
+        email_type: "campaign_test",
+        subject,
+        status: result.ok ? "sent" : "failed",
+        error: result.error ?? null,
+      });
+      if (!result.ok) return jsonResponse({ error: result.error }, 502);
+      return jsonResponse({ ok: true });
+    }
+
     /* ---------------------------- send a campaign --------------------------- */
+
     if (action === "send_campaign") {
       const campaignId = String(body.campaign_id || "");
       const { data: campaign } = await supabase
