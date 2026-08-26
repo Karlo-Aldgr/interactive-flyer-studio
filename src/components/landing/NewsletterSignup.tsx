@@ -34,21 +34,20 @@ export function NewsletterSignup() {
     setStatus("loading");
 
     try {
-      const response = await fetch(NEWSLETTER_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke("marketing-subscribe", {
+        body: {
+          action: "subscribe",
           email: trimmed,
-          source: "TapThatFlyer Website",
-          subscribed_at: new Date().toISOString(),
-        }),
+          source: "platform_newsletter",
+          signup_location: "TapThatFlyer landing page",
+        },
       });
 
-      if (response.ok) {
+      if (error || (data as { error?: string } | null)?.error) {
+        setStatus("error");
+      } else {
         setStatus("success");
         setEmail("");
-      } else {
-        setStatus("error");
       }
     } catch {
       setStatus("error");
