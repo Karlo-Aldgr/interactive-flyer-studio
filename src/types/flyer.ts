@@ -396,6 +396,8 @@ export interface LayerStyle {
   opacity?: number;
   cornerRadius?: number;
   shadow?: boolean;
+  /** CSS object-fit for image/video layers. */
+  objectFit?: "cover" | "contain" | "fill" | "none" | "scale-down";
   /** image fit: "cover" crops to fill the box (no stretching). */
   fit?: "cover" | "fill";
   // text

@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEditorStore } from "@/store/editorStore";
 import { toast } from "sonner";
+import type { FlyerSettings } from "@/types/flyer";
 
 interface Props {
   open: boolean;
@@ -33,7 +34,7 @@ export function BackgroundAudioDialog({ open, onOpenChange }: Props) {
   }, [flyer?.settings.bgAudioVolume, flyer?.settings.bgAudioUrl]);
 
   if (!flyer) return null;
-  const settings = flyer.settings ?? {};
+  const settings: FlyerSettings = flyer.settings ?? ({} as FlyerSettings);
   const url = settings.bgAudioUrl || "";
   const loop = settings.bgAudioLoop ?? true;
   const volume = settings.bgAudioVolume ?? 0.5;

@@ -2,6 +2,7 @@ import type { ActionType } from "@/types/flyer";
 
 export const ACTION_LABELS: Record<ActionType, string> = {
   open_url: "Open URL",
+  download_vcard: "Download contact card",
   popup: "Show popup",
   video: "Play video",
   audio: "Play audio",
