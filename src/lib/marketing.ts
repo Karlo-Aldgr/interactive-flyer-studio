@@ -364,7 +364,7 @@ export async function fetchAudiences(clientId: string | null | undefined, scope?
   if (scope) q = q.eq("scope", scope);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
-  return (data ?? []) as MarketingAudience[];
+  return (data ?? []) as unknown as MarketingAudience[];
 }
 
 export async function saveAudience(a: Partial<MarketingAudience> & { name: string }) {
