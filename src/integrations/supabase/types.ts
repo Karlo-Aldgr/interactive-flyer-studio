@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -1471,6 +1471,128 @@ export type Database = {
           },
         ]
       }
+      marketing_audiences: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          rules: Json
+          scope: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          rules?: Json
+          scope?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          rules?: Json
+          scope?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      marketing_campaigns: {
+        Row: {
+          audience_id: string | null
+          audience_label: string | null
+          audience_rules: Json
+          body: string | null
+          campaign_type: string
+          channel: string
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          cta_text: string | null
+          cta_url: string | null
+          error: string | null
+          failed_count: number
+          id: string
+          media_url: string | null
+          name: string
+          recipient_count: number
+          scheduled_at: string | null
+          sent_at: string | null
+          sent_count: number
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          audience_id?: string | null
+          audience_label?: string | null
+          audience_rules?: Json
+          body?: string | null
+          campaign_type?: string
+          channel?: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string | null
+          cta_url?: string | null
+          error?: string | null
+          failed_count?: number
+          id?: string
+          media_url?: string | null
+          name: string
+          recipient_count?: number
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audience_id?: string | null
+          audience_label?: string | null
+          audience_rules?: Json
+          body?: string | null
+          campaign_type?: string
+          channel?: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string | null
+          cta_url?: string | null
+          error?: string | null
+          failed_count?: number
+          id?: string
+          media_url?: string | null
+          name?: string
+          recipient_count?: number
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_campaigns_audience_id_fkey"
+            columns: ["audience_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_audiences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_drafts: {
         Row: {
           created_at: string
@@ -1589,6 +1711,229 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      marketing_email_log: {
+        Row: {
+          campaign_id: string | null
+          client_id: string | null
+          created_at: string
+          email_type: string
+          error: string | null
+          id: string
+          recipient_email: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          subscriber_id: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          email_type?: string
+          error?: string | null
+          id?: string
+          recipient_email: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          subscriber_id?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          email_type?: string
+          error?: string | null
+          id?: string
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          subscriber_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_email_log_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_email_log_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_settings: {
+        Row: {
+          business_name: string | null
+          client_id: string | null
+          created_at: string
+          from_name: string | null
+          id: string
+          reply_to: string | null
+          updated_at: string
+          welcome_body: string
+          welcome_enabled: boolean
+          welcome_subject: string
+        }
+        Insert: {
+          business_name?: string | null
+          client_id?: string | null
+          created_at?: string
+          from_name?: string | null
+          id?: string
+          reply_to?: string | null
+          updated_at?: string
+          welcome_body?: string
+          welcome_enabled?: boolean
+          welcome_subject?: string
+        }
+        Update: {
+          business_name?: string | null
+          client_id?: string | null
+          created_at?: string
+          from_name?: string | null
+          id?: string
+          reply_to?: string | null
+          updated_at?: string
+          welcome_body?: string
+          welcome_enabled?: boolean
+          welcome_subject?: string
+        }
+        Relationships: []
+      }
+      marketing_subscriber_events: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          subscriber_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          subscriber_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          subscriber_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_subscriber_events_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_subscribers: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          email: string
+          first_name: string | null
+          flyer_id: string | null
+          flyer_name: string | null
+          id: string
+          last_name: string | null
+          notes: string | null
+          phone: string | null
+          signup_location: string | null
+          source: string
+          status: string
+          tags: string[]
+          unsubscribe_token: string
+          unsubscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          email: string
+          first_name?: string | null
+          flyer_id?: string | null
+          flyer_name?: string | null
+          id?: string
+          last_name?: string | null
+          notes?: string | null
+          phone?: string | null
+          signup_location?: string | null
+          source?: string
+          status?: string
+          tags?: string[]
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          flyer_id?: string | null
+          flyer_name?: string | null
+          id?: string
+          last_name?: string | null
+          notes?: string | null
+          phone?: string | null
+          signup_location?: string | null
+          source?: string
+          status?: string
+          tags?: string[]
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_subscribers_flyer_id_fkey"
+            columns: ["flyer_id"]
+            isOneToOne: false
+            referencedRelation: "flyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_tags: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       menu_daily_summaries: {
         Row: {
@@ -2262,6 +2607,7 @@ export type Database = {
           automation_sheet_id: string | null
           automation_sheet_tab: string | null
           brokerage: string | null
+          client_status: string
           created_at: string
           email: string
           full_name: string | null
@@ -2277,6 +2623,7 @@ export type Database = {
           automation_sheet_id?: string | null
           automation_sheet_tab?: string | null
           brokerage?: string | null
+          client_status?: string
           created_at?: string
           email: string
           full_name?: string | null
@@ -2292,6 +2639,7 @@ export type Database = {
           automation_sheet_id?: string | null
           automation_sheet_tab?: string | null
           brokerage?: string | null
+          client_status?: string
           created_at?: string
           email?: string
           full_name?: string | null
@@ -3523,6 +3871,22 @@ export type Database = {
           signed_up_at: string
           user_id: string
         }[]
+      }
+      marketing_admin_overview: { Args: never; Returns: Json }
+      marketing_can_manage: { Args: { _client_id: string }; Returns: boolean }
+      marketing_list_clients: {
+        Args: never
+        Returns: {
+          client_status: string
+          email: string
+          full_name: string
+          id: string
+          subscriber_count: number
+        }[]
+      }
+      marketing_set_client_status: {
+        Args: { _client_id: string; _status: string }
+        Returns: Json
       }
       my_social_accounts: {
         Args: never
