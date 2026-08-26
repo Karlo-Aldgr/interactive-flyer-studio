@@ -28,6 +28,7 @@ const baseItems: NavItem[] = [
   { title: "My projects", url: "/my-jobs", icon: FolderKanban, match: "prefix" },
   { title: "New project", url: "/submit-job", icon: Plus, match: "exact" },
   { title: "Onboarding info", url: "/onboarding", icon: ClipboardList, match: "exact" },
+  { title: "Marketing", url: "/marketing", icon: Mail, match: "prefix" },
   { title: "Examples", url: "/examples", icon: Sparkles, match: "exact" },
 ];
 
