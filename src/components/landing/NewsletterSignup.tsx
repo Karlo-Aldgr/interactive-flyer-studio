@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const NEWSLETTER_WEBHOOK_URL = "https://hook.eu1.make.com/x5ye73x8oopmu5bhxeanttgsypt12ypo";
+import { supabase } from "@/integrations/supabase/client";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
