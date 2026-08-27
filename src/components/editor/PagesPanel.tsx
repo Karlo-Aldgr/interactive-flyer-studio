@@ -7,7 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed, IdCard, Globe, Monitor, Tablet, Smartphone, AlignCenterHorizontal } from "lucide-react";
+import { Plus, Copy, Trash2, ChevronUp, ChevronDown, Sparkles, Play, MousePointerClick, Camera, Loader2, UtensilsCrossed, IdCard, Globe, Monitor, Tablet, Smartphone, AlignCenterHorizontal, Link2 } from "lucide-react";
+import { getBizadForFlyer } from "@/lib/bizad";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { IntroPreset, PageIntro } from "@/types/flyer";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +41,8 @@ export function PagesPanel() {
   const addPage = useEditorStore((s) => s.addPage);
   const addLandingPage = useEditorStore((s) => s.addLandingPage);
   const centerPageLayout = useEditorStore((s) => s.centerPageLayout);
+  const repairBizadLinks = useEditorStore((s) => s.repairBizadLinks);
+
   const addScannedMenuPage = useEditorStore((s) => s.addScannedMenuPage);
   const addWebsitePage = useEditorStore((s) => s.addWebsitePage);
   const setWebsiteDevice = useEditorStore((s) => s.setWebsiteDevice);
@@ -324,7 +328,7 @@ export function PagesPanel() {
                     <Link2 className="h-3 w-3" />
                   </Button>
                 )}
-                )}
+
 
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); move(p.id, -1); }} disabled={i === 0}>
                   <ChevronUp className="h-3 w-3" />
