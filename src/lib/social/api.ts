@@ -114,6 +114,7 @@ export async function syncVariants(
   postId: string,
   accounts: { id: string; platform: SocialPlatform }[],
   master: { content: string; hashtags: string[]; media: SocialMediaItem[]; link_url: string | null },
+  opts: { overwriteMedia?: boolean } = {},
 ): Promise<SocialVariant[]> {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Sign in required");
@@ -132,6 +133,20 @@ export async function syncVariants(
       .delete()
       .in("id", stale.map((v) => v.id))
       .in("status", ["draft", "queued", "cancelled", "failed"]);
+  }
+
+  // When the master media changed (e.g. a different flyer was selected) the
+  // still-editable variants must follow it instead of keeping the old asset.
+  if (opts.overwriteMedia) {
+    const editable = (existing ?? []).filter(
+      (v) => keep.has(v.social_account_id ?? "") && ["draft", "failed", "cancelled"].includes(v.status),
+    );
+    if (editable.length) {
+      await supabase
+        .from("social_post_variants")
+        .update({ media: master.media as never })
+        .in("id", editable.map((v) => v.id));
+    }
   }
 
   const have = new Set((existing ?? []).map((v) => v.social_account_id ?? ""));
