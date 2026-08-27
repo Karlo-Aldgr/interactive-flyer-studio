@@ -168,6 +168,19 @@ export function Canvas() {
     return () => setStageRef(null);
   }, [setStageRef]);
 
+  // Webfonts finish loading after first paint; force a redraw so text metrics are correct.
+  useEffect(() => {
+    const fonts = (document as any).fonts;
+    if (!fonts?.ready) return;
+    let cancelled = false;
+    fonts.ready.then(() => {
+      if (!cancelled) stageRef.current?.batchDraw?.();
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+
+
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
   const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
