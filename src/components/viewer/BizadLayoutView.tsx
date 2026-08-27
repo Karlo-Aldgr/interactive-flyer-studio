@@ -582,7 +582,14 @@ export function BizadLayoutView({
     .filter((l) => !hiddenIds.has(l.id))
     .sort((a, b) => a.z_index - b.z_index)
     // Standard card tiles keep working even when their saved link is missing.
-    .map((l) => (l.action ? l : { ...l, action: resolveBizadTileAction(l, bizad) }));
+    // Older saved SHARE tiles are refreshed so every card gets the current
+    // Text Message / Email / Copy Link choices.
+    .map((l) =>
+      l.action && !l.action.payload?.shareUrl
+        ? l
+        : { ...l, action: resolveBizadTileAction(l, bizad) || l.action || null },
+    );
+
 
   const galleryImages = gallery?.payload.galleryImages || [];
 
