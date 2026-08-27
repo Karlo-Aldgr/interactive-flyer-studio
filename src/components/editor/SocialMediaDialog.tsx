@@ -6,17 +6,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Share2 } from "lucide-react";
 import { useEditorStore } from "@/store/editorStore";
 import type { SocialSlideoutSettings } from "@/types/flyer";
+import { FONT_OPTIONS as FONT_LIST } from "@/lib/fontOptions";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }
 
-const FONT_OPTIONS = [
-  "Inter", "Arial", "Helvetica", "Georgia", "Times New Roman",
-  "Courier New", "Roboto", "Poppins", "Montserrat", "Oswald",
-  "Bebas Neue", "Playfair Display", "Lato", "Open Sans", "Raleway",
-];
+const FONT_OPTIONS = FONT_LIST.map((f) => f.family);
+
 
 const PLATFORM_FIELDS: Array<{ key: keyof SocialSlideoutSettings; label: string; placeholder: string }> = [
   { key: "instagram", label: "Instagram", placeholder: "yourhandle or full URL" },

@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ActionEditor } from "./ActionEditor";
 import { CutoutLayerBanner } from "./CutoutLayerBanner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FONT_OPTIONS, FONT_GROUPS, DEFAULT_FONT } from "@/lib/fontOptions";
 import { Play, Sparkles, Upload, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -81,6 +82,14 @@ export function Inspector() {
           {selectedLayerIds.length} layers selected
         </div>
         <div>
+          <Label className="text-xs">Font</Label>
+          <FontSelect
+            value={undefined}
+            onChange={(v) => updateLayersStyle(selectedLayerIds, { fontFamily: v })}
+          />
+        </div>
+        <div>
+
           <Label className="text-xs">Opacity</Label>
           <Input
             type="number"
@@ -182,7 +191,15 @@ export function Inspector() {
               />
             </div>
             <div>
+              <Label className="text-xs">Font</Label>
+              <FontSelect
+                value={layer.style.fontFamily}
+                onChange={(v) => updateLayerStyle(layer.id, { fontFamily: v })}
+              />
+            </div>
+            <div>
               <Label className="text-xs">Font size: {layer.style.fontSize ?? 24}</Label>
+
               <Slider
                 min={8} max={120} step={1}
                 value={[layer.style.fontSize ?? 24]}
@@ -231,7 +248,15 @@ export function Inspector() {
               <Input type="color" className="mt-1 h-9 w-full" value={layer.style.color || "#ffffff"} onChange={(e) => updateLayerStyle(layer.id, { color: e.target.value })} />
             </div>
             <div>
+              <Label className="text-xs">Font</Label>
+              <FontSelect
+                value={layer.style.fontFamily}
+                onChange={(v) => updateLayerStyle(layer.id, { fontFamily: v })}
+              />
+            </div>
+            <div>
               <Label className="text-xs">Font size: {layer.style.fontSize ?? 16}</Label>
+
               <Slider
                 min={8} max={120} step={1}
                 value={[layer.style.fontSize ?? 16]}
@@ -515,5 +540,25 @@ export function Inspector() {
         })()}
       </TabsContent>
     </Tabs>
+  );
+}
+
+function FontSelect({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
+  return (
+    <Select value={value || DEFAULT_FONT} onValueChange={onChange}>
+      <SelectTrigger className="mt-1"><SelectValue placeholder="Font" /></SelectTrigger>
+      <SelectContent className="max-h-72">
+        {FONT_GROUPS.map((group) => (
+          <SelectGroup key={group}>
+            <SelectLabel>{group}</SelectLabel>
+            {FONT_OPTIONS.filter((f) => f.group === group).map((f) => (
+              <SelectItem key={f.family} value={f.family} style={{ fontFamily: f.family }}>
+                {f.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
