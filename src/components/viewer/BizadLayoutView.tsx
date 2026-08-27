@@ -6,6 +6,7 @@ import type { BizadAudioSettings } from "@/lib/bizadPage";
 import type { BizadRecord } from "@/lib/bizad";
 import { downloadVCard } from "@/lib/bizad";
 import { resolveBizadTileAction } from "@/lib/bizadTileActions";
+import { safeCopyToClipboard } from "@/lib/safeBrowser";
 
 import { BizadVideoEmbed } from "@/components/bizad/BizadVideoEmbed";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
@@ -388,6 +389,7 @@ export function BizadLayoutView({
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [popup, setPopup] = useState<LayerAction | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
   const [video, setVideo] = useState<string | null>(null);
   const [gallery, setGallery] = useState<LayerAction | null>(null);
   const [carousel, setCarousel] = useState<LayerAction | null>(null);
