@@ -7,7 +7,6 @@ import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant }
 import { buildBizadPage, BIZAD_PAGE_WIDTH } from "@/lib/bizadPage";
 import { centerBizadLayerPatches } from "@/lib/bizadLayoutUtils";
 import { bizadTileActionPatches } from "@/lib/bizadTileActions";
-import type { BizadRecord } from "@/lib/bizad";
 
 import { buildWebsitePage, type WebsiteDevice } from "@/lib/websitePage";
 import type { WebsiteProfile } from "@/lib/websiteProfile";
