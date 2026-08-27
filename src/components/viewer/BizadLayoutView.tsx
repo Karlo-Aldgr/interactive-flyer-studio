@@ -670,7 +670,7 @@ export function BizadLayoutView({
       )}
 
       {popup && (
-        <Overlay onClose={() => setPopup(null)}>
+        <Overlay onClose={() => { setPopup(null); setCopied(null); }}>
           <div style={{ color: popup.payload.popupTextColor || undefined }}>
             {(popup.payload.mediaUrl || popup.payload.ticketImageUrl) && (
               <img
