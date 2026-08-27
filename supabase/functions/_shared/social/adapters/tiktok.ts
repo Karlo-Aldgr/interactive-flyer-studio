@@ -297,8 +297,22 @@ export const tiktokAdapter: SocialPlatformAdapter = {
     });
     if (!res.ok) return mapHttpError(res, "Could not read the TikTok publish status");
     const data = res.body.data as Record<string, unknown> | undefined;
-    return { ok: true, status: String(data?.status || "unknown"), remote_post_url: null };
+    const raw = String(data?.status || "unknown");
+    // Normalize TikTok's publish states onto publishing / published / failed.
+    const status = raw === "PUBLISH_COMPLETE"
+      ? "published"
+      : raw === "FAILED"
+      ? "failed"
+      : raw === "unknown"
+      ? "unknown"
+      : "publishing";
+    const url = typeof (data?.publicaly_available_post_id ?? data?.publicly_available_post_id) ===
+        "object"
+      ? null
+      : null;
+    return { ok: true, status, remote_post_url: url };
   },
+
 
   getAnalytics() {
     return Promise.resolve({
