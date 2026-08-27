@@ -297,7 +297,9 @@ export function PagesPanel() {
                   >
                     <AlignCenterHorizontal className="h-3 w-3" />
                   </Button>
+                )}
                 {isBizad && (
+
                   <Button
                     size="icon"
                     variant="ghost"
