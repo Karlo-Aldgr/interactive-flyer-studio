@@ -145,17 +145,19 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
         hashtags,
         media,
         link_url: link || null,
+        flyer_id: flyer?.flyer_id ?? null,
       });
       setPostId(post.id);
       const accounts = connected
         .filter((a) => selected.includes(a.id))
         .map((a) => ({ id: a.id, platform: a.platform }));
-      const rows = await syncVariants(post.id, accounts, {
-        content,
-        hashtags,
-        media,
-        link_url: link || null,
-      });
+      const rows = await syncVariants(
+        post.id,
+        accounts,
+        { content, hashtags, media, link_url: link || null },
+        { overwriteMedia: mediaChanged },
+      );
+      setMediaChanged(false);
       setVariants(rows);
       return post.id;
     } catch (err) {
@@ -165,6 +167,7 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
       setBusy(null);
     }
   };
+
 
   const handlePublish = async () => {
     if (tiktokAccounts.length && !tiktokConfirmed) {
