@@ -25,32 +25,30 @@ export function buildSharePopupAction(bizad: BizadRecord): LayerAction {
     title: "Share this card",
     body: url,
     mediaUrl: buildBizadQrImageUrl(bizad.slug, 512),
-    shareUrl: url,
+    copyUrl: url,
     shareTitle: title,
     buttons: [
       {
-        id: "share-email",
-        label: "Email the link",
-        action: act("open_url", {
-          url: `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`,
-          newTab: false,
-        }),
-      },
-      {
         id: "share-sms",
-        label: "Text the link",
+        label: "Text Message",
         action: act("open_url", {
           url: `sms:?&body=${encodeURIComponent(`${title} — ${url}`)}`,
           newTab: false,
         }),
       },
       {
-        id: "share-open",
-        label: "Open card page",
-        action: act("open_url", { url, newTab: true }),
+        id: "share-email",
+        label: "Email",
+        action: act("open_url", {
+          url: `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(
+            `Here's my digital business card:\n\n${url}`,
+          )}`,
+          newTab: false,
+        }),
       },
     ],
   });
+
 }
 
 /** Tile/button action for an integration the customer has not configured yet. */

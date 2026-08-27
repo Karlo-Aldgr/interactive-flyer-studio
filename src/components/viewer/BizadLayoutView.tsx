@@ -6,6 +6,7 @@ import type { BizadAudioSettings } from "@/lib/bizadPage";
 import type { BizadRecord } from "@/lib/bizad";
 import { downloadVCard } from "@/lib/bizad";
 import { resolveBizadTileAction } from "@/lib/bizadTileActions";
+import { safeCopyToClipboard } from "@/lib/safeBrowser";
 
 import { BizadVideoEmbed } from "@/components/bizad/BizadVideoEmbed";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
@@ -388,6 +389,7 @@ export function BizadLayoutView({
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [popup, setPopup] = useState<LayerAction | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
   const [video, setVideo] = useState<string | null>(null);
   const [gallery, setGallery] = useState<LayerAction | null>(null);
   const [carousel, setCarousel] = useState<LayerAction | null>(null);
@@ -580,7 +582,14 @@ export function BizadLayoutView({
     .filter((l) => !hiddenIds.has(l.id))
     .sort((a, b) => a.z_index - b.z_index)
     // Standard card tiles keep working even when their saved link is missing.
-    .map((l) => (l.action ? l : { ...l, action: resolveBizadTileAction(l, bizad) }));
+    // Older saved SHARE tiles are refreshed so every card gets the current
+    // Text Message / Email / Copy Link choices.
+    .map((l) =>
+      l.action && !l.action.payload?.shareUrl
+        ? l
+        : { ...l, action: resolveBizadTileAction(l, bizad) || l.action || null },
+    );
+
 
   const galleryImages = gallery?.payload.galleryImages || [];
 
@@ -661,7 +670,7 @@ export function BizadLayoutView({
       )}
 
       {popup && (
-        <Overlay onClose={() => setPopup(null)}>
+        <Overlay onClose={() => { setPopup(null); setCopied(null); }}>
           <div style={{ color: popup.payload.popupTextColor || undefined }}>
             {(popup.payload.mediaUrl || popup.payload.ticketImageUrl) && (
               <img
@@ -676,7 +685,7 @@ export function BizadLayoutView({
               {popup.payload.shareUrl && (
                 <button
                   type="button"
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  className="rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
                   onClick={async () => {
                     const url = popup.payload.shareUrl!;
                     const title = popup.payload.shareTitle || document.title;
@@ -685,7 +694,7 @@ export function BizadLayoutView({
                         await (navigator as any).share({ title, url });
                         return;
                       }
-                      await (navigator as Navigator).clipboard?.writeText(url);
+                      await safeCopyToClipboard(url);
                       alert("Link copied");
                     } catch {
                       /* user dismissed the share sheet */
@@ -699,7 +708,7 @@ export function BizadLayoutView({
                 <button
                   key={b.id}
                   type="button"
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  className="rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
                   style={{ background: b.bgColor || undefined, color: b.textColor || undefined }}
                   onClick={() => {
                     setPopup(null);
@@ -709,7 +718,26 @@ export function BizadLayoutView({
                   {b.label}
                 </button>
               ))}
+              {popup.payload.copyUrl && (
+                <button
+                  type="button"
+                  className="rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
+                  onClick={async () => {
+                    const ok = await safeCopyToClipboard(popup.payload.copyUrl!);
+                    setCopied(ok ? "Link copied!" : "Copy failed — long-press the link above");
+                    window.setTimeout(() => setCopied(null), 2500);
+                  }}
+                >
+                  Copy Link
+                </button>
+              )}
+              {copied && (
+                <p aria-live="polite" className="text-center text-xs font-medium text-muted-foreground">
+                  {copied}
+                </p>
+              )}
             </div>
+
           </div>
         </Overlay>
       )}
