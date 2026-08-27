@@ -170,31 +170,17 @@ export const tiktokAdapter: SocialPlatformAdapter = {
     const video = media.find((m) => m.type === "video");
 
     // Creator info drives the allowed privacy levels and interaction settings.
-    const creator = await fetchJson(`${API}/post/publish/creator_info/query/`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${account.access_token}`,
-        "Content-Type": "application/json; charset=UTF-8",
-      },
-    });
-    if (!creator.ok) {
-      return mapHttpError(
-        creator,
-        "TikTok would not confirm this creator's posting permissions",
-        tiktokMessage(creator.body, ""),
-      );
+    const creator = await fetchTikTokCreatorInfo(account.access_token);
+    if ("ok" in creator && creator.ok === false) return creator as AdapterError;
+    const info = (creator as { ok: true; info: TikTokCreatorInfo }).info;
+    const options = info.privacy_level_options;
+    const resolved = resolveTikTokPrivacy(options, String(input.options.privacy_level || ""));
+    if ("error" in resolved) {
+      return adapterError("validation", resolved.error);
     }
-    const info = (creator.body.data ?? {}) as Record<string, unknown>;
-    const options = Array.isArray(info.privacy_level_options)
-      ? (info.privacy_level_options as string[])
-      : [];
-    const requested = String(input.options.privacy_level || "");
-    const privacy = options.includes(requested)
-      ? requested
-      : (options.includes("SELF_ONLY") ? "SELF_ONLY" : options[0] || "SELF_ONLY");
-    const maxDuration = typeof info.max_video_post_duration_sec === "number"
-      ? info.max_video_post_duration_sec
-      : null;
+    const privacy = resolved.privacy;
+    const maxDuration = info.max_video_post_duration_sec;
+
 
     const postInfo: Record<string, unknown> = {
       title,
