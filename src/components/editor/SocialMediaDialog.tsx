@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Share2 } from "lucide-react";
 import { useEditorStore } from "@/store/editorStore";
 import type { SocialSlideoutSettings } from "@/types/flyer";
+import { FONT_OPTIONS as FONT_LIST } from "@/lib/fontOptions";
 
 interface Props {
   open: boolean;
