@@ -4,7 +4,8 @@ import { defaultLayer, emptyPage, uid } from "@/lib/konvaHelpers";
 import { ensureUuid } from "@/lib/safeBrowser";
 import type { SubjectDetection, NormalizedPoint } from "@/lib/subjectDetect";
 import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant } from "@/lib/editorToolPresets";
-import { buildBizadPage } from "@/lib/bizadPage";
+import { buildBizadPage, BIZAD_PAGE_WIDTH } from "@/lib/bizadPage";
+import { centerBizadLayerPatches } from "@/lib/bizadLayoutUtils";
 import { buildWebsitePage, type WebsiteDevice } from "@/lib/websitePage";
 import type { WebsiteProfile } from "@/lib/websiteProfile";
 
@@ -121,6 +122,8 @@ interface EditorState {
   addBizadPage: (bizad: BizadRecord) => string;
   replaceBizadPage: (bizad: BizadRecord) => string;
   setBizadPageHidden: (hidden: boolean) => void;
+  /** Centers a page's layers horizontally; returns how many layers moved. */
+  centerPageLayout: (pageId: string) => number;
   addWebsitePage: (profile: WebsiteProfile) => string;
   setWebsiteDevice: (device: WebsiteDevice) => void;
   setPageSize: (id: string, w: number, h: number, mode: ResizeMode) => void;
@@ -810,6 +813,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       dirty: true,
     });
   },
+
+  /** Horizontally centers/tidies a page's layers (used for business card pages). */
+  centerPageLayout: (pageId) => {
+    const s = get();
+    const page = s.pages.find((p) => p.id === pageId);
+    if (!page) return 0;
+    const width = page.background?.size?.width ?? BIZAD_PAGE_WIDTH;
+    const patches = centerBizadLayerPatches(page.layers as any, width);
+    const ids = Object.keys(patches);
+    if (!ids.length) return 0;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) =>
+        p.id !== page.id
+          ? p
+          : { ...p, layers: p.layers.map((l) => (patches[l.id] ? { ...l, ...patches[l.id] } : l)) },
+      ),
+      past,
+      future: [],
+      dirty: true,
+    });
+    return ids.length;
+  },
+
 
   /** Creates the single long-scrolling Website page (or selects it if it already exists). */
   addWebsitePage: (profile) => {

@@ -421,7 +421,14 @@ export function BizadLayoutView({
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const update = () => setScale(Math.min(1, el.clientWidth / layout.width));
+    const update = () => {
+      /* clientWidth includes padding — measure the real content box so the
+         scaled stage matches the visible width exactly (and stays centered). */
+      const cs = window.getComputedStyle(el);
+      const inner =
+        el.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      setScale(Math.min(1, Math.max(0, inner) / layout.width));
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -585,7 +592,16 @@ export function BizadLayoutView({
       }}
     >
       <div ref={wrapRef} className="mx-auto w-full max-w-[430px] px-2">
-        <div style={{ height: layout.height * scale, position: "relative", overflow: "hidden" }}>
+        <div
+          style={{
+            height: layout.height * scale,
+            width: layout.width * scale,
+            marginLeft: "auto",
+            marginRight: "auto",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
           <div
             style={{
               width: layout.width,
