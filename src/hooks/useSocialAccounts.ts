@@ -45,13 +45,16 @@ export function useSocialAccounts(redirectPath = "/dashboard/social") {
       queryClient.invalidateQueries({ queryKey: ["social-accounts"] });
     }
     if (error) {
+      const platform = params.get("social_platform");
+      const label = platform ? platform.charAt(0).toUpperCase() + platform.slice(1) : "That";
       const cancelled = /cancel|access_denied|denied/i.test(error);
       toast.error(
         cancelled
-          ? "TikTok connection cancelled."
-          : "We couldn't finish connecting that account. Please try again.",
+          ? `${label} connection cancelled.`
+          : `We couldn't finish connecting ${platform ? label : "that account"}. Please try again.`,
       );
     }
+
 
     params.delete("social_connected");
     params.delete("social_error");
