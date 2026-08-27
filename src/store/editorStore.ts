@@ -4,7 +4,8 @@ import { defaultLayer, emptyPage, uid } from "@/lib/konvaHelpers";
 import { ensureUuid } from "@/lib/safeBrowser";
 import type { SubjectDetection, NormalizedPoint } from "@/lib/subjectDetect";
 import { BUTTON_PRESETS, SHAPE_PRESETS, type ButtonPresetId, type ShapeVariant } from "@/lib/editorToolPresets";
-import { buildBizadPage } from "@/lib/bizadPage";
+import { buildBizadPage, BIZAD_PAGE_WIDTH } from "@/lib/bizadPage";
+import { centerBizadLayerPatches } from "@/lib/bizadLayoutUtils";
 import { buildWebsitePage, type WebsiteDevice } from "@/lib/websitePage";
 import type { WebsiteProfile } from "@/lib/websiteProfile";
 
@@ -121,6 +122,8 @@ interface EditorState {
   addBizadPage: (bizad: BizadRecord) => string;
   replaceBizadPage: (bizad: BizadRecord) => string;
   setBizadPageHidden: (hidden: boolean) => void;
+  /** Centers a page's layers horizontally; returns how many layers moved. */
+  centerPageLayout: (pageId: string) => number;
   addWebsitePage: (profile: WebsiteProfile) => string;
   setWebsiteDevice: (device: WebsiteDevice) => void;
   setPageSize: (id: string, w: number, h: number, mode: ResizeMode) => void;
