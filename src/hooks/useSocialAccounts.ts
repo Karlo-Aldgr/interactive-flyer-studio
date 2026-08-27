@@ -44,7 +44,15 @@ export function useSocialAccounts(redirectPath = "/dashboard/social") {
       );
       queryClient.invalidateQueries({ queryKey: ["social-accounts"] });
     }
-    if (error) toast.error("We couldn't finish connecting that account. Please try again.");
+    if (error) {
+      const cancelled = /cancel|access_denied|denied/i.test(error);
+      toast.error(
+        cancelled
+          ? "TikTok connection cancelled."
+          : "We couldn't finish connecting that account. Please try again.",
+      );
+    }
+
     params.delete("social_connected");
     params.delete("social_error");
     params.delete("social_accounts");
