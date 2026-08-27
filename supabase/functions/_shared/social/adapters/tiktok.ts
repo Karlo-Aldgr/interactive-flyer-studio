@@ -12,7 +12,7 @@ import {
   type SocialPlatformAdapter,
 } from "../types.ts";
 import { expiresAtFrom, fetchJson, mapHttpError } from "../http.ts";
-import { tiktokCredentials, tiktokSecretNames } from "../../tiktokEnv.ts";
+import { tiktokAudited, tiktokCredentials, tiktokSecretNames } from "../../tiktokEnv.ts";
 
 /** Resolves Sandbox or Production TikTok credentials based on TIKTOK_ENV. */
 function requireTikTokCreds(): { clientKey: string; clientSecret: string } | AdapterError {
