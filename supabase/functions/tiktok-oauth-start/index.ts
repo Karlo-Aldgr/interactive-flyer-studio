@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import { maskKey, tiktokCredentials, tiktokEnvName } from "../_shared/tiktokEnv.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,8 +28,11 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userErr } = await supabaseUser.auth.getUser();
     if (userErr || !user) return json({ error: "Unauthorized" }, 401);
 
-    const clientKey = Deno.env.get("TIKTOK_CLIENT_KEY")?.trim();
-    if (!clientKey) return json({ error: "TIKTOK_CLIENT_KEY is not configured" }, 400);
+    const creds = tiktokCredentials();
+    if ("missing" in creds) {
+      return json({ error: `TikTok is not configured: missing ${creds.missing.join(", ")}` }, 400);
+    }
+    const clientKey = creds.clientKey;
 
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     const returnTo = typeof body.return_to === "string" ? body.return_to : "";
@@ -46,7 +50,8 @@ Deno.serve(async (req) => {
     });
     if (stateErr) return json({ error: stateErr.message }, 500);
 
-    const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/tiktok-oauth-callback`;
+    const redirectUri = Deno.env.get("TIKTOK_REDIRECT_URI")?.trim().replace(/\/$/, "") ||
+      "https://tapthatflyer.com/auth/tiktok/callback";
     const authUrl = new URL("https://www.tiktok.com/v2/auth/authorize/");
     authUrl.searchParams.set("client_key", clientKey);
     authUrl.searchParams.set("scope", "user.info.basic,video.publish,video.upload");
@@ -54,7 +59,16 @@ Deno.serve(async (req) => {
     authUrl.searchParams.set("redirect_uri", redirectUri);
     authUrl.searchParams.set("state", state);
 
-    return json({ ok: true, url: authUrl.toString() });
+    console.log(
+      `[tiktok-oauth-start] env=${tiktokEnvName()} client_key=${maskKey(clientKey)} redirect_uri=${redirectUri}`,
+    );
+    return json({
+      ok: true,
+      url: authUrl.toString(),
+      env: tiktokEnvName(),
+      client_key_masked: maskKey(clientKey),
+      redirect_uri: redirectUri,
+    });
   } catch (err) {
     console.error("[tiktok-oauth-start]", err);
     return json({ error: String(err) }, 500);
