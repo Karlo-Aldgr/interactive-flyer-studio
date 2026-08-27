@@ -676,7 +676,7 @@ export function BizadLayoutView({
               {popup.payload.shareUrl && (
                 <button
                   type="button"
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  className="rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
                   onClick={async () => {
                     const url = popup.payload.shareUrl!;
                     const title = popup.payload.shareTitle || document.title;
@@ -685,7 +685,7 @@ export function BizadLayoutView({
                         await (navigator as any).share({ title, url });
                         return;
                       }
-                      await (navigator as Navigator).clipboard?.writeText(url);
+                      await safeCopyToClipboard(url);
                       alert("Link copied");
                     } catch {
                       /* user dismissed the share sheet */
@@ -699,7 +699,7 @@ export function BizadLayoutView({
                 <button
                   key={b.id}
                   type="button"
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  className="rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
                   style={{ background: b.bgColor || undefined, color: b.textColor || undefined }}
                   onClick={() => {
                     setPopup(null);
@@ -709,7 +709,26 @@ export function BizadLayoutView({
                   {b.label}
                 </button>
               ))}
+              {popup.payload.copyUrl && (
+                <button
+                  type="button"
+                  className="rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
+                  onClick={async () => {
+                    const ok = await safeCopyToClipboard(popup.payload.copyUrl!);
+                    setCopied(ok ? "Link copied!" : "Copy failed — long-press the link above");
+                    window.setTimeout(() => setCopied(null), 2500);
+                  }}
+                >
+                  Copy Link
+                </button>
+              )}
+              {copied && (
+                <p aria-live="polite" className="text-center text-xs font-medium text-muted-foreground">
+                  {copied}
+                </p>
+              )}
             </div>
+
           </div>
         </Overlay>
       )}
