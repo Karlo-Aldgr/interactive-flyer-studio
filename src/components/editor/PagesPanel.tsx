@@ -297,7 +297,33 @@ export function PagesPanel() {
                   >
                     <AlignCenterHorizontal className="h-3 w-3" />
                   </Button>
+                {isBizad && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6"
+                    title="Repair button links"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!flyer?.id) return;
+                      const record = await getBizadForFlyer(flyer.id);
+                      if (!record) {
+                        toast.error("No business card record found for this project");
+                        return;
+                      }
+                      const fixed = repairBizadLinks(p.id, record);
+                      toast.success(
+                        fixed
+                          ? `Re-linked ${fixed} button${fixed === 1 ? "" : "s"} — save to publish`
+                          : "All buttons already have links",
+                      );
+                    }}
+                  >
+                    <Link2 className="h-3 w-3" />
+                  </Button>
                 )}
+                )}
+
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); move(p.id, -1); }} disabled={i === 0}>
                   <ChevronUp className="h-3 w-3" />
                 </Button>
