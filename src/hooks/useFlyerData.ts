@@ -329,10 +329,22 @@ export function useFlyerData(flyerId: string | undefined) {
           payload: l.action!.payload as any,
           highlight: (l.action!.highlight ?? null) as any,
         }));
+        // One rejected action row must never wipe every other link on the page:
+        // retry the chunk row-by-row and keep the ones the database accepts.
         for (let i = 0; i < actionRows.length; i += 200) {
-          const { error } = await supabase.from("actions").insert(actionRows.slice(i, i + 200));
-          if (error) throw error;
+          const chunk = actionRows.slice(i, i + 200);
+          const { error } = await supabase.from("actions").insert(chunk);
+          if (!error) continue;
+          const failed: string[] = [];
+          for (const row of chunk) {
+            const { error: rowError } = await supabase.from("actions").insert(row);
+            if (rowError) failed.push(row.type as string);
+          }
+          if (failed.length) {
+            console.warn("Some layer links could not be saved:", failed, error);
+          }
         }
+
       }
 
 

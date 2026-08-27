@@ -4050,6 +4050,7 @@ export type Database = {
         | "novel"
         | "realtor_gallery"
         | "carousel"
+        | "download_vcard"
       app_role: "admin" | "user" | "editor" | "realtor"
       appointment_status: "confirmed" | "cancelled"
       event_type: "view" | "click" | "submit" | "reveal"
@@ -4270,6 +4271,7 @@ export const Constants = {
         "novel",
         "realtor_gallery",
         "carousel",
+        "download_vcard",
       ],
       app_role: ["admin", "user", "editor", "realtor"],
       appointment_status: ["confirmed", "cancelled"],
