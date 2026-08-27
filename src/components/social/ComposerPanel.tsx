@@ -59,6 +59,9 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
   const [busy, setBusy] = useState<null | "save" | "publish" | "schedule">(null);
   const [showPreview, setShowPreview] = useState(false);
   const [tiktokConfirmed, setTiktokConfirmed] = useState(false);
+  const [flyer, setFlyer] = useState<FlyerLibraryItem | null>(null);
+  const [flyerVideos, setFlyerVideos] = useState<SocialMediaItem[]>([]);
+  const [generating, setGenerating] = useState(false);
 
   const hashtags = useMemo(() => parseHashtags(hashtagText), [hashtagText]);
   const connected = social.accounts.filter((a) => a.connection_status === "connected");
@@ -66,6 +69,50 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
     (a) => a.platform === "tiktok" && selected.includes(a.id),
   );
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
+  // Selecting an existing flyer replaces the media with the flyer's own asset.
+  const selectFlyer = async (item: FlyerLibraryItem) => {
+    const image = flyerImageMedia(item);
+    if (!image) {
+      toast.error("That flyer has no saved preview image yet. Open it in the editor and save it first.");
+      return;
+    }
+    setFlyer(item);
+    setMedia([image]);
+    setFlyerVideos([]);
+    if (!title) setTitle(item.project_title || item.title);
+    if (!link && item.public_slug && item.share_unlocked) {
+      setLink(`https://tapthatflyer.com/f/${item.public_slug}`);
+    }
+    try {
+      setFlyerVideos(await fetchFlyerVideos(item.flyer_id));
+    } catch {
+      /* videos are optional */
+    }
+  };
+
+  const clearFlyer = () => {
+    setFlyer(null);
+    setFlyerVideos([]);
+    setMedia([]);
+  };
+
+  const generateCopy = async () => {
+    if (!flyer) return;
+    const platform = connected.find((a) => selected.includes(a.id))?.platform ?? "facebook";
+    setGenerating(true);
+    try {
+      const result = await generateFlyerCaption(flyer.flyer_id, platform);
+      setContent(result.caption);
+      setHashtagText(result.hashtags.slice(0, 3).join(" "));
+      toast.success("Caption and hashtags generated — edit them as you like.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not generate a caption.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
 
   // Keep variant rows aligned with the selected accounts while editing.
   useEffect(() => {
