@@ -81,6 +81,14 @@ export function Inspector() {
           {selectedLayerIds.length} layers selected
         </div>
         <div>
+          <Label className="text-xs">Font</Label>
+          <FontSelect
+            value={undefined}
+            onChange={(v) => updateLayersStyle(selectedLayerIds, { fontFamily: v })}
+          />
+        </div>
+        <div>
+
           <Label className="text-xs">Opacity</Label>
           <Input
             type="number"
