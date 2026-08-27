@@ -122,6 +122,8 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
 
               <Route path="/auth/instagram/callback" element={<InstagramCallback />} />
+              <Route path="/auth/tiktok/callback" element={<TikTokCallback />} />
+
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/reset-password" element={<ResetPassword />} />
               <Route path="/privacy" element={<Privacy />} />
