@@ -103,12 +103,13 @@ export const tiktokAdapter: SocialPlatformAdapter = {
   },
 
   async refreshToken(account) {
-    const env = requireEnv(SECRETS);
+    const env = requireTikTokCreds();
     if ("ok" in env && env.ok === false) return env as AdapterError;
     if (!account.refresh_token) {
       return adapterError("auth_expired", "Reconnect TikTok — no refresh token is stored.");
     }
-    const secrets = env as Record<string, string>;
+    const secrets = env as { clientKey: string; clientSecret: string };
+
     const res = await fetchJson(`${API}/oauth/token/`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
