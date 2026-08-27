@@ -1,6 +1,10 @@
 import type { AdapterContext, PlatformResult } from "../types.ts";
 import { primaryMedia } from "../types.ts";
 import { resolveTikTokAccessToken } from "../../tiktokCredentials.ts";
+import {
+  fetchTikTokCreatorInfo,
+  resolveTikTokPrivacy,
+} from "../../social/adapters/tiktok.ts";
 
 const TIKTOK_API = "https://open.tiktokapis.com/v2";
 
@@ -33,6 +37,16 @@ export async function publishToTikTok(ctx: AdapterContext): Promise<PlatformResu
     return { platform: "tiktok", status: "not_connected", error: token.error, attempt_at };
   }
 
+  const creator = await fetchTikTokCreatorInfo(token.accessToken);
+  if (creator.ok === false) {
+    return { platform: "tiktok", status: "failed", error: creator.message, attempt_at };
+  }
+  const chosen = resolveTikTokPrivacy(creator.info.privacy_level_options, "");
+  if ("error" in chosen) {
+    return { platform: "tiktok", status: "failed", error: chosen.error, attempt_at };
+  }
+  const privacyLevel = chosen.privacy;
+
   const caption = ctx.caption.trim().slice(0, 2200);
   const isVideo = item.type === "video";
   const endpoint = isVideo
@@ -41,11 +55,11 @@ export async function publishToTikTok(ctx: AdapterContext): Promise<PlatformResu
 
   const body: Record<string, unknown> = isVideo
     ? {
-      post_info: { title: caption, privacy_level: "SELF_ONLY" },
+      post_info: { title: caption, privacy_level: privacyLevel },
       source_info: { source: "PULL_FROM_URL", video_url: item.url },
     }
     : {
-      post_info: { title: caption, privacy_level: "SELF_ONLY" },
+      post_info: { title: caption, privacy_level: privacyLevel },
       source_info: { source: "PULL_FROM_URL", photo_cover_index: 0, photo_images: [item.url] },
       post_mode: "DIRECT_POST",
       media_type: "PHOTO",

@@ -47,3 +47,19 @@ export function maskKey(value: string) {
   if (value.length <= 8) return `${value.slice(0, 2)}…`;
   return `${value.slice(0, 4)}…${value.slice(-4)}`;
 }
+
+/**
+ * Whether the active TikTok app has passed TikTok's Content Posting audit.
+ * Unaudited apps (Sandbox, or production before approval) may only create
+ * posts with a SELF_ONLY audience — TikTok otherwise rejects the init call
+ * with `unaudited_client_can_only_post_to_private_accounts`.
+ *
+ * sandbox           -> always unaudited
+ * production        -> audited unless TIKTOK_AUDITED is explicitly "false"
+ */
+export function tiktokAudited(): boolean {
+  if (tiktokEnvName() === "sandbox") return false;
+  const raw = Deno.env.get("TIKTOK_AUDITED")?.trim().toLowerCase();
+  if (raw === "false" || raw === "0" || raw === "no") return false;
+  return true;
+}

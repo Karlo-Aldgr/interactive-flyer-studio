@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MediaPicker } from "./MediaPicker";
+import { TikTokPublishSettings } from "./TikTokPublishSettings";
 import { PostPreview } from "./PostPreview";
 import { PlatformIcon } from "./PlatformIcon";
 import { CAPABILITIES, validateVariant } from "@/lib/social/capabilities";
@@ -48,9 +49,13 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
   const [scheduleAt, setScheduleAt] = useState("");
   const [busy, setBusy] = useState<null | "save" | "publish" | "schedule">(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [tiktokConfirmed, setTiktokConfirmed] = useState(false);
 
   const hashtags = useMemo(() => parseHashtags(hashtagText), [hashtagText]);
   const connected = social.accounts.filter((a) => a.connection_status === "connected");
+  const tiktokAccounts = connected.filter(
+    (a) => a.platform === "tiktok" && selected.includes(a.id),
+  );
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
   // Keep variant rows aligned with the selected accounts while editing.
@@ -106,6 +111,10 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
   };
 
   const handlePublish = async () => {
+    if (tiktokAccounts.length && !tiktokConfirmed) {
+      toast.error("Confirm the TikTok upload before publishing.");
+      return;
+    }
     const id = await persist();
     if (!id) return;
     setBusy("publish");
@@ -244,6 +253,15 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
             </div>
           </CardContent>
         </Card>
+
+        {tiktokAccounts.map((account) => (
+          <TikTokPublishSettings
+            key={account.id}
+            account={account}
+            confirmed={tiktokConfirmed}
+            onConfirmedChange={setTiktokConfirmed}
+          />
+        ))}
 
         <Card>
           <CardHeader><CardTitle className="text-base">Media</CardTitle></CardHeader>

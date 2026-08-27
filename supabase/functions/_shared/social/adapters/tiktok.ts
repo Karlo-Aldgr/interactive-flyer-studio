@@ -12,7 +12,7 @@ import {
   type SocialPlatformAdapter,
 } from "../types.ts";
 import { expiresAtFrom, fetchJson, mapHttpError } from "../http.ts";
-import { tiktokCredentials, tiktokSecretNames } from "../../tiktokEnv.ts";
+import { tiktokAudited, tiktokCredentials, tiktokSecretNames } from "../../tiktokEnv.ts";
 
 /** Resolves Sandbox or Production TikTok credentials based on TIKTOK_ENV. */
 function requireTikTokCreds(): { clientKey: string; clientSecret: string } | AdapterError {
@@ -40,6 +40,81 @@ function tiktokMessage(body: Record<string, unknown>, fallback: string) {
   }
   return fallback;
 }
+
+export type TikTokCreatorInfo = {
+  creator_username: string | null;
+  creator_nickname: string | null;
+  creator_avatar_url: string | null;
+  privacy_level_options: string[];
+  comment_disabled: boolean;
+  duet_disabled: boolean;
+  stitch_disabled: boolean;
+  max_video_post_duration_sec: number | null;
+};
+
+/** POST /v2/post/publish/creator_info/query/ — the source of truth for audience options. */
+export async function fetchTikTokCreatorInfo(
+  accessToken: string,
+): Promise<{ ok: true; info: TikTokCreatorInfo } | AdapterError> {
+  const res = await fetchJson(`${API}/post/publish/creator_info/query/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json; charset=UTF-8",
+    },
+  });
+  if (!res.ok) {
+    return mapHttpError(
+      res,
+      "TikTok would not confirm this creator's posting permissions",
+      tiktokMessage(res.body, ""),
+    );
+  }
+  const data = (res.body.data ?? {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+  return {
+    ok: true,
+    info: {
+      creator_username: str(data.creator_username),
+      creator_nickname: str(data.creator_nickname),
+      creator_avatar_url: str(data.creator_avatar_url),
+      privacy_level_options: Array.isArray(data.privacy_level_options)
+        ? (data.privacy_level_options as unknown[]).map((v) => String(v))
+        : [],
+      comment_disabled: data.comment_disabled === true,
+      duet_disabled: data.duet_disabled === true,
+      stitch_disabled: data.stitch_disabled === true,
+      max_video_post_duration_sec: typeof data.max_video_post_duration_sec === "number"
+        ? data.max_video_post_duration_sec
+        : null,
+    },
+  };
+}
+
+/**
+ * Unaudited TikTok apps (Sandbox, or production before approval) may only
+ * create private posts; anything else fails with
+ * `unaudited_client_can_only_post_to_private_accounts`.
+ */
+export function resolveTikTokPrivacy(
+  options: string[],
+  requested: string,
+): { privacy: string } | { error: string } {
+  if (!tiktokAudited()) {
+    if (options.length && !options.includes("SELF_ONLY")) {
+      return {
+        error:
+          "This TikTok account does not offer the private (“Only me”) audience, which is the only audience an unaudited TikTok app may post to. Connect a TikTok account that allows private posts, or publish after TikTok approves the app.",
+      };
+    }
+    return { privacy: "SELF_ONLY" };
+  }
+  if (requested && options.includes(requested)) return { privacy: requested };
+  if (options.includes("SELF_ONLY")) return { privacy: "SELF_ONLY" };
+  if (options.length) return { privacy: options[0] };
+  return { privacy: "SELF_ONLY" };
+}
+
 
 export const tiktokAdapter: SocialPlatformAdapter = {
   platform: "tiktok",
@@ -170,31 +245,17 @@ export const tiktokAdapter: SocialPlatformAdapter = {
     const video = media.find((m) => m.type === "video");
 
     // Creator info drives the allowed privacy levels and interaction settings.
-    const creator = await fetchJson(`${API}/post/publish/creator_info/query/`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${account.access_token}`,
-        "Content-Type": "application/json; charset=UTF-8",
-      },
-    });
-    if (!creator.ok) {
-      return mapHttpError(
-        creator,
-        "TikTok would not confirm this creator's posting permissions",
-        tiktokMessage(creator.body, ""),
-      );
+    const creator = await fetchTikTokCreatorInfo(account.access_token);
+    if ("ok" in creator && creator.ok === false) return creator as AdapterError;
+    const info = (creator as { ok: true; info: TikTokCreatorInfo }).info;
+    const options = info.privacy_level_options;
+    const resolved = resolveTikTokPrivacy(options, String(input.options.privacy_level || ""));
+    if ("error" in resolved) {
+      return adapterError("validation", resolved.error);
     }
-    const info = (creator.body.data ?? {}) as Record<string, unknown>;
-    const options = Array.isArray(info.privacy_level_options)
-      ? (info.privacy_level_options as string[])
-      : [];
-    const requested = String(input.options.privacy_level || "");
-    const privacy = options.includes(requested)
-      ? requested
-      : (options.includes("SELF_ONLY") ? "SELF_ONLY" : options[0] || "SELF_ONLY");
-    const maxDuration = typeof info.max_video_post_duration_sec === "number"
-      ? info.max_video_post_duration_sec
-      : null;
+    const privacy = resolved.privacy;
+    const maxDuration = info.max_video_post_duration_sec;
+
 
     const postInfo: Record<string, unknown> = {
       title,
