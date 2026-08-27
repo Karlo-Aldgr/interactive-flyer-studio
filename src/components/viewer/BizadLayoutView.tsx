@@ -5,6 +5,8 @@ import type { IntroPreset, Layer, LayerAction, PageIntro } from "@/types/flyer";
 import type { BizadAudioSettings } from "@/lib/bizadPage";
 import type { BizadRecord } from "@/lib/bizad";
 import { downloadVCard } from "@/lib/bizad";
+import { resolveBizadTileAction } from "@/lib/bizadTileActions";
+
 import { BizadVideoEmbed } from "@/components/bizad/BizadVideoEmbed";
 import { runAddToCalendar } from "@/lib/calendarHelpers";
 import CarouselDialog from "@/components/viewer/CarouselDialog";
@@ -576,7 +578,10 @@ export function BizadLayoutView({
 
   const ordered = [...layout.layers]
     .filter((l) => !hiddenIds.has(l.id))
-    .sort((a, b) => a.z_index - b.z_index);
+    .sort((a, b) => a.z_index - b.z_index)
+    // Standard card tiles keep working even when their saved link is missing.
+    .map((l) => (l.action ? l : { ...l, action: resolveBizadTileAction(l, bizad) }));
+
   const galleryImages = gallery?.payload.galleryImages || [];
 
 
