@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Eye, Loader2, Send, Smile } from "lucide-react";
+import { CalendarClock, Eye, Loader2, Send, Smile, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MediaPicker } from "./MediaPicker";
+import { FlyerPicker } from "./FlyerPicker";
 import { TikTokPublishSettings } from "./TikTokPublishSettings";
 import { PostPreview } from "./PostPreview";
 import { PlatformIcon } from "./PlatformIcon";
@@ -19,6 +21,12 @@ import { CAPABILITIES, validateVariant } from "@/lib/social/capabilities";
 import { PLATFORM_LABEL } from "@/lib/social/types";
 import type { SocialMediaItem, SocialVariant } from "@/lib/social/types";
 import {
+  fetchFlyerVideos,
+  flyerImageMedia,
+  type FlyerLibraryItem,
+} from "@/lib/social/flyerLibrary";
+import {
+  generateFlyerCaption,
   publishNow,
   savePost,
   schedulePost,
@@ -35,6 +43,7 @@ function parseHashtags(value: string) {
     .map((t) => t.replace(/^#/, "").trim())
     .filter(Boolean);
 }
+
 
 export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialAccounts> }) {
   const queryClient = useQueryClient();
