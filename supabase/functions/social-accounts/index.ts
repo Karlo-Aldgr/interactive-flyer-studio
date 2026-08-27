@@ -14,6 +14,11 @@ import {
 import { getAdapter, integrationStatus } from "../_shared/social/registry.ts";
 import { CAPABILITIES } from "../_shared/social/capabilities.ts";
 import { isSocialPlatform, SOCIAL_PLATFORMS } from "../_shared/social/types.ts";
+import {
+  fetchTikTokCreatorInfo,
+  resolveTikTokPrivacy,
+} from "../_shared/social/adapters/tiktok.ts";
+import { tiktokAudited, tiktokEnvName } from "../_shared/tiktokEnv.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -118,6 +123,34 @@ Deno.serve(async (req) => {
     const { error } = await supabase.from("social_accounts").delete().eq("id", accountId);
     if (error) return json({ error: error.message }, 500);
     return json({ ok: true, revoked_at_platform: revoked, revoke_error: revokeError });
+  }
+
+  // ---- TikTok creator info (audience options) ------------------------------
+  if (action === "tiktok_creator_info") {
+    if (!(await owns())) return json({ error: "Account not found" }, 404);
+    const loaded = await loadAccount(supabase, accountId);
+    if ("ok" in loaded && loaded.ok === false) {
+      return json({ error: loaded.message, code: loaded.code }, 400);
+    }
+    const fresh = await ensureFreshToken(supabase, loaded as never);
+    if ("ok" in fresh && (fresh as { ok: false }).ok === false) {
+      const err = fresh as { message: string; code: string };
+      return json({ error: err.message, code: err.code }, 400);
+    }
+    // deno-lint-ignore no-explicit-any
+    const account = fresh as any;
+    if (account.platform !== "tiktok") return json({ error: "Not a TikTok account" }, 400);
+    const info = await fetchTikTokCreatorInfo(account.access_token);
+    if (info.ok === false) return json({ error: info.message, code: info.code }, 400);
+    const resolved = resolveTikTokPrivacy(info.info.privacy_level_options, "");
+    return json({
+      ok: true,
+      audited: tiktokAudited(),
+      environment: tiktokEnvName(),
+      creator: info.info,
+      privacy_level: "privacy" in resolved ? resolved.privacy : null,
+      privacy_error: "error" in resolved ? resolved.error : null,
+    });
   }
 
   // ---- reconnect hint for a platform ---------------------------------------
