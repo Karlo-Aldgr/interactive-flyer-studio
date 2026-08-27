@@ -41,6 +41,81 @@ function tiktokMessage(body: Record<string, unknown>, fallback: string) {
   return fallback;
 }
 
+export type TikTokCreatorInfo = {
+  creator_username: string | null;
+  creator_nickname: string | null;
+  creator_avatar_url: string | null;
+  privacy_level_options: string[];
+  comment_disabled: boolean;
+  duet_disabled: boolean;
+  stitch_disabled: boolean;
+  max_video_post_duration_sec: number | null;
+};
+
+/** POST /v2/post/publish/creator_info/query/ — the source of truth for audience options. */
+export async function fetchTikTokCreatorInfo(
+  accessToken: string,
+): Promise<{ ok: true; info: TikTokCreatorInfo } | AdapterError> {
+  const res = await fetchJson(`${API}/post/publish/creator_info/query/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json; charset=UTF-8",
+    },
+  });
+  if (!res.ok) {
+    return mapHttpError(
+      res,
+      "TikTok would not confirm this creator's posting permissions",
+      tiktokMessage(res.body, ""),
+    );
+  }
+  const data = (res.body.data ?? {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+  return {
+    ok: true,
+    info: {
+      creator_username: str(data.creator_username),
+      creator_nickname: str(data.creator_nickname),
+      creator_avatar_url: str(data.creator_avatar_url),
+      privacy_level_options: Array.isArray(data.privacy_level_options)
+        ? (data.privacy_level_options as unknown[]).map((v) => String(v))
+        : [],
+      comment_disabled: data.comment_disabled === true,
+      duet_disabled: data.duet_disabled === true,
+      stitch_disabled: data.stitch_disabled === true,
+      max_video_post_duration_sec: typeof data.max_video_post_duration_sec === "number"
+        ? data.max_video_post_duration_sec
+        : null,
+    },
+  };
+}
+
+/**
+ * Unaudited TikTok apps (Sandbox, or production before approval) may only
+ * create private posts; anything else fails with
+ * `unaudited_client_can_only_post_to_private_accounts`.
+ */
+export function resolveTikTokPrivacy(
+  options: string[],
+  requested: string,
+): { privacy: string } | { error: string } {
+  if (!tiktokAudited()) {
+    if (options.length && !options.includes("SELF_ONLY")) {
+      return {
+        error:
+          "This TikTok account does not offer the private (“Only me”) audience, which is the only audience an unaudited TikTok app may post to. Connect a TikTok account that allows private posts, or publish after TikTok approves the app.",
+      };
+    }
+    return { privacy: "SELF_ONLY" };
+  }
+  if (requested && options.includes(requested)) return { privacy: requested };
+  if (options.includes("SELF_ONLY")) return { privacy: "SELF_ONLY" };
+  if (options.length) return { privacy: options[0] };
+  return { privacy: "SELF_ONLY" };
+}
+
+
 export const tiktokAdapter: SocialPlatformAdapter = {
   platform: "tiktok",
   requiredSecrets: SECRETS,
