@@ -1,4 +1,28 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import { decryptSecret } from "./social/crypto.ts";
+
+/**
+ * Falls back to the shared social_accounts store (Social Command Center TikTok
+ * connection) when the legacy tiktok_connection_secrets row is absent.
+ */
+async function fromSocialAccounts(supabase: SupabaseClient, userId: string) {
+  const { data } = await supabase
+    .from("social_accounts")
+    .select("access_token_encrypted, token_expires_at")
+    .eq("user_id", userId)
+    .eq("platform", "tiktok")
+    .eq("connection_status", "connected")
+    .order("connected_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data?.access_token_encrypted) return null;
+  const expiry = data.token_expires_at
+    ? new Date(data.token_expires_at as string).getTime()
+    : 0;
+  if (expiry && expiry - Date.now() < 60_000) return null;
+  const token = await decryptSecret(data.access_token_encrypted as string);
+  return token ? { accessToken: token } : null;
+}
 
 /** Resolve a usable TikTok access token, refreshing it when expired. */
 export async function resolveTikTokAccessToken(
@@ -13,8 +37,11 @@ export async function resolveTikTokAccessToken(
 
   if (error) return { error: error.message };
   if (!row?.access_token) {
+    const shared = await fromSocialAccounts(supabase, userId);
+    if (shared) return shared;
     return { error: "TikTok is not connected for this account." };
   }
+
 
   const expiresAt = row.expires_at ? new Date(row.expires_at as string).getTime() : 0;
   const stillValid = !expiresAt || expiresAt - Date.now() > 60_000;

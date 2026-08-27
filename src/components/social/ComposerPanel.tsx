@@ -286,6 +286,12 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
                         </Badge>
                       )}
                     </p>
+                    {account.platform === "tiktok" &&
+                      !(account.scopes ?? []).includes("video.publish") && (
+                      <p className="mt-1 text-xs text-amber-600">
+                        TikTok direct publishing is pending TikTok app approval.
+                      </p>
+                    )}
                     {issues.map((issue) => (
                       <p
                         key={issue.field + issue.message}
@@ -296,6 +302,7 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
                         {issue.message}
                       </p>
                     ))}
+
                   </div>
                 </label>
               );

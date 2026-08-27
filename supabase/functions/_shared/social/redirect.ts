@@ -20,9 +20,16 @@ export function callbackUrlFor(platform: SocialPlatform) {
     if (explicit) return explicit.replace(/\/$/, "");
     return `${appBaseUrl()}/auth/instagram/callback`;
   }
+  if (platform === "tiktok") {
+    // TikTok requires a static HTTPS callback on the verified tapthatflyer.com domain.
+    const explicit = Deno.env.get("TIKTOK_REDIRECT_URI")?.trim();
+    if (explicit) return explicit.replace(/\/$/, "");
+    return `${appBaseUrl()}/auth/tiktok/callback`;
+  }
   if (platform === "facebook") {
     const meta = Deno.env.get("SOCIAL_META_OAUTH_REDIRECT_URI")?.trim();
     if (meta) return meta.replace(/\/$/, "");
   }
   return defaultCallbackUrl();
 }
+
