@@ -30,6 +30,85 @@ const INTRO_PRESETS: { value: IntroPreset; label: string }[] = [
   { value: "drop", label: "Drop" },
 ];
 
+/** Inline "where does this go?" editor for the common single-destination actions. */
+function QuickLinkField({
+  layer,
+  onAction,
+  onLabel,
+}: {
+  layer: Layer;
+  onAction: (a: LayerAction | null) => void;
+  onLabel: (label: string) => void;
+}) {
+  const action = layer.action ?? null;
+  const type = action?.type;
+  const kind =
+    type === "call" || type === "sms" ? "phone" : type === "map" ? "address" : type === "open_url" || !action ? "url" : null;
+  if (!kind) return null;
+
+  const value =
+    kind === "phone" ? (action?.payload?.phone ?? "") : kind === "address" ? (action?.payload?.mapAddress ?? "") : (action?.payload?.url ?? "");
+
+  const label =
+    kind === "phone" ? "Phone number" : kind === "address" ? "Address" : "Link / destination";
+  const placeholder =
+    kind === "phone" ? "+1 555 123 4567" : kind === "address" ? "123 Main St, City" : "https://example.com";
+
+  function commit(raw: string) {
+    const v = raw.trim();
+
+    if (kind === "phone" || kind === "address") {
+      if (!action) return;
+      onAction({
+        ...action,
+        payload: { ...action.payload, ...(kind === "phone" ? { phone: raw } : { mapAddress: raw }) },
+      });
+      return;
+    }
+
+    if (!v) {
+      if (action?.type === "open_url") onAction({ ...action, payload: { ...action.payload, url: "" } });
+      return;
+    }
+
+    const url = normalizeUrl(v) || v;
+    if (action?.type === "open_url") {
+      onAction({ ...action, payload: { ...action.payload, url } });
+    } else {
+      onAction({ id: safeUUID(), type: "open_url", payload: { url, newTab: true }, highlight: action?.highlight });
+    }
+
+    // Clear "Setup Required" placeholder wording once a real link exists.
+    const current = layer.content.label || "";
+    if (/setup required/i.test(current)) {
+      const cleaned = current.replace(/\s*\n?\s*setup required\s*/gi, "").trim();
+      if (cleaned) onLabel(cleaned);
+    }
+  }
+
+  return (
+    <div>
+      <Label className="text-xs">{label}</Label>
+      <Input
+        className="mt-1"
+        defaultValue={value}
+        key={`${layer.id}-${kind}-${value}`}
+        placeholder={placeholder}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        {kind === "url"
+          ? "Opens when this button is tapped. Use the Action tab for popups, forms and more."
+          : "Edit the destination for this button. More options in the Action tab."}
+      </p>
+    </div>
+  );
+}
+
+
 export function Inspector() {
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
