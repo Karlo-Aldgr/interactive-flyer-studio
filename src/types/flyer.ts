@@ -147,7 +147,10 @@ export interface ActionPayload {
   mediaUrl?: string;
   /** Share popup: link to share (enables native share / copy link controls). */
   shareUrl?: string;
+  /** Share popup: link copied to the clipboard by an explicit "Copy Link" button. */
+  copyUrl?: string;
   shareTitle?: string;
+
   buttons?: PopupButton[];
   hotspots?: PopupHotspot[];
   popupBgColor?: string;
