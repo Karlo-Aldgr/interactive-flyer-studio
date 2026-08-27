@@ -239,7 +239,15 @@ export function Inspector() {
               <Input type="color" className="mt-1 h-9 w-full" value={layer.style.color || "#ffffff"} onChange={(e) => updateLayerStyle(layer.id, { color: e.target.value })} />
             </div>
             <div>
+              <Label className="text-xs">Font</Label>
+              <FontSelect
+                value={layer.style.fontFamily}
+                onChange={(v) => updateLayerStyle(layer.id, { fontFamily: v })}
+              />
+            </div>
+            <div>
               <Label className="text-xs">Font size: {layer.style.fontSize ?? 16}</Label>
+
               <Slider
                 min={8} max={120} step={1}
                 value={[layer.style.fontSize ?? 16]}
