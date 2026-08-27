@@ -475,6 +475,14 @@ export function Inspector() {
           </p>
         )}
 
+        {(layer.type === "image" || layer.type === "shape") && (
+          <QuickLinkField
+            layer={layer}
+            onAction={(a) => setLayerAction(layer.id, a)}
+            onLabel={(label) => updateLayerContent(layer.id, { label })}
+          />
+        )}
+
         <div>
           <Label className="text-xs">Opacity: {Math.round((layer.style.opacity ?? 1) * 100)}%</Label>
           <Slider min={0} max={100} step={1} value={[Math.round((layer.style.opacity ?? 1) * 100)]} onValueChange={([v]) => updateLayerStyle(layer.id, { opacity: v / 100 })} />
