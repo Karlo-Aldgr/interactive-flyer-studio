@@ -306,10 +306,12 @@ export const tiktokAdapter: SocialPlatformAdapter = {
       : raw === "unknown"
       ? "unknown"
       : "publishing";
-    const url = typeof (data?.publicaly_available_post_id ?? data?.publicly_available_post_id) ===
-        "object"
-      ? null
+    const ids = data?.publicaly_available_post_id ?? data?.publicly_available_post_id;
+    const postId = Array.isArray(ids) && ids.length ? String(ids[0]) : null;
+    const url = postId && account.username
+      ? `https://www.tiktok.com/@${account.username}/video/${postId}`
       : null;
+
     return { ok: true, status, remote_post_url: url };
   },
 
