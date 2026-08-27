@@ -837,6 +837,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return ids.length;
   },
 
+  /** Re-attaches standard business-card links (call, email, website, save contact…). */
+  repairBizadLinks: (pageId, bizad) => {
+    const s = get();
+    const page = s.pages.find((p) => p.id === pageId);
+    if (!page) return 0;
+    const patches = bizadTileActionPatches(page.layers, bizad);
+    const ids = Object.keys(patches);
+    if (!ids.length) return 0;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    set({
+      pages: s.pages.map((p) =>
+        p.id !== page.id
+          ? p
+          : { ...p, layers: p.layers.map((l) => (patches[l.id] ? { ...l, action: patches[l.id] } : l)) },
+      ),
+      past,
+      future: [],
+      dirty: true,
+    });
+    return ids.length;
+  },
+
+
+
 
   /** Creates the single long-scrolling Website page (or selects it if it already exists). */
   addWebsitePage: (profile) => {
