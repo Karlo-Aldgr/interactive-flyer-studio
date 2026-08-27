@@ -182,7 +182,15 @@ export function Inspector() {
               />
             </div>
             <div>
+              <Label className="text-xs">Font</Label>
+              <FontSelect
+                value={layer.style.fontFamily}
+                onChange={(v) => updateLayerStyle(layer.id, { fontFamily: v })}
+              />
+            </div>
+            <div>
               <Label className="text-xs">Font size: {layer.style.fontSize ?? 24}</Label>
+
               <Slider
                 min={8} max={120} step={1}
                 value={[layer.style.fontSize ?? 24]}
