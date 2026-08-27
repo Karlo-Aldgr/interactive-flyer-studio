@@ -83,7 +83,11 @@ export function centerBizadLayerPatches<T extends CenterableLayer>(
       put(l, 0, l.position.y, pageWidth, l.type === "image" ? h : l.size.height);
       continue;
     }
-    put(l, (pageWidth - l.size.width) / 2, l.position.y);
+    /* Only recenter layers that are already meant to be centered (wide blocks,
+       or elements sitting near the middle). Decorative off-center accents stay put. */
+    const wide = l.size.width >= pageWidth * 0.6;
+    const offset = Math.abs(l.position.x + l.size.width / 2 - pageWidth / 2);
+    if (wide || offset <= pageWidth * 0.06) put(l, (pageWidth - l.size.width) / 2, l.position.y);
   }
 
   // 2. Button rows
