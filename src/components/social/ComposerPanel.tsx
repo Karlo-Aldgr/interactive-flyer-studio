@@ -62,6 +62,7 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
   const [flyer, setFlyer] = useState<FlyerLibraryItem | null>(null);
   const [flyerVideos, setFlyerVideos] = useState<SocialMediaItem[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [mediaChanged, setMediaChanged] = useState(false);
 
   const hashtags = useMemo(() => parseHashtags(hashtagText), [hashtagText]);
   const connected = social.accounts.filter((a) => a.connection_status === "connected");
@@ -79,6 +80,7 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
     }
     setFlyer(item);
     setMedia([image]);
+    setMediaChanged(true);
     setFlyerVideos([]);
     if (!title) setTitle(item.project_title || item.title);
     if (!link && item.public_slug && item.share_unlocked) {
@@ -95,6 +97,7 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
     setFlyer(null);
     setFlyerVideos([]);
     setMedia([]);
+    setMediaChanged(true);
   };
 
   const generateCopy = async () => {
@@ -325,7 +328,14 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
         <Card>
           <CardHeader><CardTitle className="text-base">Media</CardTitle></CardHeader>
           <CardContent>
-            <MediaPicker media={media} onChange={setMedia} />
+            <MediaPicker
+              media={media}
+              onChange={(next) => {
+                setMedia(next);
+                setMediaChanged(true);
+                if (flyer && !next.some((m) => m.url === flyer.thumbnail_url)) setFlyer(null);
+              }}
+            />
           </CardContent>
         </Card>
 
