@@ -145,20 +145,115 @@ export const tiktokAdapter: SocialPlatformAdapter = {
   async publishPost(account, input: PublishInput): Promise<AdapterResult<PublishSuccess>> {
     const media = input.media;
     if (!media.length) return adapterError("validation", "TikTok requires a video or image.");
+    const scopes = (account.scopes ?? []).map((s) => s.trim());
+    if (scopes.length && !scopes.includes("video.publish")) {
+      return adapterError(
+        "approval_required",
+        "TikTok direct publishing is pending TikTok app approval (the video.publish permission has not been granted to this connection yet).",
+      );
+    }
     const title = composeText(input.caption, input.hashtags, null).slice(0, 2200);
-    const privacy = String(input.options.privacy_level || "SELF_ONLY");
     const video = media.find((m) => m.type === "video");
 
-    const endpoint = video
-      ? `${API}/post/publish/video/init/`
-      : `${API}/post/publish/content/init/`;
-    const body = video
-      ? {
-        post_info: { title, privacy_level: privacy },
-        source_info: { source: "PULL_FROM_URL", video_url: video.url },
+    // Creator info drives the allowed privacy levels and interaction settings.
+    const creator = await fetchJson(`${API}/post/publish/creator_info/query/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${account.access_token}`,
+        "Content-Type": "application/json; charset=UTF-8",
+      },
+    });
+    if (!creator.ok) {
+      return mapHttpError(
+        creator,
+        "TikTok would not confirm this creator's posting permissions",
+        tiktokMessage(creator.body, ""),
+      );
+    }
+    const info = (creator.body.data ?? {}) as Record<string, unknown>;
+    const options = Array.isArray(info.privacy_level_options)
+      ? (info.privacy_level_options as string[])
+      : [];
+    const requested = String(input.options.privacy_level || "");
+    const privacy = options.includes(requested)
+      ? requested
+      : (options.includes("SELF_ONLY") ? "SELF_ONLY" : options[0] || "SELF_ONLY");
+    const maxDuration = typeof info.max_video_post_duration_sec === "number"
+      ? info.max_video_post_duration_sec
+      : null;
+
+    const postInfo: Record<string, unknown> = {
+      title,
+      privacy_level: privacy,
+      disable_comment: info.comment_disabled === true,
+      disable_duet: info.duet_disabled === true,
+      disable_stitch: info.stitch_disabled === true,
+    };
+
+    if (video) {
+      // FILE_UPLOAD avoids TikTok's verified URL-prefix requirement for PULL_FROM_URL.
+      const file = await fetch(video.url);
+      if (!file.ok) {
+        return adapterError("transient", "TapThatFlyer could not read the selected video file.");
       }
-      : {
-        post_info: { title, privacy_level: privacy },
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (!bytes.byteLength) return adapterError("validation", "The selected video file is empty.");
+      const init = await fetchJson(`${API}/post/publish/video/init/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${account.access_token}`,
+          "Content-Type": "application/json; charset=UTF-8",
+        },
+        body: JSON.stringify({
+          post_info: postInfo,
+          source_info: {
+            source: "FILE_UPLOAD",
+            video_size: bytes.byteLength,
+            chunk_size: bytes.byteLength,
+            total_chunk_count: 1,
+          },
+        }),
+      });
+      const initData = init.body.data as
+        | { publish_id?: string; upload_url?: string }
+        | undefined;
+      if (!init.ok || !initData?.publish_id || !initData?.upload_url) {
+        return mapHttpError(init, "TikTok rejected the video post", tiktokMessage(init.body, ""));
+      }
+      const put = await fetch(initData.upload_url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": video.mime_type || "video/mp4",
+          "Content-Length": String(bytes.byteLength),
+          "Content-Range": `bytes 0-${bytes.byteLength - 1}/${bytes.byteLength}`,
+        },
+        body: bytes,
+      });
+      if (!put.ok) {
+        return adapterError(
+          put.status >= 500 ? "transient" : "validation",
+          `TikTok could not accept the video upload (HTTP ${put.status})${
+            maxDuration ? `. Videos must be under ${maxDuration}s.` : ""
+          }`,
+        );
+      }
+      return {
+        ok: true,
+        remote_post_id: initData.publish_id,
+        remote_post_url: null,
+        native_scheduled: false,
+      };
+    }
+
+    // Photo posts must be pulled from a public HTTPS URL.
+    const res = await fetchJson(`${API}/post/publish/content/init/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${account.access_token}`,
+        "Content-Type": "application/json; charset=UTF-8",
+      },
+      body: JSON.stringify({
+        post_info: postInfo,
         source_info: {
           source: "PULL_FROM_URL",
           photo_cover_index: 0,
@@ -166,15 +261,7 @@ export const tiktokAdapter: SocialPlatformAdapter = {
         },
         post_mode: "DIRECT_POST",
         media_type: "PHOTO",
-      };
-
-    const res = await fetchJson(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${account.access_token}`,
-        "Content-Type": "application/json; charset=UTF-8",
-      },
-      body: JSON.stringify(body),
+      }),
     });
     const publishId = (res.body.data as { publish_id?: string } | undefined)?.publish_id;
     if (!res.ok || !publishId) {
@@ -182,6 +269,7 @@ export const tiktokAdapter: SocialPlatformAdapter = {
     }
     return { ok: true, remote_post_id: publishId, remote_post_url: null, native_scheduled: false };
   },
+
 
   schedulePost() {
     return Promise.resolve(
