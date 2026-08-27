@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Eye, Loader2, Send, Smile } from "lucide-react";
+import { CalendarClock, Eye, Loader2, Send, Smile, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MediaPicker } from "./MediaPicker";
+import { FlyerPicker } from "./FlyerPicker";
 import { TikTokPublishSettings } from "./TikTokPublishSettings";
 import { PostPreview } from "./PostPreview";
 import { PlatformIcon } from "./PlatformIcon";
@@ -19,6 +21,12 @@ import { CAPABILITIES, validateVariant } from "@/lib/social/capabilities";
 import { PLATFORM_LABEL } from "@/lib/social/types";
 import type { SocialMediaItem, SocialVariant } from "@/lib/social/types";
 import {
+  fetchFlyerVideos,
+  flyerImageMedia,
+  type FlyerLibraryItem,
+} from "@/lib/social/flyerLibrary";
+import {
+  generateFlyerCaption,
   publishNow,
   savePost,
   schedulePost,
@@ -36,6 +44,7 @@ function parseHashtags(value: string) {
     .filter(Boolean);
 }
 
+
 export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialAccounts> }) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
@@ -50,6 +59,10 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
   const [busy, setBusy] = useState<null | "save" | "publish" | "schedule">(null);
   const [showPreview, setShowPreview] = useState(false);
   const [tiktokConfirmed, setTiktokConfirmed] = useState(false);
+  const [flyer, setFlyer] = useState<FlyerLibraryItem | null>(null);
+  const [flyerVideos, setFlyerVideos] = useState<SocialMediaItem[]>([]);
+  const [generating, setGenerating] = useState(false);
+  const [mediaChanged, setMediaChanged] = useState(false);
 
   const hashtags = useMemo(() => parseHashtags(hashtagText), [hashtagText]);
   const connected = social.accounts.filter((a) => a.connection_status === "connected");
@@ -57,6 +70,52 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
     (a) => a.platform === "tiktok" && selected.includes(a.id),
   );
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
+  // Selecting an existing flyer replaces the media with the flyer's own asset.
+  const selectFlyer = async (item: FlyerLibraryItem) => {
+    const image = flyerImageMedia(item);
+    if (!image) {
+      toast.error("That flyer has no saved preview image yet. Open it in the editor and save it first.");
+      return;
+    }
+    setFlyer(item);
+    setMedia([image]);
+    setMediaChanged(true);
+    setFlyerVideos([]);
+    if (!title) setTitle(item.project_title || item.title);
+    if (!link && item.public_slug && item.share_unlocked) {
+      setLink(`https://tapthatflyer.com/f/${item.public_slug}`);
+    }
+    try {
+      setFlyerVideos(await fetchFlyerVideos(item.flyer_id));
+    } catch {
+      /* videos are optional */
+    }
+  };
+
+  const clearFlyer = () => {
+    setFlyer(null);
+    setFlyerVideos([]);
+    setMedia([]);
+    setMediaChanged(true);
+  };
+
+  const generateCopy = async () => {
+    if (!flyer) return;
+    const platform = connected.find((a) => selected.includes(a.id))?.platform ?? "facebook";
+    setGenerating(true);
+    try {
+      const result = await generateFlyerCaption(flyer.flyer_id, platform);
+      setContent(result.caption);
+      setHashtagText(result.hashtags.slice(0, 3).join(" "));
+      toast.success("Caption and hashtags generated — edit them as you like.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not generate a caption.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
 
   // Keep variant rows aligned with the selected accounts while editing.
   useEffect(() => {
@@ -89,17 +148,19 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
         hashtags,
         media,
         link_url: link || null,
+        flyer_id: flyer?.flyer_id ?? null,
       });
       setPostId(post.id);
       const accounts = connected
         .filter((a) => selected.includes(a.id))
         .map((a) => ({ id: a.id, platform: a.platform }));
-      const rows = await syncVariants(post.id, accounts, {
-        content,
-        hashtags,
-        media,
-        link_url: link || null,
-      });
+      const rows = await syncVariants(
+        post.id,
+        accounts,
+        { content, hashtags, media, link_url: link || null },
+        { overwriteMedia: mediaChanged },
+      );
+      setMediaChanged(false);
       setVariants(rows);
       return post.id;
     } catch (err) {
@@ -109,6 +170,7 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
       setBusy(null);
     }
   };
+
 
   const handlePublish = async () => {
     if (tiktokAccounts.length && !tiktokConfirmed) {
@@ -266,7 +328,14 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
         <Card>
           <CardHeader><CardTitle className="text-base">Media</CardTitle></CardHeader>
           <CardContent>
-            <MediaPicker media={media} onChange={setMedia} />
+            <MediaPicker
+              media={media}
+              onChange={(next) => {
+                setMedia(next);
+                setMediaChanged(true);
+                if (flyer && !next.some((m) => m.url === flyer.thumbnail_url)) setFlyer(null);
+              }}
+            />
           </CardContent>
         </Card>
 
