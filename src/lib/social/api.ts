@@ -306,3 +306,15 @@ export async function fetchScheduledJobs() {
   if (error) throw error;
   return data ?? [];
 }
+
+// --------------------------------------------------- AI caption helper ----
+
+/** Caption + up to 3 hashtags generated from an existing flyer the user owns. */
+export async function generateFlyerCaption(flyerId: string, platform: SocialPlatform) {
+  const { data, error } = await supabase.functions.invoke("social-caption", {
+    body: { flyer_id: flyerId, platform },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data as { caption: string; hashtags: string[] };
+}
