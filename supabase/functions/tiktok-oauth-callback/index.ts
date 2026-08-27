@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import { tiktokCredentials } from "../_shared/tiktokEnv.ts";
 
 function redirect(to: string) {
   return new Response(null, { status: 302, headers: { Location: to } });
@@ -29,11 +30,16 @@ Deno.serve(async (req) => {
     }
     await supabase.from("tiktok_oauth_states").delete().eq("state", state);
 
-    const clientKey = Deno.env.get("TIKTOK_CLIENT_KEY")?.trim();
-    const clientSecret = Deno.env.get("TIKTOK_CLIENT_SECRET")?.trim();
-    if (!clientKey || !clientSecret) return redirect(`${fallback}/dashboard?tiktok=misconfigured`);
+    const creds = tiktokCredentials();
+    if ("missing" in creds) {
+      console.error("[tiktok-oauth-callback] missing secrets", creds.missing.join(", "));
+      return redirect(`${fallback}/dashboard?tiktok=misconfigured`);
+    }
+    const { clientKey, clientSecret } = creds;
 
-    const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/tiktok-oauth-callback`;
+    // Must byte-match the redirect_uri used by tiktok-oauth-start.
+    const redirectUri = Deno.env.get("TIKTOK_REDIRECT_URI")?.trim().replace(/\/$/, "") ||
+      "https://tapthatflyer.com/auth/tiktok/callback";
     const tokenRes = await fetch("https://open.tiktokapis.com/v2/oauth/token/", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },

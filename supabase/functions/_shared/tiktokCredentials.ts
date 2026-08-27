@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import { decryptSecret } from "./social/crypto.ts";
+import { tiktokCredentials } from "./tiktokEnv.ts";
 
 /**
  * Falls back to the shared social_accounts store (Social Command Center TikTok
@@ -47,8 +48,9 @@ export async function resolveTikTokAccessToken(
   const stillValid = !expiresAt || expiresAt - Date.now() > 60_000;
   if (stillValid) return { accessToken: String(row.access_token) };
 
-  const clientKey = Deno.env.get("TIKTOK_CLIENT_KEY")?.trim();
-  const clientSecret = Deno.env.get("TIKTOK_CLIENT_SECRET")?.trim();
+  const creds = tiktokCredentials();
+  const clientKey = "missing" in creds ? "" : creds.clientKey;
+  const clientSecret = "missing" in creds ? "" : creds.clientSecret;
   const refreshToken = typeof row.refresh_token === "string" ? row.refresh_token : "";
   if (!clientKey || !clientSecret || !refreshToken) {
     return { error: "TikTok token expired. Reconnect TikTok in TapThatFlyer." };
