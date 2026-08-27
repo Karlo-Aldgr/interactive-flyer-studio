@@ -11,10 +11,23 @@ import {
   type PublishSuccess,
   type SocialPlatformAdapter,
 } from "../types.ts";
-import { expiresAtFrom, fetchJson, mapHttpError, requireEnv } from "../http.ts";
+import { expiresAtFrom, fetchJson, mapHttpError } from "../http.ts";
+import { tiktokCredentials, tiktokSecretNames } from "../../tiktokEnv.ts";
+
+/** Resolves Sandbox or Production TikTok credentials based on TIKTOK_ENV. */
+function requireTikTokCreds(): { clientKey: string; clientSecret: string } | AdapterError {
+  const creds = tiktokCredentials();
+  if ("missing" in creds) {
+    return adapterError(
+      "not_configured",
+      `Missing server credentials: ${creds.missing.join(", ")}. Add them in Project Settings → Secrets.`,
+    );
+  }
+  return { clientKey: creds.clientKey, clientSecret: creds.clientSecret };
+}
 
 const API = "https://open.tiktokapis.com/v2";
-const SECRETS = ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"];
+const SECRETS = [tiktokSecretNames().keyName, tiktokSecretNames().secretName];
 const SCOPES = ["user.info.basic", "video.publish", "video.upload"];
 
 function tiktokMessage(body: Record<string, unknown>, fallback: string) {
@@ -37,10 +50,10 @@ export const tiktokAdapter: SocialPlatformAdapter = {
   developerConsoleUrl: "https://developers.tiktok.com/apps",
 
   startOAuth({ redirectUri, state, scopes }: AuthStartInput) {
-    const env = requireEnv(SECRETS);
+    const env = requireTikTokCreds();
     if ("ok" in env && env.ok === false) return env as AdapterError;
     const url = new URL("https://www.tiktok.com/v2/auth/authorize/");
-    url.searchParams.set("client_key", (env as Record<string, string>).TIKTOK_CLIENT_KEY);
+    url.searchParams.set("client_key", (env as { clientKey: string }).clientKey);
     url.searchParams.set("scope", scopes.join(","));
     url.searchParams.set("response_type", "code");
     url.searchParams.set("redirect_uri", redirectUri);
@@ -49,15 +62,15 @@ export const tiktokAdapter: SocialPlatformAdapter = {
   },
 
   async handleCallback(input) {
-    const env = requireEnv(SECRETS);
+    const env = requireTikTokCreds();
     if ("ok" in env && env.ok === false) return env as AdapterError;
-    const secrets = env as Record<string, string>;
+    const secrets = env as { clientKey: string; clientSecret: string };
     const res = await fetchJson(`${API}/oauth/token/`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_key: secrets.TIKTOK_CLIENT_KEY,
-        client_secret: secrets.TIKTOK_CLIENT_SECRET,
+        client_key: secrets.clientKey,
+        client_secret: secrets.clientSecret,
         code: input.code,
         grant_type: "authorization_code",
         redirect_uri: input.redirectUri,
@@ -100,8 +113,8 @@ export const tiktokAdapter: SocialPlatformAdapter = {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_key: secrets.TIKTOK_CLIENT_KEY,
-        client_secret: secrets.TIKTOK_CLIENT_SECRET,
+        client_key: secrets.clientKey,
+        client_secret: secrets.clientSecret,
         grant_type: "refresh_token",
         refresh_token: account.refresh_token,
       }).toString(),
@@ -326,15 +339,15 @@ export const tiktokAdapter: SocialPlatformAdapter = {
   },
 
   async revoke(account) {
-    const env = requireEnv(SECRETS);
+    const env = requireTikTokCreds();
     if ("ok" in env && env.ok === false) return env as AdapterError;
-    const secrets = env as Record<string, string>;
+    const secrets = env as { clientKey: string; clientSecret: string };
     const res = await fetchJson(`${API}/oauth/revoke/`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_key: secrets.TIKTOK_CLIENT_KEY,
-        client_secret: secrets.TIKTOK_CLIENT_SECRET,
+        client_key: secrets.clientKey,
+        client_secret: secrets.clientSecret,
         token: account.access_token,
       }).toString(),
     });
