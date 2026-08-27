@@ -15,7 +15,9 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { uploadFlyerAsset } from "@/lib/uploadFlyerAsset";
-import type { IntroPreset, PageIntro } from "@/types/flyer";
+import type { IntroPreset, Layer, LayerAction, PageIntro } from "@/types/flyer";
+import { normalizeUrl } from "@/lib/bizadTemplates/kit";
+import { safeUUID } from "@/lib/safeBrowser";
 
 const INTRO_PRESETS: { value: IntroPreset; label: string }[] = [
   { value: "none", label: "None" },
@@ -318,6 +320,11 @@ export function Inspector() {
               <Label className="text-xs">Label</Label>
               <Input className="mt-1" value={layer.content.label || ""} onChange={(e) => updateLayerContent(layer.id, { label: e.target.value })} />
             </div>
+            <QuickLinkField
+              layer={layer}
+              onAction={(a) => setLayerAction(layer.id, a)}
+              onLabel={(label) => updateLayerContent(layer.id, { label })}
+            />
             <div>
               <Label className="text-xs">Background</Label>
               <Input type="color" className="mt-1 h-9 w-full" value={layer.style.fill || "#7c3aed"} onChange={(e) => updateLayerStyle(layer.id, { fill: e.target.value })} />
