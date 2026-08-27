@@ -34,7 +34,7 @@ export default function TikTokCallback() {
         setTimeout(
           () =>
             navigate(
-              `/dashboard/social?social_error=${encodeURIComponent("TikTok connection cancelled.")}`,
+              `/dashboard/social?social_platform=tiktok&social_error=${encodeURIComponent("TikTok connection cancelled.")}`,
               { replace: true },
             ),
           600,
