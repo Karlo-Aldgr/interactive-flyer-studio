@@ -13,6 +13,7 @@ import {
 } from "../types.ts";
 import { expiresAtFrom, fetchJson, mapHttpError } from "../http.ts";
 import { tiktokAudited, tiktokCredentials, tiktokSecretNames } from "../../tiktokEnv.ts";
+import { toTikTokMediaUrl } from "../../tiktokMedia.ts";
 
 /** Resolves Sandbox or Production TikTok credentials based on TIKTOK_ENV. */
 function requireTikTokCreds(): { clientKey: string; clientSecret: string } | AdapterError {
@@ -320,7 +321,10 @@ export const tiktokAdapter: SocialPlatformAdapter = {
       };
     }
 
-    // Photo posts must be pulled from a public HTTPS URL.
+    // Photo posts must be pulled from a TapThatFlyer-owned HTTPS URL prefix.
+    const photoUrls = await Promise.all(
+      media.filter((m) => m.type === "image").map((m) => toTikTokMediaUrl(m.url)),
+    );
     const res = await fetchJson(`${API}/post/publish/content/init/`, {
       method: "POST",
       headers: {
@@ -332,7 +336,7 @@ export const tiktokAdapter: SocialPlatformAdapter = {
         source_info: {
           source: "PULL_FROM_URL",
           photo_cover_index: 0,
-          photo_images: media.filter((m) => m.type === "image").map((m) => m.url),
+          photo_images: photoUrls,
         },
         post_mode: "DIRECT_POST",
         media_type: "PHOTO",
