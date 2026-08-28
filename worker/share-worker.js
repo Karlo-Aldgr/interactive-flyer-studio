@@ -219,20 +219,36 @@ export default {
     const tiktokToken = url.pathname.startsWith("/media/tiktok/")
       ? url.pathname.slice("/media/tiktok/".length)
       : "";
-    const appOriginEarly = env.APP_ORIGIN || "https://interactive-flyer-studio.lovable.app";
-    // TikTok URL-prefix verification files (tiktok<id>.txt) are STATIC assets
-    // hosted by the app origin at the same path. Because the Cloudflare route
-    // tapthatflyer.com/media/tiktok/* intercepts these requests, the Worker
-    // must fetch the file from the app origin and return it byte-for-byte.
+    // TikTok URL-prefix verification files (tiktok<id>.txt). The Cloudflare
+    // route tapthatflyer.com/media/tiktok/* intercepts these requests, so the
+    // Worker must serve them itself. The app origin 302-redirects every
+    // request back to tapthatflyer.com (custom-domain canonicalization), so
+    // fetching the origin from inside this Worker would loop back into this
+    // same route forever. The known verification files are therefore served
+    // directly, byte-for-byte. Unknown .txt files fall through to the app
+    // via a redirect (no loop).
+    const TIKTOK_VERIFICATION_FILES = {
+      "tiktokFzkOFpQosoc7bNc21Sw89taX3EVtZE5M.txt":
+        "tiktok-developers-site-verification=FzkOFpQosoc7bNc21Sw89taX3EVtZE5M",
+      "tiktokLkKMwdoDnykW3lw62P9ZOT7E6ezqOrp9.txt":
+        "tiktok-developers-site-verification=LkKMwdoDnykW3lw62P9ZOT7E6ezqOrp9",
+    };
     if (tiktokToken && tiktokToken.endsWith(".txt")) {
-      const res = await fetch(`${appOriginEarly}${url.pathname}`, {
-        method: "GET",
-        cf: { cacheTtl: 300, cacheEverything: true },
-      });
-      const out = new Response(res.body, res);
-      out.headers.set("content-type", "text/plain; charset=utf-8");
-      out.headers.set("cache-control", "public, max-age=300");
-      return out;
+      const body = TIKTOK_VERIFICATION_FILES[tiktokToken];
+      if (body !== undefined) {
+        return new Response(body, {
+          status: 200,
+          headers: {
+            "content-type": "text/plain; charset=utf-8",
+            "cache-control": "public, max-age=300",
+          },
+        });
+      }
+      // Unknown verification file: send the client to the app origin's copy.
+      return Response.redirect(
+        `https://interactive-flyer-studio.lovable.app${url.pathname}`,
+        302,
+      );
     }
     if (tiktokToken && !tiktokToken.endsWith(".txt")) {
       const supabaseUrl = (env.SUPABASE_URL || "https://iwmykqilqywbzxpcgaop.supabase.co")
