@@ -172,7 +172,20 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
   };
 
 
+  // Media requirements per selected platform (e.g. TikTok needs a video).
+  const mediaBlockers = connected
+    .filter((a) => selected.includes(a.id))
+    .flatMap((a) =>
+      validateVariant(a.platform, { caption: content, hashtags, link: link || null, media })
+        .filter((i) => i.field === "media")
+        .map((i) => `${PLATFORM_LABEL[a.platform]}: ${i.message}`)
+    );
+
   const handlePublish = async () => {
+    if (mediaBlockers.length) {
+      toast.error(mediaBlockers[0]);
+      return;
+    }
     if (tiktokAccounts.length && !tiktokConfirmed) {
       toast.error("Confirm the TikTok upload before publishing.");
       return;
@@ -198,6 +211,10 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
   };
 
   const handleSchedule = async () => {
+    if (mediaBlockers.length) {
+      toast.error(mediaBlockers[0]);
+      return;
+    }
     if (!scheduleAt) {
       toast.error("Pick a date and time first.");
       return;
@@ -247,6 +264,70 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Choose from your flyers</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Pick a project you already built in TapThatFlyer — its current flyer image is used
+              directly, no re-upload needed.
+            </p>
+            <FlyerPicker
+              selectedId={flyer?.flyer_id ?? null}
+              onSelect={selectFlyer}
+              onClear={clearFlyer}
+            />
+            {flyer && (
+              <div className="space-y-3 rounded-md border bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-medium">Selected: {flyer.title}</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={generateCopy}
+                    disabled={generating}
+                  >
+                    {generating
+                      ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      : <Sparkles className="mr-2 h-4 w-4" />}
+                    Generate Caption &amp; Hashtags
+                  </Button>
+                </div>
+                {tiktokAccounts.length > 0 && !media.some((m) => m.type === "video") && (
+                  <div className="space-y-2 text-xs">
+                    <p className="text-amber-600">
+                      TikTok needs a video. This flyer is an image, so it cannot be published to
+                      TikTok as-is.
+                    </p>
+                    {flyerVideos.length > 0
+                      ? flyerVideos.map((video, i) => (
+                        <Button
+                          key={video.url ?? i}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setMedia([video]);
+                            setMediaChanged(true);
+                          }}
+                        >
+                          Use this project's video {flyerVideos.length > 1 ? i + 1 : ""}
+                        </Button>
+                      ))
+                      : (
+                        <p className="text-muted-foreground">
+                          This project has no video yet — add one in the editor or upload one below.
+                        </p>
+                      )}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader><CardTitle className="text-base">Content</CardTitle></CardHeader>
           <CardContent className="space-y-3">
@@ -326,8 +407,13 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
         ))}
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Media</CardTitle></CardHeader>
-          <CardContent>
+          <CardHeader>
+            <CardTitle className="text-base">Media (optional upload)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Only needed for content that is not one of your TapThatFlyer flyers.
+            </p>
             <MediaPicker
               media={media}
               onChange={(next) => {
@@ -494,14 +580,25 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
                 />
               </div>
             </div>
+            {mediaBlockers.length > 0 && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2">
+                {mediaBlockers.map((m) => (
+                  <p key={m} className="text-xs text-destructive">{m}</p>
+                ))}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
-              <Button onClick={handlePublish} disabled={busy !== null}>
+              <Button onClick={handlePublish} disabled={busy !== null || mediaBlockers.length > 0}>
                 {busy === "publish"
                   ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   : <Send className="mr-2 h-4 w-4" />}
                 Publish Now
               </Button>
-              <Button variant="secondary" onClick={handleSchedule} disabled={busy !== null}>
+              <Button
+                variant="secondary"
+                onClick={handleSchedule}
+                disabled={busy !== null || mediaBlockers.length > 0}
+              >
                 {busy === "schedule"
                   ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   : <CalendarClock className="mr-2 h-4 w-4" />}
