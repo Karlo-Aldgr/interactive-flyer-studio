@@ -5,6 +5,7 @@ import {
   fetchTikTokCreatorInfo,
   resolveTikTokPrivacy,
 } from "../../social/adapters/tiktok.ts";
+import { toTikTokMediaUrl } from "../../tiktokMedia.ts";
 
 const TIKTOK_API = "https://open.tiktokapis.com/v2";
 
@@ -48,6 +49,8 @@ export async function publishToTikTok(ctx: AdapterContext): Promise<PlatformResu
   const privacyLevel = chosen.privacy;
 
   const caption = ctx.caption.trim().slice(0, 2200);
+  // TikTok can only pull from a URL prefix TapThatFlyer owns and verified.
+  const mediaUrl = await toTikTokMediaUrl(item.url);
   const isVideo = item.type === "video";
   const endpoint = isVideo
     ? `${TIKTOK_API}/post/publish/video/init/`
@@ -56,11 +59,11 @@ export async function publishToTikTok(ctx: AdapterContext): Promise<PlatformResu
   const body: Record<string, unknown> = isVideo
     ? {
       post_info: { title: caption, privacy_level: privacyLevel },
-      source_info: { source: "PULL_FROM_URL", video_url: item.url },
+      source_info: { source: "PULL_FROM_URL", video_url: mediaUrl },
     }
     : {
       post_info: { title: caption, privacy_level: privacyLevel },
-      source_info: { source: "PULL_FROM_URL", photo_cover_index: 0, photo_images: [item.url] },
+      source_info: { source: "PULL_FROM_URL", photo_cover_index: 0, photo_images: [mediaUrl] },
       post_mode: "DIRECT_POST",
       media_type: "PHOTO",
     };
