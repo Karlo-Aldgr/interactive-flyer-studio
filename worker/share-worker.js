@@ -219,6 +219,21 @@ export default {
     const tiktokToken = url.pathname.startsWith("/media/tiktok/")
       ? url.pathname.slice("/media/tiktok/".length)
       : "";
+    const appOriginEarly = env.APP_ORIGIN || "https://interactive-flyer-studio.lovable.app";
+    // TikTok URL-prefix verification files (tiktok<id>.txt) are STATIC assets
+    // hosted by the app origin at the same path. Because the Cloudflare route
+    // tapthatflyer.com/media/tiktok/* intercepts these requests, the Worker
+    // must fetch the file from the app origin and return it byte-for-byte.
+    if (tiktokToken && tiktokToken.endsWith(".txt")) {
+      const res = await fetch(`${appOriginEarly}${url.pathname}`, {
+        method: "GET",
+        cf: { cacheTtl: 300, cacheEverything: true },
+      });
+      const out = new Response(res.body, res);
+      out.headers.set("content-type", "text/plain; charset=utf-8");
+      out.headers.set("cache-control", "public, max-age=300");
+      return out;
+    }
     if (tiktokToken && !tiktokToken.endsWith(".txt")) {
       const supabaseUrl = (env.SUPABASE_URL || "https://iwmykqilqywbzxpcgaop.supabase.co")
         .replace(/\/$/, "");
