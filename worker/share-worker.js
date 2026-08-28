@@ -213,11 +213,16 @@ export default {
     // TikTok media proxy — streams the original storage object under a
     // TapThatFlyer-owned URL prefix so PULL_FROM_URL passes URL verification.
     // No redirect: bytes are proxied straight through with Range support.
-    if (url.pathname.startsWith("/media/tiktok/")) {
+    // TikTok URL-prefix verification files (tiktok<id>.txt) are STATIC assets
+    // served by the app origin. They must never be proxied, or TikTok's
+    // Production/Sandbox prefix verification breaks. Only signed tokens proxy.
+    const tiktokToken = url.pathname.startsWith("/media/tiktok/")
+      ? url.pathname.slice("/media/tiktok/".length)
+      : "";
+    if (tiktokToken && !tiktokToken.endsWith(".txt")) {
       const supabaseUrl = (env.SUPABASE_URL || "https://iwmykqilqywbzxpcgaop.supabase.co")
         .replace(/\/$/, "");
-      const token = url.pathname.slice("/media/tiktok/".length);
-      const target = `${supabaseUrl}/functions/v1/tiktok-media/${token}`;
+      const target = `${supabaseUrl}/functions/v1/tiktok-media/${tiktokToken}`;
       const headers = new Headers();
       const range = request.headers.get("range");
       if (range) headers.set("range", range);
