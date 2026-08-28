@@ -59,3 +59,6 @@ verify_jwt = true
 
 [functions.social-oauth-callback]
 verify_jwt = false
+
+[functions.tiktok-media]
+verify_jwt = false
