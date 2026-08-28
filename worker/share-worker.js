@@ -210,6 +210,23 @@ function ogHtml({ title, description, image, canonical }) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // TikTok media proxy — streams the original storage object under a
+    // TapThatFlyer-owned URL prefix so PULL_FROM_URL passes URL verification.
+    // No redirect: bytes are proxied straight through with Range support.
+    if (url.pathname.startsWith("/media/tiktok/")) {
+      const supabaseUrl = (env.SUPABASE_URL || "https://iwmykqilqywbzxpcgaop.supabase.co")
+        .replace(/\/$/, "");
+      const token = url.pathname.slice("/media/tiktok/".length);
+      const target = `${supabaseUrl}/functions/v1/tiktok-media/${token}`;
+      const headers = new Headers();
+      const range = request.headers.get("range");
+      if (range) headers.set("range", range);
+      const res = await fetch(target, { method: request.method === "HEAD" ? "HEAD" : "GET", headers, redirect: "follow" });
+      const out = new Response(res.body, res);
+      out.headers.delete("content-security-policy");
+      out.headers.delete("x-frame-options");
+      return out;
+    }
     const ua = request.headers.get("user-agent") || "";
     const isCrawler = CRAWLER_RE.test(ua);
     const appOrigin = env.APP_ORIGIN || "https://interactive-flyer-studio.lovable.app";
