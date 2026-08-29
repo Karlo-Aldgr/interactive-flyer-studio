@@ -339,10 +339,15 @@ export const tiktokAdapter: SocialPlatformAdapter = {
     const media = input.media;
     if (!media.length) return adapterError("validation", "TikTok requires a video or image.");
     const scopes = (account.scopes ?? []).map((s) => s.trim());
+    console.log(
+      `[tiktok] publishing as account=${account.platform_account_id} username=${
+        account.username ?? "unknown"
+      } scopes=${scopes.join("|") || "none-recorded"}`,
+    );
     if (scopes.length && !scopes.includes("video.publish")) {
       return adapterError(
         "approval_required",
-        "TikTok direct publishing is pending TikTok app approval (the video.publish permission has not been granted to this connection yet).",
+        "TikTok direct publishing is pending TikTok app approval (the video.publish permission has not been granted to this connection yet). Reconnect TikTok and grant the video.publish permission.",
       );
     }
     const title = composeText(input.caption, input.hashtags, null).slice(0, 2200);
