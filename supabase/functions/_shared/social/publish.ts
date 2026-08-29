@@ -174,14 +174,15 @@ export async function publishVariant(
   }
 
   const success = result as PublishSuccess & { ok: true };
+  const pending = success.pending === true;
   await supabase
     .from("social_post_variants")
     .update({
-      status: "published",
+      status: pending ? "publishing" : "published",
       remote_post_id: success.remote_post_id,
       remote_post_url: success.remote_post_url,
-      published_at: new Date().toISOString(),
-      last_error: null,
+      published_at: pending ? null : new Date().toISOString(),
+      last_error: pending ? success.pending_message ?? null : null,
     })
     .eq("id", variant.id);
 
@@ -189,6 +190,8 @@ export async function publishVariant(
     variant_id: variant.id,
     platform: variant.platform,
     ok: true,
+    pending,
+    message: pending ? success.pending_message : undefined,
     remote_post_id: success.remote_post_id,
     remote_post_url: success.remote_post_url,
     native_scheduled: success.native_scheduled,
