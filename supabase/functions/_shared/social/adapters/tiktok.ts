@@ -461,7 +461,21 @@ export const tiktokAdapter: SocialPlatformAdapter = {
     if (!res.ok || !publishId) {
       return mapHttpError(res, "TikTok rejected the post", tiktokMessage(res.body, ""));
     }
-    return { ok: true, remote_post_id: publishId, remote_post_url: null, native_scheduled: false };
+    const photoOutcome = await pollTikTokPublish(account.access_token, publishId);
+    if (photoOutcome.kind === "failed") {
+      return adapterError("validation", photoOutcome.message);
+    }
+    const photoPostId = photoOutcome.kind === "complete" ? photoOutcome.postId : null;
+    return {
+      ok: true,
+      remote_post_id: publishId,
+      remote_post_url: photoPostId && account.username
+        ? `https://www.tiktok.com/@${account.username}/video/${photoPostId}`
+        : null,
+      native_scheduled: false,
+      pending: photoOutcome.kind === "pending",
+      pending_message: photoOutcome.kind === "pending" ? photoOutcome.message : undefined,
+    };
   },
 
 
