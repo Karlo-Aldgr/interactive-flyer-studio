@@ -67,8 +67,9 @@ export type VariantRow = {
 };
 
 export type VariantResult =
-  | { variant_id: string; platform: SocialPlatform; ok: true; remote_post_id: string; remote_post_url: string | null; native_scheduled: boolean }
+  | { variant_id: string; platform: SocialPlatform; ok: true; pending?: boolean; message?: string; remote_post_id: string; remote_post_url: string | null; native_scheduled: boolean }
   | { variant_id: string; platform: SocialPlatform; ok: false; code: string; message: string; retryable: boolean };
+
 
 /**
  * Publishes exactly one variant. Idempotent by design: a variant that is
