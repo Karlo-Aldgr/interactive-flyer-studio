@@ -3,6 +3,7 @@ import { primaryMedia } from "../types.ts";
 import { resolveTikTokAccessToken } from "../../tiktokCredentials.ts";
 import {
   fetchTikTokCreatorInfo,
+  pollTikTokPublish,
   resolveTikTokPrivacy,
 } from "../../social/adapters/tiktok.ts";
 import { toTikTokMediaUrl } from "../../tiktokMedia.ts";

@@ -38,7 +38,7 @@ export type PublishRequest = {
  * `queued` is only ever returned by an asynchronous executor: the request was
  * accepted and the terminal result must be read back via the job id.
  */
-export type PlatformStatus = "success" | "failed" | "not_connected" | "queued";
+export type PlatformStatus = "success" | "failed" | "not_connected" | "queued" | "pending";
 
 export type PlatformResult = {
   platform: Platform;
@@ -49,7 +49,7 @@ export type PlatformResult = {
   attempt_at: string;
 };
 
-export type PublishOutcomeStatus = "success" | "partial_success" | "failed" | "queued";
+export type PublishOutcomeStatus = "success" | "partial_success" | "failed" | "queued" | "pending";
 
 export type PublishOutcome = {
   status: PublishOutcomeStatus;
@@ -85,6 +85,9 @@ export type PublishExecutor = {
 
 export function summarizeResults(results: PlatformResult[]): PublishOutcomeStatus {
   if (results.length > 0 && results.every((r) => r.status === "queued")) return "queued";
+  // `pending` means the platform accepted the media but has not confirmed the
+  // post is live (TikTok processing). It must never roll up as success.
+  if (results.length > 0 && results.every((r) => r.status === "pending")) return "pending";
   const successes = results.filter((r) => r.status === "success").length;
   if (successes > 0 && successes === results.length) return "success";
   if (successes > 0) return "partial_success";
