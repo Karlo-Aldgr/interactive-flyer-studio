@@ -143,13 +143,18 @@ Deno.serve(async (req) => {
     await rollupPostStatus(supabase, post.id);
   }
 
-  const published = results.filter((r) => (r as { ok?: boolean }).ok).length;
+  const published = results.filter((r) => {
+    const v = r as { ok?: boolean; pending?: boolean };
+    return v.ok && !v.pending;
+  }).length;
+  const pending = results.filter((r) => (r as { pending?: boolean }).pending).length;
   return json({
     ok: published > 0,
     projects: jobs.length,
     accounts: usable.length,
     published,
-    failed: results.length - published,
+    pending,
+    failed: results.length - published - pending,
     results,
   });
 });
