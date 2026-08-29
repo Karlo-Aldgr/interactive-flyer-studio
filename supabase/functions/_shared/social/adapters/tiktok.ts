@@ -416,13 +416,25 @@ export const tiktokAdapter: SocialPlatformAdapter = {
           }`,
         );
       }
+      // The upload PUT only means TikTok received bytes. Confirm the real
+      // outcome with status/fetch before reporting success anywhere.
+      const outcome = await pollTikTokPublish(account.access_token, initData.publish_id);
+      if (outcome.kind === "failed") {
+        return adapterError("validation", outcome.message);
+      }
+      const videoPostId = outcome.kind === "complete" ? outcome.postId : null;
       return {
         ok: true,
         remote_post_id: initData.publish_id,
-        remote_post_url: null,
+        remote_post_url: videoPostId && account.username
+          ? `https://www.tiktok.com/@${account.username}/video/${videoPostId}`
+          : null,
         native_scheduled: false,
+        pending: outcome.kind === "pending",
+        pending_message: outcome.kind === "pending" ? outcome.message : undefined,
       };
     }
+
 
     // Photo posts must be pulled from a TapThatFlyer-owned HTTPS URL prefix.
     const photoUrls = await Promise.all(
