@@ -116,6 +116,109 @@ export function resolveTikTokPrivacy(
   return { privacy: "SELF_ONLY" };
 }
 
+export type TikTokPublishStatus = {
+  status: string;
+  fail_reason: string | null;
+  post_ids: string[];
+  uploaded_bytes: number | null;
+  raw: Record<string, unknown>;
+};
+
+/**
+ * POST /v2/post/publish/status/fetch/ — the ONLY authoritative signal that a
+ * TikTok post actually landed. `publish_id` from init means "accepted", not
+ * "published": TikTok can still fail during transcode/moderation.
+ */
+export async function fetchTikTokPublishStatus(
+  accessToken: string,
+  publishId: string,
+): Promise<{ ok: true; status: TikTokPublishStatus } | AdapterError> {
+  const res = await fetchJson(`${API}/post/publish/status/fetch/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json; charset=UTF-8",
+    },
+    body: JSON.stringify({ publish_id: publishId }),
+  });
+  if (!res.ok) {
+    return mapHttpError(
+      res,
+      "Could not read the TikTok publish status",
+      tiktokMessage(res.body, ""),
+    );
+  }
+  const data = (res.body.data ?? {}) as Record<string, unknown>;
+  const ids = data.publicaly_available_post_id ?? data.publicly_available_post_id;
+  return {
+    ok: true,
+    status: {
+      status: String(data.status || "unknown"),
+      fail_reason: typeof data.fail_reason === "string" && data.fail_reason
+        ? data.fail_reason
+        : null,
+      post_ids: Array.isArray(ids) ? (ids as unknown[]).map((v) => String(v)) : [],
+      uploaded_bytes: typeof data.uploaded_bytes === "number" ? data.uploaded_bytes : null,
+      raw: data,
+    },
+  };
+}
+
+export type TikTokPollOutcome =
+  | { kind: "complete"; postId: string | null; status: TikTokPublishStatus }
+  | { kind: "failed"; message: string; status: TikTokPublishStatus }
+  | { kind: "pending"; message: string; status: TikTokPublishStatus | null };
+
+/**
+ * Polls the publish status until TikTok reports PUBLISH_COMPLETE or FAILED.
+ * Never claims success on a still-processing post — the caller must surface
+ * "pending" as an in-progress state, not as "published".
+ */
+export async function pollTikTokPublish(
+  accessToken: string,
+  publishId: string,
+  opts: { attempts?: number; intervalMs?: number } = {},
+): Promise<TikTokPollOutcome> {
+  const attempts = opts.attempts ?? 10;
+  const intervalMs = opts.intervalMs ?? 3000;
+  let last: TikTokPublishStatus | null = null;
+
+  for (let i = 0; i < attempts; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, intervalMs));
+    const res = await fetchTikTokPublishStatus(accessToken, publishId);
+    if ("ok" in res && res.ok === false) {
+      console.error(`[tiktok] status/fetch error for ${publishId}: ${(res as AdapterError).message}`);
+      continue;
+    }
+    last = (res as { ok: true; status: TikTokPublishStatus }).status;
+    console.log(
+      `[tiktok] publish_id=${publishId} attempt=${i + 1} status=${last.status}` +
+        (last.fail_reason ? ` fail_reason=${last.fail_reason}` : "") +
+        (last.uploaded_bytes !== null ? ` uploaded_bytes=${last.uploaded_bytes}` : ""),
+    );
+    if (last.status === "PUBLISH_COMPLETE") {
+      return { kind: "complete", postId: last.post_ids[0] ?? null, status: last };
+    }
+    if (last.status === "FAILED") {
+      return {
+        kind: "failed",
+        message: `TikTok failed to publish the post: ${last.fail_reason || "no fail_reason returned"}.`,
+        status: last,
+      };
+    }
+  }
+
+  return {
+    kind: "pending",
+    message:
+      `TikTok is still processing this post (last status: ${last?.status ?? "unknown"}). ` +
+      "It has not been published yet — TapThatFlyer will keep checking.",
+    status: last,
+  };
+}
+
+
+
 
 export const tiktokAdapter: SocialPlatformAdapter = {
   platform: "tiktok",
@@ -236,10 +339,15 @@ export const tiktokAdapter: SocialPlatformAdapter = {
     const media = input.media;
     if (!media.length) return adapterError("validation", "TikTok requires a video or image.");
     const scopes = (account.scopes ?? []).map((s) => s.trim());
+    console.log(
+      `[tiktok] publishing as account=${account.platform_account_id} username=${
+        account.username ?? "unknown"
+      } scopes=${scopes.join("|") || "none-recorded"}`,
+    );
     if (scopes.length && !scopes.includes("video.publish")) {
       return adapterError(
         "approval_required",
-        "TikTok direct publishing is pending TikTok app approval (the video.publish permission has not been granted to this connection yet).",
+        "TikTok direct publishing is pending TikTok app approval (the video.publish permission has not been granted to this connection yet). Reconnect TikTok and grant the video.publish permission.",
       );
     }
     const title = composeText(input.caption, input.hashtags, null).slice(0, 2200);
@@ -313,13 +421,25 @@ export const tiktokAdapter: SocialPlatformAdapter = {
           }`,
         );
       }
+      // The upload PUT only means TikTok received bytes. Confirm the real
+      // outcome with status/fetch before reporting success anywhere.
+      const outcome = await pollTikTokPublish(account.access_token, initData.publish_id);
+      if (outcome.kind === "failed") {
+        return adapterError("validation", outcome.message);
+      }
+      const videoPostId = outcome.kind === "complete" ? outcome.postId : null;
       return {
         ok: true,
         remote_post_id: initData.publish_id,
-        remote_post_url: null,
+        remote_post_url: videoPostId && account.username
+          ? `https://www.tiktok.com/@${account.username}/video/${videoPostId}`
+          : null,
         native_scheduled: false,
+        pending: outcome.kind === "pending",
+        pending_message: outcome.kind === "pending" ? outcome.message : undefined,
       };
     }
+
 
     // Photo posts must be pulled from a TapThatFlyer-owned HTTPS URL prefix.
     const photoUrls = await Promise.all(
@@ -346,7 +466,21 @@ export const tiktokAdapter: SocialPlatformAdapter = {
     if (!res.ok || !publishId) {
       return mapHttpError(res, "TikTok rejected the post", tiktokMessage(res.body, ""));
     }
-    return { ok: true, remote_post_id: publishId, remote_post_url: null, native_scheduled: false };
+    const photoOutcome = await pollTikTokPublish(account.access_token, publishId);
+    if (photoOutcome.kind === "failed") {
+      return adapterError("validation", photoOutcome.message);
+    }
+    const photoPostId = photoOutcome.kind === "complete" ? photoOutcome.postId : null;
+    return {
+      ok: true,
+      remote_post_id: publishId,
+      remote_post_url: photoPostId && account.username
+        ? `https://www.tiktok.com/@${account.username}/video/${photoPostId}`
+        : null,
+      native_scheduled: false,
+      pending: photoOutcome.kind === "pending",
+      pending_message: photoOutcome.kind === "pending" ? photoOutcome.message : undefined,
+    };
   },
 
 

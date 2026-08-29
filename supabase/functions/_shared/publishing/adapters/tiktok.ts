@@ -3,6 +3,7 @@ import { primaryMedia } from "../types.ts";
 import { resolveTikTokAccessToken } from "../../tiktokCredentials.ts";
 import {
   fetchTikTokCreatorInfo,
+  pollTikTokPublish,
   resolveTikTokPrivacy,
 } from "../../social/adapters/tiktok.ts";
 import { toTikTokMediaUrl } from "../../tiktokMedia.ts";
@@ -90,10 +91,34 @@ export async function publishToTikTok(ctx: AdapterContext): Promise<PlatformResu
     };
   }
 
+  // publish_id only means "accepted". Confirm the terminal state before
+  // reporting success to any caller.
+  const outcome = await pollTikTokPublish(token.accessToken, publishId);
+  if (outcome.kind === "failed") {
+    return {
+      platform: "tiktok",
+      status: "failed",
+      error: outcome.message,
+      post_id: publishId,
+      attempt_at,
+      token_source: "tiktok_oauth",
+    };
+  }
+  if (outcome.kind === "pending") {
+    return {
+      platform: "tiktok",
+      status: "pending",
+      error: outcome.message,
+      post_id: publishId,
+      attempt_at,
+      token_source: "tiktok_oauth",
+    };
+  }
+
   return {
     platform: "tiktok",
     status: "success",
-    post_id: publishId,
+    post_id: outcome.postId ?? publishId,
     attempt_at,
     token_source: "tiktok_oauth",
   };

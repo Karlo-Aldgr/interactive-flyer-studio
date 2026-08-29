@@ -110,6 +110,9 @@ export type PublishSuccess = {
   remote_post_id: string;
   remote_post_url: string | null;
   native_scheduled: boolean;
+  /** Accepted by the platform but not confirmed live yet (e.g. TikTok processing). */
+  pending?: boolean;
+  pending_message?: string;
 };
 
 export type AnalyticsSnapshot = {

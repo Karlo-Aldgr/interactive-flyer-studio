@@ -194,12 +194,20 @@ export function ComposerPanel({ social }: { social: ReturnType<typeof useSocialA
     setBusy("publish");
     try {
       const result = await publishNow(id);
-      const failures = (result.results ?? []).filter((r: { ok: boolean }) => !r.ok);
-      if (!failures.length) toast.success("Published to every selected account.");
-      else if (failures.length === result.results.length) {
+      const all = (result.results ?? []) as { ok: boolean; pending?: boolean; message?: string; platform: string }[];
+      const failures = all.filter((r) => !r.ok);
+      const pendings = all.filter((r) => r.ok && r.pending);
+      if (!failures.length && !pendings.length) {
+        toast.success("Published to every selected account.");
+      } else if (failures.length === all.length && all.length) {
         toast.error(`Publishing failed: ${failures[0].message}`);
-      } else {
+      } else if (failures.length) {
         toast.warning(`Partially published. ${failures[0].platform}: ${failures[0].message}`);
+      } else {
+        toast.info(
+          pendings[0].message ??
+            `${pendings[0].platform} is still processing this post — not published yet.`,
+        );
       }
       queryClient.invalidateQueries({ queryKey: ["social-posts"] });
     } catch (err) {
