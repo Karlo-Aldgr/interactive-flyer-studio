@@ -380,11 +380,13 @@ export function BizadLayoutView({
   layout,
   bizad,
   embedded = false,
+  onAutomationAction,
 }: {
   layout: BizadLayout;
   bizad: BizadRecord;
   /** When true, used inside editor dialog — no full-screen bleed. */
   embedded?: boolean;
+  onAutomationAction?: (action: LayerAction) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -442,6 +444,7 @@ export function BizadLayoutView({
   const runAction = useCallback(
     (a: LayerAction) => {
       if (!a) return;
+      onAutomationAction?.(a);
       const p = a.payload || {};
       switch (a.type) {
         case "open_url":
@@ -561,7 +564,7 @@ export function BizadLayoutView({
         }
       }
     },
-    [bizad, flyerId],
+    [bizad, flyerId, onAutomationAction],
   );
 
   useEffect(() => () => audioRef.current?.pause(), []);

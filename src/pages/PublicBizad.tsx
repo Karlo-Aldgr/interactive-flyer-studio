@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { BizadLayoutView, isBizadLayout } from "@/components/viewer/BizadLayoutV
 import { BizadAudio } from "@/components/viewer/BizadAudio";
 import type { BizadAudioSettings } from "@/lib/bizadPage";
 import { buildPublicBizadUrl } from "@/lib/utils";
+import { deliverAutomationResults, ingestAutomationEvent } from "@/lib/automations/ingestion";
+import { toast } from "sonner";
 
 function setPageMeta(selector: string, attr: string, name: string, content: string) {
   let tag = document.head.querySelector<HTMLMetaElement>(selector);
@@ -74,6 +76,26 @@ export default function PublicBizad() {
     };
   }, [bizad]);
 
+  useEffect(() => {
+    if (!bizad || slug === "demo") return;
+    void ingestAutomationEvent({
+      eventType: "bizad_viewed",
+      sourceType: "bizad",
+      sourceId: bizad.id,
+      clientEventId: `view:${bizad.id}:${crypto.randomUUID()}`,
+    }).then((deliveries) => deliverAutomationResults(deliveries, (title, message) => toast.info(title, { description: message })));
+  }, [bizad, slug]);
+
+  const handleBizadAction = useCallback((action: { id?: string; type: string }) => {
+    if (!bizad || slug === "demo") return;
+    void ingestAutomationEvent({
+      eventType: "bizad_action_clicked",
+      sourceType: "bizad",
+      sourceId: bizad.id,
+      metadata: { interaction_id: action.id || "", action_type: action.type },
+    }).then((deliveries) => deliverAutomationResults(deliveries, (title, message) => toast.info(title, { description: message })));
+  }, [bizad, slug]);
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -99,7 +121,7 @@ export default function PublicBizad() {
     return (
       <>
         <BizadAudio audio={audio} />
-        <BizadLayoutView layout={bizad.layout} bizad={bizad} />
+        <BizadLayoutView layout={bizad.layout} bizad={bizad} onAutomationAction={handleBizadAction} />
         {slug !== "demo" && <FlyerChatbot flyerId={bizad.flyer_id} flyerTitle={chatTitle} />}
       </>
     );

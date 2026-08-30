@@ -148,6 +148,23 @@ Deno.serve(async (req) => {
       emailStatus = "failed";
     }
 
+    // Emit only after the appointment exists. The automation engine resolves
+    // tenant ownership from this trusted appointment -> flyer relationship.
+    try {
+      await supabase.functions.invoke("automation-engine", {
+        body: {
+          eventType: "appointment_request_submitted",
+          sourceType: "appointment",
+          sourceId: inserted.id,
+          clientEventId: `appointment:${inserted.id}`,
+          actor: { name: body.name, email: body.email, phone: body.phone },
+          metadata: { hotspot_id: body.layerId, interaction_id: body.actionId },
+        },
+      });
+    } catch (_e) {
+      // Appointment creation remains successful if automation processing is unavailable.
+    }
+
     return new Response(
       JSON.stringify({ id: inserted.id, emailStatus }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

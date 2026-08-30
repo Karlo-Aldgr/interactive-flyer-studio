@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { deliverAutomationResults, ingestAutomationEvent } from "@/lib/automations/ingestion";
 
 /** Resolve true once every provided image src has loaded (or errored / timed out). */
 function useImagesReady(srcs: string[], timeoutMs = 4000): boolean {
@@ -1024,7 +1025,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
           .from("analytics_events")
           .insert([{ flyer_id: f.id, event_type: "view", session_id: sid, metadata: { referrer: ts.referrer, source: ts.source, utm: ts.utm, device: getViewerDevice() } } as any]);
         if (trackErr) console.warn("[analytics] view insert failed", trackErr);
-        else didLogViewRef.current = true;
+        else {
+          didLogViewRef.current = true;
+          void ingestAutomationEvent({
+            eventType: "flyer_viewed",
+            sourceType: "flyer",
+            sourceId: f.id,
+            clientEventId: `view:${sid}`,
+            metadata: { flyer_category: (f as { category?: string }).category || "" },
+          }).then((deliveries) => deliverAutomationResults(deliveries, (title, message) => toast.info(title, { description: message })));
+        }
       }
     })();
   }, [slug, flyerId, previewMode]);
@@ -1309,6 +1319,16 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     const cy = layer.position.y + layer.size.height / 2;
     triggerClickPing(cx, cy, layer.action.highlight?.color);
     logClick(layer, layer.action.type);
+    if (flyer && !previewMode) {
+      const common = {
+        sourceType: "flyer" as const,
+        sourceId: flyer.id,
+        metadata: { hotspot_id: layer.id, layer_id: layer.id, action_type: layer.action.type },
+      };
+      void ingestAutomationEvent({ ...common, eventType: "flyer_tapped" });
+      void ingestAutomationEvent({ ...common, eventType: "hotspot_clicked" })
+        .then((deliveries) => deliverAutomationResults(deliveries, (title, message) => toast.info(title, { description: message })));
+    }
     executeAction(layer.action, layer);
   }
 
