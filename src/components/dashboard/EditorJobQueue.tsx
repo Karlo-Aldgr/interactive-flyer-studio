@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { JobStatusBadge } from "@/components/dashboard/JobStatusBadge";
-import { INTERACTIONS } from "@/lib/interactionsCatalog";
+import { interactionLabel } from "@/lib/interactionsCatalog";
 import {
   EDITOR_JOB_STATUSES,
   EDITOR_STATUS_LABEL,
@@ -50,8 +50,6 @@ type JobFilter = "available" | "mine" | "all" | "pending" | "in_progress" | "com
 type EditorJobQueueProps = {
   flyers: Flyer[];
 };
-
-const labelFor = (id: string) => INTERACTIONS.find((i) => i.id === id)?.label ?? id;
 
 const PENDING = new Set(["new", "reviewing", "quoted", "paid"]);
 const IN_PROGRESS = new Set(["in_progress", "preview_ready"]);
@@ -430,7 +428,7 @@ export function EditorJobQueue({ flyers }: EditorJobQueueProps) {
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {selected.selected_actions.map((id) => (
                         <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">
-                          {labelFor(id)}
+                          {interactionLabel(id)}
                         </span>
                       ))}
                     </div>

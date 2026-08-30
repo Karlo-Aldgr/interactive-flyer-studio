@@ -55,18 +55,30 @@ const DIGITAL = [
   { src: "/landing/digital-guardian.png", alt: "Interactive apparel flyer", rotate: "6deg", x: "14%", y: "54%", z: 4 },
 ] as const;
 
-const UPDATES = [
+const OFFERINGS = [
   {
-    title: "Social posting automations",
-    body: "Connect a Facebook Page and publish flyer posts without leaving Tap That Flyer — built for real customer Pages once Meta Live access is ready.",
+    title: "Interactive flyers",
+    body: "Upload or design a flyer, then wire 30+ tap actions — calls, bookings, forms, video, checkout, and more.",
   },
   {
-    title: "Hosted business pages",
-    body: "Draft a simple public business page from onboarding. Staff publishes when it’s ready — a clean /b link for customers who need a web presence.",
+    title: "Digital business card",
+    body: "A mobile link-in-bio page with Save Contact, hot buttons, social links, and QR — auto-built from your onboarding info.",
   },
   {
-    title: "Smarter flyer experiences",
-    body: "Interactive hotspots, Ask AI from your business description, realtor tools, and more — so every flyer does more than look good.",
+    title: "Email marketing",
+    body: "Grow subscribers, send campaigns, and track signups from your flyers — all from your customer Marketing hub.",
+  },
+  {
+    title: "Hosted business websites",
+    body: "Publish a simple public business page when you need a web presence — a clean link customers can bookmark.",
+  },
+  {
+    title: "Clients portal analytics",
+    body: "See how your flyer performs — views, taps, and leads — in a dedicated portal you can share with your team.",
+  },
+  {
+    title: "Ask AI + automations",
+    body: "Let visitors chat with AI trained on your business, and connect social posting automations when Meta Live access is ready.",
   },
 ] as const;
 
@@ -193,7 +205,7 @@ export default function Landing() {
           <nav className="hidden items-center gap-7 text-sm font-semibold text-[#5a6a80] md:flex">
             {[
               ["#compare", "Why interactive"],
-              ["#updates", "What’s new"],
+              ["#platform", "What we offer"],
               ["#interactions", "Interactions"],
             ].map(([href, label]) => (
               <a key={href} href={href} className="transition hover:text-[#1e9fff]">
@@ -225,6 +237,9 @@ export default function Landing() {
             </h1>
           </Reveal>
           <Reveal delay={120}>
+            <p className="mx-auto mt-2 max-w-2xl text-sm font-semibold text-[#0a1f44] sm:text-base md:text-lg">
+              TapThatFlyer is your small business marketing command station.
+            </p>
             <p className="mx-auto mt-2 max-w-xl text-sm font-medium text-[#3d4d63] sm:text-base md:text-lg">
               People don&apos;t ignore what they can{" "}
               <span className="font-bold text-[#1e9fff]">see, tap, and interact</span> with.
@@ -380,24 +395,27 @@ export default function Landing() {
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="w-full border-[#0a1f44] font-semibold hover:scale-[1.03] sm:w-auto">
-            <a href="#updates">See what we&apos;re building</a>
+            <a href="#platform">Explore your marketing command station</a>
           </Button>
         </div>
       </section>
 
-      <section id="updates" className="bg-[#0a1f44] py-16 text-white md:py-20">
+      <section id="platform" className="bg-[#0a1f44] py-16 text-white md:py-20">
         <div className="container">
           <Reveal className="mx-auto max-w-2xl text-center">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[#ff8a00]">
-              <Sparkles className="h-3.5 w-3.5" /> Updates we&apos;re shipping
+              <Sparkles className="h-3.5 w-3.5" /> Everything in one place
             </div>
             <h2 className="font-display text-3xl font-extrabold md:text-4xl">
-              Built for results — including <span className="text-[#ff8a00]">automations</span>
+              Your small business <span className="text-[#ff8a00]">marketing command station</span>
             </h2>
+            <p className="mt-4 text-sm text-white/70 md:text-base">
+              Flyers, digital cards, email marketing, websites, client analytics, and AI — built for owners who want results, not more apps.
+            </p>
           </Reveal>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {UPDATES.map((item, i) => (
-              <Reveal key={item.title} delay={i * 80}>
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {OFFERINGS.map((item, i) => (
+              <Reveal key={item.title} delay={i * 60}>
                 <div className="landing-tilt h-full rounded-2xl border border-white/10 p-6 transition hover:border-[#ff8a00]/50">
                   <div className="mb-4 h-1 w-10 rounded-full bg-[#ff8a00]" />
                   <h3 className="font-display text-xl font-bold">{item.title}</h3>

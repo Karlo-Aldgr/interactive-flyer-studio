@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
-import { getOnboardingForJob, submitOnboarding, extractSpreadsheetId, type OnboardingHelp } from "@/lib/onboarding";
+import { getOnboardingForJob, submitOnboarding, extractSpreadsheetId, type OnboardingHelp, ONBOARDING_SERVICE_OPTIONS, type OnboardingServiceInterest } from "@/lib/onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdgeFunction } from "@/lib/invokeEdgeFunction";
 
@@ -80,6 +80,7 @@ export default function Onboarding() {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const social = useSocialAccounts();
   const [postingPermission, setPostingPermission] = useState(false);
+  const [serviceInterests, setServiceInterests] = useState<string[]>([]);
   const [existingFlyer, setExistingFlyer] = useState<{ title: string; url: string } | null>(null);
   const [scanning, setScanning] = useState(false);
 
@@ -114,6 +115,7 @@ export default function Onboarding() {
           setWebsiteHelp(existing.website_help);
           setLogoHelp(existing.logo_help);
           setSocialHelp(existing.social_help);
+          setServiceInterests(existing.service_interests ?? []);
           setExistingLogoUrl(existing.logo_url);
           setAlreadySubmitted(true);
         } else {
@@ -249,6 +251,7 @@ export default function Onboarding() {
           social_help: missingSocials ? socialHelp : false,
           logo_url: existingLogoUrl,
           logo_help: !logoFile && !existingLogoUrl ? logoHelp : null,
+          service_interests: serviceInterests as OnboardingServiceInterest[],
         },
         logoFile,
         flyerFile,
@@ -382,6 +385,38 @@ export default function Onboarding() {
                 className="mt-2"
               />
             </div>
+          </div>
+        </Card>
+
+        <Card className="p-5 space-y-4">
+          <h2 className="font-semibold">What do you need help with?</h2>
+          <p className="text-sm text-muted-foreground">
+            Select everything that applies — we use this to prioritize your setup and recommend the right tools.
+          </p>
+          <div className="space-y-3">
+            {ONBOARDING_SERVICE_OPTIONS.map((opt) => {
+              const on = serviceInterests.includes(opt.id);
+              return (
+                <label
+                  key={opt.id}
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${on ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}
+                >
+                  <Checkbox
+                    checked={on}
+                    onCheckedChange={(v) => {
+                      setServiceInterests((prev) =>
+                        v ? [...prev, opt.id] : prev.filter((id) => id !== opt.id),
+                      );
+                    }}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="text-sm font-medium">{opt.label}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{opt.description}</span>
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </Card>
 

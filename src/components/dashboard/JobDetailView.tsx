@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { JobStatusBadge } from "@/components/dashboard/JobStatusBadge";
-import { INTERACTIONS } from "@/lib/interactionsCatalog";
+import { interactionLabel } from "@/lib/interactionsCatalog";
 import { type UserJob } from "@/lib/userJobs";
 import { UNIFIED_STEPS, getUnifiedStepIndex, getUnifiedStatusLabel } from "@/lib/jobStatus";
 import { getJobUploadSignedUrl } from "@/lib/jobUploads";
@@ -14,8 +14,6 @@ import { Sparkles } from "lucide-react";
 import { OnboardingSubmissionCard } from "@/components/dashboard/OnboardingSubmissionCard";
 import { WebsiteStatusCard } from "@/components/dashboard/WebsiteStatusCard";
 
-
-const labelFor = (id: string) => INTERACTIONS.find((i) => i.id === id)?.label ?? id;
 
 type JobDetailViewProps = {
   job: UserJob;
@@ -107,7 +105,7 @@ export function JobDetailView({ job }: JobDetailViewProps) {
           <div className="mt-3 flex flex-wrap gap-1.5">
             {job.selected_actions.map((id) => (
               <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">
-                {labelFor(id)}
+                {interactionLabel(id)}
               </span>
             ))}
           </div>

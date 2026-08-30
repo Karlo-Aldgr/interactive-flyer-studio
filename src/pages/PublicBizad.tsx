@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BizadPageContent } from "@/components/bizad/BizadPageContent";
+import { FlyerChatbot } from "@/components/viewer/FlyerChatbot";
 import { loadPublicBizad, DEMO_BIZAD, type BizadRecord } from "@/lib/bizad";
 import { BizadLayoutView, isBizadLayout } from "@/components/viewer/BizadLayoutView";
 import { BizadAudio } from "@/components/viewer/BizadAudio";
@@ -92,12 +93,14 @@ export default function PublicBizad() {
   }
 
   const audio = (bizad.layout as { audio?: BizadAudioSettings } | null)?.audio ?? null;
+  const chatTitle = bizad.business_name || "Business";
 
   if (isBizadLayout(bizad.layout)) {
     return (
       <>
         <BizadAudio audio={audio} />
         <BizadLayoutView layout={bizad.layout} bizad={bizad} />
+        {slug !== "demo" && <FlyerChatbot flyerId={bizad.flyer_id} flyerTitle={chatTitle} />}
       </>
     );
   }
@@ -106,6 +109,7 @@ export default function PublicBizad() {
     <>
       <BizadAudio audio={audio} />
       <BizadPageContent bizad={bizad} />
+      {slug !== "demo" && <FlyerChatbot flyerId={bizad.flyer_id} flyerTitle={chatTitle} />}
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { getOnboardingForJob, type OnboardingSubmission } from "@/lib/onboarding";
+import { getOnboardingForJob, type OnboardingSubmission, ONBOARDING_SERVICE_OPTIONS } from "@/lib/onboarding";
 
 type Props = { jobId: string };
 
@@ -49,6 +49,21 @@ export function OnboardingSubmissionCard({ jobId }: Props) {
       <p className="mt-1 text-xs text-muted-foreground">Submitted through the onboarding form.</p>
 
       <div className="mt-4 space-y-4">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Services requested</div>
+          {(sub.service_interests?.length ?? 0) > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {sub.service_interests.map((id) => (
+                <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">
+                  {ONBOARDING_SERVICE_OPTIONS.find((o) => o.id === id)?.label ?? id}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">None selected</p>
+          )}
+        </div>
+
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact</div>
           <Row label="Name" value={sub.full_name} />

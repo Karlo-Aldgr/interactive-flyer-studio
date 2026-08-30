@@ -8,8 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Upload, Wand2, CheckCircle2 } from "lucide-react";
-import { INTERACTIONS } from "@/lib/interactionsCatalog";
+import { Loader2, Upload, Wand2, CheckCircle2, Sparkles } from "lucide-react";
+import { INTERACTIONS, STAFF_CHOICE_ID } from "@/lib/interactionsCatalog";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
 
 export default function SubmitJob() {
@@ -22,19 +22,27 @@ export default function SubmitJob() {
   const [brief, setBrief] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [staffChoice, setStaffChoice] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { setType(initialType); }, [initialType]);
 
-  const toggle = (id: string) =>
+  const toggle = (id: string) => {
+    setStaffChoice(false);
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  };
+
+  const chooseStaffPick = () => {
+    setStaffChoice(true);
+    setSelected([]);
+  };
 
   const submit = async () => {
     if (!user) return;
     if (!title.trim()) { toast.error("Please add a title for your job."); return; }
     if (type === "upload" && !file) { toast.error("Please upload your flyer file."); return; }
     if (type === "design" && !brief.trim()) { toast.error("Please share a short brief."); return; }
-    if (selected.length === 0) { toast.error("Pick at least one interaction."); return; }
+    if (!staffChoice && selected.length === 0) { toast.error("Pick at least one interaction, or choose for us."); return; }
 
     setSubmitting(true);
     try {
@@ -48,6 +56,8 @@ export default function SubmitJob() {
         uploadUrl = path;
       }
 
+      const actions = staffChoice ? [STAFF_CHOICE_ID] : selected;
+
       const { error } = await supabase.from("jobs").insert({
         user_id: user.id,
         customer_email: user.email ?? null,
@@ -55,7 +65,7 @@ export default function SubmitJob() {
         title: title.trim(),
         brief: brief.trim() || null,
         upload_url: uploadUrl,
-        selected_actions: selected,
+        selected_actions: actions,
         status: "new",
       });
       if (error) throw error;
@@ -108,8 +118,23 @@ export default function SubmitJob() {
         </div>
 
         <div>
-          <Label>Pick your interactions ({selected.length} selected)</Label>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <Label>Pick your interactions {staffChoice ? "" : `(${selected.length} selected)`}</Label>
+          <button
+            type="button"
+            onClick={chooseStaffPick}
+            className={`mt-3 flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
+              staffChoice ? "border-[#ff8a00] bg-[#ff8a00]/10" : "border-border bg-card hover:border-[#ff8a00]/40"
+            }`}
+          >
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${staffChoice ? "bg-[#ff8a00] text-white" : "bg-[#ff8a00]/15 text-[#ff8a00]"}`}>
+              {staffChoice ? <CheckCircle2 className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium">I&apos;d rather you choose for me</div>
+              <div className="text-xs text-muted-foreground">Not sure which interactions fit? Our team will pick the best ones for your goals.</div>
+            </div>
+          </button>
+          <div className={`mt-3 grid gap-2 sm:grid-cols-2 ${staffChoice ? "pointer-events-none opacity-50" : ""}`}>
             {INTERACTIONS.map((it) => {
               const on = selected.includes(it.id);
               return (

@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Plus, ExternalLink, Eye, ChevronRight, Send } from "lucide-react";
-import { INTERACTIONS } from "@/lib/interactionsCatalog";
+import { interactionLabel } from "@/lib/interactionsCatalog";
 import { format } from "date-fns";
 import { getJobUploadSignedUrl } from "@/lib/jobUploads";
 import { toast } from "sonner";
@@ -16,7 +16,6 @@ import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortal
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { PostToSocialsDialog } from "@/components/social/PostToSocialsDialog";
 
-const labelFor = (id: string) => INTERACTIONS.find((i) => i.id === id)?.label ?? id;
 const formatPrice = (cents?: number | null) =>
   typeof cents === "number" ? `$${(cents / 100).toFixed(2)}` : null;
 
@@ -129,7 +128,7 @@ export default function MyJobs() {
             {j.brief && <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{j.brief}</p>}
             <div className="mt-3 flex flex-wrap gap-1.5">
               {(j.selected_actions ?? []).map((id: string) => (
-                <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">{labelFor(id)}</span>
+                <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">{interactionLabel(id)}</span>
               ))}
             </div>
           </div>

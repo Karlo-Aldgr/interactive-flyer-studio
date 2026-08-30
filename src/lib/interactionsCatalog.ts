@@ -14,6 +14,14 @@ export type InteractionDef = {
   details: string;
 };
 
+/** Submit-job sentinel when the client wants staff to pick interactions. */
+export const STAFF_CHOICE_ID = "staff_choice";
+
+export function interactionLabel(id: string): string {
+  if (id === STAFF_CHOICE_ID) return "I'd rather you choose for me";
+  return INTERACTIONS.find((i) => i.id === id)?.label ?? id;
+}
+
 export const INTERACTIONS: InteractionDef[] = [
   { id: "open_url", label: "Open URL", icon: LinkIcon,
     short: "Send taps to any web link.",

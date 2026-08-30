@@ -2442,6 +2442,7 @@ export type Database = {
           posting_permission_at: string | null
           posting_permission_name: string | null
           public_slug: string | null
+          service_interests: string[]
           social_help: boolean
           social_step_seen_at: string | null
           social_step_status: string
@@ -2480,6 +2481,7 @@ export type Database = {
           posting_permission_at?: string | null
           posting_permission_name?: string | null
           public_slug?: string | null
+          service_interests?: string[]
           social_help?: boolean
           social_step_seen_at?: string | null
           social_step_status?: string
@@ -2518,6 +2520,7 @@ export type Database = {
           posting_permission_at?: string | null
           posting_permission_name?: string | null
           public_slug?: string | null
+          service_interests?: string[]
           social_help?: boolean
           social_step_seen_at?: string | null
           social_step_status?: string

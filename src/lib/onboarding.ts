@@ -2,6 +2,26 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type OnboardingHelp = "yes" | "more_info" | "no" | null;
 
+export type OnboardingServiceInterest = "automation_marketing" | "digital_bizad" | "website";
+
+export const ONBOARDING_SERVICE_OPTIONS: { id: OnboardingServiceInterest; label: string; description: string }[] = [
+  {
+    id: "automation_marketing",
+    label: "AI automation & marketing",
+    description: "Social posts, email campaigns, and automation scripts for your business.",
+  },
+  {
+    id: "digital_bizad",
+    label: "Digital business card",
+    description: "Mobile link-in-bio page with Save Contact, hot buttons, and QR.",
+  },
+  {
+    id: "website",
+    label: "Website",
+    description: "A hosted public business page when you need a web presence.",
+  },
+];
+
 export interface OnboardingSubmission {
   id: string;
   user_id: string;
@@ -33,6 +53,7 @@ export interface OnboardingSubmission {
   flyer_upload_url: string | null;
   flyer_job_id: string | null;
   hotspot_suggestions: unknown;
+  service_interests: OnboardingServiceInterest[];
   created_at: string;
   updated_at: string;
 }
@@ -264,6 +285,7 @@ export async function submitOnboarding(args: SubmitOnboardingArgs): Promise<{ jo
     posting_permission_at: input.posting_permission_at,
     flyer_upload_url: flyerPath ?? existing?.flyer_upload_url ?? null,
     flyer_job_id: jobId,
+    service_interests: input.service_interests ?? [],
   };
 
   const { error: upsertErr } = await supabase

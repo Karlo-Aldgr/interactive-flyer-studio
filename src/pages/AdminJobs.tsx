@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Loader2, ExternalLink, Trash2, Pencil, FileText, Database, X, Sparkles, BadgeDollarSign } from "lucide-react";
-import { INTERACTIONS } from "@/lib/interactionsCatalog";
+import { interactionLabel } from "@/lib/interactionsCatalog";
 import { format, formatDistanceToNow } from "date-fns";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { JobDeletedBanner, JobStaffBadges } from "@/components/dashboard/JobStaffBadges";
@@ -31,8 +31,6 @@ const STATUS_LABEL: Record<string,string> = {
   new: "New", reviewing: "Reviewing", quoted: "Quote sent", paid: "Paid",
   in_progress: "In progress", preview_ready: "Preview ready", delivered: "Delivered", cancelled: "Cancelled",
 };
-
-const labelFor = (id: string) => INTERACTIONS.find((i) => i.id === id)?.label ?? id;
 
 const NEW_BADGE_MS = 1000 * 60 * 60 * 24; // 24h "new" highlight
 const BACKUP_REMINDER_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
@@ -440,7 +438,7 @@ export default function AdminJobs() {
             {j.brief && <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{j.brief}</p>}
             <div className="mt-2 flex flex-wrap gap-1.5">
               {(j.selected_actions ?? []).map((id: string) => (
-                <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">{labelFor(id)}</span>
+                <span key={id} className="rounded-full border border-border px-2 py-0.5 text-xs">{interactionLabel(id)}</span>
               ))}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
