@@ -4,6 +4,7 @@ import {
   type Automation,
   type AutomationStep,
   type AutomationVersion,
+  type AutomationFlyerOption,
   type CreateAutomationInput,
   type UpdateAutomationInput,
 } from "./types";
@@ -60,17 +61,46 @@ export async function updateAutomation(id: string, input: UpdateAutomationInput)
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.description !== undefined) patch.description = input.description?.trim() || null;
   if (input.trigger_type !== undefined) patch.trigger_type = automationTriggerTypeSchema.parse(input.trigger_type);
+  if (input.flyer_id !== undefined) patch.flyer_id = input.flyer_id;
   if (input.draft_definition !== undefined) {
     patch.draft_definition = validateAutomationDefinition(input.draft_definition);
   }
   delete patch.account_id;
-  delete patch.flyer_id;
   delete patch.created_by;
   delete patch.published_version_id;
   Object.keys(patch).forEach((key) => patch[key] === undefined && delete patch[key]);
   const { data, error } = await db.from("automations").update(patch).eq("id", id).select("*").single();
   if (error) throw new Error(error.message);
   return data as Automation;
+}
+
+export async function activateAutomation(id: string): Promise<Automation> {
+  await publishAutomation(id);
+  return updateAutomation(id, { status: "active" });
+}
+
+export async function pauseAutomation(id: string): Promise<Automation> {
+  return updateAutomation(id, { status: "paused" });
+}
+
+export async function duplicateAutomation(source: Automation): Promise<Automation> {
+  return createAutomation({
+    flyerId: source.flyer_id,
+    name: `${source.name} (copy)`,
+    description: source.description,
+    triggerType: source.trigger_type,
+    triggerConfig: source.trigger_config,
+    definition: source.draft_definition,
+  });
+}
+
+export async function listAutomationFlyers(): Promise<AutomationFlyerOption[]> {
+  const { data, error } = await supabase
+    .from("flyers")
+    .select("id, title, category, status")
+    .order("updated_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as AutomationFlyerOption[];
 }
 
 export async function deleteAutomation(id: string): Promise<void> {

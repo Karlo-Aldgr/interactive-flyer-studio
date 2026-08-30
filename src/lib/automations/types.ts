@@ -7,8 +7,12 @@ export const AUTOMATION_TRIGGER_TYPES = [
   "hotspot_clicked",
   "qr_scanned",
   "form_submitted",
+  "contact_form_submitted",
+  "website_form_submitted",
   "lead_created",
   "appointment_booked",
+  "appointment_request_submitted",
+  "ticket_purchase_completed",
   "flyer_shared",
   "bizad_viewed",
   "bizad_action_clicked",
@@ -25,10 +29,17 @@ export const AUTOMATION_ACTION_TYPES = [
   "open_phone_dialer",
   "open_email",
   "open_sms",
+  "send_sms",
   "save_lead",
+  "create_lead",
   "update_lead",
+  "add_tag",
+  "remove_tag",
+  "save_contact_activity",
   "send_notification",
   "send_email",
+  "send_appointment_confirmation",
+  "send_ticket_confirmation",
   "trigger_webhook",
   "update_record",
   "wait",
@@ -54,12 +65,26 @@ export const AUTOMATION_CONDITION_OPERATORS = [
 ] as const;
 export type AutomationConditionOperator = (typeof AUTOMATION_CONDITION_OPERATORS)[number];
 
+export const AUTOMATION_CONDITION_FIELDS = [
+  "flyer_id",
+  "flyer_category",
+  "city",
+  "state",
+  "date",
+  "time",
+  "lead_email",
+  "lead_phone",
+  "ticket_type",
+  "hotspot_id",
+] as const;
+export type AutomationConditionField = (typeof AUTOMATION_CONDITION_FIELDS)[number];
+
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
 
 export interface AutomationCondition {
   id: string;
-  field: string;
+  field: AutomationConditionField;
   operator: AutomationConditionOperator;
   value?: JsonValue;
 }
@@ -153,4 +178,11 @@ export type CreateAutomationInput = {
 
 export type UpdateAutomationInput = Partial<
   Pick<Automation, "name" | "description" | "status" | "trigger_type" | "trigger_config" | "draft_definition">
->;
+> & { flyer_id?: string | null };
+
+export type AutomationFlyerOption = {
+  id: string;
+  title: string;
+  category: string;
+  status: string;
+};

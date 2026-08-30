@@ -1,12 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createAutomation,
+  activateAutomation,
   deleteAutomation,
+  duplicateAutomation,
   getAutomation,
   listAutomations,
+  listAutomationFlyers,
   listAutomationSteps,
   listAutomationVersions,
   publishAutomation,
+  pauseAutomation,
   updateAutomation,
 } from "@/lib/automations/service";
 import type { CreateAutomationInput, UpdateAutomationInput } from "@/lib/automations/types";
@@ -17,10 +21,14 @@ const automationKeys = {
   detail: (id: string) => ["automations", "detail", id] as const,
   versions: (id: string) => ["automations", "versions", id] as const,
   steps: (versionId: string) => ["automations", "steps", versionId] as const,
+  flyers: ["automations", "flyers"] as const,
 };
 
 export function useAutomations(flyerId?: string) {
   return useQuery({ queryKey: automationKeys.list(flyerId), queryFn: () => listAutomations(flyerId) });
+}
+export function useAutomationFlyers() {
+  return useQuery({ queryKey: automationKeys.flyers, queryFn: listAutomationFlyers });
 }
 export function useAutomation(id?: string) {
   return useQuery({
@@ -70,6 +78,37 @@ export function useDeleteAutomation() {
   return useMutation({
     mutationFn: deleteAutomation,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: automationKeys.all }),
+  });
+}
+
+export function useDuplicateAutomation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: duplicateAutomation,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: automationKeys.all }),
+  });
+}
+
+export function useActivateAutomation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: activateAutomation,
+    onSuccess: (automation) => {
+      queryClient.setQueryData(automationKeys.detail(automation.id), automation);
+      void queryClient.invalidateQueries({ queryKey: automationKeys.all });
+      void queryClient.invalidateQueries({ queryKey: automationKeys.versions(automation.id) });
+    },
+  });
+}
+
+export function usePauseAutomation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: pauseAutomation,
+    onSuccess: (automation) => {
+      queryClient.setQueryData(automationKeys.detail(automation.id), automation);
+      void queryClient.invalidateQueries({ queryKey: automationKeys.all });
+    },
   });
 }
 

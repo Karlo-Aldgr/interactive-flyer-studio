@@ -68,6 +68,8 @@ const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
 const AdminAffiliates = lazy(() => import("./pages/AdminAffiliates"));
 const AffiliateTerms = lazy(() => import("./pages/AffiliateTerms"));
 const PublicWebsitePage = lazy(() => import("./pages/PublicWebsitePage"));
+const Automations = lazy(() => import("./pages/Automations"));
+const AutomationBuilder = lazy(() => import("./pages/AutomationBuilder"));
 
 
 const queryClient = new QueryClient({
@@ -176,6 +178,9 @@ const App = () => (
               <Route path="/admin/marketing/:tab" element={<ProtectedRoute><AdminMarketing /></ProtectedRoute>} />
               <Route path="/marketing" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
               <Route path="/marketing/:tab" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
+              <Route path="/automations" element={<ProtectedRoute><Automations /></ProtectedRoute>} />
+              <Route path="/automations/new" element={<ProtectedRoute><AutomationBuilder /></ProtectedRoute>} />
+              <Route path="/automations/:automationId" element={<ProtectedRoute><AutomationBuilder /></ProtectedRoute>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
