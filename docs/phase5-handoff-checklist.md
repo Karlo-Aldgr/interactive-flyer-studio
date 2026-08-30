@@ -60,7 +60,7 @@ SMS auth skipped per your note. Email signup is unchanged.
 
 Please test Clients portal on your account and confirm the error is gone. Quick question: for "copy button style" — is the editor button styling + link field what you meant?
 
-Next: once you send Dr's GitHub username, I'll add him as a collaborator on the repo.
+Next: Dr already has GitHub collaborator access.
 ```
 
 ## Blocked / out of scope
