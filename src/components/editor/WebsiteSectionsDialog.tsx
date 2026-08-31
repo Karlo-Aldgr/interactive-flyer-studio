@@ -9,21 +9,30 @@ import {
   WEBSITE_SECTION_OPTIONS,
   type WebsiteSectionKey,
 } from "@/lib/websiteProfile";
+import {
+  DEFAULT_WEBSITE_TEMPLATE,
+  WEBSITE_TEMPLATES,
+  type WebsiteTemplateId,
+} from "@/lib/websiteTemplates";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Called with the sections the client picked. */
-  onConfirm: (sections: WebsiteSectionKey[]) => void;
+  /** Called with the template and the sections the client picked. */
+  onConfirm: (sections: WebsiteSectionKey[], templateId: WebsiteTemplateId) => void;
   loading?: boolean;
 };
 
-/** Asks which sections should be part of the website before it is generated. */
+/** Asks which template and which sections should be part of the website before it is generated. */
 export function WebsiteSectionsDialog({ open, onOpenChange, onConfirm, loading }: Props) {
   const [selected, setSelected] = useState<WebsiteSectionKey[]>(DEFAULT_WEBSITE_SECTIONS);
+  const [template, setTemplate] = useState<WebsiteTemplateId>(DEFAULT_WEBSITE_TEMPLATE);
 
   useEffect(() => {
-    if (open) setSelected(DEFAULT_WEBSITE_SECTIONS);
+    if (open) {
+      setSelected(DEFAULT_WEBSITE_SECTIONS);
+      setTemplate(DEFAULT_WEBSITE_TEMPLATE);
+    }
   }, [open]);
 
   const toggle = (key: WebsiteSectionKey) =>
@@ -33,12 +42,41 @@ export function WebsiteSectionsDialog({ open, onOpenChange, onConfirm, loading }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Choose your website sections</DialogTitle>
+          <DialogTitle>Choose your website template &amp; sections</DialogTitle>
           <DialogDescription>
-            Pick which sections belong on this website. The header, hero and footer are always
-            included — everything else is only added when it is checked here.
+            Pick a design, then pick which sections belong on this website. The header, hero and
+            footer are always included — everything else is only added when it is checked here.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {WEBSITE_TEMPLATES.map((tpl) => {
+            const active = template === tpl.id;
+            return (
+              <button
+                key={tpl.id}
+                type="button"
+                onClick={() => setTemplate(tpl.id)}
+                className={`overflow-hidden rounded-lg border text-left transition-colors ${
+                  active ? "border-primary ring-2 ring-primary/40" : "border-border hover:bg-muted/40"
+                }`}
+              >
+                <img
+                  src={tpl.thumbnail}
+                  alt={`${tpl.name} website template preview`}
+                  loading="lazy"
+                  width={800}
+                  height={600}
+                  className="h-24 w-full object-cover"
+                />
+                <span className="block p-3">
+                  <span className="block text-sm font-medium text-foreground">{tpl.name}</span>
+                  <span className="block text-xs text-muted-foreground">{tpl.description}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">{selected.length} of {WEBSITE_SECTION_OPTIONS.length} selected</span>
@@ -51,6 +89,7 @@ export function WebsiteSectionsDialog({ open, onOpenChange, onConfirm, loading }
             </Button>
           </div>
         </div>
+
 
         <div className="grid gap-2 sm:grid-cols-2">
           {WEBSITE_SECTION_OPTIONS.map((opt) => {
