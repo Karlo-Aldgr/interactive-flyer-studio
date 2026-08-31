@@ -71,9 +71,67 @@ const EMPTY: PlanSnapshot = {
   usage: { posts_this_month: 0, scheduled_posts: 0, connected_accounts: 0 },
 };
 
-/** Reads the client's effective plan + current usage. Never trusts the browser. */
+/**
+ * Reads the client's effective plan + current usage. Never trusts the browser.
+ * Runs with the service role, so it queries the tables directly rather than the
+ * auth.uid()-scoped RPC used by the front end.
+ */
 export async function planLimits(supabase: Supabase, userId: string): Promise<PlanSnapshot> {
-  const { data, error } = await supabase.rpc("client_plan_limits", { _user_id: userId });
-  if (error || !data) return EMPTY;
-  return data as unknown as PlanSnapshot;
+  const periodStart = new Date();
+  periodStart.setUTCDate(1);
+  periodStart.setUTCHours(0, 0, 0, 0);
+
+  const { data: sub } = await supabase
+    .from("client_subscriptions")
+    .select("plan_id")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  let plan: PlanSnapshot["plan"] = null;
+  if (sub?.plan_id) {
+    const { data } = await supabase.from("plans").select("*").eq("id", sub.plan_id).maybeSingle();
+    plan = (data ?? null) as PlanSnapshot["plan"];
+  }
+  if (!plan) {
+    const { data } = await supabase
+      .from("plans")
+      .select("*")
+      .eq("active", true)
+      .order("is_default", { ascending: false })
+      .order("display_order", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    plan = (data ?? null) as PlanSnapshot["plan"];
+  }
+
+  const [posts, scheduled, accounts] = await Promise.all([
+    supabase
+      .from("zernio_posts")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .neq("status", "draft")
+      .gte("created_at", periodStart.toISOString()),
+    supabase
+      .from("zernio_posts")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "scheduled"),
+    supabase
+      .from("zernio_accounts")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "connected"),
+  ]);
+
+  if (!plan) return EMPTY;
+  return {
+    plan,
+    usage: {
+      posts_this_month: posts.count ?? 0,
+      scheduled_posts: scheduled.count ?? 0,
+      connected_accounts: accounts.count ?? 0,
+    },
+  };
 }
+
