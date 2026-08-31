@@ -3545,6 +3545,146 @@ export type Database = {
         }
         Relationships: []
       }
+      zernio_accounts: {
+        Row: {
+          account_name: string | null
+          avatar_url: string | null
+          connected_at: string | null
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          metadata: Json
+          platform: string
+          profile_id: string
+          status: string
+          status_detail: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+          zernio_account_id: string
+          zernio_profile_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          avatar_url?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          metadata?: Json
+          platform: string
+          profile_id: string
+          status?: string
+          status_detail?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+          zernio_account_id: string
+          zernio_profile_id: string
+        }
+        Update: {
+          account_name?: string | null
+          avatar_url?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          metadata?: Json
+          platform?: string
+          profile_id?: string
+          status?: string
+          status_detail?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+          zernio_account_id?: string
+          zernio_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zernio_accounts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "zernio_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zernio_events: {
+        Row: {
+          created_at: string
+          detail: string | null
+          error_category: string | null
+          http_status: number | null
+          id: string
+          operation: string
+          platform: string | null
+          success: boolean
+          user_id: string | null
+          zernio_account_id: string | null
+          zernio_profile_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          error_category?: string | null
+          http_status?: number | null
+          id?: string
+          operation: string
+          platform?: string | null
+          success?: boolean
+          user_id?: string | null
+          zernio_account_id?: string | null
+          zernio_profile_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          error_category?: string | null
+          http_status?: number | null
+          id?: string
+          operation?: string
+          platform?: string | null
+          success?: boolean
+          user_id?: string | null
+          zernio_account_id?: string | null
+          zernio_profile_id?: string | null
+        }
+        Relationships: []
+      }
+      zernio_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          profile_name: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          zernio_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          profile_name?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          zernio_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          profile_name?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          zernio_profile_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       waiters_public: {
@@ -3766,6 +3906,18 @@ export type Database = {
           _discount?: number
         }
         Returns: Json
+      }
+      admin_zernio_overview: {
+        Args: never
+        Returns: {
+          accounts: Json
+          email: string
+          full_name: string
+          profile_name: string
+          profile_status: string
+          user_id: string
+          zernio_profile_id: string
+        }[]
       }
       affiliate_attribute_signup: {
         Args: { _channel?: string; _code: string }
