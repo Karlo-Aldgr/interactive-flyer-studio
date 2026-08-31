@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export type AdminNavKey = "users" | "jobs" | "editors" | "analytics" | "contacts" | "examples" | "mini-ads" | "automation" | "realtor-applications" | "realtor-portal" | "affiliates" | "marketing" | "social-accounts";
+export type AdminNavKey = "users" | "jobs" | "editors" | "analytics" | "contacts" | "examples" | "mini-ads" | "automation" | "realtor-applications" | "realtor-portal" | "affiliates" | "marketing" | "social-accounts" | "zernio-settings";
 
 type AdminNavProps = {
   active?: AdminNavKey;
@@ -22,6 +22,7 @@ export const ADMIN_NAV_LINKS: { key: AdminNavKey; to: string; label: string }[] 
   { key: "editors", to: "/admin/editors", label: "Editors" },
   { key: "marketing", to: "/admin/marketing", label: "Marketing" },
   { key: "social-accounts", to: "/admin/social-accounts", label: "Social accounts" },
+  { key: "zernio-settings", to: "/admin/zernio-settings", label: "Zernio settings" },
 
   { key: "realtor-applications", to: "/admin/realtor-applications", label: "Listings overview" },
   { key: "realtor-portal", to: "/realtor", label: "Realtor portal" },
@@ -36,7 +37,7 @@ const PRIMARY_NAV_KEYS: AdminNavKey[] = ["users", "jobs"];
 
 const NAV_GROUPS: { label: string; keys: AdminNavKey[] }[] = [
   { label: "Operations", keys: ["editors", "contacts", "automation", "affiliates"] },
-  { label: "Marketing", keys: ["marketing", "social-accounts"] },
+  { label: "Marketing", keys: ["marketing", "social-accounts", "zernio-settings"] },
   { label: "Realtor", keys: ["realtor-applications", "realtor-portal"] },
   { label: "Content", keys: ["examples", "mini-ads"] },
 ];
