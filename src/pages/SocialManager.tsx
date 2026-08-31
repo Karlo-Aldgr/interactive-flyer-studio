@@ -7,6 +7,7 @@ import { PublishedPanel, ScheduledPanel } from "@/components/social/PostListPane
 import { AnalyticsPanel } from "@/components/social/AnalyticsPanel";
 import { IntegrationsPanel } from "@/components/social/IntegrationsPanel";
 import { SocialHistoryPanel } from "@/components/social/SocialHistoryPanel";
+import { ZernioAccountsPanel } from "@/components/social/ZernioAccountsPanel";
 
 
 export default function SocialManager() {
@@ -26,6 +27,7 @@ export default function SocialManager() {
       <Tabs defaultValue="accounts">
         <TabsList className="flex-wrap">
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
+          <TabsTrigger value="zernio">New connections</TabsTrigger>
           <TabsTrigger value="compose">Create Social Post</TabsTrigger>
           <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
           <TabsTrigger value="published">Published</TabsTrigger>
@@ -36,6 +38,9 @@ export default function SocialManager() {
 
         <TabsContent value="accounts" className="pt-4">
           <ConnectPlatformGrid social={social} />
+        </TabsContent>
+        <TabsContent value="zernio" className="pt-4">
+          <ZernioAccountsPanel />
         </TabsContent>
         <TabsContent value="compose" className="pt-4">
           <ComposerPanel social={social} />
