@@ -36,7 +36,7 @@ const PRIMARY_NAV_KEYS: AdminNavKey[] = ["users", "jobs"];
 
 const NAV_GROUPS: { label: string; keys: AdminNavKey[] }[] = [
   { label: "Operations", keys: ["editors", "contacts", "automation", "affiliates"] },
-  { label: "Marketing", keys: ["marketing"] },
+  { label: "Marketing", keys: ["marketing", "social-accounts"] },
   { label: "Realtor", keys: ["realtor-applications", "realtor-portal"] },
   { label: "Content", keys: ["examples", "mini-ads"] },
 ];
