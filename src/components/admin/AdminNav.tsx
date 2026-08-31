@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export type AdminNavKey = "users" | "jobs" | "editors" | "analytics" | "contacts" | "examples" | "mini-ads" | "automation" | "realtor-applications" | "realtor-portal" | "affiliates" | "marketing";
+export type AdminNavKey = "users" | "jobs" | "editors" | "analytics" | "contacts" | "examples" | "mini-ads" | "automation" | "realtor-applications" | "realtor-portal" | "affiliates" | "marketing" | "social-accounts";
 
 type AdminNavProps = {
   active?: AdminNavKey;
