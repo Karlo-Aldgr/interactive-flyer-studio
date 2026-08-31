@@ -1199,6 +1199,36 @@ export type Database = {
           },
         ]
       }
+      integration_secrets: {
+        Row: {
+          key: string
+          last_test_message: string | null
+          last_test_ok: boolean | null
+          last_tested_at: string | null
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          key: string
+          last_test_message?: string | null
+          last_test_ok?: boolean | null
+          last_tested_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          key?: string
+          last_test_message?: string | null
+          last_test_ok?: boolean | null
+          last_tested_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           admin_notes: string | null
