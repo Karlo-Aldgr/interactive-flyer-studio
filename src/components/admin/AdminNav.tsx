@@ -21,6 +21,8 @@ export const ADMIN_NAV_LINKS: { key: AdminNavKey; to: string; label: string }[] 
   { key: "jobs", to: "/admin/jobs", label: "Jobs" },
   { key: "editors", to: "/admin/editors", label: "Editors" },
   { key: "marketing", to: "/admin/marketing", label: "Marketing" },
+  { key: "social-accounts", to: "/admin/social-accounts", label: "Social accounts" },
+
   { key: "realtor-applications", to: "/admin/realtor-applications", label: "Listings overview" },
   { key: "realtor-portal", to: "/realtor", label: "Realtor portal" },
   { key: "affiliates", to: "/admin/affiliates", label: "Affiliates" },
