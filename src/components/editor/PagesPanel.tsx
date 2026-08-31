@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { loadWebsiteSources } from "@/lib/websiteSources";
 import { buildWebsiteProfile, type WebsiteSectionKey } from "@/lib/websiteProfile";
 import { WebsiteSectionsDialog } from "@/components/editor/WebsiteSectionsDialog";
+import type { WebsiteTemplateId } from "@/lib/websiteTemplates";
 
 const PRESET_OPTIONS: { value: IntroPreset; label: string }[] = [
   { value: "none", label: "None" },
@@ -81,7 +82,7 @@ export function PagesPanel() {
   };
 
   /** Builds the website with ONLY the sections the client picked. */
-  const createWebsiteWithSections = async (sections: WebsiteSectionKey[]) => {
+  const createWebsiteWithSections = async (sections: WebsiteSectionKey[], templateId: WebsiteTemplateId) => {
     const state = useEditorStore.getState();
     const currentFlyer = state.flyer;
     if (!currentFlyer) return;
@@ -90,7 +91,7 @@ export function PagesPanel() {
       // Combine the client's dashboard/profile info with this project's own data.
       const sources = await loadWebsiteSources(currentFlyer);
       const profile = buildWebsiteProfile({ flyer: currentFlyer, pages: state.pages, sources });
-      addWebsitePage({ ...profile, sections });
+      addWebsitePage({ ...profile, sections }, templateId);
       setSectionsOpen(false);
       toast.success("Website page created with your selected sections");
     } catch {
@@ -662,7 +663,7 @@ export function PagesPanel() {
         open={sectionsOpen}
         onOpenChange={setSectionsOpen}
         loading={creatingWebsite}
-        onConfirm={(sections) => { void createWebsiteWithSections(sections); }}
+        onConfirm={(sections, templateId) => { void createWebsiteWithSections(sections, templateId); }}
       />
     </div>
   );
