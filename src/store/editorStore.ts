@@ -8,7 +8,8 @@ import { buildBizadPage, BIZAD_PAGE_WIDTH } from "@/lib/bizadPage";
 import { centerBizadLayerPatches } from "@/lib/bizadLayoutUtils";
 import { bizadTileActionPatches } from "@/lib/bizadTileActions";
 
-import { buildWebsitePage, type WebsiteDevice } from "@/lib/websitePage";
+import { type WebsiteDevice } from "@/lib/websitePage";
+import { buildWebsitePageWithTemplate, type WebsiteTemplateId } from "@/lib/websiteTemplates";
 import type { WebsiteProfile } from "@/lib/websiteProfile";
 
 import type { BizadRecord } from "@/lib/bizad";
@@ -128,7 +129,7 @@ interface EditorState {
   centerPageLayout: (pageId: string) => number;
   repairBizadLinks: (pageId: string, bizad: BizadRecord) => number;
 
-  addWebsitePage: (profile: WebsiteProfile) => string;
+  addWebsitePage: (profile: WebsiteProfile, templateId?: WebsiteTemplateId) => string;
   setWebsiteDevice: (device: WebsiteDevice) => void;
   setPageSize: (id: string, w: number, h: number, mode: ResizeMode) => void;
 
@@ -867,7 +868,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
 
   /** Creates the single long-scrolling Website page (or selects it if it already exists). */
-  addWebsitePage: (profile) => {
+  addWebsitePage: (profile, templateId) => {
     const s = get();
     if (!s.flyer) return "";
     const existing = s.pages.find((p) => p.background?.websitePage);
@@ -876,7 +877,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return existing.id;
     }
     const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
-    const page = buildWebsitePage(s.flyer.id, s.pages.length, profile);
+    const page = buildWebsitePageWithTemplate(templateId, s.flyer.id, s.pages.length, profile);
     set({
       pages: [...s.pages, page],
       selectedPageId: page.id,
@@ -912,7 +913,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       counts[type] = (counts[type] ?? 0) + 1;
       return `${type}#${counts[type]}`;
     };
-    const baseline = buildWebsitePage(s.flyer.id, page.index, profile, current);
+    const templateId = page.background?.websiteTemplate as WebsiteTemplateId | undefined;
+    const baseline = buildWebsitePageWithTemplate(templateId, s.flyer.id, page.index, profile, current);
     const baseCounts: Record<string, number> = {};
     const baseMap = new Map(baseline.layers.map((l) => [keyOf(baseCounts, l.type), l]));
     const curCounts: Record<string, number> = {};
@@ -928,7 +930,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (Object.keys(o).length) overrides.set(key, o);
     }
 
-    const rebuilt = buildWebsitePage(s.flyer.id, page.index, profile, device);
+    const rebuilt = buildWebsitePageWithTemplate(templateId, s.flyer.id, page.index, profile, device);
     const newCounts: Record<string, number> = {};
     const layers = rebuilt.layers.map((l) => {
       const key = keyOf(newCounts, l.type);

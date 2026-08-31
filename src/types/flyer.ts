@@ -519,6 +519,8 @@ export interface FlyerPage {
     bizadLayoutSource?: string;
     /** Marks this page as the single long-scrolling Website page (editor-only for now). */
     websitePage?: boolean;
+    /** Which website template the page was generated from (e.g. "wavex", "dazzle"). */
+    websiteTemplate?: string;
     /** Which responsive width the Website page is currently being edited at. */
     websiteDevice?: "desktop" | "tablet" | "mobile";
     /** Snapshot of the client/project profile the Website was generated from (used to rebuild per viewport). */
