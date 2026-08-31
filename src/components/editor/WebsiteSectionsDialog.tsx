@@ -115,7 +115,7 @@ export function WebsiteSectionsDialog({ open, onOpenChange, onConfirm, loading }
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" disabled={loading} onClick={() => onConfirm(selected)}>
+          <Button type="button" disabled={loading} onClick={() => onConfirm(selected, template)}>
             {loading ? "Building website..." : "Create website"}
           </Button>
         </DialogFooter>
