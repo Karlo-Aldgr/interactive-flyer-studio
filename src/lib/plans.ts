@@ -28,7 +28,7 @@ export type PlanDraft = Omit<Plan, "id"> & { id?: string };
 export type ClientLimits = {
   plan: Plan | null;
   usage: { posts_this_month: number; scheduled_posts: number; connected_accounts: number };
-  subscription: { status: string; current_period_end: string | null } | null;
+  subscription?: { status: string; current_period_end: string | null } | null;
 };
 
 export function formatPrice(cents: number, currency = "USD") {
