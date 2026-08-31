@@ -229,11 +229,16 @@ export default function Landing() {
             <img src={logo} alt="Tap That Flyer" className="mx-auto h-auto w-full max-w-[240px] sm:max-w-[300px] md:max-w-[360px]" />
           </Reveal>
           <Reveal delay={60}>
-            <h1 className="mt-3 font-display text-[clamp(1.75rem,5.2vw,3.5rem)] font-extrabold uppercase leading-[1.05] tracking-tight">
-              <span className="text-[#0a1f44]">Are your </span>
-              <span className="text-[#1e9fff]">flyers</span>
+            <h1 className="mx-auto mt-3 max-w-4xl font-display text-[clamp(1.25rem,3.8vw,2.65rem)] font-extrabold uppercase leading-[1.12] tracking-tight">
+              <span className="text-[#0a1f44]">Do your business </span>
+              <span className="text-[#ff8a00]">lack marketing</span>
+              <span className="text-[#0a1f44]">,</span>
+              <br className="hidden sm:inline" />
+              <span className="text-[#1e9fff]">do you have time to do it</span>
+              <span className="text-[#0a1f44]">,</span>
               <br />
-              <span className="text-[#ff8a00]">getting ignored?</span>
+              <span className="text-[#0a1f44]">and </span>
+              <span className="text-[#ff8a00]">do you know what to do?</span>
             </h1>
           </Reveal>
           <Reveal delay={120}>
