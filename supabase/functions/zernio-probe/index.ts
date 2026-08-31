@@ -1,27 +1,36 @@
-// TEMPORARY diagnostic: verifies the Zernio API key works server-side.
-// Returns HTTP status codes and shapes only — never the key.
+// TEMPORARY diagnostic: verifies profile creation + OAuth URL generation.
+// Returns statuses only — never the key.
 import { corsHeaders, json } from "../_shared/social/cors.ts";
-import { getZernioApiKey } from "../_shared/zernio/secretStore.ts";
-
-const BASE = (Deno.env.get("ZERNIO_BASE_URL")?.trim() || "https://zernio.com/api/v1").replace(/\/$/, "");
+import { remoteId, unwrapOne, zernio, type ZernioProfile } from "../_shared/zernio/client.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const key = await getZernioApiKey();
-  if (!key) return json({ configured: false }, 200);
 
-  const paths = ["/profiles", "/accounts", "/platforms", "/me", "/posts"];
-  const results: Record<string, unknown> = {};
-  for (const p of paths) {
-    try {
-      const res = await fetch(BASE + p, {
-        headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
-      });
-      const text = (await res.text()).slice(0, 400);
-      results[p] = { status: res.status, body: text };
-    } catch (e) {
-      results[p] = { error: String((e as Error).message).slice(0, 200) };
-    }
+  const verify = await zernio.verify();
+  const name = `TTF Probe ${Date.now()}`;
+  const created = await zernio.createProfile({ name });
+  const profileId = created.ok ? remoteId(unwrapOne<ZernioProfile>(created.data, "profile")) : "";
+
+  let connect: unknown = null;
+  let accounts: unknown = null;
+  if (profileId) {
+    const link = await zernio.connectUrl({
+      profileId,
+      platform: "instagram",
+      redirectUrl: "https://tapthatflyer.com/dashboard/social?zernio_return=1",
+    });
+    connect = link.ok
+      ? { ok: true, hasAuthUrl: Boolean(link.data?.authUrl), host: link.data?.authUrl?.slice(0, 60) }
+      : { ok: false, status: link.status, message: link.message };
+    const acc = await zernio.listAccounts(profileId);
+    accounts = acc.ok ? { ok: true, body: JSON.stringify(acc.data).slice(0, 200) } : { ok: false, message: acc.message };
+    await zernio.deleteProfile(profileId);
   }
-  return json({ configured: true, base: BASE, results });
+
+  return json({
+    verify: { ok: verify.ok, status: verify.status },
+    create_profile: created.ok ? { ok: true, profileId } : { ok: false, status: created.status, message: created.message },
+    connect,
+    accounts,
+  });
 });
