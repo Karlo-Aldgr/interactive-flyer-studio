@@ -37,6 +37,7 @@ const SubmitJob = lazy(() => import("./pages/SubmitJob"));
 const MyJobs = lazy(() => import("./pages/MyJobs"));
 const SocialManager = lazy(() => import("./pages/SocialManager"));
 const AdminSocialAccounts = lazy(() => import("./pages/AdminSocialAccounts"));
+const AdminZernioSettings = lazy(() => import("./pages/AdminZernioSettings"));
 const JobDetail = lazy(() => import("./pages/JobDetail"));
 const EditJob = lazy(() => import("./pages/EditJob"));
 const WaiterPortal = lazy(() => import("./pages/WaiterPortal"));
@@ -175,6 +176,7 @@ const App = () => (
               <Route path="/admin/affiliates" element={<ProtectedRoute><AdminAffiliates /></ProtectedRoute>} />
               <Route path="/admin/marketing" element={<ProtectedRoute><AdminMarketing /></ProtectedRoute>} />
               <Route path="/admin/social-accounts" element={<ProtectedRoute><AdminSocialAccounts /></ProtectedRoute>} />
+              <Route path="/admin/zernio-settings" element={<ProtectedRoute><AdminZernioSettings /></ProtectedRoute>} />
               <Route path="/admin/marketing/:tab" element={<ProtectedRoute><AdminMarketing /></ProtectedRoute>} />
               <Route path="/marketing" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
               <Route path="/marketing/:tab" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
