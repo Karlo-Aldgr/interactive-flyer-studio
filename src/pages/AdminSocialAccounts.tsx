@@ -17,9 +17,11 @@ export default function AdminSocialAccounts() {
   });
 
   return (
-    <AdminLayout active="social-accounts" title="Social Accounts">
+    <AdminLayout active="social-accounts">
       <div className="space-y-4">
+        <h1 className="text-2xl font-bold">Social Accounts</h1>
         <p className="text-sm text-muted-foreground">
+
           Each client maps to one Zernio profile. Connections are managed by the client from their
           own dashboard.
         </p>
