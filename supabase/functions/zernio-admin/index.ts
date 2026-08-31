@@ -2,7 +2,7 @@
 // it is never returned to the browser.
 import { corsHeaders, json } from "../_shared/social/cors.ts";
 import { requireUser, serviceClient } from "../_shared/social/store.ts";
-import { unwrapList, zernio } from "../_shared/zernio/client.ts";
+import { normalizePlatform, remoteId, unwrapList, zernio } from "../_shared/zernio/client.ts";
 import {
   envZernioKey,
   getZernioApiKey,
