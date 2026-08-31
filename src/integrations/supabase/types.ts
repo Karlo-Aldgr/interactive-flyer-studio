@@ -4273,7 +4273,7 @@ export type Database = {
       }
       archive_menu_orders_daily: { Args: never; Returns: number }
       check_novel_payment: { Args: { _payment_ref: string }; Returns: Json }
-      client_plan_limits: { Args: { _user_id: string }; Returns: Json }
+      client_plan_limits: { Args: { _user_id?: string }; Returns: Json }
       current_user_can_edit: { Args: never; Returns: boolean }
       customer_delete_job: {
         Args: { _job_id: string; _reason: string }
