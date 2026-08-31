@@ -1,6 +1,8 @@
 // Server-only Zernio API service layer.
 // The business API key lives in ZERNIO_API_KEY and never leaves this boundary.
 
+import { getZernioApiKey } from "./secretStore.ts";
+
 const BASE_URL = (Deno.env.get("ZERNIO_BASE_URL")?.trim() || "https://zernio.com/api/v1").replace(
   /\/$/,
   "",
@@ -27,8 +29,8 @@ export type ZernioFailure = {
 export type ZernioSuccess<T> = { ok: true; status: number; data: T };
 export type ZernioResult<T> = ZernioSuccess<T> | ZernioFailure;
 
-export function zernioConfigured() {
-  return Boolean(Deno.env.get("ZERNIO_API_KEY")?.trim());
+export async function zernioConfigured(): Promise<boolean> {
+  return Boolean(await getZernioApiKey());
 }
 
 const FRIENDLY: Record<ZernioErrorCategory, string> = {
@@ -63,7 +65,7 @@ async function request<T>(
   body?: unknown,
   query?: Record<string, string | undefined>,
 ): Promise<ZernioResult<T>> {
-  const key = Deno.env.get("ZERNIO_API_KEY")?.trim();
+  const key = await getZernioApiKey();
   if (!key) return fail("not_configured");
 
   const url = new URL(BASE_URL + (path.startsWith("/") ? path : `/${path}`));

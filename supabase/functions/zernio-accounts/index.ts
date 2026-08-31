@@ -267,7 +267,8 @@ Deno.serve(async (req) => {
   const action = String(body.action ?? "status");
   const supabase = serviceClient();
 
-  if (!zernioConfigured() && action !== "status") {
+  const configured = await zernioConfigured();
+  if (!configured && action !== "status") {
     return json({
       error:
         "Social publishing is not configured yet. An administrator needs to add the Zernio API key.",
@@ -285,7 +286,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       const accounts = profile ? await listStoredAccounts(supabase, profile.id) : [];
       return json({
-        configured: zernioConfigured(),
+        configured,
         profile: profile
           ? { profile_name: profile.profile_name, status: profile.status }
           : null,
