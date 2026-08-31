@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.tiktok-media]
 verify_jwt = false
+
+[functions.zernio-accounts]
+verify_jwt = true
