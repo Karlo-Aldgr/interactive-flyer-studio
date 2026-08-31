@@ -990,11 +990,11 @@ export function buildDazzleWebsitePage(
     if (profile.phone)
       details.push(["Phone", profile.phone, { id: uid(), type: "call", payload: { phone: profile.phone } }]);
     if (profile.whatsapp)
-      details.push(["WhatsApp", profile.whatsapp, { id: uid(), type: "whatsapp", payload: { phone: profile.whatsapp } }]);
+      details.push(["WhatsApp", profile.whatsapp, { id: uid(), type: "open_url", payload: { url: profile.whatsapp, newTab: true } }]);
     if (profile.email)
-      details.push(["Email", profile.email, { id: uid(), type: "email", payload: { email: profile.email } }]);
+      details.push(["Email", profile.email, { id: uid(), type: "open_url", payload: { url: `mailto:${profile.email}`, newTab: false } }]);
     if (profile.address)
-      details.push(["Visit us", profile.address, { id: uid(), type: "map", payload: { address: profile.address } }]);
+      details.push(["Visit us", profile.address, { id: uid(), type: "map", payload: { mapAddress: profile.address } }]);
     if (!details.length) details.push(["Contact", "Add your contact details in the editor", null]);
 
     const g = grid(details.length, device === "mobile" ? 1 : 2);
