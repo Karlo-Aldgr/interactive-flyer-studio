@@ -24,7 +24,9 @@ export async function fetchFlyerLibrary(): Promise<FlyerLibraryItem[]> {
   const userId = auth.user?.id;
   if (!userId) return [];
 
-  const [{ data: flyers, error }, { data: jobs }] = await Promise.all([
+  // Jobs can belong to the user directly (user_id) OR be admin-created jobs
+  // attached to a flyer the user owns. Both must be postable.
+  const [{ data: flyers, error }, { data: ownJobs }, { data: flyerJobs }] = await Promise.all([
     supabase
       .from("flyers")
       .select("id, title, thumbnail_url, public_slug, category, status, updated_at")
@@ -33,17 +35,29 @@ export async function fetchFlyerLibrary(): Promise<FlyerLibraryItem[]> {
       .limit(200),
     supabase
       .from("jobs")
-      .select("id, title, flyer_id, share_unlocked")
+      .select("id, title, flyer_id, share_unlocked, status, created_at")
       .eq("user_id", userId)
+      .is("deleted_at", null)
+      .not("flyer_id", "is", null)
+      .limit(300),
+    supabase
+      .from("jobs")
+      .select("id, title, flyer_id, share_unlocked, status, created_at, flyer:flyers!inner(owner_id)")
+      .eq("flyer.owner_id", userId)
       .is("deleted_at", null)
       .not("flyer_id", "is", null)
       .limit(300),
   ]);
   if (error) throw error;
 
-  const jobByFlyer = new Map(
-    (jobs ?? []).filter((j) => j.flyer_id).map((j) => [j.flyer_id as string, j]),
-  );
+  const jobByFlyer = new Map<string, any>();
+  for (const j of [...(ownJobs ?? []), ...(flyerJobs ?? [])]) {
+    if (!j.flyer_id) continue;
+    const prev = jobByFlyer.get(j.flyer_id as string);
+    const rank = (x: any) => (x.share_unlocked ? 2 : 0) +
+      (["paid", "completed", "delivered"].includes(x.status) ? 1 : 0);
+    if (!prev || rank(j) > rank(prev)) jobByFlyer.set(j.flyer_id as string, j);
+  }
 
   return (flyers ?? []).map((f) => {
     const job = jobByFlyer.get(f.id);
