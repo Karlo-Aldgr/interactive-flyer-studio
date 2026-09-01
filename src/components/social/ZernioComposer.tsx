@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { FlyerPicker } from "@/components/social/FlyerPicker";
-import { flyerImageMedia, type FlyerLibraryItem } from "@/lib/social/flyerLibrary";
+import { fetchFlyerLibrary, flyerImageMedia, type FlyerLibraryItem } from "@/lib/social/flyerLibrary";
 import {
   cancelZernioPost,
   createZernioPost,
@@ -128,12 +128,26 @@ export function ZernioPostList({
 }
 
 /** Zernio-backed composer: pick a project, pick accounts, publish or schedule. */
-export function ZernioComposer() {
+export function ZernioComposer({ initialJobId }: { initialJobId?: string | null } = {}) {
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
   const [flyer, setFlyer] = useState<FlyerLibraryItem | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [scheduledAt, setScheduledAt] = useState("");
+
+  const library = useQuery({
+    queryKey: ["social-flyer-library"],
+    queryFn: fetchFlyerLibrary,
+    staleTime: 60_000,
+    enabled: !!initialJobId,
+  });
+
+  // Preselect the project the client came from (My projects → Post to Socials).
+  useEffect(() => {
+    if (!initialJobId || flyer) return;
+    const match = (library.data ?? []).find((f) => f.job_id === initialJobId);
+    if (match) setFlyer(match);
+  }, [initialJobId, library.data, flyer]);
 
   const status = useQuery({ queryKey: ["zernio-status"], queryFn: fetchZernioStatus, staleTime: 15_000 });
   const posts = useQuery({ queryKey: ["zernio-posts"], queryFn: fetchZernioPosts, staleTime: 10_000 });
