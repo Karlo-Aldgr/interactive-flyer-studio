@@ -180,6 +180,7 @@ const App = () => (
               <Route path="/admin/marketing" element={<ProtectedRoute><AdminMarketing /></ProtectedRoute>} />
               <Route path="/admin/social-accounts" element={<ProtectedRoute><AdminSocialAccounts /></ProtectedRoute>} />
               <Route path="/admin/zernio-settings" element={<ProtectedRoute><AdminZernioSettings /></ProtectedRoute>} />
+              <Route path="/admin/plans" element={<ProtectedRoute><AdminPlans /></ProtectedRoute>} />
               <Route path="/admin/marketing/:tab" element={<ProtectedRoute><AdminMarketing /></ProtectedRoute>} />
               <Route path="/marketing" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
               <Route path="/marketing/:tab" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
