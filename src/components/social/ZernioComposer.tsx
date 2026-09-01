@@ -248,22 +248,42 @@ export function ZernioComposer({
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading your selected project…
               </p>
             )}
+            {initialJobId && !flyer && !library.isLoading && (
+              <p className="text-sm text-muted-foreground">
+                We couldn't load that project automatically — pick it below.
+              </p>
+            )}
             {flyer && (
               <div className="flex items-center gap-3 rounded-lg border p-3">
                 {media[0]?.url ? (
-                  <img
-                    src={media[0].url}
-                    alt={`${flyer.title} media preview`}
-                    className="h-20 w-20 rounded-md object-cover"
-                  />
+                  flyer.media_type === "video" ? (
+                    <video
+                      src={media[0].url}
+                      muted
+                      playsInline
+                      className="h-20 w-20 rounded-md object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={media[0].url}
+                      alt={`${flyer.title} media preview`}
+                      className="h-20 w-20 rounded-md object-cover"
+                    />
+                  )
                 ) : (
                   <div className="flex h-20 w-20 items-center justify-center rounded-md bg-muted text-center text-[11px] text-muted-foreground">
                     No media yet
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="truncate font-medium">{flyer.project_title || flyer.title}</p>
-                  <p className="truncate text-xs text-muted-foreground">{flyer.title}</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Selected project
+                  </p>
+                  <p className="truncate font-medium">{flyer.title}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {flyer.kind === "upload" ? "Uploaded project" : "Designed flyer"}
+                    {flyer.status ? ` · ${flyer.status}` : ""}
+                  </p>
                   {!media[0]?.url && (
                     <p className="text-xs text-destructive">
                       This project has no image yet — open it in the editor and save to generate one.
@@ -280,11 +300,12 @@ export function ZernioComposer({
                 </Button>
               </div>
             )}
-            <FlyerPicker
-              selectedId={flyer?.flyer_id ?? null}
+            <ProjectPicker
+              selectedId={flyer?.job_id ?? null}
               onSelect={setFlyer}
               onClear={() => setFlyer(null)}
             />
+
           </div>
 
           <div className="space-y-2">
