@@ -304,7 +304,7 @@ export function ZernioComposer() {
           {posts.data?.posts.length === 0 && (
             <p className="text-sm text-muted-foreground">Nothing published yet.</p>
           )}
-          {(posts.data?.posts ?? []).map((p) => <PostRow key={p.id} post={p} />)}
+      {(posts.data?.posts ?? []).map((p) => <ZernioPostRow key={p.id} post={p} />)}
         </CardContent>
       </Card>
     </div>
