@@ -51,6 +51,7 @@ const AdminMiniAds = lazy(() => import("./pages/AdminMiniAds"));
 const AdminAutomation = lazy(() => import("./pages/AdminAutomation"));
 const AdminMarketing = lazy(() => import("./pages/AdminMarketing"));
 const ClientMarketing = lazy(() => import("./pages/ClientMarketing"));
+const ClientSocial = lazy(() => import("./pages/ClientSocial"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const RealtorDashboard = lazy(() => import("./pages/RealtorDashboard"));
 const RealtorListing = lazy(() => import("./pages/RealtorListing"));
@@ -184,6 +185,8 @@ const App = () => (
               <Route path="/admin/marketing/:tab" element={<ProtectedRoute><AdminMarketing /></ProtectedRoute>} />
               <Route path="/marketing" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
               <Route path="/marketing/:tab" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
+              <Route path="/social-media" element={<ProtectedRoute><ClientSocial /></ProtectedRoute>} />
+              <Route path="/social-media/:tab" element={<ProtectedRoute><ClientSocial /></ProtectedRoute>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

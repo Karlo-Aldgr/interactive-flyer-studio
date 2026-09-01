@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, FolderKanban, Plus, Sparkles, Home, ClipboardList, BarChart3, Mail } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Plus, Sparkles, Home, ClipboardList, BarChart3, Mail, Share2 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -29,6 +29,7 @@ const baseItems: NavItem[] = [
   { title: "New project", url: "/submit-job", icon: Plus, match: "exact" },
   { title: "Onboarding info", url: "/onboarding", icon: ClipboardList, match: "exact" },
   { title: "Marketing", url: "/marketing", icon: Mail, match: "prefix" },
+  { title: "Social media", url: "/social-media", icon: Share2, match: "prefix" },
   { title: "Examples", url: "/examples", icon: Sparkles, match: "exact" },
 ];
 
