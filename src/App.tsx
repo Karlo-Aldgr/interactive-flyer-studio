@@ -38,6 +38,8 @@ const MyJobs = lazy(() => import("./pages/MyJobs"));
 const SocialManager = lazy(() => import("./pages/SocialManager"));
 const AdminSocialAccounts = lazy(() => import("./pages/AdminSocialAccounts"));
 const AdminZernioSettings = lazy(() => import("./pages/AdminZernioSettings"));
+const AdminPlans = lazy(() => import("./pages/AdminPlans"));
+const Billing = lazy(() => import("./pages/Billing"));
 const JobDetail = lazy(() => import("./pages/JobDetail"));
 const EditJob = lazy(() => import("./pages/EditJob"));
 const WaiterPortal = lazy(() => import("./pages/WaiterPortal"));
@@ -147,6 +149,7 @@ const App = () => (
               <Route path="/admin/analytics" element={<ProtectedRoute><AdminAnalytics /></ProtectedRoute>} />
               <Route path="/submit-job" element={<ProtectedRoute><SubmitJob /></ProtectedRoute>} />
               <Route path="/dashboard/social" element={<ProtectedRoute><SocialManager /></ProtectedRoute>} />
+              <Route path="/dashboard/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
               <Route path="/my-jobs" element={<ProtectedRoute><MyJobs /></ProtectedRoute>} />
               <Route path="/my-jobs/:jobId" element={<ProtectedRoute><JobDetail /></ProtectedRoute>} />
               <Route path="/my-jobs/:jobId/edit" element={<ProtectedRoute><EditJob /></ProtectedRoute>} />
@@ -177,6 +180,7 @@ const App = () => (
               <Route path="/admin/marketing" element={<ProtectedRoute><AdminMarketing /></ProtectedRoute>} />
               <Route path="/admin/social-accounts" element={<ProtectedRoute><AdminSocialAccounts /></ProtectedRoute>} />
               <Route path="/admin/zernio-settings" element={<ProtectedRoute><AdminZernioSettings /></ProtectedRoute>} />
+              <Route path="/admin/plans" element={<ProtectedRoute><AdminPlans /></ProtectedRoute>} />
               <Route path="/admin/marketing/:tab" element={<ProtectedRoute><AdminMarketing /></ProtectedRoute>} />
               <Route path="/marketing" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
               <Route path="/marketing/:tab" element={<ProtectedRoute><ClientMarketing /></ProtectedRoute>} />
