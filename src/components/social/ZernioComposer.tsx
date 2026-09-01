@@ -33,7 +33,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   cancelled: "outline",
 };
 
-function PostRow({ post }: { post: ZernioPostRow }) {
+export function ZernioPostRow({ post }: { post: ZernioPostRow }) {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["zernio-posts"] });
 
