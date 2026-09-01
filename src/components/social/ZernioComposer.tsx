@@ -90,6 +90,43 @@ export function ZernioPostRow({ post }: { post: ZernioPostRow }) {
   );
 }
 
+/** Standalone, filterable list of the signed-in client's Zernio posts. */
+export function ZernioPostList({
+  statuses,
+  emptyMessage = "No posts here yet.",
+}: {
+  statuses?: string[];
+  emptyMessage?: string;
+}) {
+  const posts = useQuery({ queryKey: ["zernio-posts"], queryFn: fetchZernioPosts });
+  const filtered = useMemo(
+    () => (posts.data?.posts ?? []).filter((p) => !statuses || statuses.includes(p.status)),
+    [posts.data, statuses],
+  );
+
+  if (posts.isLoading) return <Skeleton className="h-24 w-full" />;
+  if (posts.error) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-sm text-muted-foreground">
+          We couldn't load your posts right now. Please try again.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {filtered.length === 0 && (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">{emptyMessage}</CardContent>
+        </Card>
+      )}
+      {filtered.map((p) => <ZernioPostRow key={p.id} post={p} />)}
+    </div>
+  );
+}
+
 /** Zernio-backed composer: pick a project, pick accounts, publish or schedule. */
 export function ZernioComposer() {
   const queryClient = useQueryClient();
