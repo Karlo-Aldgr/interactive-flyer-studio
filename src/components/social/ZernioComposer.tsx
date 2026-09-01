@@ -33,7 +33,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   cancelled: "outline",
 };
 
-function PostRow({ post }: { post: ZernioPostRow }) {
+export function ZernioPostRowItem({ post }: { post: ZernioPostRow }) {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["zernio-posts"] });
 
@@ -86,6 +86,43 @@ function PostRow({ post }: { post: ZernioPostRow }) {
           <Trash2 className="mr-2 h-3.5 w-3.5" /> Remove
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** Standalone, filterable list of the signed-in client's Zernio posts. */
+export function ZernioPostList({
+  statuses,
+  emptyMessage = "No posts here yet.",
+}: {
+  statuses?: string[];
+  emptyMessage?: string;
+}) {
+  const posts = useQuery({ queryKey: ["zernio-posts"], queryFn: fetchZernioPosts });
+  const filtered = useMemo(
+    () => (posts.data?.posts ?? []).filter((p) => !statuses || statuses.includes(p.status)),
+    [posts.data, statuses],
+  );
+
+  if (posts.isLoading) return <Skeleton className="h-24 w-full" />;
+  if (posts.error) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-sm text-muted-foreground">
+          We couldn't load your posts right now. Please try again.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {filtered.length === 0 && (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">{emptyMessage}</CardContent>
+        </Card>
+      )}
+      {filtered.map((p) => <ZernioPostRowItem key={p.id} post={p} />)}
     </div>
   );
 }
@@ -267,7 +304,7 @@ export function ZernioComposer() {
           {posts.data?.posts.length === 0 && (
             <p className="text-sm text-muted-foreground">Nothing published yet.</p>
           )}
-          {(posts.data?.posts ?? []).map((p) => <PostRow key={p.id} post={p} />)}
+      {(posts.data?.posts ?? []).map((p) => <ZernioPostRowItem key={p.id} post={p} />)}
         </CardContent>
       </Card>
     </div>
