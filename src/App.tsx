@@ -149,6 +149,7 @@ const App = () => (
               <Route path="/admin/analytics" element={<ProtectedRoute><AdminAnalytics /></ProtectedRoute>} />
               <Route path="/submit-job" element={<ProtectedRoute><SubmitJob /></ProtectedRoute>} />
               <Route path="/dashboard/social" element={<ProtectedRoute><SocialManager /></ProtectedRoute>} />
+              <Route path="/dashboard/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
               <Route path="/my-jobs" element={<ProtectedRoute><MyJobs /></ProtectedRoute>} />
               <Route path="/my-jobs/:jobId" element={<ProtectedRoute><JobDetail /></ProtectedRoute>} />
               <Route path="/my-jobs/:jobId/edit" element={<ProtectedRoute><EditJob /></ProtectedRoute>} />
