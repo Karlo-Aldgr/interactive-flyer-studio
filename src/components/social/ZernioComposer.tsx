@@ -11,8 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { FlyerPicker } from "@/components/social/FlyerPicker";
-import { fetchFlyerLibrary, flyerImageMedia, type FlyerLibraryItem } from "@/lib/social/flyerLibrary";
+import { ProjectPicker } from "@/components/social/ProjectPicker";
+import { fetchProjectLibrary, projectMedia, type ProjectLibraryItem } from "@/lib/social/projectLibrary";
+
 import {
   cancelZernioPost,
   createZernioPost,
@@ -134,26 +135,25 @@ export function ZernioComposer({
 }: { initialJobId?: string | null; extraJobCount?: number } = {}) {
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
-  const [flyer, setFlyer] = useState<FlyerLibraryItem | null>(null);
+  const [flyer, setFlyer] = useState<ProjectLibraryItem | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [scheduledAt, setScheduledAt] = useState("");
 
-  // Always load the library (the picker needs it too) and never serve stale
-  // data: a project created moments ago must show up immediately.
+  // Projects come from `jobs` (designed flyers AND uploads), never stale.
   const library = useQuery({
-    queryKey: ["social-flyer-library"],
-    queryFn: fetchFlyerLibrary,
+    queryKey: ["social-project-library"],
+    queryFn: fetchProjectLibrary,
     staleTime: 0,
     refetchOnMount: "always",
   });
 
   // Preselect the project the client came from (My projects → Post to Socials).
-  // The incoming id may be a job id or a flyer id depending on the entry point.
+  // The incoming id is normally a job id; a flyer id is accepted as a fallback.
   useEffect(() => {
     if (!initialJobId || flyer) return;
-    const match = (library.data ?? []).find(
-      (f) => f.job_id === initialJobId || f.flyer_id === initialJobId,
-    );
+    const rows = library.data ?? [];
+    const match = rows.find((p) => p.job_id === initialJobId)
+      ?? rows.find((p) => p.flyer_id === initialJobId);
     if (match) setFlyer(match);
   }, [initialJobId, library.data, flyer]);
 
@@ -170,9 +170,10 @@ export function ZernioComposer({
   const atPostLimit = maxPosts > 0 && usedPosts >= maxPosts;
 
   const media = useMemo(() => {
-    const item = flyer ? flyerImageMedia(flyer) : null;
-    return item?.url ? [{ type: "image", url: item.url }] : [];
+    const item = flyer ? projectMedia(flyer) : null;
+    return item?.url ? [{ type: item.type, url: item.url }] : [];
   }, [flyer]);
+
 
   const publish = useMutation({
     mutationFn: (mode: "draft" | "publish" | "schedule") =>
