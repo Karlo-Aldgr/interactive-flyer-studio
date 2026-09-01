@@ -40,7 +40,14 @@ export default function MyJobs() {
         navigate("/social-media/accounts");
         return;
       }
-      navigate("/social-media/compose", { state: { jobId: selectedJobs[0].id } });
+      const [first, ...rest] = selectedJobs;
+      navigate(
+        `/social-media/compose?project=${encodeURIComponent(first.id)}${rest.length ? `&more=${rest.length}` : ""}`,
+        { state: { jobId: first.id, extraJobCount: rest.length } },
+      );
+      if (rest.length) {
+        toast.info("You can post one project at a time — the first one is loaded.");
+      }
     } catch {
       toast.error("We couldn't check your social accounts. Please try again.");
     } finally {

@@ -16,10 +16,16 @@ export default function ClientSocial() {
   const { tab } = useParams();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const jobId = (location.state as { jobId?: string } | null)?.jobId
-    ?? searchParams.get("job");
-  const initial = TABS.includes((tab ?? "") as (typeof TABS)[number])
-    ? (tab as (typeof TABS)[number])
+  const state = location.state as { jobId?: string; extraJobCount?: number } | null;
+  const jobId = state?.jobId ?? searchParams.get("project") ?? searchParams.get("job");
+  const extraJobCount = state?.extraJobCount
+    ?? Math.max(0, Number(searchParams.get("more") ?? 0) || 0);
+  const tabParam = searchParams.get("tab");
+  const requested = tab ?? (tabParam === "create-post" ? "compose" : tabParam) ?? "";
+  const initial = TABS.includes(requested as (typeof TABS)[number])
+    ? (requested as (typeof TABS)[number])
+    : jobId
+    ? "compose"
     : "accounts";
 
   return (
@@ -40,7 +46,7 @@ export default function ClientSocial() {
           <ZernioAccountsPanel redirectPath="/social-media" />
         </TabsContent>
         <TabsContent value="compose" className="pt-2">
-          <ZernioComposer initialJobId={jobId} />
+          <ZernioComposer initialJobId={jobId} extraJobCount={extraJobCount} />
         </TabsContent>
         <TabsContent value="scheduled" className="pt-2">
           <ZernioPostList

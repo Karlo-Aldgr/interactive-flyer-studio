@@ -37,12 +37,14 @@ export async function fetchFlyerLibrary(): Promise<FlyerLibraryItem[]> {
       .from("jobs")
       .select("id, title, flyer_id, share_unlocked, status, created_at")
       .eq("user_id", userId)
+      .is("deleted_at", null)
       .not("flyer_id", "is", null)
       .limit(300),
     supabase
       .from("jobs")
       .select("id, title, flyer_id, share_unlocked, status, created_at, flyer:flyers!inner(owner_id)")
       .eq("flyer.owner_id", userId)
+      .is("deleted_at", null)
       .not("flyer_id", "is", null)
       .limit(300),
   ]);

@@ -128,24 +128,32 @@ export function ZernioPostList({
 }
 
 /** Zernio-backed composer: pick a project, pick accounts, publish or schedule. */
-export function ZernioComposer({ initialJobId }: { initialJobId?: string | null } = {}) {
+export function ZernioComposer({
+  initialJobId,
+  extraJobCount = 0,
+}: { initialJobId?: string | null; extraJobCount?: number } = {}) {
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
   const [flyer, setFlyer] = useState<FlyerLibraryItem | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [scheduledAt, setScheduledAt] = useState("");
 
+  // Always load the library (the picker needs it too) and never serve stale
+  // data: a project created moments ago must show up immediately.
   const library = useQuery({
     queryKey: ["social-flyer-library"],
     queryFn: fetchFlyerLibrary,
-    staleTime: 60_000,
-    enabled: !!initialJobId,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   // Preselect the project the client came from (My projects → Post to Socials).
+  // The incoming id may be a job id or a flyer id depending on the entry point.
   useEffect(() => {
     if (!initialJobId || flyer) return;
-    const match = (library.data ?? []).find((f) => f.job_id === initialJobId);
+    const match = (library.data ?? []).find(
+      (f) => f.job_id === initialJobId || f.flyer_id === initialJobId,
+    );
     if (match) setFlyer(match);
   }, [initialJobId, library.data, flyer]);
 
@@ -228,6 +236,49 @@ export function ZernioComposer({ initialJobId }: { initialJobId?: string | null 
         <CardContent className="space-y-5">
           <div className="space-y-2">
             <Label>Choose a project</Label>
+            {extraJobCount > 0 && (
+              <p className="text-sm text-muted-foreground">
+                You selected {extraJobCount + 1} projects. Posts are created one project at a
+                time — this one is loaded first, then come back for the others.
+              </p>
+            )}
+            {initialJobId && !flyer && library.isLoading && (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading your selected project…
+              </p>
+            )}
+            {flyer && (
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                {media[0]?.url ? (
+                  <img
+                    src={media[0].url}
+                    alt={`${flyer.title} media preview`}
+                    className="h-20 w-20 rounded-md object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-md bg-muted text-center text-[11px] text-muted-foreground">
+                    No media yet
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{flyer.project_title || flyer.title}</p>
+                  <p className="truncate text-xs text-muted-foreground">{flyer.title}</p>
+                  {!media[0]?.url && (
+                    <p className="text-xs text-destructive">
+                      This project has no image yet — open it in the editor and save to generate one.
+                    </p>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-auto"
+                  onClick={() => setFlyer(null)}
+                >
+                  Change
+                </Button>
+              </div>
+            )}
             <FlyerPicker
               selectedId={flyer?.flyer_id ?? null}
               onSelect={setFlyer}
