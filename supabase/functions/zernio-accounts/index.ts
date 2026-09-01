@@ -3,94 +3,26 @@
 import { corsHeaders, json } from "../_shared/social/cors.ts";
 import { requireUser, serviceClient } from "../_shared/social/store.ts";
 import {
+  normalizePlatform,
+  remoteId,
   unwrapList,
   unwrapOne,
   zernio,
+  ZERNIO_PLATFORMS,
   zernioConfigured,
   type ZernioAccount,
   type ZernioFailure,
   type ZernioProfile,
 } from "../_shared/zernio/client.ts";
-
-/** Platforms TapThatFlyer is prepared to surface. Availability comes from Zernio. */
-const KNOWN_PLATFORMS = [
-  "instagram",
-  "facebook",
-  "tiktok",
-  "linkedin",
-  "youtube",
-  "x",
-  "pinterest",
-  "threads",
-  "bluesky",
-  "reddit",
-  "google_business",
-  "telegram",
-  "snapchat",
-  "whatsapp",
-  "discord",
-  "slack",
-] as const;
+import { logZernioEvent, planLimits } from "../_shared/zernio/tenancy.ts";
 
 type Supabase = ReturnType<typeof serviceClient>;
-
-async function logEvent(
-  supabase: Supabase,
-  entry: {
-    user_id: string | null;
-    operation: string;
-    zernio_profile_id?: string | null;
-    zernio_account_id?: string | null;
-    platform?: string | null;
-    success: boolean;
-    http_status?: number | null;
-    error_category?: string | null;
-    detail?: string | null;
-  },
-) {
-  // Structured, secret-free audit trail.
-  console.log(
-    JSON.stringify({
-      scope: "zernio",
-      operation: entry.operation,
-      user_id: entry.user_id,
-      profile: entry.zernio_profile_id ?? null,
-      account: entry.zernio_account_id ?? null,
-      platform: entry.platform ?? null,
-      success: entry.success,
-      status: entry.http_status ?? null,
-      error_category: entry.error_category ?? null,
-      at: new Date().toISOString(),
-    }),
-  );
-  await supabase.from("zernio_events").insert({
-    user_id: entry.user_id,
-    operation: entry.operation,
-    zernio_profile_id: entry.zernio_profile_id ?? null,
-    zernio_account_id: entry.zernio_account_id ?? null,
-    platform: entry.platform ?? null,
-    success: entry.success,
-    http_status: entry.http_status ?? null,
-    error_category: entry.error_category ?? null,
-    detail: entry.detail?.slice(0, 500) ?? null,
-  });
-}
 
 function failureBody(f: ZernioFailure) {
   return { error: f.message, code: f.category };
 }
 
-function normalizePlatform(value: unknown) {
-  const raw = String(value ?? "").toLowerCase().trim();
-  if (!raw) return "unknown";
-  if (raw === "twitter") return "x";
-  if (raw === "gmb" || raw === "google-business" || raw === "google_my_business") {
-    return "google_business";
-  }
-  return raw.replace(/[\s-]+/g, "_");
-}
-
-/** Finds, or securely creates, the caller's Zernio profile. */
+/** Finds, or securely creates, the caller's Zernio profile (exactly one per client). */
 async function ensureProfile(supabase: Supabase, userId: string) {
   const { data: existing } = await supabase
     .from("zernio_profiles")
@@ -105,36 +37,51 @@ async function ensureProfile(supabase: Supabase, userId: string) {
     .select("full_name, email")
     .eq("id", userId)
     .maybeSingle();
-  const name = (profileRow?.full_name || profileRow?.email || `Client ${userId.slice(0, 8)}`) as string;
+  const base = (profileRow?.full_name || profileRow?.email || `Client ${userId.slice(0, 8)}`) as string;
+  // Zernio profile names are unique per workspace: suffix keeps clients distinct.
+  const name = `${base} (${userId.slice(0, 6)})`;
 
-  const created = await zernio.createProfile({ name, external_id: userId });
+  const created = await zernio.createProfile({ name }, `ttf-profile-${userId}`);
+
+  let remoteProfileId = "";
+  let remoteName = name;
+
   if (created.ok === false) {
-    await logEvent(supabase, {
-      user_id: userId,
-      operation: "create_profile",
-      success: false,
-      http_status: created.status,
-      error_category: created.category,
-    });
-    return { failure: created };
+    // A duplicate name means the profile already exists remotely — recover it.
+    const details = (created as ZernioFailure & { details?: { existingProfileId?: string } }).details;
+    if (details?.existingProfileId) {
+      remoteProfileId = String(details.existingProfileId);
+    } else {
+      const lookup = await zernio.listProfiles(name);
+      if (lookup.ok) {
+        const match = unwrapList<ZernioProfile>(lookup.data, "profiles")[0];
+        remoteProfileId = remoteId(match);
+      }
+    }
+    if (!remoteProfileId) {
+      await logZernioEvent(supabase, {
+        user_id: userId,
+        operation: "create_profile",
+        success: false,
+        http_status: created.status,
+        error_category: created.category,
+        detail: created.message,
+      });
+      return { failure: created };
+    }
+  } else {
+    const remote = unwrapOne<ZernioProfile>(created.data, "profile");
+    remoteProfileId = remoteId(remote);
+    remoteName = (remote.name as string) ?? name;
   }
 
-  const remote = unwrapOne<ZernioProfile>(created.data);
-  const remoteId = String(remote.id ?? "");
-  if (!remoteId) {
-    await logEvent(supabase, {
-      user_id: userId,
-      operation: "create_profile",
-      success: false,
-      error_category: "unknown",
-      detail: "Zernio returned no profile id",
-    });
+  if (!remoteProfileId) {
     return {
       failure: {
         ok: false as const,
         category: "unknown" as const,
         status: 0,
-        message: "Zernio did not return a profile. Please try again.",
+        message: "The publishing service did not return a profile. Please try again.",
       },
     };
   }
@@ -143,12 +90,13 @@ async function ensureProfile(supabase: Supabase, userId: string) {
     .from("zernio_profiles")
     .insert({
       user_id: userId,
-      zernio_profile_id: remoteId,
-      profile_name: (remote.name as string) ?? name,
+      zernio_profile_id: remoteProfileId,
+      profile_name: remoteName,
       status: "active",
     })
     .select("*")
     .single();
+
   if (error) {
     // Lost a race: re-read the winning row.
     const { data: retry } = await supabase
@@ -163,17 +111,16 @@ async function ensureProfile(supabase: Supabase, userId: string) {
         ok: false as const,
         category: "unknown" as const,
         status: 0,
-        message: "Could not save your Zernio profile. Please try again.",
+        message: "Could not save your publishing profile. Please try again.",
       },
     };
   }
 
-  await logEvent(supabase, {
+  await logZernioEvent(supabase, {
     user_id: userId,
     operation: "create_profile",
-    zernio_profile_id: remoteId,
+    zernio_profile_id: remoteProfileId,
     success: true,
-    http_status: created.status,
   });
   return { row: inserted };
 }
@@ -186,7 +133,7 @@ async function syncAccounts(
 ) {
   const result = await zernio.listAccounts(profile.zernio_profile_id);
   if (result.ok === false) {
-    await logEvent(supabase, {
+    await logZernioEvent(supabase, {
       user_id: userId,
       operation: "sync_accounts",
       zernio_profile_id: profile.zernio_profile_id,
@@ -198,25 +145,30 @@ async function syncAccounts(
   }
 
   const now = new Date().toISOString();
-  const remote = unwrapList<ZernioAccount>(result.data);
+  const remote = unwrapList<ZernioAccount>(result.data, "accounts").filter((a) => {
+    const owner = remoteId(a.profileId);
+    return !owner || owner === profile.zernio_profile_id;
+  });
   const keep: string[] = [];
 
   for (const account of remote) {
-    const remoteId = String(account.id ?? "");
-    if (!remoteId) continue;
-    keep.push(remoteId);
+    const accountId = remoteId(account);
+    if (!accountId) continue;
+    keep.push(accountId);
+    const healthy = account.needsReconnection ? false : account.isActive !== false;
     await supabase.from("zernio_accounts").upsert(
       {
         user_id: userId,
         profile_id: profile.id,
         zernio_profile_id: profile.zernio_profile_id,
-        zernio_account_id: remoteId,
-        platform: normalizePlatform(account.platform ?? account.provider),
-        account_name: (account.name ?? account.display_name ?? null) as string | null,
-        username: (account.username ?? account.handle ?? null) as string | null,
-        avatar_url: (account.avatar_url ?? account.avatar ?? account.picture ?? null) as string | null,
-        status: String(account.status ?? "connected"),
-        connected_at: (account.connected_at as string) ?? now,
+        zernio_account_id: accountId,
+        platform: normalizePlatform(account.platform),
+        account_name: (account.displayName ?? account.name ?? null) as string | null,
+        username: (account.username ?? null) as string | null,
+        avatar_url: (account.profileImageUrl ?? account.avatar ?? null) as string | null,
+        status: healthy ? "connected" : "reconnect_required",
+        status_detail: account.needsReconnection ? "This account needs to be reconnected." : null,
+        connected_at: (account.createdAt as string) ?? now,
         last_synced_at: now,
         metadata: account as Record<string, unknown>,
       },
@@ -234,7 +186,7 @@ async function syncAccounts(
   if (keep.length) stale = stale.not("zernio_account_id", "in", `(${keep.join(",")})`);
   await stale;
 
-  await logEvent(supabase, {
+  await logZernioEvent(supabase, {
     user_id: userId,
     operation: "sync_accounts",
     zernio_profile_id: profile.zernio_profile_id,
@@ -271,7 +223,7 @@ Deno.serve(async (req) => {
   if (!configured && action !== "status") {
     return json({
       error:
-        "Social publishing is not configured yet. An administrator needs to add the Zernio API key.",
+        "Social publishing is not configured yet. An administrator needs to finish the setup.",
       code: "not_configured",
     }, 400);
   }
@@ -287,12 +239,11 @@ Deno.serve(async (req) => {
       const accounts = profile ? await listStoredAccounts(supabase, profile.id) : [];
       return json({
         configured,
-        profile: profile
-          ? { profile_name: profile.profile_name, status: profile.status }
-          : null,
+        profile: profile ? { profile_name: profile.profile_name, status: profile.status } : null,
         has_profile: Boolean(profile),
-        platforms: KNOWN_PLATFORMS,
+        platforms: ZERNIO_PLATFORMS,
         accounts,
+        limits: await planLimits(supabase, user.id),
       });
     }
 
@@ -301,65 +252,88 @@ Deno.serve(async (req) => {
       if (ensured.failure) return json(failureBody(ensured.failure), 400);
       const profile = ensured.row!;
 
-      if (action === "ensure_profile") {
-        return json({ ok: true, has_profile: true });
-      }
+      if (action === "ensure_profile") return json({ ok: true, has_profile: true });
 
       if (action === "sync") {
         const synced = await syncAccounts(supabase, user.id, profile);
         if (synced.failure) return json(failureBody(synced.failure), 400);
-        return json({ ok: true, accounts: await listStoredAccounts(supabase, profile.id) });
+        return json({
+          ok: true,
+          accounts: await listStoredAccounts(supabase, profile.id),
+          limits: await planLimits(supabase, user.id),
+        });
       }
 
-      // connect
-      const platform = body.platform ? normalizePlatform(body.platform) : undefined;
-      const redirectPath = typeof body.redirect_path === "string" && body.redirect_path.startsWith("/")
-        ? body.redirect_path
-        : "/dashboard/social";
+      // ---- connect: server-side plan enforcement before handing out a URL --
+      const platform = normalizePlatform(body.platform);
+      if (!ZERNIO_PLATFORMS.includes(platform as typeof ZERNIO_PLATFORMS[number])) {
+        return json({ error: "That platform is not available yet.", code: "invalid_request" }, 400);
+      }
+
+      const limits = await planLimits(supabase, user.id);
+      const max = limits.plan?.max_social_accounts ?? 0;
+      if (max > 0 && limits.usage.connected_accounts >= max) {
+        return json({
+          error:
+            "You've reached your social account limit. Upgrade your plan to connect more accounts.",
+          code: "limit_reached",
+          limits,
+        }, 402);
+      }
+
+      const redirectPath =
+        typeof body.redirect_path === "string" && body.redirect_path.startsWith("/")
+          ? body.redirect_path
+          : "/dashboard/social";
       const appBase = (Deno.env.get("SOCIAL_APP_BASE_URL")?.trim() || "https://tapthatflyer.com")
         .replace(/\/$/, "");
-      const link = await zernio.createConnectionUrl({
+
+      const link = await zernio.connectUrl({
         profileId: profile.zernio_profile_id,
         platform,
-        redirectUrl: `${appBase}${redirectPath}?zernio_connected=1`,
+        redirectUrl: `${appBase}${redirectPath}?zernio_return=1`,
       });
       if (link.ok === false) {
-        await logEvent(supabase, {
+        await logZernioEvent(supabase, {
           user_id: user.id,
           operation: "connect_url",
           zernio_profile_id: profile.zernio_profile_id,
-          platform: platform ?? null,
+          platform,
           success: false,
           http_status: link.status,
           error_category: link.category,
+          detail: link.message,
         });
         return json(failureBody(link), 400);
       }
-      const payload = unwrapOne<Record<string, unknown>>(link.data);
-      const authorizeUrl = [payload.url, payload.connect_url, payload.authorize_url, payload.link]
-        .find((v) => typeof v === "string" && v);
+      const authorizeUrl = (link.data as { authUrl?: string })?.authUrl;
       if (!authorizeUrl) {
-        await logEvent(supabase, {
+        await logZernioEvent(supabase, {
           user_id: user.id,
           operation: "connect_url",
           zernio_profile_id: profile.zernio_profile_id,
-          platform: platform ?? null,
+          platform,
           success: false,
           error_category: "unknown",
-          detail: "no url in response",
+          detail: "no authUrl in response",
         });
         return json({
-          error: "Zernio did not return a connection link. Please try again.",
+          error: "We could not start that connection. Please try again.",
           code: "unknown",
         }, 400);
       }
-      await logEvent(supabase, {
+      await logZernioEvent(supabase, {
         user_id: user.id,
         operation: "connect_url",
         zernio_profile_id: profile.zernio_profile_id,
-        platform: platform ?? null,
+        platform,
         success: true,
         http_status: link.status,
+      });
+      await supabase.from("usage_events").insert({
+        user_id: user.id,
+        event_type: "social_connect_started",
+        metadata: { platform },
       });
       return json({ authorize_url: String(authorizeUrl) });
     }
@@ -377,7 +351,7 @@ Deno.serve(async (req) => {
       }
       const result = await zernio.disconnectAccount(row.zernio_account_id);
       if (result.ok === false && result.category !== "not_found") {
-        await logEvent(supabase, {
+        await logZernioEvent(supabase, {
           user_id: user.id,
           operation: "disconnect",
           zernio_profile_id: row.zernio_profile_id,
@@ -393,7 +367,7 @@ Deno.serve(async (req) => {
         .from("zernio_accounts")
         .update({ status: "disconnected", last_synced_at: new Date().toISOString() })
         .eq("id", row.id);
-      await logEvent(supabase, {
+      await logZernioEvent(supabase, {
         user_id: user.id,
         operation: "disconnect",
         zernio_profile_id: row.zernio_profile_id,
@@ -401,12 +375,16 @@ Deno.serve(async (req) => {
         platform: row.platform,
         success: true,
       });
-      return json({ ok: true, accounts: await listStoredAccounts(supabase, row.profile_id) });
+      return json({
+        ok: true,
+        accounts: await listStoredAccounts(supabase, row.profile_id),
+        limits: await planLimits(supabase, user.id),
+      });
     }
 
     return json({ error: "Unknown action" }, 400);
-  } catch (err) {
-    console.error("[zernio-accounts]", err instanceof Error ? err.message : "unknown error");
-    return json({ error: "Something went wrong. Please try again.", code: "unknown" }, 500);
+  } catch (_err) {
+    console.error(JSON.stringify({ scope: "zernio", operation: action, success: false }));
+    return json({ error: "Something went wrong. Please try again." }, 500);
   }
 });

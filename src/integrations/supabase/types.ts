@@ -1007,6 +1007,92 @@ export type Database = {
         }
         Relationships: []
       }
+      client_subscriptions: {
+        Row: {
+          cancel_at: string | null
+          created_at: string
+          current_period_end: string
+          current_period_start: string
+          id: string
+          plan_id: string | null
+          provider_customer_id: string | null
+          provider_subscription_id: string | null
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancel_at?: string | null
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          plan_id?: string | null
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancel_at?: string | null
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          plan_id?: string | null
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_usage: {
+        Row: {
+          accounts_connected: number
+          created_at: string
+          id: string
+          period_start: string
+          posts_created: number
+          scheduled_posts: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accounts_connected?: number
+          created_at?: string
+          id?: string
+          period_start?: string
+          posts_created?: number
+          scheduled_posts?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accounts_connected?: number
+          created_at?: string
+          id?: string
+          period_start?: string
+          posts_created?: number
+          scheduled_posts?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       example_flyers: {
         Row: {
           created_at: string
@@ -2608,6 +2694,119 @@ export type Database = {
           },
         ]
       }
+      plan_features: {
+        Row: {
+          created_at: string
+          display_order: number
+          feature_key: string
+          feature_label: string
+          feature_value: string | null
+          id: string
+          included: boolean
+          plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          feature_key: string
+          feature_label: string
+          feature_value?: string | null
+          id?: string
+          included?: boolean
+          plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          feature_key?: string
+          feature_label?: string
+          feature_value?: string | null
+          id?: string
+          included?: boolean
+          plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_features_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          active: boolean
+          ai_features: boolean
+          analytics_access: boolean
+          billing_period: string
+          created_at: string
+          currency: string
+          description: string | null
+          display_order: number
+          id: string
+          is_default: boolean
+          max_posts_per_month: number
+          max_scheduled_posts: number
+          max_social_accounts: number
+          max_team_members: number
+          name: string
+          price_cents: number
+          priority_support: boolean
+          promo_text: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          ai_features?: boolean
+          analytics_access?: boolean
+          billing_period?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_default?: boolean
+          max_posts_per_month?: number
+          max_scheduled_posts?: number
+          max_social_accounts?: number
+          max_team_members?: number
+          name: string
+          price_cents?: number
+          priority_support?: boolean
+          promo_text?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          ai_features?: boolean
+          analytics_access?: boolean
+          billing_period?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_default?: boolean
+          max_posts_per_month?: number
+          max_scheduled_posts?: number
+          max_social_accounts?: number
+          max_team_members?: number
+          name?: string
+          price_cents?: number
+          priority_support?: boolean
+          promo_text?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       poll_votes: {
         Row: {
           action_id: string
@@ -3524,6 +3723,33 @@ export type Database = {
         }
         Relationships: []
       }
+      usage_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          quantity: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          quantity?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          quantity?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -3681,6 +3907,83 @@ export type Database = {
           zernio_profile_id?: string | null
         }
         Relationships: []
+      }
+      zernio_posts: {
+        Row: {
+          account_ids: Json
+          content: string
+          created_at: string
+          id: string
+          last_error: string | null
+          media: Json
+          platforms: Json
+          profile_id: string | null
+          provider: string
+          published_at: string | null
+          response: Json | null
+          scheduled_at: string | null
+          status: string
+          timezone: string
+          title: string | null
+          updated_at: string
+          user_id: string
+          zernio_account_ids: Json
+          zernio_post_id: string | null
+          zernio_profile_id: string | null
+        }
+        Insert: {
+          account_ids?: Json
+          content?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          media?: Json
+          platforms?: Json
+          profile_id?: string | null
+          provider?: string
+          published_at?: string | null
+          response?: Json | null
+          scheduled_at?: string | null
+          status?: string
+          timezone?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          zernio_account_ids?: Json
+          zernio_post_id?: string | null
+          zernio_profile_id?: string | null
+        }
+        Update: {
+          account_ids?: Json
+          content?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          media?: Json
+          platforms?: Json
+          profile_id?: string | null
+          provider?: string
+          published_at?: string | null
+          response?: Json | null
+          scheduled_at?: string | null
+          status?: string
+          timezone?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          zernio_account_ids?: Json
+          zernio_post_id?: string | null
+          zernio_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zernio_posts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "zernio_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       zernio_profiles: {
         Row: {
@@ -3970,6 +4273,7 @@ export type Database = {
       }
       archive_menu_orders_daily: { Args: never; Returns: number }
       check_novel_payment: { Args: { _payment_ref: string }; Returns: Json }
+      client_plan_limits: { Args: { _user_id?: string }; Returns: Json }
       current_user_can_edit: { Args: never; Returns: boolean }
       customer_delete_job: {
         Args: { _job_id: string; _reason: string }
