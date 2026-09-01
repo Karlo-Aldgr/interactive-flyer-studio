@@ -8,6 +8,7 @@ import { AnalyticsPanel } from "@/components/social/AnalyticsPanel";
 import { IntegrationsPanel } from "@/components/social/IntegrationsPanel";
 import { SocialHistoryPanel } from "@/components/social/SocialHistoryPanel";
 import { ZernioAccountsPanel } from "@/components/social/ZernioAccountsPanel";
+import { ZernioComposer } from "@/components/social/ZernioComposer";
 
 
 export default function SocialManager() {
