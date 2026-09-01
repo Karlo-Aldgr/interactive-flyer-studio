@@ -38,6 +38,8 @@ const MyJobs = lazy(() => import("./pages/MyJobs"));
 const SocialManager = lazy(() => import("./pages/SocialManager"));
 const AdminSocialAccounts = lazy(() => import("./pages/AdminSocialAccounts"));
 const AdminZernioSettings = lazy(() => import("./pages/AdminZernioSettings"));
+const AdminPlans = lazy(() => import("./pages/AdminPlans"));
+const Billing = lazy(() => import("./pages/Billing"));
 const JobDetail = lazy(() => import("./pages/JobDetail"));
 const EditJob = lazy(() => import("./pages/EditJob"));
 const WaiterPortal = lazy(() => import("./pages/WaiterPortal"));
