@@ -33,7 +33,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   cancelled: "outline",
 };
 
-export function ZernioPostRow({ post }: { post: ZernioPostRow }) {
+export function ZernioPostRowItem({ post }: { post: ZernioPostRow }) {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["zernio-posts"] });
 
@@ -122,7 +122,7 @@ export function ZernioPostList({
           <CardContent className="pt-6 text-sm text-muted-foreground">{emptyMessage}</CardContent>
         </Card>
       )}
-      {filtered.map((p) => <ZernioPostRow key={p.id} post={p} />)}
+      {filtered.map((p) => <ZernioPostRowItem key={p.id} post={p} />)}
     </div>
   );
 }
@@ -304,7 +304,7 @@ export function ZernioComposer() {
           {posts.data?.posts.length === 0 && (
             <p className="text-sm text-muted-foreground">Nothing published yet.</p>
           )}
-      {(posts.data?.posts ?? []).map((p) => <ZernioPostRow key={p.id} post={p} />)}
+      {(posts.data?.posts ?? []).map((p) => <ZernioPostRowItem key={p.id} post={p} />)}
         </CardContent>
       </Card>
     </div>
