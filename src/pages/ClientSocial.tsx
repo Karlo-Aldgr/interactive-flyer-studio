@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,10 @@ const TABS = ["accounts", "compose", "scheduled", "history"] as const;
  */
 export default function ClientSocial() {
   const { tab } = useParams();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const jobId = (location.state as { jobId?: string } | null)?.jobId
+    ?? searchParams.get("job");
   const initial = TABS.includes((tab ?? "") as (typeof TABS)[number])
     ? (tab as (typeof TABS)[number])
     : "accounts";
@@ -36,7 +40,7 @@ export default function ClientSocial() {
           <ZernioAccountsPanel redirectPath="/social-media" />
         </TabsContent>
         <TabsContent value="compose" className="pt-2">
-          <ZernioComposer />
+          <ZernioComposer initialJobId={jobId} />
         </TabsContent>
         <TabsContent value="scheduled" className="pt-2">
           <ZernioPostList
