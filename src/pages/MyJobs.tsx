@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { getUnifiedStatusLabel } from "@/lib/jobStatus";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { PostToSocialsDialog } from "@/components/social/PostToSocialsDialog";
+import { fetchZernioStatus } from "@/lib/zernio";
 
 const formatPrice = (cents?: number | null) =>
   typeof cents === "number" ? `$${(cents / 100).toFixed(2)}` : null;
@@ -24,7 +24,29 @@ export default function MyJobs() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [postOpen, setPostOpen] = useState(false);
+  const [postChecking, setPostChecking] = useState(false);
+  const navigate = useNavigate();
+
+  // Single source of truth for social connections: the Zernio-backed
+  // Social Media page. No legacy OAuth flows are triggered from here.
+  const goPostToSocials = async () => {
+    if (!selectedJobs.length) return;
+    setPostChecking(true);
+    try {
+      const status = await fetchZernioStatus();
+      const connected = (status.accounts ?? []).filter((a) => a.status === "connected");
+      if (!connected.length) {
+        toast.error("Connect a social account before posting.");
+        navigate("/social-media/accounts");
+        return;
+      }
+      navigate("/social-media/compose", { state: { jobId: selectedJobs[0].id } });
+    } catch {
+      toast.error("We couldn't check your social accounts. Please try again.");
+    } finally {
+      setPostChecking(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -174,8 +196,8 @@ export default function MyJobs() {
           <div className="flex flex-wrap items-center gap-2">
             <Button
               className="shadow-glow"
-              disabled={selectedJobs.length === 0}
-              onClick={() => setPostOpen(true)}
+              disabled={selectedJobs.length === 0 || postChecking}
+              onClick={goPostToSocials}
             >
               <Send className="mr-1 h-4 w-4" />
               Post to Socials{selectedJobs.length ? ` (${selectedJobs.length})` : ""}
@@ -201,12 +223,6 @@ export default function MyJobs() {
           )}
         </div>
       )}
-
-      <PostToSocialsDialog
-        open={postOpen}
-        onOpenChange={setPostOpen}
-        projects={selectedJobs}
-      />
 
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
