@@ -7,13 +7,29 @@ import {
   type AutomationFlyerOption,
   type CreateAutomationInput,
   type UpdateAutomationInput,
+  type AutomationExecutionHistory,
+  type AutomationHistoryFilters,
 } from "./types";
+import { safeAutomationError, sanitizeAutomationHistory } from "./history";
 import { automationTriggerTypeSchema, validateAutomationDefinition } from "./validation";
 
 // The generated Supabase types are updated after the migration is applied to
 // the linked project. Keep the cast local so the rest of the application stays typed.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
+
+type RawHistoryStep = {
+  id: string; step_key: string; attempt: number; status: AutomationExecutionHistory["steps"][number]["status"];
+  output: unknown; error_code: unknown; error_message: unknown; started_at: string | null; completed_at: string | null;
+  automation_steps: { position: number; action_type: AutomationExecutionHistory["steps"][number]["action_type"] } | null;
+};
+type RawHistoryRow = {
+  id: string; automation_id: string; status: AutomationExecutionHistory["status"]; correlation_id: string;
+  output: unknown; error_code: unknown; error_message: unknown; started_at: string | null; completed_at: string | null; created_at: string;
+  automations: { name: string; trigger_type: AutomationExecutionHistory["trigger_type"] };
+  automation_versions: { version: number }; automation_events: { event_type: string } | null;
+  automation_step_executions: RawHistoryStep[];
+};
 
 async function requireUserId(): Promise<string> {
   const { data, error } = await supabase.auth.getUser();
@@ -133,4 +149,56 @@ export async function listAutomationSteps(versionId: string): Promise<Automation
     .order("position");
   if (error) throw new Error(error.message);
   return (data ?? []) as AutomationStep[];
+}
+
+export async function listAutomationHistory(filters: AutomationHistoryFilters = {}): Promise<{ rows: AutomationExecutionHistory[]; count: number }> {
+  const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? 20));
+  const page = Math.max(1, filters.page ?? 1);
+  const fromIndex = (page - 1) * pageSize;
+  let query = db.from("automation_executions").select(
+    "id, automation_id, status, correlation_id, output, error_code, error_message, started_at, completed_at, created_at, automations!inner(name, trigger_type), automation_versions!inner(version), automation_events(event_type), automation_step_executions(id, step_key, attempt, status, output, error_code, error_message, started_at, completed_at, automation_steps(position, action_type))",
+    { count: "exact" },
+  ).order("created_at", { ascending: false }).range(fromIndex, fromIndex + pageSize - 1);
+  if (filters.automationId) query = query.eq("automation_id", filters.automationId);
+  if (filters.status) query = query.eq("status", filters.status);
+  if (filters.from) query = query.gte("created_at", filters.from);
+  if (filters.to) query = query.lte("created_at", filters.to);
+  const { data, error, count } = await query;
+  if (error) throw new Error(error.message);
+  const rows = ((data ?? []) as RawHistoryRow[]).map((row) => {
+    const executionError = safeAutomationError(row.error_code, row.error_message);
+    return {
+      id: row.id,
+      automation_id: row.automation_id,
+      automation_name: row.automations.name,
+      version: row.automation_versions.version,
+      trigger_type: row.automations.trigger_type,
+      event_type: row.automation_events?.event_type ?? null,
+      status: row.status,
+      correlation_id: row.correlation_id,
+      output: sanitizeAutomationHistory(row.output),
+      error_code: executionError.code,
+      error_message: executionError.message,
+      started_at: row.started_at,
+      completed_at: row.completed_at,
+      created_at: row.created_at,
+      steps: (row.automation_step_executions ?? []).map((step) => {
+        const stepError = safeAutomationError(step.error_code, step.error_message);
+        return {
+          id: step.id,
+          step_key: step.step_key,
+          position: step.automation_steps?.position ?? null,
+          action_type: step.automation_steps?.action_type ?? null,
+          attempt: step.attempt,
+          status: step.status,
+          output: sanitizeAutomationHistory(step.output),
+          error_code: stepError.code,
+          error_message: stepError.message,
+          started_at: step.started_at,
+          completed_at: step.completed_at,
+        };
+      }).sort((a, b) => (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER) || a.attempt - b.attempt),
+    } as AutomationExecutionHistory;
+  });
+  return { rows, count: count ?? 0 };
 }

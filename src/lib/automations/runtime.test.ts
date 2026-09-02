@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  automationEventIdempotencyKey,
   checkChainTarget, evaluateConditions, matchesTrigger, MAX_AUTOMATION_CHAIN_DEPTH,
-  redactForLog, runOrderedSteps, safeDeliveryUrl, selectEligibleAutomations,
+  isAutomationRateLimited, redactForLog, runOrderedSteps, safeDeliveryUrl, selectEligibleAutomations,
+  validAutomationEventEnvelope, validAutomationEventTime,
 } from "../../../supabase/functions/_shared/automation-runtime";
 
 const event = {
@@ -11,6 +13,25 @@ const event = {
 };
 
 describe("automation runtime", () => {
+  it("deduplicates immutable trusted record events regardless of browser event ids", () => {
+    expect(automationEventIdempotencyKey("form_submitted", "form_submission", "form-1", "browser-a"))
+      .toBe(automationEventIdempotencyKey("form_submitted", "form_submission", "form-1", "browser-b"));
+    expect(automationEventIdempotencyKey("flyer_tapped", "flyer", "flyer-1", "tap-a"))
+      .not.toBe(automationEventIdempotencyKey("flyer_tapped", "flyer", "flyer-1", "tap-b"));
+  });
+  it("rejects malformed envelopes and replay timestamps", () => {
+    const allowed = new Set(["flyer_viewed"]);
+    expect(validAutomationEventEnvelope(null, allowed)).toBe(false);
+    expect(validAutomationEventEnvelope({ eventType: "flyer_viewed", sourceId: "x", clientEventId: "y" }, allowed)).toBe(true);
+    expect(validAutomationEventEnvelope({ eventType: "unknown", sourceId: "x", clientEventId: "y" }, allowed)).toBe(false);
+    const now = Date.parse("2026-09-02T12:00:00Z");
+    expect(validAutomationEventTime("2026-08-01T12:00:00Z", now)).toBeNull();
+    expect(validAutomationEventTime("2026-09-02T12:06:00Z", now)).toBeNull();
+  });
+  it("enforces the application event rate limit boundary", () => {
+    expect(isAutomationRateLimited(119)).toBe(false);
+    expect(isAutomationRateLimited(120)).toBe(true);
+  });
   it("matches triggers exactly", () => {
     expect(matchesTrigger("hotspot_clicked", event.event_type)).toBe(true);
     expect(matchesTrigger("flyer_viewed", event.event_type)).toBe(false);

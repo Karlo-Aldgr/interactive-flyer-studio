@@ -70,6 +70,8 @@ const AffiliateTerms = lazy(() => import("./pages/AffiliateTerms"));
 const PublicWebsitePage = lazy(() => import("./pages/PublicWebsitePage"));
 const Automations = lazy(() => import("./pages/Automations"));
 const AutomationBuilder = lazy(() => import("./pages/AutomationBuilder"));
+const AutomationHistory = lazy(() => import("./pages/AutomationHistory"));
+const AdminAutomationHistory = lazy(() => import("./pages/AdminAutomationHistory"));
 
 
 const queryClient = new QueryClient({
@@ -157,6 +159,7 @@ const App = () => (
               <Route path="/admin/examples" element={<ProtectedRoute><AdminExamples /></ProtectedRoute>} />
               <Route path="/admin/editors" element={<ProtectedRoute><AdminEditors /></ProtectedRoute>} />
               <Route path="/admin/automation" element={<ProtectedRoute><AdminAutomation /></ProtectedRoute>} />
+              <Route path="/admin/automation-history" element={<ProtectedRoute><AdminAutomationHistory /></ProtectedRoute>} />
               <Route path="/admin/mini-ads" element={<ProtectedRoute><AdminMiniAds /></ProtectedRoute>} />
               <Route path="/realtor" element={<ProtectedRoute><RealtorDashboard /></ProtectedRoute>} />
               <Route path="/realtor/apply" element={<RealtorApply />} />
@@ -181,6 +184,7 @@ const App = () => (
               <Route path="/automations" element={<ProtectedRoute><Automations /></ProtectedRoute>} />
               <Route path="/automations/new" element={<ProtectedRoute><AutomationBuilder /></ProtectedRoute>} />
               <Route path="/automations/:automationId" element={<ProtectedRoute><AutomationBuilder /></ProtectedRoute>} />
+              <Route path="/automation-history" element={<ProtectedRoute><AutomationHistory /></ProtectedRoute>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

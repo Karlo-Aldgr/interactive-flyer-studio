@@ -7,14 +7,27 @@ type RegistryItem<T extends string> = {
   phase: "foundation" | "future";
   execution: "client" | "server" | "scheduler";
 };
+export type AutomationCapability = "available" | "configuration_required" | "not_yet_available";
+const CONFIGURATION_REQUIRED = new Set<string>(["send_email", "send_sms", "send_notification", "send_appointment_confirmation", "send_ticket_confirmation", "wait"]);
+const NOT_YET_AVAILABLE = new Set<string>(["qr_scanned", "ticket_purchase_completed", "date_time_reached", "customer_action_completed", "trigger_webhook", "update_record", "save_contact_activity"]);
+export function automationCapability(type: AutomationTriggerType | AutomationActionType): AutomationCapability {
+  if (NOT_YET_AVAILABLE.has(type)) return "not_yet_available";
+  if (CONFIGURATION_REQUIRED.has(type)) return "configuration_required";
+  return "available";
+}
+export const AUTOMATION_CAPABILITY_LABEL: Record<AutomationCapability, string> = {
+  available: "AVAILABLE",
+  configuration_required: "CONFIGURATION REQUIRED",
+  not_yet_available: "NOT YET AVAILABLE",
+};
 export const TRIGGER_REGISTRY: readonly RegistryItem<AutomationTriggerType>[] = [
   { type: "flyer_viewed", label: "Flyer viewed", category: "Flyer", phase: "foundation", execution: "server" },
   { type: "flyer_tapped", label: "Flyer tapped", category: "Flyer", phase: "foundation", execution: "server" },
   { type: "hotspot_clicked", label: "Hotspot clicked", category: "Flyer", phase: "foundation", execution: "server" },
-  { type: "qr_scanned", label: "QR code scanned", category: "QR", phase: "future", execution: "server" },
+  { type: "qr_scanned", label: "QR code scanned", category: "QR", phase: "foundation", execution: "server" },
   { type: "form_submitted", label: "Form submitted", category: "Lead", phase: "foundation", execution: "server" },
-  { type: "contact_form_submitted", label: "Contact form submitted", category: "Lead", phase: "future", execution: "server" },
-  { type: "website_form_submitted", label: "Website / mini-site form submitted", category: "Lead", phase: "future", execution: "server" },
+  { type: "contact_form_submitted", label: "Contact form submitted", category: "Lead", phase: "foundation", execution: "server" },
+  { type: "website_form_submitted", label: "Website / mini-site form submitted", category: "Lead", phase: "foundation", execution: "server" },
   { type: "lead_created", label: "Lead created", category: "Lead", phase: "foundation", execution: "server" },
   { type: "appointment_booked", label: "Appointment booked", category: "Booking", phase: "foundation", execution: "server" },
   { type: "appointment_request_submitted", label: "Appointment request submitted", category: "Booking", phase: "foundation", execution: "server" },

@@ -88,6 +88,32 @@ export function matchesTrigger(triggerType: string, eventType: unknown): boolean
   return typeof eventType === "string" && triggerType === eventType;
 }
 
+export function automationEventIdempotencyKey(eventType: string, sourceType: string, sourceId: string, clientEventId: string): string {
+  const immutableRecordSources = new Set(["appointment", "subscriber", "form_submission"]);
+  return immutableRecordSources.has(sourceType)
+    ? `${eventType}:${sourceType}:${sourceId}`
+    : `${eventType}:${sourceType}:${sourceId}:${clientEventId}`;
+}
+
+export function validAutomationEventEnvelope(value: unknown, allowedEventTypes: ReadonlySet<string>): value is { eventType: string; sourceId: string; clientEventId: string } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const event = value as JsonObject;
+  return typeof event.eventType === "string" && allowedEventTypes.has(event.eventType)
+    && typeof event.sourceId === "string" && event.sourceId.length > 0 && event.sourceId.length <= 500
+    && typeof event.clientEventId === "string" && event.clientEventId.length > 0 && event.clientEventId.length <= 200;
+}
+
+export function isAutomationRateLimited(count: number | null, limit = 120): boolean {
+  return Number.isFinite(count) && (count ?? 0) >= limit;
+}
+
+export function validAutomationEventTime(value: unknown, now = Date.now()): string | null {
+  if (value === undefined) return new Date(now).toISOString();
+  if (typeof value !== "string") return null;
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) || time < now - 86_400_000 || time > now + 300_000 ? null : new Date(time).toISOString();
+}
+
 export function checkChainTarget(context: ChainContext, targetAutomationId: string): { allowed: boolean; code?: string; next?: ChainContext } {
   if (context.depth >= MAX_AUTOMATION_CHAIN_DEPTH) return { allowed: false, code: "max_chain_depth" };
   if (context.visitedAutomationIds.includes(targetAutomationId)) return { allowed: false, code: "loop_prevented" };

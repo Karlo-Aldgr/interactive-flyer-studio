@@ -24,6 +24,7 @@ const actionConfigSchemas: Partial<Record<(typeof AUTOMATION_ACTION_TYPES)[numbe
   send_ticket_confirmation: z.object({ subject: nonEmptyText.max(200), message: nonEmptyText }),
   open_url: z.object({ url: z.string().trim().url().max(2000) }),
   continue_workflow: z.object({ targetAutomationId: z.string().uuid() }),
+  wait: z.object({ seconds: z.number().int().min(1).max(31_536_000) }),
 };
 
 export const automationConditionSchema = z.object({

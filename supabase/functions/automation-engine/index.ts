@@ -2,13 +2,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   checkChainTarget,
+  automationEventIdempotencyKey,
   evaluateConditions,
   matchesTrigger,
+  isAutomationRateLimited,
   redactForLog,
   safeDeliveryUrl,
+  validAutomationEventEnvelope,
+  validAutomationEventTime,
   type ChainContext,
   type JsonObject,
 } from "../_shared/automation-runtime.ts";
+import { createAutomationProviderRegistry, type AutomationActionResult } from "../_shared/automation-providers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,31 +22,23 @@ const corsHeaders = {
 const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
 
 const EVENT_TYPES = new Set([
-  "flyer_viewed", "flyer_tapped", "hotspot_clicked", "contact_form_submitted",
+  "flyer_viewed", "flyer_tapped", "hotspot_clicked", "form_submitted", "contact_form_submitted",
   "appointment_request_submitted", "bizad_viewed", "bizad_action_clicked", "lead_created",
   "qr_scanned", "website_form_submitted", "ticket_purchase_completed",
 ]);
 const EVENT_SOURCE: Record<string, EventRequest["sourceType"] | null> = {
   flyer_viewed: "flyer", flyer_tapped: "flyer", hotspot_clicked: "flyer",
-  contact_form_submitted: "subscriber", lead_created: "subscriber",
+  form_submitted: "form_submission", contact_form_submitted: "form_submission", website_form_submitted: "form_submission",
+  lead_created: "subscriber",
   appointment_request_submitted: "appointment",
   bizad_viewed: "bizad", bizad_action_clicked: "bizad",
-  qr_scanned: null, website_form_submitted: null, ticket_purchase_completed: null,
+  qr_scanned: "qr", ticket_purchase_completed: null,
 };
-type ActionResult = { ok: boolean; code?: string; output?: JsonObject };
-type ProviderAdapter = (config: JsonObject, event: JsonObject) => Promise<ActionResult>;
-const providerNotConfigured: ProviderAdapter = async () => ({ ok: false, code: "provider_not_configured" });
-const PROVIDER_ADAPTERS: Record<string, ProviderAdapter> = {
-  send_email: providerNotConfigured,
-  send_sms: providerNotConfigured,
-  send_notification: providerNotConfigured,
-  send_appointment_confirmation: providerNotConfigured,
-  send_ticket_confirmation: providerNotConfigured,
-};
+const PROVIDER_ADAPTERS = createAutomationProviderRegistry();
 
 type EventRequest = {
   eventType: string;
-  sourceType: "flyer" | "bizad" | "appointment" | "subscriber";
+  sourceType: "flyer" | "bizad" | "appointment" | "subscriber" | "form_submission" | "qr";
   sourceId: string;
   flyerId?: string;
   clientEventId: string;
@@ -98,15 +95,29 @@ async function resolveTrustedSource(db: any, input: EventRequest) {
     flyerId = data.flyer_id;
     trustedActor = cleanActor({ name: data.name, email: data.email, phone: data.phone });
   }
+  if (input.sourceType === "form_submission") {
+    const { data } = await db.from("form_submissions").select("id, flyer_id, layer_id, data").eq("id", input.sourceId).maybeSingle();
+    if (!data) throw new Error("unknown_source");
+    flyerId = data.flyer_id;
+    const submitted = data.data && typeof data.data === "object" ? data.data as JsonObject : {};
+    const customer = submitted.customer && typeof submitted.customer === "object" ? submitted.customer as JsonObject : submitted;
+    trustedActor = cleanActor(customer);
+    trustedMetadata = { hotspot_id: data.layer_id || "", form_kind: typeof submitted._preset === "string" ? submitted._preset : "form" };
+  }
+  if (input.sourceType === "qr") {
+    const { data } = await db.from("flyers").select("id").eq("public_slug", input.sourceId).maybeSingle();
+    if (!data) throw new Error("unknown_source");
+    flyerId = data.id;
+  }
   if (!flyerId) throw new Error("unknown_source");
   const { data: flyer } = await db.from("flyers").select("id, owner_id, category, status").eq("id", flyerId).maybeSingle();
   if (!flyer?.owner_id || flyer.status !== "published") throw new Error("source_not_public");
   return { accountId: flyer.owner_id as string, flyerId: flyer.id as string, flyerCategory: flyer.category, sourceId, trustedActor, trustedMetadata };
 }
 
-async function executeAction(db: any, actionType: string, config: JsonObject, event: JsonObject, accountId: string, deliveries: JsonObject[]) {
+async function executeAction(db: any, actionType: string, config: JsonObject, event: JsonObject, accountId: string, deliveries: JsonObject[], correlationId: string, idempotencyKey: string): Promise<AutomationActionResult> {
   const providerAdapter = PROVIDER_ADAPTERS[actionType];
-  if (providerAdapter) return providerAdapter(config, event);
+  if (providerAdapter) return providerAdapter(config, event, { accountId, correlationId, idempotencyKey });
   const actor = event.actor as JsonObject;
   const flyerId = event.flyer_id as string;
   if (actionType === "show_popup") {
@@ -193,7 +204,28 @@ async function runAutomation(db: any, automation: any, eventRow: any, chain: Cha
           result = chainedResult.status === "succeeded" ? { ok: true, output: { execution_id: chainedResult.executionId } } : { ok: false, code: chainedResult.status };
         }
       }
-    } else result = await executeAction(db, step.actionType, step.config || {}, eventRow.payload, eventRow.account_id, deliveries);
+    } else if (step.actionType === "wait") {
+      const seconds = Number(step.config?.seconds ?? 0);
+      if (!Number.isFinite(seconds) || seconds < 1 || seconds > 31_536_000) result = { ok: false, code: "invalid_wait_duration" };
+      else {
+        const dueAt = new Date(Date.now() + seconds * 1000).toISOString();
+        const { data: waitingStep, error: waitingError } = await db.from("automation_step_executions").insert({
+          account_id: eventRow.account_id, execution_id: execution.id, version_id: version.id,
+          step_key: step.key || `step_${position}`, status: "waiting", input: {}, output: { due_at: dueAt },
+          started_at: startedAt,
+        }).select("id").single();
+        if (waitingError) throw waitingError;
+        const { error: jobError } = await db.from("automation_jobs").insert({
+          account_id: eventRow.account_id, execution_id: execution.id, step_execution_id: waitingStep.id,
+          job_type: "wait", due_at: dueAt, idempotency_key: `wait:${execution.id}:${step.key}`,
+          payload: { next_position: position + 1, version_id: version.id, correlation_id: chain.correlationId },
+        });
+        if (jobError && jobError.code !== "23505") throw jobError;
+        await db.from("automation_executions").update({ status: "waiting", current_step_key: step.key, step_count: position + 1 })
+          .eq("id", execution.id).eq("account_id", eventRow.account_id);
+        return { status: "waiting", executionId: execution.id };
+      }
+    } else result = await executeAction(db, step.actionType, step.config || {}, eventRow.payload, eventRow.account_id, deliveries, chain.correlationId, `${execution.id}:${step.key}:${1}`);
     await db.from("automation_step_executions").insert({
       account_id: eventRow.account_id, execution_id: execution.id, version_id: version.id,
       step_key: step.key || `step_${position}`, status: result.ok ? "succeeded" : "failed",
@@ -225,30 +257,34 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return response({ error: "method_not_allowed" }, 405);
   try {
-    const input = await req.json() as EventRequest;
-    if (!EVENT_TYPES.has(input.eventType) || !input.sourceId || !input.clientEventId || input.clientEventId.length > 200) {
+    const contentLength = Number(req.headers.get("content-length") || "0");
+    if (contentLength > 65536) return response({ error: "payload_too_large" }, 413);
+    const candidate: unknown = await req.json();
+    if (!validAutomationEventEnvelope(candidate, EVENT_TYPES)) {
       return response({ error: "invalid_event" }, 400);
     }
+    const input = candidate as EventRequest;
     if (input.eventType === "ticket_purchase_completed") return response({ error: "verified_payment_required" }, 403);
     const requiredSource = EVENT_SOURCE[input.eventType];
     if (!requiredSource) return response({ error: "trusted_source_unavailable" }, 409);
     if (input.sourceType !== requiredSource) return response({ error: "trusted_record_required" }, 403);
     const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const trusted = await resolveTrustedSource(db, input);
-    const occurredAt = input.occurredAt && !Number.isNaN(new Date(input.occurredAt).getTime()) ? input.occurredAt : new Date().toISOString();
+    const occurredAt = validAutomationEventTime(input.occurredAt);
+    if (!occurredAt) return response({ error: "invalid_event_time" }, 400);
     const payload = {
       event_type: input.eventType, occurred_at: occurredAt, flyer_id: trusted.flyerId,
       actor: Object.keys(trusted.trustedActor).length ? trusted.trustedActor : {},
       metadata: { ...cleanMetadata(input.metadata), ...trusted.trustedMetadata, flyer_category: trusted.flyerCategory },
     };
-    const idempotencyKey = `${input.eventType}:${input.sourceType}:${trusted.sourceId}:${input.clientEventId}`;
+    const idempotencyKey = automationEventIdempotencyKey(input.eventType, input.sourceType, trusted.sourceId, input.clientEventId);
     const { data: existing } = await db.from("automation_events").select("*").eq("account_id", trusted.accountId).eq("idempotency_key", idempotencyKey).maybeSingle();
     if (existing) return response({ eventId: existing.id, duplicate: true, deliveries: [] });
     const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
     const { count } = await db.from("automation_events").select("id", { count: "exact", head: true })
       .eq("account_id", trusted.accountId).eq("source_type", input.sourceType).eq("source_id", trusted.sourceId)
       .gte("received_at", oneMinuteAgo);
-    if ((count || 0) >= 120) return response({ error: "rate_limited" }, 429);
+    if (isAutomationRateLimited(count)) return response({ error: "rate_limited" }, 429);
     const correlationId = crypto.randomUUID();
     const { data: eventRow, error } = await db.from("automation_events").insert({
       account_id: trusted.accountId, flyer_id: trusted.flyerId, event_type: input.eventType,

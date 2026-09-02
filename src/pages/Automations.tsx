@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Copy, Loader2, Pause, Play, Plus, Trash2, Workflow } from "lucide-react";
+import { Copy, History, Loader2, Pause, Play, Plus, Trash2, Workflow } from "lucide-react";
 import { toast } from "sonner";
 import { CustomerPortalShell } from "@/components/portal-customer/CustomerPortalShell";
 import { PageHeader } from "@/components/dashboard/PageHeader";
@@ -44,8 +44,8 @@ export default function Automations() {
   return (
     <CustomerPortalShell maxWidth="6xl">
       <div className="space-y-6">
-        <PageHeader title="Automations" description="Build simple IF → THEN workflows for your flyers, leads, bookings, and business cards." actions={<Button asChild><Link to="/automations/new"><Plus className="mr-1 h-4 w-4" />New automation</Link></Button>} />
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">Phase 2B publishes and manages your automation definitions. Live trigger processing and message delivery remain disconnected until Phase 2C.</div>
+        <PageHeader title="Automations" description="Build simple IF → THEN workflows for your flyers, leads, bookings, and business cards." actions={<div className="flex gap-2"><Button asChild variant="outline"><Link to="/automation-history"><History className="mr-1 h-4 w-4" />History</Link></Button><Button asChild><Link to="/automations/new"><Plus className="mr-1 h-4 w-4" />New automation</Link></Button></div>} />
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">Automation execution is available for connected trusted events. Provider-backed and scheduled actions clearly remain configuration-dependent until staging validation and provider setup are complete.</div>
         {isLoading ? <div className="flex h-56 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div> : error ? <Card><CardContent className="p-6 text-sm text-destructive">{error.message}</CardContent></Card> : automations.length === 0 ? <Card className="border-dashed"><CardContent className="flex flex-col items-center px-6 py-14 text-center"><div className="rounded-2xl bg-primary/10 p-4 text-primary"><Workflow className="h-8 w-8" /></div><h2 className="mt-4 text-xl font-semibold">Create your first automation</h2><p className="mt-2 max-w-md text-sm text-muted-foreground">Choose a trigger, add optional conditions, and stack actions in the order they should happen.</p><Button asChild className="mt-5"><Link to="/automations/new"><Plus className="mr-1 h-4 w-4" />Create automation</Link></Button></CardContent></Card> : <div className="grid gap-4">
           {automations.map((automation) => {
             const trigger = TRIGGER_REGISTRY.find((item) => item.type === automation.trigger_type)?.label ?? automation.trigger_type;

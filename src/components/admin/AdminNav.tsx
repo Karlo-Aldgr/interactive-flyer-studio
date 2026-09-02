@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export type AdminNavKey = "users" | "jobs" | "editors" | "analytics" | "contacts" | "examples" | "mini-ads" | "automation" | "realtor-applications" | "realtor-portal" | "affiliates" | "marketing";
+export type AdminNavKey = "users" | "jobs" | "editors" | "analytics" | "contacts" | "examples" | "mini-ads" | "automation" | "automation-history" | "realtor-applications" | "realtor-portal" | "affiliates" | "marketing";
 
 type AdminNavProps = {
   active?: AdminNavKey;
@@ -27,13 +27,14 @@ export const ADMIN_NAV_LINKS: { key: AdminNavKey; to: string; label: string }[] 
   { key: "examples", to: "/admin/examples", label: "Examples" },
   { key: "mini-ads", to: "/admin/mini-ads", label: "Mini-ads" },
   { key: "automation", to: "/admin/automation", label: "Automation" },
+  { key: "automation-history", to: "/admin/automation-history", label: "Automation history" },
   { key: "analytics", to: "/admin/analytics", label: "Analytics" },
   { key: "contacts", to: "/admin/contacts", label: "Contacts" },
 ];
 const PRIMARY_NAV_KEYS: AdminNavKey[] = ["users", "jobs"];
 
 const NAV_GROUPS: { label: string; keys: AdminNavKey[] }[] = [
-  { label: "Operations", keys: ["editors", "contacts", "automation", "affiliates"] },
+  { label: "Operations", keys: ["editors", "contacts", "automation", "automation-history", "affiliates"] },
   { label: "Marketing", keys: ["marketing"] },
   { label: "Realtor", keys: ["realtor-applications", "realtor-portal"] },
   { label: "Content", keys: ["examples", "mini-ads"] },

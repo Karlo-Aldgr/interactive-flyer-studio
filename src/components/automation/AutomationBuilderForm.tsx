@@ -17,9 +17,11 @@ import {
 } from "@/hooks/useAutomations";
 import {
   ACTION_REGISTRY,
+  AUTOMATION_CAPABILITY_LABEL,
   CONDITION_FIELD_REGISTRY,
   CONDITION_OPERATOR_LABELS,
   TRIGGER_REGISTRY,
+  automationCapability,
 } from "@/lib/automations/registry";
 import { validateAutomationDefinition } from "@/lib/automations/validation";
 import type {
@@ -45,7 +47,7 @@ const BUILDER_TRIGGERS: AutomationTriggerType[] = [
 const BUILDER_ACTIONS: AutomationActionType[] = [
   "send_email", "send_sms", "show_popup", "send_notification", "create_lead", "update_lead",
   "add_tag", "remove_tag", "save_contact_activity", "send_appointment_confirmation",
-  "send_ticket_confirmation", "open_url", "continue_workflow",
+  "send_ticket_confirmation", "open_url", "continue_workflow", "wait",
 ];
 
 const PROVIDER_ACTIONS = new Set<AutomationActionType>([
@@ -194,7 +196,8 @@ export function AutomationBuilderForm({ automation, onSaved }: Props) {
       <Card className="border-primary/30">
         <CardHeader><div className="flex items-center gap-3"><span className="rounded-lg bg-primary px-3 py-1 text-sm font-bold text-primary-foreground">IF</span><CardTitle className="text-lg">When this happens</CardTitle></div></CardHeader>
         <CardContent className="space-y-3">
-          <Select value={triggerType} onValueChange={(value) => setTriggerType(value as AutomationTriggerType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BUILDER_TRIGGERS.map((type) => { const item = TRIGGER_REGISTRY.find((entry) => entry.type === type)!; return <SelectItem key={type} value={type}>{item.label}</SelectItem>; })}</SelectContent></Select>
+          <Select value={triggerType} onValueChange={(value) => setTriggerType(value as AutomationTriggerType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BUILDER_TRIGGERS.map((type) => { const item = TRIGGER_REGISTRY.find((entry) => entry.type === type)!; return <SelectItem key={type} value={type}>{item.label} — {AUTOMATION_CAPABILITY_LABEL[automationCapability(type)]}</SelectItem>; })}</SelectContent></Select>
+          <Badge variant={automationCapability(triggerType) === "available" ? "default" : "secondary"}>{AUTOMATION_CAPABILITY_LABEL[automationCapability(triggerType)]}</Badge>
           {trigger?.phase === "future" && <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{triggerType === "ticket_purchase_completed" ? "Activation saves this rule, but verified payment-provider webhooks are required before this trigger can execute." : "Activation saves this rule. Live trigger connection is scheduled for Phase 2C."}</span></div>}
         </CardContent>
       </Card>
@@ -222,7 +225,7 @@ export function AutomationBuilderForm({ automation, onSaved }: Props) {
             const action = ACTION_REGISTRY.find((item) => item.type === step.actionType);
             return <div key={step.key} className="rounded-xl border bg-card p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Badge variant="outline">Action {index + 1}</Badge>{PROVIDER_ACTIONS.has(step.actionType!) && <Badge variant="secondary">Provider connection required</Badge>}</div><div className="flex gap-1"><Button type="button" variant="ghost" size="icon" disabled={index === 0} onClick={() => moveStep(index, -1)}><ArrowUp className="h-4 w-4" /><span className="sr-only">Move up</span></Button><Button type="button" variant="ghost" size="icon" disabled={index === steps.length - 1} onClick={() => moveStep(index, 1)}><ArrowDown className="h-4 w-4" /><span className="sr-only">Move down</span></Button><Button type="button" variant="ghost" size="icon" className="text-destructive" disabled={steps.length === 1} onClick={() => setSteps((items) => items.filter((item) => item.key !== step.key))}><Trash2 className="h-4 w-4" /><span className="sr-only">Delete action</span></Button></div></div>
-              <div className="mt-3 space-y-3"><Select value={step.actionType} onValueChange={(value) => changeActionType(step, value as AutomationActionType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BUILDER_ACTIONS.map((type) => { const item = ACTION_REGISTRY.find((entry) => entry.type === type)!; return <SelectItem key={type} value={type}>{item.label}</SelectItem>; })}</SelectContent></Select><ActionConfig step={step} automations={selectableAutomations} onChange={(key, value) => updateConfig(step, key, value)} />{action?.phase === "future" && <p className="text-xs text-muted-foreground">Configuration is saved now. This action will not run until the Phase 2C execution adapter is connected.</p>}</div>
+              <div className="mt-3 space-y-3"><Select value={step.actionType} onValueChange={(value) => changeActionType(step, value as AutomationActionType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BUILDER_ACTIONS.map((type) => { const item = ACTION_REGISTRY.find((entry) => entry.type === type)!; return <SelectItem key={type} value={type}>{item.label} — {AUTOMATION_CAPABILITY_LABEL[automationCapability(type)]}</SelectItem>; })}</SelectContent></Select><Badge variant={automationCapability(step.actionType!) === "available" ? "default" : "secondary"}>{AUTOMATION_CAPABILITY_LABEL[automationCapability(step.actionType!)]}</Badge><ActionConfig step={step} automations={selectableAutomations} onChange={(key, value) => updateConfig(step, key, value)} />{action?.phase === "future" && <p className="text-xs text-muted-foreground">This definition can be saved, but execution requires the capability shown above.</p>}</div>
             </div>;
           })}
           <Button type="button" variant="outline" onClick={() => setSteps((items) => [...items, emptyStep()])}><Plus className="mr-1 h-4 w-4" />Add action</Button>
@@ -249,6 +252,7 @@ function ActionConfig({ step, automations, onChange }: { step: AutomationStepDef
     case "send_appointment_confirmation": case "send_ticket_confirmation": return <div className="grid gap-3 md:grid-cols-2">{field("subject", "Confirmation subject")}<div className="space-y-1 md:col-span-2"><Label>Confirmation message</Label><Textarea value={configText(step.config, "message")} onChange={(event) => onChange("message", event.target.value)} /></div></div>;
     case "open_url": return field("url", "Destination URL", "https://example.com");
     case "continue_workflow": return <div className="space-y-1"><Label>Automation to continue</Label><Select value={configText(step.config, "targetAutomationId")} onValueChange={(value) => onChange("targetAutomationId", value)}><SelectTrigger><SelectValue placeholder="Choose automation" /></SelectTrigger><SelectContent>{automations.map((automation) => <SelectItem key={automation.id} value={automation.id}>{automation.name}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Phase 2C will enforce loop and depth protection before continuation runs.</p></div>;
+    case "wait": return <div className="space-y-1"><Label>Delay in seconds</Label><Input type="number" min={1} max={31536000} value={configText(step.config, "seconds")} onChange={(event) => onChange("seconds", Number(event.target.value))} /><p className="text-xs text-muted-foreground">Requires the durable server-side job worker to be scheduled.</p></div>;
     case "create_lead": return <p className="text-sm text-muted-foreground">The trigger&apos;s verified contact fields will be used to create the lead.</p>;
     case "update_lead": return <p className="text-sm text-muted-foreground">Phase 2C will update only the triggering account&apos;s matching lead.</p>;
     default: return null;

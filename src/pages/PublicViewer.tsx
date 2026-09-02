@@ -1506,15 +1506,19 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
         return;
       }
     }
-    const { error } = await supabase.from("form_submissions").insert([{
+    const { data: submitted, error } = await supabase.from("form_submissions").insert([{
       flyer_id: flyer.id,
       layer_id: formLayerId,
       data: { ...formData, _preset: isRsvp ? "rsvp" : "form" } as any,
-    }]);
+    }]).select("id").single();
     if (error) {
       toast.error("Could not submit");
       return;
     }
+    if (submitted?.id) void ingestAutomationEvent({
+      eventType: "contact_form_submitted", sourceType: "form_submission", sourceId: submitted.id,
+      clientEventId: `form:${submitted.id}`,
+    });
     toast.success(formAction.payload.successMessage || (isRsvp ? "Thanks for your RSVP!" : "Thanks!"));
     const offerCalendar = isRsvp && formAction.payload.rsvpAddToCalendar && formAction.payload.eventTitle && formAction.payload.startISO;
     const calPayload = formAction.payload;
@@ -1538,20 +1542,24 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
     if (phoneRequired && !phone) return toast.error("Please enter your phone");
     if (name.length > 200 || email.length > 320 || phone.length > 40) return toast.error("Input too long");
     setSubscribing(true);
-    const { error } = await supabase.from("subscribers").insert([{
+    const { data: subscriber, error } = await supabase.from("subscribers").insert([{
       flyer_id: flyer.id,
       name: name || null,
       email: email.toLowerCase(),
       phone: phoneEnabled && phone ? phone : null,
       list_name: p.subscribeListName || null,
       source: "subscribe",
-    }]);
+    }]).select("id").single();
     setSubscribing(false);
     if (error && (error as any).code !== "23505") {
       console.error("[subscribe]", error);
       toast.error("Could not subscribe — try again");
       return;
     }
+    if (subscriber?.id) void ingestAutomationEvent({
+      eventType: "lead_created", sourceType: "subscriber", sourceId: subscriber.id,
+      clientEventId: `subscriber:${subscriber.id}`,
+    });
     toast.success(p.subscribeSuccessMessage || "You're in! Thanks for subscribing.");
     setSubscribeAction(null);
   }
@@ -3027,6 +3035,10 @@ export default function PublicViewer({ previewMode = false }: PublicViewerProps)
                   return;
                 }
                 setPlacedOrderId((inserted as any)?.id || null);
+                if ((inserted as any)?.id) void ingestAutomationEvent({
+                  eventType: "form_submitted", sourceType: "form_submission", sourceId: (inserted as any).id,
+                  clientEventId: `form:${(inserted as any).id}`,
+                });
                 if ((inserted as any)?.id && flyer) {
                   saveOrderTrack(flyer.id, {
                     orderId: (inserted as any).id,

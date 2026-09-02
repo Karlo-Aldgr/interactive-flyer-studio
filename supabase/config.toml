@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.tiktok-media]
 verify_jwt = false
+
+[functions.qr-redirect]
+verify_jwt = false

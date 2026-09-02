@@ -186,3 +186,47 @@ export type AutomationFlyerOption = {
   category: string;
   status: string;
 };
+
+export const AUTOMATION_EXECUTION_STATUSES = ["pending", "running", "waiting", "succeeded", "failed", "cancelled"] as const;
+export type AutomationExecutionStatus = (typeof AUTOMATION_EXECUTION_STATUSES)[number];
+
+export interface AutomationExecutionStepHistory {
+  id: string;
+  step_key: string;
+  position: number | null;
+  action_type: AutomationActionType | null;
+  attempt: number;
+  status: "pending" | "running" | "waiting" | "succeeded" | "failed" | "skipped" | "cancelled";
+  output: JsonValue | null;
+  error_code: string | null;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface AutomationExecutionHistory {
+  id: string;
+  automation_id: string;
+  automation_name: string;
+  version: number;
+  trigger_type: AutomationTriggerType;
+  event_type: string | null;
+  status: AutomationExecutionStatus;
+  correlation_id: string;
+  output: JsonValue | null;
+  error_code: string | null;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  steps: AutomationExecutionStepHistory[];
+}
+
+export type AutomationHistoryFilters = {
+  automationId?: string;
+  status?: AutomationExecutionStatus;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+};

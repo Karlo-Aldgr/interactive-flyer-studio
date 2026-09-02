@@ -3,6 +3,7 @@ import * as LucideIcons from "lucide-react";
 import { Menu, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ingestAutomationEvent } from "@/lib/automations/ingestion";
 import type { FlyerPage, Layer, LayerAction } from "@/types/flyer";
 import type { WebsiteDocument } from "@/lib/websiteDocument";
 import { useActionRuntime } from "@/components/viewer/useActionRuntime";
@@ -468,11 +469,13 @@ function useFormSubmit(flyerId: string, canSubmit: boolean) {
       return;
     }
     setBusy(true);
-    const { error } = await supabase
+    const { data: submitted, error } = await supabase
       .from("form_submissions")
-      .insert([{ flyer_id: flyerId, layer_id: null, data: { ...values, _preset: "website" } as any }]);
+      .insert([{ flyer_id: flyerId, layer_id: null, data: { ...values, _preset: "website" } as any }])
+      .select("id").single();
     setBusy(false);
     if (error) return toast.error("Could not send your message");
+    if (submitted?.id) void ingestAutomationEvent({ eventType: "website_form_submitted", sourceType: "form_submission", sourceId: submitted.id, clientEventId: `website-form:${submitted.id}` });
     toast.success(((action?.payload as any)?.successMessage as string) || "Thanks — we'll be in touch.");
     onDone();
   };
@@ -991,11 +994,13 @@ function ContactFormDialog({
       return;
     }
     setBusy(true);
-    const { error } = await supabase
+    const { data: submitted, error } = await supabase
       .from("form_submissions")
-      .insert([{ flyer_id: flyerId, layer_id: null, data: { ...values, _preset: "website" } as any }]);
+      .insert([{ flyer_id: flyerId, layer_id: null, data: { ...values, _preset: "website" } as any }])
+      .select("id").single();
     setBusy(false);
     if (error) return toast.error("Could not send your message");
+    if (submitted?.id) void ingestAutomationEvent({ eventType: "website_form_submitted", sourceType: "form_submission", sourceId: submitted.id, clientEventId: `website-form:${submitted.id}` });
     toast.success(p.successMessage || "Thanks — we'll be in touch.");
     onClose();
   }

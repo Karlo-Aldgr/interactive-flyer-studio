@@ -6,7 +6,7 @@ export type AutomationDelivery =
 
 type PublicAutomationEvent = {
   eventType: string;
-  sourceType: "flyer" | "bizad" | "appointment" | "subscriber";
+  sourceType: "flyer" | "bizad" | "appointment" | "subscriber" | "form_submission" | "qr";
   sourceId: string;
   clientEventId?: string;
   occurredAt?: string;
