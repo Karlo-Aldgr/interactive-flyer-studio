@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as LucideIcons from "lucide-react";
 import {
-  MousePointerClick, SquareDashed, CircleDashed, Sparkles, Star, ScanFace, Wand2,
+  MousePointerClick, SquareDashed, CircleDashed, Sparkles, Star, ScanFace, Wand2, Copy,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,6 +10,7 @@ import { useEditorStore } from "@/store/editorStore";
 import { BUTTON_PRESETS } from "@/lib/editorToolPresets";
 import { SmartDetectDialog } from "./SmartDetectDialog";
 import { SubjectDetectDialog } from "./SubjectDetectDialog";
+import { CopyButtonLinkDialog } from "./CopyButtonLinkDialog";
 import { toast } from "sonner";
 import type { Layer } from "@/types/flyer";
 
@@ -17,6 +18,7 @@ const ICONS = ["Star", "Heart", "Smile", "ThumbsUp", "Award", "Bell", "Bookmark"
 
 export function InteractiveToolsPanel() {
   const addButtonLayer = useEditorStore((s) => s.addButtonLayer);
+  const copyButtonLayer = useEditorStore((s) => s.copyButtonLayer);
   const addLayer = useEditorStore((s) => s.addLayer);
   const pages = useEditorStore((s) => s.pages);
   const selectedPageId = useEditorStore((s) => s.selectedPageId);
@@ -30,6 +32,28 @@ export function InteractiveToolsPanel() {
   const [detectOpen, setDetectOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
   const [subjectDetectOpen, setSubjectDetectOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [pendingCopyLayerId, setPendingCopyLayerId] = useState<string | null>(null);
+
+  const selectedButtonLayer = (() => {
+    const page = pages.find((p) => p.id === selectedPageId);
+    const layer = page?.layers.find((l) => l.id === selectedLayerId);
+    return layer?.type === "button" ? layer : undefined;
+  })();
+
+  function handleCopyButton() {
+    if (!selectedLayerId || !selectedButtonLayer) {
+      toast.error("Select a button on the canvas first");
+      return;
+    }
+    const newId = copyButtonLayer(selectedLayerId);
+    if (!newId) {
+      toast.error("Select a button on the canvas first");
+      return;
+    }
+    setPendingCopyLayerId(newId);
+    setLinkDialogOpen(true);
+  }
 
   const hotspotActive = drawMode === "hotspot" || drawMode === "hotspot-ellipse";
   const extractActive = drawMode === "extract-rect" || drawMode === "extract-auto";
@@ -148,6 +172,21 @@ export function InteractiveToolsPanel() {
         </PopoverContent>
       </Popover>
 
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12"
+            disabled={!selectedButtonLayer}
+            onClick={handleCopyButton}
+          >
+            <Copy className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Copy button</TooltipContent>
+      </Tooltip>
+
       <Popover open={iconOpen} onOpenChange={setIconOpen}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -249,6 +288,11 @@ export function InteractiveToolsPanel() {
 
       <SmartDetectDialog open={detectOpen} onOpenChange={setDetectOpen} />
       <SubjectDetectDialog open={subjectDetectOpen} onOpenChange={setSubjectDetectOpen} />
+      <CopyButtonLinkDialog
+        layerId={pendingCopyLayerId}
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+      />
     </>
   );
 }

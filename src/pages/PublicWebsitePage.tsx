@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { PublicWebsite } from "@/components/website/PublicWebsite";
+import { FlyerChatbot } from "@/components/viewer/FlyerChatbot";
 import { loadPublishedWebsite, loadWebsiteByFlyerId, type LoadedWebsite } from "@/lib/websiteLoader";
 
 /**
@@ -100,6 +101,10 @@ export default function PublicWebsitePage({
         </div>
       )}
       <PublicWebsite doc={site.doc} page={site.page} flyerId={site.flyerId} canSubmitForms={site.status === "published"} />
+      <FlyerChatbot
+        flyerId={site.flyerId}
+        flyerTitle={site.doc.brandName?.trim() || site.title || "Website"}
+      />
     </>
   );
 }

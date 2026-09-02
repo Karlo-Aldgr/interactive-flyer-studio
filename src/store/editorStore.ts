@@ -101,6 +101,8 @@ interface EditorState {
   moveLayersBy: (ids: string[], dx: number, dy: number) => void;
   deleteLayers: (ids: string[]) => void;
   duplicateLayers: (ids: string[]) => void;
+  /** Clone a button layer (same style), clear its link, offset position. Returns new layer id. */
+  copyButtonLayer: (id: string) => string | null;
   orderLayersBulk: (ids: string[], direction: "front" | "forward" | "backward" | "back") => void;
   alignLayers: (ids: string[], mode: "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom") => void;
   distributeLayers: (ids: string[], axis: "h" | "v") => void;
@@ -348,6 +350,32 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       future: [],
       dirty: true,
     });
+  },
+
+  copyButtonLayer: (id) => {
+    const s = get();
+    const page = s.pages.find((p) => p.id === s.selectedPageId);
+    if (!page) return null;
+    const layer = page.layers.find((l) => l.id === id);
+    if (!layer || layer.type !== "button") return null;
+    const past = [...s.past, snap(s.pages)].slice(-HISTORY_LIMIT);
+    const z = page.layers.reduce((m, l) => Math.max(m, l.z_index), 0) + 1;
+    const clone: Layer = {
+      ...JSON.parse(JSON.stringify(layer)),
+      id: uid(),
+      z_index: z,
+      position: { x: layer.position.x + 16, y: layer.position.y + 16 },
+      action: null,
+    };
+    set({
+      pages: s.pages.map((p) => (p.id === page.id ? { ...p, layers: [...p.layers, clone] } : p)),
+      selectedLayerIds: [clone.id],
+      selectedLayerId: clone.id,
+      past,
+      future: [],
+      dirty: true,
+    });
+    return clone.id;
   },
 
   orderLayersBulk: (ids, direction) => {
