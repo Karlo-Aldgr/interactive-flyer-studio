@@ -22,8 +22,10 @@ describe("automation runtime", () => {
   it("rejects malformed envelopes and replay timestamps", () => {
     const allowed = new Set(["flyer_viewed"]);
     expect(validAutomationEventEnvelope(null, allowed)).toBe(false);
-    expect(validAutomationEventEnvelope({ eventType: "flyer_viewed", sourceId: "x", clientEventId: "y" }, allowed)).toBe(true);
-    expect(validAutomationEventEnvelope({ eventType: "unknown", sourceId: "x", clientEventId: "y" }, allowed)).toBe(false);
+    expect(validAutomationEventEnvelope({ eventType: "flyer_viewed", sourceType: "flyer", sourceId: "x", clientEventId: "y" }, allowed)).toBe(true);
+    expect(validAutomationEventEnvelope({ eventType: "unknown", sourceType: "flyer", sourceId: "x", clientEventId: "y" }, allowed)).toBe(false);
+    expect(validAutomationEventEnvelope({ eventType: "flyer_viewed", sourceType: "forged", sourceId: "x", clientEventId: "y" }, allowed)).toBe(false);
+    expect(validAutomationEventEnvelope({ eventType: "flyer_viewed", sourceType: "flyer", sourceId: "x", clientEventId: "y", actor: [] }, allowed)).toBe(false);
     const now = Date.parse("2026-09-02T12:00:00Z");
     expect(validAutomationEventTime("2026-08-01T12:00:00Z", now)).toBeNull();
     expect(validAutomationEventTime("2026-09-02T12:06:00Z", now)).toBeNull();

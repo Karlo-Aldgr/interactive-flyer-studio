@@ -9,6 +9,8 @@ describe("automation capability labels", () => {
   });
   it("marks trusted connected sources as available", () => {
     expect(automationCapability("website_form_submitted")).toBe("available");
-    expect(automationCapability("qr_scanned")).toBe("not_yet_available");
+    expect(automationCapability("qr_scanned")).toBe("available");
+    expect(automationCapability("save_contact_activity")).toBe("available");
+    expect(automationCapability("flyer_shared")).toBe("not_yet_available");
   });
 });

@@ -14,6 +14,8 @@ describe("Phase 2D security boundaries", () => {
     expect(engine).toContain('.eq("account_id", eventRow.account_id)');
     expect(qr).toContain('.eq("status", "published")');
     expect(qr).not.toMatch(/searchParams\.get\(["'](?:account|owner|tenant)/);
+    expect(qr).toContain('Deno.env.get("PUBLIC_SITE_URL")');
+    expect(qr).not.toContain("requestUrl.origin");
   });
   it("has payload, duplicate, replay, rate, and durable claim controls", () => {
     expect(engine).toContain("payload_too_large");

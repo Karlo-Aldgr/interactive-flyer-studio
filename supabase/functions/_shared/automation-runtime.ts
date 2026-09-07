@@ -98,9 +98,13 @@ export function automationEventIdempotencyKey(eventType: string, sourceType: str
 export function validAutomationEventEnvelope(value: unknown, allowedEventTypes: ReadonlySet<string>): value is { eventType: string; sourceId: string; clientEventId: string } {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const event = value as JsonObject;
+  const validObject = (candidate: unknown) => candidate === undefined ||
+    (!!candidate && typeof candidate === "object" && !Array.isArray(candidate));
   return typeof event.eventType === "string" && allowedEventTypes.has(event.eventType)
+    && typeof event.sourceType === "string" && ["flyer", "bizad", "appointment", "subscriber", "form_submission", "qr"].includes(event.sourceType)
     && typeof event.sourceId === "string" && event.sourceId.length > 0 && event.sourceId.length <= 500
-    && typeof event.clientEventId === "string" && event.clientEventId.length > 0 && event.clientEventId.length <= 200;
+    && typeof event.clientEventId === "string" && event.clientEventId.length > 0 && event.clientEventId.length <= 200
+    && validObject(event.actor) && validObject(event.metadata);
 }
 
 export function isAutomationRateLimited(count: number | null, limit = 120): boolean {

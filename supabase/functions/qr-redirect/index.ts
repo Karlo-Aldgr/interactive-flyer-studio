@@ -4,12 +4,18 @@ Deno.serve(async (request) => {
   if (request.method !== "GET") return new Response("Method not allowed", { status: 405 });
   const requestUrl = new URL(request.url);
   const slug = requestUrl.searchParams.get("slug")?.trim() ?? "";
+  const publicSiteUrl = Deno.env.get("PUBLIC_SITE_URL")?.trim();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (!publicSiteUrl || !supabaseUrl || !serviceRoleKey) {
+    return new Response("QR redirect is not configured", { status: 503 });
+  }
   let site: URL;
-  try { site = new URL(Deno.env.get("PUBLIC_SITE_URL") || requestUrl.origin); }
+  try { site = new URL(publicSiteUrl); }
   catch { return new Response("QR redirect is not configured", { status: 503 }); }
   const fallback = () => new Response(null, { status: 302, headers: { Location: site.origin } });
   if (!/^https?:$/.test(site.protocol) || !/^[a-z0-9-]{1,160}$/i.test(slug)) return fallback();
-  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const db = createClient(supabaseUrl, serviceRoleKey);
   const { data: flyer } = await db.from("flyers").select("id, public_slug, status").eq("public_slug", slug).eq("status", "published").maybeSingle();
   if (!flyer) return fallback();
   try {

@@ -9,7 +9,7 @@ type RegistryItem<T extends string> = {
 };
 export type AutomationCapability = "available" | "configuration_required" | "not_yet_available";
 const CONFIGURATION_REQUIRED = new Set<string>(["send_email", "send_sms", "send_notification", "send_appointment_confirmation", "send_ticket_confirmation", "wait"]);
-const NOT_YET_AVAILABLE = new Set<string>(["qr_scanned", "ticket_purchase_completed", "date_time_reached", "customer_action_completed", "trigger_webhook", "update_record", "save_contact_activity"]);
+const NOT_YET_AVAILABLE = new Set<string>(["ticket_purchase_completed", "flyer_shared", "date_time_reached", "customer_action_completed", "trigger_webhook", "update_record"]);
 export function automationCapability(type: AutomationTriggerType | AutomationActionType): AutomationCapability {
   if (NOT_YET_AVAILABLE.has(type)) return "not_yet_available";
   if (CONFIGURATION_REQUIRED.has(type)) return "configuration_required";

@@ -6,13 +6,14 @@ const MAX_TEXT = 1000;
 
 export function sanitizeAutomationHistory(value: unknown, depth = 0): JsonValue | null {
   if (depth > MAX_DEPTH) return "[TRUNCATED]";
-  if (value === null || typeof value === "boolean" || typeof value === "number") return value;
+  if (value === null) return null;
+  if (typeof value === "boolean" || typeof value === "number") return value;
   if (typeof value === "string") return value.length > MAX_TEXT ? `${value.slice(0, MAX_TEXT)}…` : value;
   if (Array.isArray(value)) return value.slice(0, 100).map((item) => sanitizeAutomationHistory(item, depth + 1));
   if (typeof value === "object") {
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>).slice(0, 100).map(([key, item]) => [
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).slice(0, 100).map(([key, item]): [string, JsonValue] => [
       key,
-      SECRET_KEY.test(key) ? "[REDACTED]" : sanitizeAutomationHistory(item, depth + 1),
+      SECRET_KEY.test(key) ? "[REDACTED]" : sanitizeAutomationHistory(item, depth + 1) ?? null,
     ]));
   }
   return null;

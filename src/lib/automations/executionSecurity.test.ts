@@ -30,7 +30,7 @@ describe("Phase 2C tenant security", () => {
     expect(engine).toContain("trusted_source_unavailable");
   });
   it("keeps operational writes server-side", () => {
-    expect(engine).toContain('Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")');
+    expect(engine).toContain('requiredEnv("SUPABASE_SERVICE_ROLE_KEY")');
     expect(migration).not.toMatch(/GRANT (INSERT|UPDATE|DELETE).*automation_(events|executions|step_executions|jobs).*anon/i);
   });
   it("uses immutable published versions and database idempotency", () => {
@@ -45,5 +45,11 @@ describe("Phase 2C tenant security", () => {
     expect(engine).toContain('status: "skipped"');
     expect(engine).toContain('error_code: "prior_step_failed"');
     expect(engine).toContain('status: failed ? "failed" : "succeeded"');
+  });
+  it("uses the recovered marketing schema for lead mutation and contact activity", () => {
+    expect(engine).toContain('.from("marketing_subscribers")');
+    expect(engine).toContain('.from("marketing_subscriber_events")');
+    expect(engine).toContain('.eq("client_id", accountId)');
+    expect(engine).not.toContain('code: "unsupported_schema"');
   });
 });
