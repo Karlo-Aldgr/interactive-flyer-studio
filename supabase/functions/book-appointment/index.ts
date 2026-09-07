@@ -35,6 +35,12 @@ function isIso(s: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const body = (await req.json()) as BookingBody;
@@ -59,10 +65,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+    if (!supabaseUrl || !serviceRoleKey) {
+      return new Response(JSON.stringify({ error: "Booking service is not configured" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Verify flyer is published
     const { data: flyer, error: flyerErr } = await supabase
@@ -70,7 +81,7 @@ Deno.serve(async (req) => {
       .select("id, status, title")
       .eq("id", body.flyerId)
       .maybeSingle();
-    if (flyerErr || !flyer || (flyer.status !== "published" && flyer.status !== "draft")) {
+    if (flyerErr || !flyer || flyer.status !== "published") {
       return new Response(JSON.stringify({ error: "Flyer not bookable" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

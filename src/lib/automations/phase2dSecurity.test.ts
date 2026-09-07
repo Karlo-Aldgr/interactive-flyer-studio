@@ -5,6 +5,7 @@ const read = (path: string) => fs.readFileSync(new URL(path, import.meta.url), "
 const engine = read("../../../supabase/functions/automation-engine/index.ts");
 const migration = read("../../../supabase/migrations/20260902090000_automation_phase_2d.sql");
 const qr = read("../../../supabase/functions/qr-redirect/index.ts");
+const booking = read("../../../supabase/functions/book-appointment/index.ts");
 
 describe("Phase 2D security boundaries", () => {
   it("rejects browser payment completion claims", () => expect(engine).toContain('return response({ error: "verified_payment_required" }, 403)'));
@@ -28,5 +29,10 @@ describe("Phase 2D security boundaries", () => {
   it("does not grant customers or admins operational mutation", () => {
     expect(migration).toContain("REVOKE ALL ON FUNCTION public.claim_due_automation_jobs(text, integer) FROM PUBLIC, anon, authenticated");
     expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.claim_due_automation_jobs(text, integer) TO service_role");
+  });
+  it("keeps the public booking event source aligned with published-only database policy", () => {
+    expect(booking).toContain('flyer.status !== "published"');
+    expect(booking).not.toContain('flyer.status !== "draft"');
+    expect(booking).toContain('req.method !== "POST"');
   });
 });
