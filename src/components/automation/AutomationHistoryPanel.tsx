@@ -18,8 +18,8 @@ const duration = (row: { started_at: string | null; completed_at: string | null 
 };
 const pretty = (value: unknown) => value && typeof value === "object" && Object.keys(value).length ? JSON.stringify(value, null, 2) : "No output";
 
-export function AutomationHistoryPanel({ automations, supportMode = false }: { automations: Automation[]; supportMode?: boolean }) {
-  const [automationId, setAutomationId] = useState("all");
+export function AutomationHistoryPanel({ automations, supportMode = false, initialAutomationId = "all" }: { automations: Automation[]; supportMode?: boolean; initialAutomationId?: string }) {
+  const [automationId, setAutomationId] = useState(initialAutomationId);
   const [status, setStatus] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");

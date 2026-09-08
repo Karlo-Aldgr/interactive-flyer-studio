@@ -6,19 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AutomationBuilderForm } from "@/components/automation/AutomationBuilderForm";
-import { useAutomation } from "@/hooks/useAutomations";
+import { useAutomation, useAutomationVersions } from "@/hooks/useAutomations";
 
 export default function AutomationBuilder() {
   const { automationId } = useParams<{ automationId: string }>();
   const navigate = useNavigate();
   const isNew = !automationId;
   const { data: automation, isLoading, error } = useAutomation(automationId);
+  const { data: versions = [] } = useAutomationVersions(automationId);
 
   return (
     <CustomerPortalShell maxWidth="6xl">
       <div className="space-y-6">
         <PageHeader title={<span className="flex flex-wrap items-center gap-2">{isNew ? "New automation" : "Edit automation"}{automation && <Badge variant={automation.status === "active" ? "default" : automation.status === "paused" ? "secondary" : "outline"}>{automation.status}</Badge>}</span>} description="Build the workflow visually. Saving or activating never changes another account’s data." actions={<Button asChild variant="outline"><Link to="/automations"><ArrowLeft className="mr-1 h-4 w-4" />All automations</Link></Button>} />
-        {!isNew && isLoading ? <div className="flex h-56 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div> : !isNew && (error || !automation) ? <Card><CardContent className="p-6"><p className="text-sm text-destructive">{error?.message ?? "Automation not found or you do not have access."}</p></CardContent></Card> : <AutomationBuilderForm automation={automation} onSaved={(saved) => { if (isNew) navigate(`/automations/${saved.id}`, { replace: true }); }} />}
+        {!isNew && isLoading ? <div className="flex h-56 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div> : !isNew && (error || !automation) ? <Card><CardContent className="p-6"><p className="text-sm text-destructive">{error?.message ?? "Automation not found or you do not have access."}</p></CardContent></Card> : <><AutomationBuilderForm automation={automation} onSaved={(saved) => { if (isNew) navigate(`/automations/${saved.id}`, { replace: true }); }} />{!isNew && <Card><CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm"><div><p className="font-medium">Published versions</p><p className="text-muted-foreground">{versions.length ? `${versions.length} immutable version${versions.length === 1 ? "" : "s"}; latest is version ${versions[0].version}.` : "No version has been published yet."}</p></div><Button asChild variant="outline" size="sm"><Link to={`/automation-history?automation=${automationId}`}>View execution history</Link></Button></CardContent></Card>}</>}
       </div>
     </CustomerPortalShell>
   );

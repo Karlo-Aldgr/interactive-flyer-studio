@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateAutomationDefinition } from "./validation";
+import { validateAutomationDefinition, validatePublishableAutomation } from "./validation";
 
 describe("automation definition validation", () => {
   it("accepts an ordered multi-action definition", () => {
@@ -28,6 +28,33 @@ describe("automation definition validation", () => {
       conditions: { match: "all", items: [] },
       steps: [{ key: "first", type: "action", actionType: "show_popup", config: {}, nextStepKey: "missing" }],
     })).toThrow(/unknown step/i);
+  });
+
+  it("rejects missing condition values and cyclic step graphs", () => {
+    expect(() => validateAutomationDefinition({
+      conditions: { match: "all", items: [{ id: "city", field: "city", operator: "equals", value: "" }] },
+      steps: [{ key: "popup", type: "action", actionType: "show_popup", config: { title: "Hi", message: "Hello" } }],
+    })).toThrow(/condition value/i);
+    expect(() => validateAutomationDefinition({
+      conditions: { match: "all", items: [] },
+      steps: [
+        { key: "one", type: "action", actionType: "show_popup", config: { title: "Hi", message: "Hello" }, nextStepKey: "two" },
+        { key: "two", type: "action", actionType: "open_url", config: { url: "https://example.com" }, nextStepKey: "one" },
+      ],
+    })).toThrow(/cycle/i);
+  });
+
+  it("allows drafts but prevents unavailable capabilities from being published", () => {
+    const definition = {
+      conditions: { match: "all" as const, items: [] },
+      steps: [{ key: "email", type: "action" as const, actionType: "send_email" as const, config: { subject: "Hello", body: "World" } }],
+    };
+    expect(validateAutomationDefinition(definition)).toBeTruthy();
+    expect(() => validatePublishableAutomation("flyer_viewed", definition)).toThrow(/available/i);
+    expect(() => validatePublishableAutomation("ticket_purchase_completed", {
+      ...definition,
+      steps: [{ key: "popup", type: "action", actionType: "show_popup", config: { title: "Hello", message: "World" } }],
+    })).toThrow(/trigger/i);
   });
 
   it("validates provider-backed action configuration without sending anything", () => {

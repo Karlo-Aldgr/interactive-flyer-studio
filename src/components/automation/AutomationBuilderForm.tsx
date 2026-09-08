@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Loader2, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2, Plus, Send, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
   useAutomationFlyers,
   useAutomations,
   useCreateAutomation,
+  usePublishAutomation,
   useUpdateAutomation,
 } from "@/hooks/useAutomations";
 import {
@@ -22,6 +23,7 @@ import {
   CONDITION_OPERATOR_LABELS,
   TRIGGER_REGISTRY,
   automationCapability,
+  automationCapabilityCanPublish,
 } from "@/lib/automations/registry";
 import { validateAutomationDefinition } from "@/lib/automations/validation";
 import type {
@@ -91,6 +93,7 @@ export function AutomationBuilderForm({ automation, onSaved }: Props) {
   const createMutation = useCreateAutomation();
   const updateMutation = useUpdateAutomation();
   const activateMutation = useActivateAutomation();
+  const publishMutation = usePublishAutomation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [flyerId, setFlyerId] = useState<string>("any");
@@ -110,13 +113,12 @@ export function AutomationBuilderForm({ automation, onSaved }: Props) {
     setSteps(automation.draft_definition.steps.length ? automation.draft_definition.steps : [emptyStep()]);
   }, [automation]);
 
-  const busy = createMutation.isPending || updateMutation.isPending || activateMutation.isPending;
-  const trigger = TRIGGER_REGISTRY.find((item) => item.type === triggerType);
+  const busy = createMutation.isPending || updateMutation.isPending || activateMutation.isPending || publishMutation.isPending;
   const selectableAutomations = automations.filter((item) => item.id !== automation?.id && item.status !== "archived");
 
   const definition = useMemo<AutomationDefinition>(() => ({ conditions: { match, items: conditions }, steps }), [conditions, match, steps]);
 
-  const persist = async (activate: boolean) => {
+  const persist = async (intent: "draft" | "publish" | "activate") => {
     if (!name.trim()) return toast.error("Give this automation a name");
     if (steps.length === 0) return toast.error("Add at least one action");
     try {
@@ -136,8 +138,12 @@ export function AutomationBuilderForm({ automation, onSaved }: Props) {
           triggerType, triggerConfig: {}, definition,
         });
       }
-      if (activate) saved = await activateMutation.mutateAsync(saved.id);
-      toast.success(activate ? "Automation activated" : "Draft saved");
+      if (intent === "publish") {
+        const publishedVersionId = await publishMutation.mutateAsync(saved.id);
+        saved = { ...saved, published_version_id: publishedVersionId };
+      }
+      if (intent === "activate") saved = await activateMutation.mutateAsync(saved.id);
+      toast.success(intent === "activate" ? "Automation published and activated" : intent === "publish" ? "New immutable version published" : "Draft saved");
       onSaved(saved);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not save automation";
@@ -183,7 +189,7 @@ export function AutomationBuilderForm({ automation, onSaved }: Props) {
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>Activating publishes this definition securely. It will not process live events or send messages until the Phase 2C execution layer is connected.</span></div>
+      <div className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>Save freely as a draft. Publishing creates an immutable version; activation makes that version eligible for trusted staging events. Only capabilities marked AVAILABLE can be published.</span></div>
       <Card>
         <CardHeader><CardTitle className="text-lg">Automation details</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
@@ -196,9 +202,9 @@ export function AutomationBuilderForm({ automation, onSaved }: Props) {
       <Card className="border-primary/30">
         <CardHeader><div className="flex items-center gap-3"><span className="rounded-lg bg-primary px-3 py-1 text-sm font-bold text-primary-foreground">IF</span><CardTitle className="text-lg">When this happens</CardTitle></div></CardHeader>
         <CardContent className="space-y-3">
-          <Select value={triggerType} onValueChange={(value) => setTriggerType(value as AutomationTriggerType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BUILDER_TRIGGERS.map((type) => { const item = TRIGGER_REGISTRY.find((entry) => entry.type === type)!; return <SelectItem key={type} value={type}>{item.label} — {AUTOMATION_CAPABILITY_LABEL[automationCapability(type)]}</SelectItem>; })}</SelectContent></Select>
+          <Select value={triggerType} onValueChange={(value) => setTriggerType(value as AutomationTriggerType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BUILDER_TRIGGERS.map((type) => { const item = TRIGGER_REGISTRY.find((entry) => entry.type === type)!; return <SelectItem key={type} value={type} disabled={!automationCapabilityCanPublish(type)}>{item.label} — {AUTOMATION_CAPABILITY_LABEL[automationCapability(type)]}</SelectItem>; })}</SelectContent></Select>
           <Badge variant={automationCapability(triggerType) === "available" ? "default" : "secondary"}>{AUTOMATION_CAPABILITY_LABEL[automationCapability(triggerType)]}</Badge>
-          {trigger?.phase === "future" && <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{triggerType === "ticket_purchase_completed" ? "Activation saves this rule, but verified payment-provider webhooks are required before this trigger can execute." : "Activation saves this rule. Live trigger connection is scheduled for Phase 2C."}</span></div>}
+          {!automationCapabilityCanPublish(triggerType) && <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>This trigger may remain in a draft, but cannot be published until its trusted event source is connected.</span></div>}
         </CardContent>
       </Card>
 
@@ -222,10 +228,9 @@ export function AutomationBuilderForm({ automation, onSaved }: Props) {
         <CardHeader><div className="flex items-center gap-3"><span className="rounded-lg bg-primary px-3 py-1 text-sm font-bold text-primary-foreground">THEN</span><CardTitle className="text-lg">Do these actions in order</CardTitle></div></CardHeader>
         <CardContent className="space-y-4">
           {steps.map((step, index) => {
-            const action = ACTION_REGISTRY.find((item) => item.type === step.actionType);
             return <div key={step.key} className="rounded-xl border bg-card p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Badge variant="outline">Action {index + 1}</Badge>{PROVIDER_ACTIONS.has(step.actionType!) && <Badge variant="secondary">Provider connection required</Badge>}</div><div className="flex gap-1"><Button type="button" variant="ghost" size="icon" disabled={index === 0} onClick={() => moveStep(index, -1)}><ArrowUp className="h-4 w-4" /><span className="sr-only">Move up</span></Button><Button type="button" variant="ghost" size="icon" disabled={index === steps.length - 1} onClick={() => moveStep(index, 1)}><ArrowDown className="h-4 w-4" /><span className="sr-only">Move down</span></Button><Button type="button" variant="ghost" size="icon" className="text-destructive" disabled={steps.length === 1} onClick={() => setSteps((items) => items.filter((item) => item.key !== step.key))}><Trash2 className="h-4 w-4" /><span className="sr-only">Delete action</span></Button></div></div>
-              <div className="mt-3 space-y-3"><Select value={step.actionType} onValueChange={(value) => changeActionType(step, value as AutomationActionType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BUILDER_ACTIONS.map((type) => { const item = ACTION_REGISTRY.find((entry) => entry.type === type)!; return <SelectItem key={type} value={type}>{item.label} — {AUTOMATION_CAPABILITY_LABEL[automationCapability(type)]}</SelectItem>; })}</SelectContent></Select><Badge variant={automationCapability(step.actionType!) === "available" ? "default" : "secondary"}>{AUTOMATION_CAPABILITY_LABEL[automationCapability(step.actionType!)]}</Badge><ActionConfig step={step} automations={selectableAutomations} onChange={(key, value) => updateConfig(step, key, value)} />{action?.phase === "future" && <p className="text-xs text-muted-foreground">This definition can be saved, but execution requires the capability shown above.</p>}</div>
+              <div className="mt-3 space-y-3"><Select value={step.actionType} onValueChange={(value) => changeActionType(step, value as AutomationActionType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BUILDER_ACTIONS.map((type) => { const item = ACTION_REGISTRY.find((entry) => entry.type === type)!; return <SelectItem key={type} value={type} disabled={!automationCapabilityCanPublish(type)}>{item.label} — {AUTOMATION_CAPABILITY_LABEL[automationCapability(type)]}</SelectItem>; })}</SelectContent></Select><Badge variant={automationCapability(step.actionType!) === "available" ? "default" : "secondary"}>{AUTOMATION_CAPABILITY_LABEL[automationCapability(step.actionType!)]}</Badge><ActionConfig step={step} automations={selectableAutomations} onChange={(key, value) => updateConfig(step, key, value)} />{!automationCapabilityCanPublish(step.actionType!) && <p className="text-xs text-muted-foreground">This action can remain in a draft, but cannot be published until its runtime capability is configured.</p>}</div>
             </div>;
           })}
           <Button type="button" variant="outline" onClick={() => setSteps((items) => [...items, emptyStep()])}><Plus className="mr-1 h-4 w-4" />Add action</Button>
@@ -233,8 +238,9 @@ export function AutomationBuilderForm({ automation, onSaved }: Props) {
       </Card>
 
       <div className="sticky bottom-3 z-20 flex flex-col-reverse gap-2 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:justify-end">
-        <Button variant="outline" disabled={busy} onClick={() => void persist(false)}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save draft</Button>
-        <Button disabled={busy} onClick={() => void persist(true)}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Activate automation</Button>
+        <Button variant="outline" disabled={busy} onClick={() => void persist("draft")}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save draft</Button>
+        <Button variant="secondary" disabled={busy} onClick={() => void persist("publish")}><Send className="mr-2 h-4 w-4" />Publish version</Button>
+        <Button disabled={busy} onClick={() => void persist("activate")}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Publish &amp; activate</Button>
       </div>
     </div>
   );
@@ -251,10 +257,10 @@ function ActionConfig({ step, automations, onChange }: { step: AutomationStepDef
     case "save_contact_activity": return <div className="space-y-1"><Label>Activity description</Label><Textarea value={configText(step.config, "description")} onChange={(event) => onChange("description", event.target.value)} /></div>;
     case "send_appointment_confirmation": case "send_ticket_confirmation": return <div className="grid gap-3 md:grid-cols-2">{field("subject", "Confirmation subject")}<div className="space-y-1 md:col-span-2"><Label>Confirmation message</Label><Textarea value={configText(step.config, "message")} onChange={(event) => onChange("message", event.target.value)} /></div></div>;
     case "open_url": return field("url", "Destination URL", "https://example.com");
-    case "continue_workflow": return <div className="space-y-1"><Label>Automation to continue</Label><Select value={configText(step.config, "targetAutomationId")} onValueChange={(value) => onChange("targetAutomationId", value)}><SelectTrigger><SelectValue placeholder="Choose automation" /></SelectTrigger><SelectContent>{automations.map((automation) => <SelectItem key={automation.id} value={automation.id}>{automation.name}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Phase 2C will enforce loop and depth protection before continuation runs.</p></div>;
+    case "continue_workflow": return <div className="space-y-1"><Label>Automation to continue</Label><Select value={configText(step.config, "targetAutomationId")} onValueChange={(value) => onChange("targetAutomationId", value)}><SelectTrigger><SelectValue placeholder="Choose automation" /></SelectTrigger><SelectContent>{automations.map((automation) => <SelectItem key={automation.id} value={automation.id}>{automation.name}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Workflow continuation is not deployable until its server-side executor is connected.</p></div>;
     case "wait": return <div className="space-y-1"><Label>Delay in seconds</Label><Input type="number" min={1} max={31536000} value={configText(step.config, "seconds")} onChange={(event) => onChange("seconds", Number(event.target.value))} /><p className="text-xs text-muted-foreground">Requires the durable server-side job worker to be scheduled.</p></div>;
     case "create_lead": return <p className="text-sm text-muted-foreground">The trigger&apos;s verified contact fields will be used to create the lead.</p>;
-    case "update_lead": return <p className="text-sm text-muted-foreground">Phase 2C will update only the triggering account&apos;s matching lead.</p>;
+    case "update_lead": return <p className="text-sm text-muted-foreground">Only a lead resolved from the trusted event in this account can be updated.</p>;
     default: return null;
   }
 }

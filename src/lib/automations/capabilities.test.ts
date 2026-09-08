@@ -12,5 +12,7 @@ describe("automation capability labels", () => {
     expect(automationCapability("qr_scanned")).toBe("available");
     expect(automationCapability("save_contact_activity")).toBe("available");
     expect(automationCapability("flyer_shared")).toBe("not_yet_available");
+    expect(automationCapability("open_email")).toBe("not_yet_available");
+    expect(automationCapability("continue_workflow")).toBe("not_yet_available");
   });
 });

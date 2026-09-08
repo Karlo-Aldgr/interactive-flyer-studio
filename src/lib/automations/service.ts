@@ -8,10 +8,11 @@ import {
   type CreateAutomationInput,
   type UpdateAutomationInput,
   type AutomationExecutionHistory,
+  type AutomationExecutionSummary,
   type AutomationHistoryFilters,
 } from "./types";
 import { safeAutomationError, sanitizeAutomationHistory } from "./history";
-import { automationTriggerTypeSchema, validateAutomationDefinition } from "./validation";
+import { automationTriggerTypeSchema, validateAutomationDefinition, validatePublishableAutomation } from "./validation";
 
 // The generated Supabase types are updated after the migration is applied to
 // the linked project. Keep the cast local so the rest of the application stays typed.
@@ -27,9 +28,25 @@ type RawHistoryRow = {
   id: string; automation_id: string; status: AutomationExecutionHistory["status"]; correlation_id: string;
   output: unknown; error_code: unknown; error_message: unknown; started_at: string | null; completed_at: string | null; created_at: string;
   automations: { name: string; trigger_type: AutomationExecutionHistory["trigger_type"] };
-  automation_versions: { version: number }; automation_events: { event_type: string } | null;
+  automation_versions: { version: number; definition: Automation["draft_definition"] }; automation_events: { event_type: string } | null;
   automation_step_executions: RawHistoryStep[];
 };
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+export function automationVersionMatchesDraft(
+  automation: Pick<Automation, "trigger_type" | "trigger_config" | "draft_definition">,
+  version: Pick<AutomationVersion, "trigger_type" | "trigger_config" | "definition">,
+): boolean {
+  return canonicalJson({ trigger_type: version.trigger_type, trigger_config: version.trigger_config, definition: version.definition }) ===
+    canonicalJson({ trigger_type: automation.trigger_type, trigger_config: automation.trigger_config, definition: automation.draft_definition });
+}
 
 async function requireUserId(): Promise<string> {
   const { data, error } = await supabase.auth.getUser();
@@ -91,12 +108,28 @@ export async function updateAutomation(id: string, input: UpdateAutomationInput)
 }
 
 export async function activateAutomation(id: string): Promise<Automation> {
-  await publishAutomation(id);
+  const automation = await getAutomation(id);
+  if (!automation) throw new Error("Automation not found or you do not have access");
+  validatePublishableAutomation(automation.trigger_type, automation.draft_definition);
+  let needsPublish = !automation.published_version_id;
+  if (automation.published_version_id) {
+    const { data, error } = await db.from("automation_versions")
+      .select("trigger_type, trigger_config, definition")
+      .eq("id", automation.published_version_id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    needsPublish = !data || !automationVersionMatchesDraft(automation, data as AutomationVersion);
+  }
+  if (needsPublish) await publishAutomation(id);
   return updateAutomation(id, { status: "active" });
 }
 
 export async function pauseAutomation(id: string): Promise<Automation> {
   return updateAutomation(id, { status: "paused" });
+}
+
+export async function archiveAutomation(id: string): Promise<Automation> {
+  return updateAutomation(id, { status: "archived" });
 }
 
 export async function duplicateAutomation(source: Automation): Promise<Automation> {
@@ -125,10 +158,25 @@ export async function deleteAutomation(id: string): Promise<void> {
 }
 
 export async function publishAutomation(id: string): Promise<string> {
-  validateAutomationDefinition((await getAutomation(id))?.draft_definition);
+  const automation = await getAutomation(id);
+  if (!automation) throw new Error("Automation not found or you do not have access");
+  validatePublishableAutomation(automation.trigger_type, automation.draft_definition);
   const { data, error } = await db.rpc("publish_automation", { _automation_id: id });
   if (error) throw new Error(error.message);
   return data as string;
+}
+
+export async function listLatestAutomationExecutions(): Promise<AutomationExecutionSummary[]> {
+  const { data, error } = await db.from("automation_executions")
+    .select("automation_id, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) throw new Error(error.message);
+  const latest = new Map<string, AutomationExecutionSummary>();
+  for (const row of (data ?? []) as AutomationExecutionSummary[]) {
+    if (!latest.has(row.automation_id)) latest.set(row.automation_id, row);
+  }
+  return [...latest.values()];
 }
 
 export async function listAutomationVersions(automationId: string): Promise<AutomationVersion[]> {
@@ -156,7 +204,7 @@ export async function listAutomationHistory(filters: AutomationHistoryFilters = 
   const page = Math.max(1, filters.page ?? 1);
   const fromIndex = (page - 1) * pageSize;
   let query = db.from("automation_executions").select(
-    "id, automation_id, status, correlation_id, output, error_code, error_message, started_at, completed_at, created_at, automations!inner(name, trigger_type), automation_versions!inner(version), automation_events(event_type), automation_step_executions(id, step_key, attempt, status, output, error_code, error_message, started_at, completed_at, automation_steps(position, action_type))",
+    "id, automation_id, status, correlation_id, output, error_code, error_message, started_at, completed_at, created_at, automations!inner(name, trigger_type), automation_versions!inner(version, definition), automation_events(event_type), automation_step_executions(id, step_key, attempt, status, output, error_code, error_message, started_at, completed_at, automation_steps(position, action_type))",
     { count: "exact" },
   ).order("created_at", { ascending: false }).range(fromIndex, fromIndex + pageSize - 1);
   if (filters.automationId) query = query.eq("automation_id", filters.automationId);
@@ -184,11 +232,14 @@ export async function listAutomationHistory(filters: AutomationHistoryFilters = 
       created_at: row.created_at,
       steps: (row.automation_step_executions ?? []).map((step) => {
         const stepError = safeAutomationError(step.error_code, step.error_message);
+        const definitionSteps = row.automation_versions.definition?.steps ?? [];
+        const definitionPosition = definitionSteps.findIndex((item) => item.key === step.step_key);
+        const definitionStep = definitionPosition >= 0 ? definitionSteps[definitionPosition] : null;
         return {
           id: step.id,
           step_key: step.step_key,
-          position: step.automation_steps?.position ?? null,
-          action_type: step.automation_steps?.action_type ?? null,
+          position: step.automation_steps?.position ?? (definitionPosition >= 0 ? definitionPosition : null),
+          action_type: step.automation_steps?.action_type ?? definitionStep?.actionType ?? null,
           attempt: step.attempt,
           status: step.status,
           output: sanitizeAutomationHistory(step.output),

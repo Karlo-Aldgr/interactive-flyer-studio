@@ -5,7 +5,9 @@ import {
   AUTOMATION_CONDITION_OPERATORS,
   AUTOMATION_TRIGGER_TYPES,
   type AutomationDefinition,
+  type AutomationTriggerType,
 } from "./types";
+import { automationCapabilityCanPublish } from "./registry";
 
 const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
   z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(jsonValueSchema), z.record(jsonValueSchema)]),
@@ -32,6 +34,13 @@ export const automationConditionSchema = z.object({
   field: z.enum(AUTOMATION_CONDITION_FIELDS),
   operator: z.enum(AUTOMATION_CONDITION_OPERATORS),
   value: jsonValueSchema.optional(),
+}).superRefine((condition, context) => {
+  const noValueOperators = new Set(["exists", "not_exists"]);
+  if (!noValueOperators.has(condition.operator)) {
+    const missing = condition.value === undefined || condition.value === null ||
+      (typeof condition.value === "string" && condition.value.trim() === "");
+    if (missing) context.addIssue({ code: z.ZodIssueCode.custom, path: ["value"], message: "Condition value is required" });
+  }
 });
 
 export const automationStepSchema = z.object({
@@ -85,10 +94,34 @@ export const automationDefinitionSchema = z.object({
       }
     }
   });
+  const edges = new Map(definition.steps.map((step) => [step.key, [step.nextStepKey, step.onTrueStepKey, step.onFalseStepKey].filter(Boolean) as string[]]));
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const hasCycle = (key: string): boolean => {
+    if (visiting.has(key)) return true;
+    if (visited.has(key)) return false;
+    visiting.add(key);
+    const cyclic = (edges.get(key) ?? []).some(hasCycle);
+    visiting.delete(key);
+    visited.add(key);
+    return cyclic;
+  };
+  if (definition.steps.some((step) => hasCycle(step.key))) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["steps"], message: "Step graph cannot contain a cycle" });
+  }
 });
 
 export const automationTriggerTypeSchema = z.enum(AUTOMATION_TRIGGER_TYPES);
 
 export function validateAutomationDefinition(value: unknown): AutomationDefinition {
   return automationDefinitionSchema.parse(value) as AutomationDefinition;
+}
+
+export function validatePublishableAutomation(triggerType: AutomationTriggerType, value: unknown): AutomationDefinition {
+  const definition = validateAutomationDefinition(value);
+  if (definition.steps.length === 0) throw new Error("Add at least one THEN action before publishing");
+  if (!automationCapabilityCanPublish(triggerType)) throw new Error("This IF trigger is not available for live automation yet");
+  const unavailable = definition.steps.find((step) => !step.actionType || !automationCapabilityCanPublish(step.actionType));
+  if (unavailable) throw new Error("Every THEN action must be marked AVAILABLE before publishing");
+  return definition;
 }

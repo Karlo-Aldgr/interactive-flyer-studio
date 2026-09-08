@@ -145,6 +145,12 @@ export interface AutomationVersion {
   published_at: string;
 }
 
+export type AutomationExecutionSummary = {
+  automation_id: string;
+  status: AutomationExecutionStatus;
+  created_at: string;
+};
+
 export interface AutomationStep {
   id: string;
   account_id: string;

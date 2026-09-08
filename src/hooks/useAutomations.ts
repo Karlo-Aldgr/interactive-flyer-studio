@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createAutomation,
+  archiveAutomation,
   activateAutomation,
   deleteAutomation,
   duplicateAutomation,
   getAutomation,
   listAutomations,
   listAutomationFlyers,
+  listLatestAutomationExecutions,
   listAutomationSteps,
   listAutomationVersions,
   publishAutomation,
@@ -22,6 +24,7 @@ const automationKeys = {
   versions: (id: string) => ["automations", "versions", id] as const,
   steps: (versionId: string) => ["automations", "steps", versionId] as const,
   flyers: ["automations", "flyers"] as const,
+  latestExecutions: ["automations", "latest-executions"] as const,
 };
 
 export function useAutomations(flyerId?: string) {
@@ -29,6 +32,9 @@ export function useAutomations(flyerId?: string) {
 }
 export function useAutomationFlyers() {
   return useQuery({ queryKey: automationKeys.flyers, queryFn: listAutomationFlyers });
+}
+export function useLatestAutomationExecutions() {
+  return useQuery({ queryKey: automationKeys.latestExecutions, queryFn: listLatestAutomationExecutions });
 }
 export function useAutomation(id?: string) {
   return useQuery({
@@ -105,6 +111,17 @@ export function usePauseAutomation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: pauseAutomation,
+    onSuccess: (automation) => {
+      queryClient.setQueryData(automationKeys.detail(automation.id), automation);
+      void queryClient.invalidateQueries({ queryKey: automationKeys.all });
+    },
+  });
+}
+
+export function useArchiveAutomation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: archiveAutomation,
     onSuccess: (automation) => {
       queryClient.setQueryData(automationKeys.detail(automation.id), automation);
       void queryClient.invalidateQueries({ queryKey: automationKeys.all });
